@@ -14,16 +14,256 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      agent_assignments: {
+        Row: {
+          agent_id: string
+          client_id: string
+          created_at: string | null
+          id: string
+        }
+        Insert: {
+          agent_id: string
+          client_id: string
+          created_at?: string | null
+          id?: string
+        }
+        Update: {
+          agent_id?: string
+          client_id?: string
+          created_at?: string | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_assignments_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_assignments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agents: {
+        Row: {
+          api_key: string
+          config: Json | null
+          created_at: string | null
+          id: string
+          name: string
+          provider: string
+          updated_at: string | null
+        }
+        Insert: {
+          api_key: string
+          config?: Json | null
+          created_at?: string | null
+          id?: string
+          name: string
+          provider: string
+          updated_at?: string | null
+        }
+        Update: {
+          api_key?: string
+          config?: Json | null
+          created_at?: string | null
+          id?: string
+          name?: string
+          provider?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      client_users: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_users_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_users_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clients: {
+        Row: {
+          created_at: string | null
+          id: string
+          logo_url: string | null
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          logo_url?: string | null
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          logo_url?: string | null
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      conversations: {
+        Row: {
+          agent_id: string
+          caller_phone: string | null
+          duration: number | null
+          ended_at: string | null
+          id: string
+          metadata: Json | null
+          sentiment: string | null
+          started_at: string | null
+          status: string
+        }
+        Insert: {
+          agent_id: string
+          caller_phone?: string | null
+          duration?: number | null
+          ended_at?: string | null
+          id?: string
+          metadata?: Json | null
+          sentiment?: string | null
+          started_at?: string | null
+          status?: string
+        }
+        Update: {
+          agent_id?: string
+          caller_phone?: string | null
+          duration?: number | null
+          ended_at?: string | null
+          id?: string
+          metadata?: Json | null
+          sentiment?: string | null
+          started_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          email: string
+          full_name: string | null
+          id: string
+          role: Database["public"]["Enums"]["user_role"]
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          full_name?: string | null
+          id: string
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          full_name?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      transcripts: {
+        Row: {
+          confidence: number | null
+          conversation_id: string
+          id: string
+          speaker: string
+          text: string
+          timestamp: string | null
+        }
+        Insert: {
+          confidence?: number | null
+          conversation_id: string
+          id?: string
+          speaker: string
+          text: string
+          timestamp?: string | null
+        }
+        Update: {
+          confidence?: number | null
+          conversation_id?: string
+          id?: string
+          speaker?: string
+          text?: string
+          timestamp?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transcripts_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_client_ids: {
+        Args: { user_id: string }
+        Returns: {
+          client_id: string
+        }[]
+      }
+      is_admin: {
+        Args: { user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      user_role: "admin" | "client"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +390,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      user_role: ["admin", "client"],
+    },
   },
 } as const
