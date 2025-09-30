@@ -38,11 +38,39 @@ const App = () => (
                     <Sidebar />
                     <main className="flex-1 p-8 overflow-y-auto">
                       <Routes>
-                        {/* Client Routes */}
-                        <Route path="/" element={<Dashboard />} />
-                        <Route path="/analytics" element={<Analytics />} />
-                        <Route path="/transcripts" element={<Transcripts />} />
-                        <Route path="/settings" element={<Settings />} />
+                        {/* Client Routes - Not accessible to admins */}
+                        <Route 
+                          path="/" 
+                          element={
+                            <ProtectedRoute requireClient>
+                              <Dashboard />
+                            </ProtectedRoute>
+                          } 
+                        />
+                        <Route 
+                          path="/analytics" 
+                          element={
+                            <ProtectedRoute requireClient>
+                              <Analytics />
+                            </ProtectedRoute>
+                          } 
+                        />
+                        <Route 
+                          path="/transcripts" 
+                          element={
+                            <ProtectedRoute requireClient>
+                              <Transcripts />
+                            </ProtectedRoute>
+                          } 
+                        />
+                        <Route 
+                          path="/settings" 
+                          element={
+                            <ProtectedRoute requireClient>
+                              <Settings />
+                            </ProtectedRoute>
+                          } 
+                        />
 
                         {/* Admin Routes */}
                         <Route

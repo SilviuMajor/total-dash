@@ -5,9 +5,10 @@ import { useAuth } from "@/hooks/useAuth";
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requireAdmin?: boolean;
+  requireClient?: boolean;
 }
 
-export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRouteProps) {
+export function ProtectedRoute({ children, requireAdmin = false, requireClient = false }: ProtectedRouteProps) {
   const { user, profile, loading } = useAuth();
   const navigate = useNavigate();
 
@@ -17,9 +18,11 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
         navigate('/auth');
       } else if (requireAdmin && profile?.role !== 'admin') {
         navigate('/');
+      } else if (requireClient && profile?.role === 'admin') {
+        navigate('/admin/clients');
       }
     }
-  }, [user, profile, loading, navigate, requireAdmin]);
+  }, [user, profile, loading, navigate, requireAdmin, requireClient]);
 
   if (loading) {
     return (
@@ -29,7 +32,7 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
     );
   }
 
-  if (!user || (requireAdmin && profile?.role !== 'admin')) {
+  if (!user || (requireAdmin && profile?.role !== 'admin') || (requireClient && profile?.role === 'admin')) {
     return null;
   }
 
