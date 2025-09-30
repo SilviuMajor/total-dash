@@ -51,27 +51,6 @@ export default function Settings() {
         </div>
       </Card>
 
-      <Card className="p-6 bg-gradient-card border-border/50">
-        <h3 className="text-lg font-semibold text-foreground mb-6">Client Management</h3>
-        
-        <div className="space-y-4">
-          {["Acme Corp", "Tech Solutions", "Global Industries"].map((client, i) => (
-            <div key={i} className="flex items-center justify-between p-4 rounded-lg bg-muted/30">
-              <div>
-                <p className="font-medium text-foreground">{client}</p>
-                <p className="text-sm text-muted-foreground">8 active agents</p>
-              </div>
-              <Button variant="outline" size="sm" className="border-border/50">
-                Manage
-              </Button>
-            </div>
-          ))}
-        </div>
-
-        <Button variant="secondary" className="w-full mt-4">
-          Add New Client
-        </Button>
-      </Card>
     </div>
   );
 }
