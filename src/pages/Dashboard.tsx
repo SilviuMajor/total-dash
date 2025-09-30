@@ -1,100 +1,124 @@
+import { useEffect, useState } from "react";
 import { MetricCard } from "@/components/MetricCard";
-import { Phone, Clock, CheckCircle, Users } from "lucide-react";
+import { Phone, Clock, CheckCircle, MessageSquare } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { supabase } from "@/integrations/supabase/client";
+import { useAgentSelection } from "@/hooks/useAgentSelection";
+
+interface Conversation {
+  id: string;
+  caller_phone: string;
+  status: string;
+  started_at: string;
+  duration: number;
+}
 
 export default function Dashboard() {
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { selectedAgentId } = useAgentSelection();
+
+  useEffect(() => {
+    if (selectedAgentId) {
+      loadConversations();
+    }
+  }, [selectedAgentId]);
+
+  const loadConversations = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('conversations')
+        .select('*')
+        .eq('agent_id', selectedAgentId!)
+        .order('started_at', { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+      setConversations(data || []);
+    } catch (error) {
+      console.error('Error loading conversations:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const stats = {
+    totalCalls: conversations.length,
+    avgDuration: conversations.length > 0 
+      ? Math.round(conversations.reduce((sum, c) => sum + (c.duration || 0), 0) / conversations.length / 60)
+      : 0,
+    activeNow: conversations.filter(c => c.status === 'active').length,
+  };
+
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-4xl font-bold text-foreground mb-2">Dashboard</h1>
-        <p className="text-muted-foreground">Welcome back! Here's your AI agent overview.</p>
+        <h1 className="text-4xl font-bold text-foreground mb-2">Conversations</h1>
+        <p className="text-muted-foreground">Monitor live and recent conversations with your AI agent.</p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <MetricCard
-          title="Total Calls"
-          value="1,284"
-          change="+12.5% from last month"
+          title="Total Conversations"
+          value={stats.totalCalls}
           icon={Phone}
-          trend="up"
+          trend="neutral"
         />
         <MetricCard
           title="Avg Duration"
-          value="4:32"
-          change="-2.3% from last month"
+          value={`${stats.avgDuration}m`}
           icon={Clock}
-          trend="down"
+          trend="neutral"
         />
         <MetricCard
-          title="Success Rate"
-          value="94.2%"
-          change="+5.1% from last month"
+          title="Active Now"
+          value={stats.activeNow}
+          icon={MessageSquare}
+          trend="neutral"
+        />
+        <MetricCard
+          title="Completed"
+          value={conversations.filter(c => c.status === 'completed').length}
           icon={CheckCircle}
-          trend="up"
-        />
-        <MetricCard
-          title="Active Agents"
-          value="8"
-          change="2 agents online now"
-          icon={Users}
           trend="neutral"
         />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card className="p-6 bg-gradient-card border-border/50">
-          <h3 className="text-lg font-semibold text-foreground mb-4">Recent Activity</h3>
+      <Card className="p-6 bg-gradient-card border-border/50">
+        <h3 className="text-lg font-semibold text-foreground mb-4">Recent Conversations</h3>
+        {loading ? (
           <div className="space-y-4">
-            {[
-              { agent: "Sales Agent", call: "Inbound call completed", time: "2 min ago", status: "success" },
-              { agent: "Support Agent", call: "Handover requested", time: "5 min ago", status: "warning" },
-              { agent: "Lead Gen Agent", call: "Call in progress", time: "8 min ago", status: "active" },
-              { agent: "Sales Agent", call: "Outbound call completed", time: "12 min ago", status: "success" },
-            ].map((activity, i) => (
-              <div key={i} className="flex items-center gap-4 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="animate-pulse">
+                <div className="h-16 bg-muted rounded-lg"></div>
+              </div>
+            ))}
+          </div>
+        ) : conversations.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">No conversations yet for this agent.</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {conversations.map((conversation) => (
+              <div key={conversation.id} className="flex items-center gap-4 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
                 <div className={`w-2 h-2 rounded-full ${
-                  activity.status === "success" ? "bg-success" :
-                  activity.status === "warning" ? "bg-warning" :
-                  "bg-accent animate-pulse"
+                  conversation.status === "active" ? "bg-success animate-pulse" :
+                  conversation.status === "completed" ? "bg-muted-foreground" :
+                  "bg-warning"
                 }`} />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">{activity.agent}</p>
-                  <p className="text-xs text-muted-foreground">{activity.call}</p>
+                  <p className="text-sm font-medium text-foreground">{conversation.caller_phone || 'Unknown'}</p>
+                  <p className="text-xs text-muted-foreground">{new Date(conversation.started_at).toLocaleString()}</p>
                 </div>
-                <span className="text-xs text-muted-foreground">{activity.time}</span>
+                <span className="text-xs px-2 py-1 rounded bg-muted capitalize">
+                  {conversation.status}
+                </span>
               </div>
             ))}
           </div>
-        </Card>
-
-        <Card className="p-6 bg-gradient-card border-border/50">
-          <h3 className="text-lg font-semibold text-foreground mb-4">Top Performing Agents</h3>
-          <div className="space-y-4">
-            {[
-              { name: "Sales Agent Pro", calls: 156, success: 96 },
-              { name: "Support Bot Elite", calls: 143, success: 94 },
-              { name: "Lead Generator", calls: 128, success: 91 },
-              { name: "Customer Care AI", calls: 98, success: 89 },
-            ].map((agent, i) => (
-              <div key={i} className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-foreground">{agent.name}</span>
-                  <span className="text-sm text-muted-foreground">{agent.calls} calls</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-gradient-accent rounded-full transition-all"
-                      style={{ width: `${agent.success}%` }}
-                    />
-                  </div>
-                  <span className="text-xs font-medium text-success">{agent.success}%</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-      </div>
+        )}
+      </Card>
     </div>
   );
 }
