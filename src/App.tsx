@@ -14,6 +14,8 @@ import Settings from "./pages/Settings";
 import AdminClients from "./pages/admin/Clients";
 import AdminAgents from "./pages/admin/Agents";
 import AdminSettings from "./pages/admin/Settings";
+import ClientDetails from "./pages/admin/ClientDetails";
+import ClientDashboard from "./pages/client/ClientDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -52,6 +54,14 @@ const App = () => (
                           }
                         />
                         <Route
+                          path="/admin/clients/:clientId/:tab"
+                          element={
+                            <ProtectedRoute requireAdmin>
+                              <ClientDetails />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
                           path="/admin/agents"
                           element={
                             <ProtectedRoute requireAdmin>
@@ -67,6 +77,9 @@ const App = () => (
                             </ProtectedRoute>
                           }
                         />
+
+                        {/* Client Dashboard Routes */}
+                        <Route path="/client/:clientId/dashboard" element={<ClientDashboard />} />
 
                         {/* 404 */}
                         <Route path="*" element={<NotFound />} />

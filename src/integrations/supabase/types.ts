@@ -80,23 +80,126 @@ export type Database = {
         }
         Relationships: []
       }
+      client_settings: {
+        Row: {
+          client_id: string
+          company_name: string | null
+          created_at: string | null
+          custom_css: string | null
+          id: string
+          logo_url: string | null
+          primary_color: string | null
+          secondary_color: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          client_id: string
+          company_name?: string | null
+          created_at?: string | null
+          custom_css?: string | null
+          id?: string
+          logo_url?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          client_id?: string
+          company_name?: string | null
+          created_at?: string | null
+          custom_css?: string | null
+          id?: string
+          logo_url?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_settings_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_subscriptions: {
+        Row: {
+          amount_cents: number | null
+          billing_cycle_end: string | null
+          billing_cycle_start: string | null
+          client_id: string
+          created_at: string | null
+          currency: string | null
+          current_usage: number | null
+          id: string
+          monthly_limit: number | null
+          plan_name: string
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          amount_cents?: number | null
+          billing_cycle_end?: string | null
+          billing_cycle_start?: string | null
+          client_id: string
+          created_at?: string | null
+          currency?: string | null
+          current_usage?: number | null
+          id?: string
+          monthly_limit?: number | null
+          plan_name?: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          amount_cents?: number | null
+          billing_cycle_end?: string | null
+          billing_cycle_start?: string | null
+          client_id?: string
+          created_at?: string | null
+          currency?: string | null
+          current_usage?: number | null
+          id?: string
+          monthly_limit?: number | null
+          plan_name?: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_subscriptions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_users: {
         Row: {
           client_id: string
           created_at: string | null
           id: string
+          role: string | null
+          updated_at: string | null
           user_id: string
         }
         Insert: {
           client_id: string
           created_at?: string | null
           id?: string
+          role?: string | null
+          updated_at?: string | null
           user_id: string
         }
         Update: {
           client_id?: string
           created_at?: string | null
           id?: string
+          role?: string | null
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: [
@@ -118,24 +221,42 @@ export type Database = {
       }
       clients: {
         Row: {
+          company_address: string | null
+          contact_email: string | null
+          contact_phone: string | null
           created_at: string | null
+          custom_domain: string | null
           id: string
+          is_active: boolean | null
           logo_url: string | null
           name: string
+          subscription_status: string | null
           updated_at: string | null
         }
         Insert: {
+          company_address?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
           created_at?: string | null
+          custom_domain?: string | null
           id?: string
+          is_active?: boolean | null
           logo_url?: string | null
           name: string
+          subscription_status?: string | null
           updated_at?: string | null
         }
         Update: {
+          company_address?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
           created_at?: string | null
+          custom_domain?: string | null
           id?: string
+          is_active?: boolean | null
           logo_url?: string | null
           name?: string
+          subscription_status?: string | null
           updated_at?: string | null
         }
         Relationships: []

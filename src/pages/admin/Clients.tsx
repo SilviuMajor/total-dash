@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Users } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Users, Settings, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -13,9 +15,11 @@ interface Client {
   name: string;
   logo_url: string | null;
   created_at: string;
+  subscription_status: string | null;
 }
 
 export default function AdminClients() {
+  const navigate = useNavigate();
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -119,8 +123,8 @@ export default function AdminClients() {
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {clients.map((client) => (
-            <Card key={client.id} className="p-6 bg-gradient-card border-border/50 hover:border-primary/50 transition-all">
-              <div className="flex items-start gap-4">
+            <Card key={client.id} className="p-6 bg-gradient-card border-border/50 hover:border-primary/50 transition-all group">
+              <div className="flex items-start gap-4 mb-4">
                 <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
                   <Users className="w-6 h-6 text-primary" />
                 </div>
@@ -129,11 +133,29 @@ export default function AdminClients() {
                   <p className="text-sm text-muted-foreground">
                     Created {new Date(client.created_at).toLocaleDateString()}
                   </p>
+                  <Badge variant="outline" className="mt-2">
+                    {client.subscription_status || "Basic"}
+                  </Badge>
                 </div>
               </div>
-              <div className="mt-4 pt-4 border-t border-border/50">
-                <Button variant="outline" size="sm" className="w-full border-border/50">
-                  Manage
+              <div className="space-y-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full border-border/50 gap-2"
+                  onClick={() => navigate(`/admin/clients/${client.id}/overview`)}
+                >
+                  <Settings className="w-4 h-4" />
+                  Manage Client
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full border-border/50 gap-2"
+                  onClick={() => window.open(`/client/${client.id}/dashboard`, '_blank')}
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  View Dashboard
                 </Button>
               </div>
             </Card>
