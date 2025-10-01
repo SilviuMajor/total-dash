@@ -20,18 +20,21 @@ export type Database = {
           client_id: string
           created_at: string | null
           id: string
+          sort_order: number | null
         }
         Insert: {
           agent_id: string
           client_id: string
           created_at?: string | null
           id?: string
+          sort_order?: number | null
         }
         Update: {
           agent_id?: string
           client_id?: string
           created_at?: string | null
           id?: string
+          sort_order?: number | null
         }
         Relationships: [
           {

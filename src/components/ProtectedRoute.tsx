@@ -15,7 +15,8 @@ export function ProtectedRoute({ children, requireAdmin = false, requireClient =
   useEffect(() => {
     if (!loading) {
       if (!user) {
-        navigate('/auth');
+        // Default to client auth when not logged in
+        navigate('/client/auth');
       } else if (requireAdmin && profile?.role !== 'admin') {
         navigate('/');
       } else if (requireClient && profile?.role === 'admin') {

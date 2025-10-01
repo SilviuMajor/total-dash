@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -15,63 +14,27 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { supabase } from "@/integrations/supabase/client";
-import { useAgentSelection } from "@/hooks/useAgentSelection";
-import { useAuth } from "@/hooks/useAuth";
+import { useClientAgentContext } from "@/hooks/useClientAgentContext";
+import { useState } from "react";
 
-interface Agent {
-  id: string;
-  name: string;
-  provider: string;
-}
-
-export function AgentSelector() {
+export function ClientAgentSelector() {
   const [open, setOpen] = useState(false);
-  const [agents, setAgents] = useState<Agent[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { selectedAgentId, setSelectedAgentId } = useAgentSelection();
-  const { profile } = useAuth();
-
-  useEffect(() => {
-    loadAgents();
-  }, [profile]);
-
-  const loadAgents = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('agents')
-        .select('id, name, provider')
-        .order('name');
-
-      if (error) throw error;
-      
-      setAgents(data || []);
-      
-      // Auto-select first agent if none selected
-      if (!selectedAgentId && data && data.length > 0) {
-        setSelectedAgentId(data[0].id);
-      }
-    } catch (error) {
-      console.error('Error loading agents:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { agents, selectedAgentId, setSelectedAgentId, loading } = useClientAgentContext();
 
   const selectedAgent = agents.find((agent) => agent.id === selectedAgentId);
 
   if (loading) {
     return (
-      <div className="px-4 py-3 rounded-lg bg-muted/50 animate-pulse">
-        <div className="h-4 bg-muted rounded w-24"></div>
+      <div className="px-6 py-4 rounded-lg bg-muted/50 animate-pulse w-64">
+        <div className="h-10 bg-muted rounded"></div>
       </div>
     );
   }
 
   if (agents.length === 0) {
     return (
-      <div className="px-4 py-3 rounded-lg bg-muted/50">
-        <p className="text-xs text-muted-foreground">No agents assigned</p>
+      <div className="px-6 py-4 rounded-lg bg-muted/50 w-64">
+        <p className="text-sm text-muted-foreground">No agents assigned</p>
       </div>
     );
   }
@@ -80,21 +43,26 @@ export function AgentSelector() {
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
-          variant="ghost"
+          variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full justify-between bg-muted/50 hover:bg-muted"
+          className="w-64 justify-between h-auto py-3 bg-card hover:bg-muted border-border"
         >
           <div className="flex flex-col items-start flex-1 min-w-0">
-            <span className="text-xs text-muted-foreground">Selected Agent</span>
-            <span className="text-sm font-medium truncate w-full text-left">
+            <span className="text-xs text-muted-foreground mb-1">Active Agent</span>
+            <span className="text-base font-semibold truncate w-full text-left text-foreground">
               {selectedAgent?.name || "Select agent..."}
             </span>
+            {selectedAgent && (
+              <span className="text-xs text-muted-foreground truncate w-full text-left">
+                {selectedAgent.provider}
+              </span>
+            )}
           </div>
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          <ChevronsUpDown className="ml-2 h-5 w-5 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[240px] p-0 bg-card border-border z-50">
+      <PopoverContent className="w-64 p-0 bg-card border-border z-50">
         <Command className="bg-card">
           <CommandInput placeholder="Search agents..." className="bg-muted/30" />
           <CommandList>

@@ -1,7 +1,6 @@
 import { NavLink } from "react-router-dom";
 import { LayoutDashboard, BarChart3, FileText, Settings, Users, Bot, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { AgentSelector } from "./AgentSelector";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "./ui/button";
 
@@ -38,12 +37,6 @@ export function Sidebar() {
           </p>
         </div>
       </div>
-
-      {!isAdmin && (
-        <div className="p-4 border-b border-border">
-          <AgentSelector />
-        </div>
-      )}
 
       <nav className="flex-1 p-4 space-y-1">
         {navigation.map((item) => (

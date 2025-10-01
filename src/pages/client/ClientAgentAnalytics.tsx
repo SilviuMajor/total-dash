@@ -1,5 +1,8 @@
 import { Card } from "@/components/ui/card";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { useClientAgentContext } from "@/hooks/useClientAgentContext";
+import { ClientAgentSelector } from "@/components/ClientAgentSelector";
+import { NoAgentsAssigned } from "@/components/NoAgentsAssigned";
 
 const callVolumeData = [
   { name: "Mon", calls: 145 },
@@ -18,12 +21,21 @@ const performanceData = [
   { name: "Week 4", success: 96, handovers: 4 },
 ];
 
-export default function Analytics() {
+export default function ClientAgentAnalytics() {
+  const { agents } = useClientAgentContext();
+
+  if (agents.length === 0) {
+    return <NoAgentsAssigned />;
+  }
+
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-4xl font-bold text-foreground mb-2">Analytics</h1>
-        <p className="text-muted-foreground">Deep dive into your AI agent performance metrics.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-4xl font-bold text-foreground mb-2">Analytics</h1>
+          <p className="text-muted-foreground">Deep dive into your AI agent performance metrics.</p>
+        </div>
+        <ClientAgentSelector />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">

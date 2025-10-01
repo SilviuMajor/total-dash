@@ -3,7 +3,9 @@ import { MetricCard } from "@/components/MetricCard";
 import { Phone, Clock, CheckCircle, MessageSquare } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
-import { useAgentSelection } from "@/hooks/useAgentSelection";
+import { useClientAgentContext } from "@/hooks/useClientAgentContext";
+import { ClientAgentSelector } from "@/components/ClientAgentSelector";
+import { NoAgentsAssigned } from "@/components/NoAgentsAssigned";
 
 interface Conversation {
   id: string;
@@ -13,10 +15,10 @@ interface Conversation {
   duration: number;
 }
 
-export default function Dashboard() {
+export default function ClientAgentDashboard() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
-  const { selectedAgentId } = useAgentSelection();
+  const { selectedAgentId, agents } = useClientAgentContext();
 
   useEffect(() => {
     if (selectedAgentId) {
@@ -42,6 +44,10 @@ export default function Dashboard() {
     }
   };
 
+  if (agents.length === 0) {
+    return <NoAgentsAssigned />;
+  }
+
   const stats = {
     totalCalls: conversations.length,
     avgDuration: conversations.length > 0 
@@ -52,9 +58,12 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-4xl font-bold text-foreground mb-2">Conversations</h1>
-        <p className="text-muted-foreground">Monitor live and recent conversations with your AI agent.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-4xl font-bold text-foreground mb-2">Conversations</h1>
+          <p className="text-muted-foreground">Monitor live and recent conversations with your AI agent.</p>
+        </div>
+        <ClientAgentSelector />
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">

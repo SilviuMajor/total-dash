@@ -66,11 +66,12 @@ export function ClientAgentAssignments({ clientId }: { clientId: string }) {
         .delete()
         .eq('client_id', clientId);
 
-      // Insert new assignments
+      // Insert new assignments with sort_order
       if (assignedAgentIds.size > 0) {
-        const assignments = Array.from(assignedAgentIds).map(agentId => ({
+        const assignments = Array.from(assignedAgentIds).map((agentId, index) => ({
           client_id: clientId,
           agent_id: agentId,
+          sort_order: index, // Set order based on current list order
         }));
 
         const { error } = await supabase
