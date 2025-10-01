@@ -84,7 +84,7 @@ export default function AdminAgents() {
         
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-gradient-accent hover:opacity-90 gap-2">
+            <Button className="bg-foreground text-background hover:bg-foreground/90 gap-2">
               <Plus className="w-4 h-4" />
               New Agent
             </Button>
