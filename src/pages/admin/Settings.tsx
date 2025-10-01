@@ -22,11 +22,55 @@ export default function AdminSettings() {
   const [open, setOpen] = useState(false);
   const [newMemberEmail, setNewMemberEmail] = useState("");
   const [newMemberName, setNewMemberName] = useState("");
+  const [agencyDomain, setAgencyDomain] = useState("");
+  const [savingDomain, setSavingDomain] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     loadMembers();
+    loadAgencySettings();
   }, []);
+
+  const loadAgencySettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('agency_settings')
+        .select('agency_domain')
+        .single();
+
+      if (error) throw error;
+      setAgencyDomain(data?.agency_domain || "");
+    } catch (error) {
+      console.error('Error loading agency settings:', error);
+    }
+  };
+
+  const handleSaveAgencyDomain = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingDomain(true);
+
+    try {
+      const { error } = await supabase
+        .from('agency_settings')
+        .update({ agency_domain: agencyDomain })
+        .eq('id', (await supabase.from('agency_settings').select('id').single()).data?.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Agency domain updated successfully",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSavingDomain(false);
+    }
+  };
 
   const loadMembers = async () => {
     try {
@@ -110,11 +154,39 @@ export default function AdminSettings() {
 
   return (
     <div className="space-y-8">
+      <div>
+        <h1 className="text-4xl font-bold text-foreground mb-2">Agency Settings</h1>
+        <p className="text-muted-foreground">Manage your agency configuration and team members.</p>
+      </div>
+
+      <Card className="p-6 bg-gradient-card border-border/50">
+        <h3 className="text-lg font-semibold text-foreground mb-6">Agency Configuration</h3>
+        <form onSubmit={handleSaveAgencyDomain} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="agency_domain">Client Portal Domain</Label>
+            <Input
+              id="agency_domain"
+              value={agencyDomain}
+              onChange={(e) => setAgencyDomain(e.target.value)}
+              placeholder="dashboard.fiveleaf.com"
+              className="bg-muted/50 border-border"
+            />
+            <p className="text-xs text-muted-foreground">
+              This is the universal domain where all clients will sign in to access their dashboards
+            </p>
+          </div>
+          <Button
+            type="submit"
+            disabled={savingDomain}
+            className="bg-gradient-accent hover:opacity-90"
+          >
+            {savingDomain ? "Saving..." : "Save Domain"}
+          </Button>
+        </form>
+      </Card>
+
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-4xl font-bold text-foreground mb-2">Agency Settings</h1>
-          <p className="text-muted-foreground">Manage your agency team members and access.</p>
-        </div>
+        <h2 className="text-2xl font-semibold text-foreground">Agency Team Members</h2>
         
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
@@ -160,7 +232,6 @@ export default function AdminSettings() {
       </div>
 
       <Card className="p-6 bg-gradient-card border-border/50">
-        <h3 className="text-lg font-semibold text-foreground mb-6">Agency Team Members</h3>
         
         {loading ? (
           <div className="space-y-4">

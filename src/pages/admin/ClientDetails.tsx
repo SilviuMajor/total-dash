@@ -5,13 +5,11 @@ import { useToast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, ExternalLink } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { ClientOverview } from "@/components/client-management/ClientOverview";
-import { ClientDashboardAccess } from "@/components/client-management/ClientDashboardAccess";
 import { ClientUsersManagement } from "@/components/client-management/ClientUsersManagement";
 import { ClientAgentAssignments } from "@/components/client-management/ClientAgentAssignments";
 import { ClientSettings } from "@/components/client-management/ClientSettings";
-import { ClientBilling } from "@/components/client-management/ClientBilling";
 
 interface ClientData {
   id: string;
@@ -20,7 +18,6 @@ interface ClientData {
   contact_phone: string | null;
   company_address: string | null;
   subscription_status: string | null;
-  custom_domain: string | null;
   is_active: boolean | null;
   created_at: string;
 }
@@ -77,46 +74,31 @@ export default function ClientDetails() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => navigate('/admin/clients')}
-            className="border-border/50"
-          >
-            <ArrowLeft className="w-4 h-4" />
-          </Button>
-          <div>
-            <h1 className="text-4xl font-bold text-foreground">{client.name}</h1>
-            <p className="text-muted-foreground">Client Management Dashboard</p>
-          </div>
-        </div>
+      <div className="flex items-center gap-4">
         <Button
-          onClick={() => window.open(`/client/${client.id}/dashboard`, '_blank')}
-          className="bg-gradient-accent hover:opacity-90 gap-2"
+          variant="outline"
+          size="icon"
+          onClick={() => navigate('/admin/clients')}
+          className="border-border/50"
         >
-          <ExternalLink className="w-4 h-4" />
-          View Client Dashboard
+          <ArrowLeft className="w-4 h-4" />
         </Button>
+        <div>
+          <h1 className="text-4xl font-bold text-foreground">{client.name}</h1>
+          <p className="text-muted-foreground">Client Management Dashboard</p>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
         <TabsList className="bg-muted">
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="dashboard">Dashboard Access</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="agents">Agent Assignments</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
-          <TabsTrigger value="billing">Billing</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview">
           <ClientOverview client={client} onUpdate={loadClientData} />
-        </TabsContent>
-
-        <TabsContent value="dashboard">
-          <ClientDashboardAccess client={client} />
         </TabsContent>
 
         <TabsContent value="users">
@@ -129,10 +111,6 @@ export default function ClientDetails() {
 
         <TabsContent value="settings">
           <ClientSettings client={client} onUpdate={loadClientData} />
-        </TabsContent>
-
-        <TabsContent value="billing">
-          <ClientBilling clientId={client.id} />
         </TabsContent>
       </Tabs>
     </div>

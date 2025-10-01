@@ -13,7 +13,6 @@ interface ClientSettingsProps {
     contact_email: string | null;
     contact_phone: string | null;
     company_address: string | null;
-    custom_domain: string | null;
   };
   onUpdate: () => void;
 }
@@ -23,7 +22,6 @@ export function ClientSettings({ client, onUpdate }: ClientSettingsProps) {
     contact_email: client.contact_email || "",
     contact_phone: client.contact_phone || "",
     company_address: client.company_address || "",
-    custom_domain: client.custom_domain || "",
   });
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
@@ -95,20 +93,6 @@ export function ClientSettings({ client, onUpdate }: ClientSettingsProps) {
               placeholder="123 Business St, City, Country"
               className="bg-muted/50 border-border"
             />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="custom_domain">Custom Domain</Label>
-            <Input
-              id="custom_domain"
-              value={formData.custom_domain}
-              onChange={(e) => setFormData({ ...formData, custom_domain: e.target.value })}
-              placeholder="client.yourdomain.com"
-              className="bg-muted/50 border-border"
-            />
-            <p className="text-xs text-muted-foreground">
-              Configure a custom domain for this client's dashboard
-            </p>
           </div>
 
           <Button

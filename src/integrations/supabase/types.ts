@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      agency_settings: {
+        Row: {
+          agency_domain: string | null
+          created_at: string | null
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          agency_domain?: string | null
+          created_at?: string | null
+          id?: string
+          updated_at?: string | null
+        }
+        Update: {
+          agency_domain?: string | null
+          created_at?: string | null
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       agent_assignments: {
         Row: {
           agent_id: string
@@ -228,7 +249,6 @@ export type Database = {
           contact_email: string | null
           contact_phone: string | null
           created_at: string | null
-          custom_domain: string | null
           id: string
           is_active: boolean | null
           logo_url: string | null
@@ -241,7 +261,6 @@ export type Database = {
           contact_email?: string | null
           contact_phone?: string | null
           created_at?: string | null
-          custom_domain?: string | null
           id?: string
           is_active?: boolean | null
           logo_url?: string | null
@@ -254,7 +273,6 @@ export type Database = {
           contact_email?: string | null
           contact_phone?: string | null
           created_at?: string | null
-          custom_domain?: string | null
           id?: string
           is_active?: boolean | null
           logo_url?: string | null
