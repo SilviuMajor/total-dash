@@ -1,56 +1,51 @@
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { useEffect, useState } from "react";
+import { TeamMembersCard } from "@/components/client-management/TeamMembersCard";
+import { DefaultPermissionsCard } from "@/components/client-management/DefaultPermissionsCard";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Settings() {
+  const { user } = useAuth();
+  const [clientId, setClientId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadClientId = async () => {
+      if (!user) return;
+
+      const { data } = await supabase
+        .from('client_users')
+        .select('client_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (data) {
+        setClientId(data.client_id);
+      }
+    };
+
+    loadClientId();
+  }, [user]);
+
+  if (!clientId) {
+    return (
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-4xl font-bold text-foreground mb-2">Settings</h1>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       <div>
         <h1 className="text-4xl font-bold text-foreground mb-2">Settings</h1>
-        <p className="text-muted-foreground">Manage your dashboard and integration settings.</p>
+        <p className="text-muted-foreground">Manage your team and preferences</p>
       </div>
 
-      <Card className="p-6 bg-gradient-card border-border/50">
-        <h3 className="text-lg font-semibold text-foreground mb-6">Integration Settings</h3>
-        
-        <div className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="voiceflow">Voiceflow API Key</Label>
-            <Input 
-              id="voiceflow"
-              type="password" 
-              placeholder="Enter your Voiceflow API key"
-              className="bg-muted/50 border-border"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="retell">Retell AI API Key</Label>
-            <Input 
-              id="retell"
-              type="password" 
-              placeholder="Enter your Retell AI API key"
-              className="bg-muted/50 border-border"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="webhook">Webhook URL</Label>
-            <Input 
-              id="webhook"
-              type="url" 
-              placeholder="https://your-webhook-url.com"
-              className="bg-muted/50 border-border"
-            />
-          </div>
-
-          <Button className="bg-foreground text-background hover:bg-foreground/90">
-            Save Settings
-          </Button>
-        </div>
-      </Card>
-
+      <TeamMembersCard clientId={clientId} />
+      <DefaultPermissionsCard clientId={clientId} />
     </div>
   );
 }

@@ -46,7 +46,7 @@ const App = () => (
                           <Route 
                             path="/" 
                             element={
-                              <ProtectedRoute requireClient>
+                              <ProtectedRoute requireClient requiredPage="dashboard">
                                 <ClientAgentDashboard />
                               </ProtectedRoute>
                             } 
@@ -54,7 +54,7 @@ const App = () => (
                           <Route 
                             path="/analytics" 
                             element={
-                              <ProtectedRoute requireClient>
+                              <ProtectedRoute requireClient requiredPage="analytics">
                                 <ClientAgentAnalytics />
                               </ProtectedRoute>
                             } 
@@ -62,7 +62,7 @@ const App = () => (
                           <Route 
                             path="/transcripts" 
                             element={
-                              <ProtectedRoute requireClient>
+                              <ProtectedRoute requireClient requiredPage="transcripts">
                                 <ClientAgentTranscripts />
                               </ProtectedRoute>
                             } 
@@ -70,7 +70,7 @@ const App = () => (
                           <Route 
                             path="/settings" 
                             element={
-                              <ProtectedRoute requireClient>
+                              <ProtectedRoute requireClient requiredPage="settings">
                                 <Settings />
                               </ProtectedRoute>
                             } 
