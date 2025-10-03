@@ -39,7 +39,7 @@ export default function ClientAuth() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
       <Card className="w-full max-w-md p-8 bg-gradient-card border-border/50">
         <div className="flex flex-col items-center mb-8">
-          <img src={fiveleafLogo} alt="Fiveleaf" className="h-16 w-16 object-contain mb-4" />
+          <img src={fiveleafLogo} alt="Fiveleaf" className="h-40 w-40 object-contain mb-4" />
           <h1 className="text-3xl font-semibold text-foreground">Fiveleaf</h1>
           <p className="text-muted-foreground mt-2">Client Portal</p>
         </div>
