@@ -468,6 +468,10 @@ export type Database = {
           name: string
         }[]
       }
+      has_settings_permission: {
+        Args: { _client_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_admin: {
         Args: { user_id: string }
         Returns: boolean
