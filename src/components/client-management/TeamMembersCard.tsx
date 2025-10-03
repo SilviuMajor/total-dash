@@ -84,7 +84,7 @@ export function TeamMembersCard({ clientId }: { clientId: string }) {
     email: "",
     full_name: "",
     role: "user",
-    department_id: "",
+    department_id: "none",
     avatar_url: "",
   });
 
@@ -157,7 +157,7 @@ export function TeamMembersCard({ clientId }: { clientId: string }) {
           email: newUser.email,
           fullName: newUser.full_name,
           role: newUser.role,
-          departmentId: newUser.department_id || null,
+          departmentId: newUser.department_id === "none" ? null : newUser.department_id || null,
           avatarUrl: newUser.avatar_url || null,
           pagePermissions: defaultPermissions,
         },
@@ -175,7 +175,7 @@ export function TeamMembersCard({ clientId }: { clientId: string }) {
         email: "",
         full_name: "",
         role: "user",
-        department_id: "",
+        department_id: "none",
         avatar_url: "",
       });
 
@@ -314,7 +314,7 @@ export function TeamMembersCard({ clientId }: { clientId: string }) {
                       <SelectValue placeholder="Select department" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">None</SelectItem>
+                      <SelectItem value="none">None</SelectItem>
                       {departments.map((dept) => (
                         <SelectItem key={dept.id} value={dept.id}>
                           {dept.name}
@@ -552,16 +552,16 @@ export function TeamMembersCard({ clientId }: { clientId: string }) {
               <div className="space-y-2">
                 <Label>Department</Label>
                 <Select
-                  value={selectedUser.department_id || ""}
+                  value={selectedUser.department_id || "none"}
                   onValueChange={(value) =>
-                    setSelectedUser({ ...selectedUser, department_id: value || null })
+                    setSelectedUser({ ...selectedUser, department_id: value === "none" ? null : value })
                   }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select department" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     {departments.map((dept) => (
                       <SelectItem key={dept.id} value={dept.id}>
                         {dept.name}

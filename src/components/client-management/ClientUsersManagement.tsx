@@ -54,7 +54,7 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserFullName, setNewUserFullName] = useState("");
   const [newUserRole, setNewUserRole] = useState("user");
-  const [newUserDepartment, setNewUserDepartment] = useState<string>("");
+  const [newUserDepartment, setNewUserDepartment] = useState<string>("none");
   const [newUserAvatar, setNewUserAvatar] = useState("");
   const [newUserPermissions, setNewUserPermissions] = useState({
     dashboard: true,
@@ -117,7 +117,7 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
           email: newUserEmail,
           fullName: newUserFullName,
           role: newUserRole,
-          departmentId: newUserDepartment || null,
+          departmentId: newUserDepartment === "none" ? null : newUserDepartment || null,
           avatarUrl: newUserAvatar || null,
           pagePermissions: newUserPermissions,
         },
@@ -135,7 +135,7 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
         setNewUserEmail("");
         setNewUserFullName("");
         setNewUserRole("user");
-        setNewUserDepartment("");
+        setNewUserDepartment("none");
         setNewUserAvatar("");
         setNewUserPermissions({
           dashboard: true,
@@ -344,7 +344,7 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
                   <SelectValue placeholder="Select department" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No Department</SelectItem>
+                  <SelectItem value="none">No Department</SelectItem>
                   {departments.map((dept) => (
                     <SelectItem key={dept.id} value={dept.id}>
                       {dept.name}
@@ -478,16 +478,16 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
               <div>
                 <Label htmlFor="editDepartment">Department</Label>
                 <Select
-                  value={selectedUser.department_id || ""}
+                  value={selectedUser.department_id || "none"}
                   onValueChange={(value) =>
-                    setSelectedUser({ ...selectedUser, department_id: value || null })
+                    setSelectedUser({ ...selectedUser, department_id: value === "none" ? null : value })
                   }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select department" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No Department</SelectItem>
+                    <SelectItem value="none">No Department</SelectItem>
                     {departments.map((dept) => (
                       <SelectItem key={dept.id} value={dept.id}>
                         {dept.name}
