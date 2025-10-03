@@ -83,7 +83,7 @@ export default function AdminClients() {
         
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-gradient-accent hover:opacity-90 gap-2">
+            <Button className="bg-foreground text-background hover:bg-foreground/90 gap-2">
               <Plus className="w-4 h-4" />
               New Client
             </Button>
@@ -104,7 +104,7 @@ export default function AdminClients() {
                   className="bg-muted/50 border-border"
                 />
               </div>
-              <Button type="submit" className="w-full bg-gradient-accent hover:opacity-90">
+              <Button type="submit" className="w-full bg-foreground text-background hover:bg-foreground/90">
                 Create Client
               </Button>
             </form>

@@ -132,7 +132,7 @@ export default function AdminAgents() {
                 />
               </div>
 
-              <Button type="submit" className="w-full bg-gradient-accent hover:opacity-90">
+              <Button type="submit" className="w-full bg-foreground text-background hover:bg-foreground/90">
                 Create Agent
               </Button>
             </form>

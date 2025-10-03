@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { signIn } from "@/lib/auth";
-import { Bot } from "lucide-react";
+import fiveleafLogo from "@/assets/fiveleaf-logo.png";
 
 export default function ClientAuth() {
   const [email, setEmail] = useState("");
@@ -39,10 +39,8 @@ export default function ClientAuth() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
       <Card className="w-full max-w-md p-8 bg-gradient-card border-border/50">
         <div className="flex flex-col items-center mb-8">
-          <div className="bg-primary/10 p-3 rounded-full mb-4">
-            <Bot className="h-8 w-8 text-primary" />
-          </div>
-          <h1 className="text-3xl font-bold text-foreground">AgentDash</h1>
+          <img src={fiveleafLogo} alt="Fiveleaf" className="h-16 w-16 object-contain mb-4" />
+          <h1 className="text-3xl font-semibold text-foreground">Fiveleaf</h1>
           <p className="text-muted-foreground mt-2">Client Portal</p>
         </div>
 

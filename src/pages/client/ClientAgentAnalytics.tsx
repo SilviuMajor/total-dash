@@ -94,7 +94,7 @@ export default function ClientAgentAnalytics() {
               <div key={i} className="flex flex-col items-center gap-2">
                 <div className="w-full flex items-end justify-center h-32">
                   <div 
-                    className="w-full bg-gradient-accent rounded-t transition-all hover:opacity-80"
+                    className="w-full bg-foreground rounded-t transition-all hover:opacity-80"
                     style={{ height: `${height}%` }}
                   />
                 </div>

@@ -139,7 +139,7 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
           <h3 className="text-lg font-semibold text-foreground">Client Users</h3>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-gradient-accent hover:opacity-90 gap-2">
+              <Button className="bg-foreground text-background hover:bg-foreground/90 gap-2">
                 <Plus className="w-4 h-4" />
                 Add User
               </Button>
@@ -177,7 +177,7 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
                     </SelectContent>
                   </Select>
                 </div>
-                <Button type="submit" className="w-full bg-gradient-accent hover:opacity-90">
+                <Button type="submit" className="w-full bg-foreground text-background hover:bg-foreground/90">
                   Add User
                 </Button>
               </form>

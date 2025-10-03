@@ -45,7 +45,7 @@ export default function Settings() {
             />
           </div>
 
-          <Button className="bg-gradient-accent hover:opacity-90">
+          <Button className="bg-foreground text-background hover:bg-foreground/90">
             Save Settings
           </Button>
         </div>

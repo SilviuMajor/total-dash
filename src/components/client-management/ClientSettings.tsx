@@ -98,7 +98,7 @@ export function ClientSettings({ client, onUpdate }: ClientSettingsProps) {
           <Button
             type="submit"
             disabled={saving}
-            className="bg-gradient-accent hover:opacity-90 gap-2"
+            className="bg-foreground text-background hover:bg-foreground/90 gap-2"
           >
             <Save className="w-4 h-4" />
             {saving ? "Saving..." : "Save Changes"}

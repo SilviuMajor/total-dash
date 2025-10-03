@@ -3,6 +3,7 @@ import { LayoutDashboard, BarChart3, FileText, Settings, Users, Bot, LogOut } fr
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "./ui/button";
+import fiveleafLogo from "@/assets/fiveleaf-logo.png";
 
 const clientNavigation = [
   { name: "Conversations", href: "/", icon: LayoutDashboard },
@@ -25,12 +26,10 @@ export function Sidebar() {
   return (
     <div className="flex flex-col w-64 border-r border-border bg-card/50 backdrop-blur-sm">
       <div className="flex items-center gap-3 p-6 border-b border-border">
-        <div className="w-10 h-10 rounded-lg bg-gradient-primary flex items-center justify-center shadow-glow">
-          <Bot className="w-6 h-6 text-primary-foreground" />
-        </div>
+        <img src={fiveleafLogo} alt="Fiveleaf" className="w-10 h-10 object-contain" />
         <div>
-          <h1 className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-            AgentDash
+          <h1 className="text-xl font-semibold text-foreground">
+            Fiveleaf
           </h1>
           <p className="text-xs text-muted-foreground">
             {isAdmin ? 'Admin Portal' : 'Client Portal'}

@@ -45,7 +45,7 @@ export default function LiveCalls() {
 
               <div className="flex items-center gap-3">
                 {call.status === "Handover Requested" && (
-                  <Button className="bg-gradient-accent hover:opacity-90 gap-2">
+                  <Button className="bg-foreground text-background hover:bg-foreground/90 gap-2">
                     <UserCheck className="w-4 h-4" />
                     Accept Handover
                   </Button>

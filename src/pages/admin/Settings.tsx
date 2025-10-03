@@ -178,7 +178,7 @@ export default function AdminSettings() {
           <Button
             type="submit"
             disabled={savingDomain}
-            className="bg-gradient-accent hover:opacity-90"
+            className="bg-foreground text-background hover:bg-foreground/90"
           >
             {savingDomain ? "Saving..." : "Save Domain"}
           </Button>
@@ -190,7 +190,7 @@ export default function AdminSettings() {
         
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-gradient-accent hover:opacity-90 gap-2">
+            <Button className="bg-foreground text-background hover:bg-foreground/90 gap-2">
               <Plus className="w-4 h-4" />
               Invite Member
             </Button>
@@ -223,7 +223,7 @@ export default function AdminSettings() {
                   className="bg-muted/50 border-border"
                 />
               </div>
-              <Button type="submit" className="w-full bg-gradient-accent hover:opacity-90">
+              <Button type="submit" className="w-full bg-foreground text-background hover:bg-foreground/90">
                 Send Invitation
               </Button>
             </form>
