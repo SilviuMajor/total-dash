@@ -19,9 +19,16 @@ const adminNavigation = [
 ];
 
 export function Sidebar() {
-  const { profile, signOut } = useAuth();
+  const { profile, signOut, hasPageAccess } = useAuth();
   const isAdmin = profile?.role === 'admin';
-  const navigation = isAdmin ? adminNavigation : clientNavigation;
+  
+  // Filter navigation based on permissions for client users
+  const navigation = isAdmin 
+    ? adminNavigation 
+    : clientNavigation.filter(item => {
+        const pageName = item.href === '/' ? 'dashboard' : item.href.substring(1);
+        return hasPageAccess(pageName);
+      });
 
   return (
     <div className="flex flex-col w-64 border-r border-border bg-card/50 backdrop-blur-sm">

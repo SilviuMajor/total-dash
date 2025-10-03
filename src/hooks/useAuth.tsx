@@ -10,11 +10,20 @@ interface Profile {
   role: 'admin' | 'client';
 }
 
+interface PagePermissions {
+  dashboard?: boolean;
+  analytics?: boolean;
+  transcripts?: boolean;
+  settings?: boolean;
+}
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   profile: Profile | null;
   loading: boolean;
+  userPermissions: PagePermissions | null;
+  hasPageAccess: (pageName: string) => boolean;
   signOut: () => Promise<void>;
 }
 
@@ -23,6 +32,8 @@ const AuthContext = createContext<AuthContextType>({
   session: null,
   profile: null,
   loading: true,
+  userPermissions: null,
+  hasPageAccess: () => false,
   signOut: async () => {},
 });
 
@@ -32,6 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [userPermissions, setUserPermissions] = useState<PagePermissions | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -74,11 +86,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (error) throw error;
       setProfile(data);
+
+      // Load user permissions if they're a client user
+      if (data.role === 'client') {
+        const { data: clientUserData } = await supabase
+          .from('client_users')
+          .select('page_permissions')
+          .eq('user_id', userId)
+          .single();
+
+        if (clientUserData) {
+          setUserPermissions(clientUserData.page_permissions as PagePermissions);
+        }
+      } else {
+        // Admins have access to everything
+        setUserPermissions({
+          dashboard: true,
+          analytics: true,
+          transcripts: true,
+          settings: true,
+        });
+      }
     } catch (error) {
       console.error('Error loading profile:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const hasPageAccess = (pageName: string): boolean => {
+    if (!userPermissions) return false;
+    return userPermissions[pageName as keyof PagePermissions] ?? false;
   };
 
   const handleSignOut = async () => {
@@ -93,6 +131,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         session,
         profile,
         loading,
+        userPermissions,
+        hasPageAccess,
         signOut: handleSignOut,
       }}
     >

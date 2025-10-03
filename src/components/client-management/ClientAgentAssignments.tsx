@@ -2,23 +2,99 @@ import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Bot, Save } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Bot, GripVertical, Trash2, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface Agent {
   id: string;
   name: string;
   provider: string;
+  config: any;
+}
+
+interface AssignedAgent extends Agent {
+  sort_order: number;
+  assignment_id: string;
+}
+
+function SortableAgentCard({ agent, onRemove }: { agent: AssignedAgent; onRemove: (id: string) => void }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: agent.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="flex items-center gap-4 p-4 rounded-lg border border-border/50 bg-card hover:bg-muted/50 transition-colors"
+    >
+      <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
+        <GripVertical className="w-5 h-5 text-muted-foreground" />
+      </div>
+      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+        <Bot className="w-5 h-5 text-primary" />
+      </div>
+      <div className="flex-1">
+        <p className="font-medium text-foreground">{agent.name}</p>
+        <p className="text-sm text-muted-foreground">{agent.provider}</p>
+      </div>
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => onRemove(agent.assignment_id)}
+      >
+        <Trash2 className="w-4 h-4 text-destructive" />
+      </Button>
+    </div>
+  );
 }
 
 export function ClientAgentAssignments({ clientId }: { clientId: string }) {
-  const [agents, setAgents] = useState<Agent[]>([]);
-  const [assignedAgentIds, setAssignedAgentIds] = useState<Set<string>>(new Set());
+  const [assignedAgents, setAssignedAgents] = useState<AssignedAgent[]>([]);
+  const [availableAgents, setAvailableAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
+  const [agentToRemove, setAgentToRemove] = useState<string | null>(null);
   const { toast } = useToast();
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   useEffect(() => {
     loadData();
@@ -26,16 +102,45 @@ export function ClientAgentAssignments({ clientId }: { clientId: string }) {
 
   const loadData = async () => {
     try {
-      const [agentsResult, assignmentsResult] = await Promise.all([
-        supabase.from('agents').select('*').order('name'),
-        supabase.from('agent_assignments').select('agent_id').eq('client_id', clientId),
-      ]);
+      // Load assigned agents with their assignments
+      const { data: assignmentsData, error: assignmentsError } = await supabase
+        .from('agent_assignments')
+        .select(`
+          id,
+          agent_id,
+          sort_order,
+          agents (
+            id,
+            name,
+            provider,
+            config
+          )
+        `)
+        .eq('client_id', clientId)
+        .order('sort_order');
 
-      if (agentsResult.error) throw agentsResult.error;
-      if (assignmentsResult.error) throw assignmentsResult.error;
+      if (assignmentsError) throw assignmentsError;
 
-      setAgents(agentsResult.data || []);
-      setAssignedAgentIds(new Set(assignmentsResult.data?.map(a => a.agent_id) || []));
+      const assigned = (assignmentsData || []).map((assignment: any) => ({
+        ...assignment.agents,
+        sort_order: assignment.sort_order,
+        assignment_id: assignment.id,
+      }));
+
+      setAssignedAgents(assigned);
+
+      // Load all agents to find available ones
+      const { data: allAgents, error: agentsError } = await supabase
+        .from('agents')
+        .select('*')
+        .order('name');
+
+      if (agentsError) throw agentsError;
+
+      const assignedIds = new Set(assigned.map((a: AssignedAgent) => a.id));
+      const available = (allAgents || []).filter((agent: Agent) => !assignedIds.has(agent.id));
+      
+      setAvailableAgents(available);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -47,115 +152,215 @@ export function ClientAgentAssignments({ clientId }: { clientId: string }) {
     }
   };
 
-  const handleToggleAgent = (agentId: string) => {
-    const newAssigned = new Set(assignedAgentIds);
-    if (newAssigned.has(agentId)) {
-      newAssigned.delete(agentId);
-    } else {
-      newAssigned.add(agentId);
-    }
-    setAssignedAgentIds(newAssigned);
-  };
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
 
-  const handleSaveAssignments = async () => {
-    setSaving(true);
-    try {
-      // Delete existing assignments
-      await supabase
-        .from('agent_assignments')
-        .delete()
-        .eq('client_id', clientId);
+    if (over && active.id !== over.id) {
+      const oldIndex = assignedAgents.findIndex((a) => a.id === active.id);
+      const newIndex = assignedAgents.findIndex((a) => a.id === over.id);
 
-      // Insert new assignments with sort_order
-      if (assignedAgentIds.size > 0) {
-        const assignments = Array.from(assignedAgentIds).map((agentId, index) => ({
-          client_id: clientId,
-          agent_id: agentId,
-          sort_order: index, // Set order based on current list order
+      const newOrder = arrayMove(assignedAgents, oldIndex, newIndex);
+      setAssignedAgents(newOrder);
+
+      try {
+        const updates = newOrder.map((agent, index) => ({
+          id: agent.assignment_id,
+          sort_order: index,
         }));
 
-        const { error } = await supabase
-          .from('agent_assignments')
-          .insert(assignments);
+        for (const update of updates) {
+          await supabase
+            .from('agent_assignments')
+            .update({ sort_order: update.sort_order })
+            .eq('id', update.id);
+        }
 
-        if (error) throw error;
+        toast({
+          title: "Success",
+          description: "Agent order updated",
+        });
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        });
+        loadData();
       }
+    }
+  };
+
+  const handleAssignAgent = async (agentId: string) => {
+    try {
+      const { error } = await supabase
+        .from('agent_assignments')
+        .insert({
+          client_id: clientId,
+          agent_id: agentId,
+          sort_order: assignedAgents.length,
+        });
+
+      if (error) throw error;
 
       toast({
         title: "Success",
-        description: "Agent assignments saved successfully",
+        description: "Agent assigned successfully",
       });
+      loadData();
+      setDialogOpen(false);
     } catch (error: any) {
       toast({
         title: "Error",
         description: error.message,
         variant: "destructive",
       });
-    } finally {
-      setSaving(false);
     }
   };
 
+  const handleRemoveAgent = async () => {
+    if (!agentToRemove) return;
+
+    try {
+      const { error } = await supabase
+        .from('agent_assignments')
+        .delete()
+        .eq('id', agentToRemove);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Agent removed successfully",
+      });
+      loadData();
+      setRemoveDialogOpen(false);
+      setAgentToRemove(null);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (loading) {
+    return (
+      <Card className="p-6 bg-gradient-card border-border/50">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-muted rounded w-1/4"></div>
+          <div className="h-16 bg-muted rounded"></div>
+        </div>
+      </Card>
+    );
+  }
+
   return (
-    <div className="space-y-6">
+    <>
       <Card className="p-6 bg-gradient-card border-border/50">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h3 className="text-lg font-semibold text-foreground">Assign Agents</h3>
-            <p className="text-sm text-muted-foreground">
-              Select which agents this client can access
-            </p>
+            <h2 className="text-2xl font-semibold text-foreground">
+              Assigned Agents
+              {assignedAgents.length > 0 && (
+                <Badge variant="secondary" className="ml-2">{assignedAgents.length}</Badge>
+              )}
+            </h2>
+            <p className="text-sm text-muted-foreground">Drag to reorder agents</p>
           </div>
-          <Button
-            onClick={handleSaveAssignments}
-            disabled={saving}
-            className="bg-foreground text-background hover:bg-foreground/90 gap-2"
-          >
-            <Save className="w-4 h-4" />
-            {saving ? "Saving..." : "Save Changes"}
+          <Button onClick={() => setDialogOpen(true)} className="bg-foreground text-background hover:bg-foreground/90">
+            <Plus className="w-4 h-4 mr-2" />
+            Assign Agent
           </Button>
         </div>
 
-        {loading ? (
-          <div className="space-y-4">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-16 bg-muted/30 rounded-lg animate-pulse" />
-            ))}
-          </div>
-        ) : agents.length === 0 ? (
+        {assignedAgents.length === 0 ? (
           <div className="text-center py-12">
             <Bot className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground">No agents available</p>
+            <p className="text-muted-foreground mb-4">No agents assigned yet</p>
+            <Button onClick={() => setDialogOpen(true)} variant="outline">
+              Assign Your First Agent
+            </Button>
           </div>
         ) : (
-          <div className="space-y-3">
-            {agents.map((agent) => (
-              <div
-                key={agent.id}
-                className="flex items-center justify-between p-4 rounded-lg border border-border/50 bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors"
-                onClick={() => handleToggleAgent(agent.id)}
-              >
-                <div className="flex items-center gap-3">
-                  <Checkbox
-                    checked={assignedAgentIds.has(agent.id)}
-                    onCheckedChange={() => handleToggleAgent(agent.id)}
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={assignedAgents.map((a) => a.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="space-y-3">
+                {assignedAgents.map((agent) => (
+                  <SortableAgentCard
+                    key={agent.id}
+                    agent={agent}
+                    onRemove={(id) => {
+                      setAgentToRemove(id);
+                      setRemoveDialogOpen(true);
+                    }}
                   />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+        )}
+      </Card>
+
+      {/* Assign Agent Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Assign Agent</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 max-h-96 overflow-y-auto">
+            {availableAgents.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                All agents are already assigned to this client.
+              </div>
+            ) : (
+              availableAgents.map((agent) => (
+                <div
+                  key={agent.id}
+                  className="flex items-center gap-4 p-4 rounded-lg border border-border/50 bg-card hover:bg-muted/50 transition-colors cursor-pointer"
+                  onClick={() => handleAssignAgent(agent.id)}
+                >
                   <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
                     <Bot className="w-5 h-5 text-primary" />
                   </div>
-                  <div>
+                  <div className="flex-1">
                     <p className="font-medium text-foreground">{agent.name}</p>
                     <p className="text-sm text-muted-foreground">{agent.provider}</p>
                   </div>
+                  <Button variant="outline" size="sm">
+                    Assign
+                  </Button>
                 </div>
-                <Badge variant={assignedAgentIds.has(agent.id) ? "default" : "outline"}>
-                  {assignedAgentIds.has(agent.id) ? "Assigned" : "Not Assigned"}
-                </Badge>
-              </div>
-            ))}
+              ))
+            )}
           </div>
-        )}
-      </Card>
-    </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Remove Agent Confirmation */}
+      <AlertDialog open={removeDialogOpen} onOpenChange={setRemoveDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Agent</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove this agent from the client? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleRemoveAgent} className="bg-destructive hover:bg-destructive/90">
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

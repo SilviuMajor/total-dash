@@ -10,6 +10,7 @@ import { ClientOverview } from "@/components/client-management/ClientOverview";
 import { ClientUsersManagement } from "@/components/client-management/ClientUsersManagement";
 import { ClientAgentAssignments } from "@/components/client-management/ClientAgentAssignments";
 import { ClientSettings } from "@/components/client-management/ClientSettings";
+import { DepartmentManagement } from "@/components/client-management/DepartmentManagement";
 
 interface ClientData {
   id: string;
@@ -110,7 +111,10 @@ export default function ClientDetails() {
         </TabsContent>
 
         <TabsContent value="settings">
-          <ClientSettings client={client} onUpdate={loadClientData} />
+          <div className="space-y-6">
+            <ClientSettings client={client} onUpdate={loadClientData} />
+            <DepartmentManagement clientId={client.id} />
+          </div>
         </TabsContent>
       </Tabs>
     </div>

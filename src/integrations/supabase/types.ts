@@ -110,6 +110,7 @@ export type Database = {
           company_name: string | null
           created_at: string | null
           custom_css: string | null
+          default_user_permissions: Json | null
           id: string
           logo_url: string | null
           primary_color: string | null
@@ -121,6 +122,7 @@ export type Database = {
           company_name?: string | null
           created_at?: string | null
           custom_css?: string | null
+          default_user_permissions?: Json | null
           id?: string
           logo_url?: string | null
           primary_color?: string | null
@@ -132,6 +134,7 @@ export type Database = {
           company_name?: string | null
           created_at?: string | null
           custom_css?: string | null
+          default_user_permissions?: Json | null
           id?: string
           logo_url?: string | null
           primary_color?: string | null
@@ -203,25 +206,37 @@ export type Database = {
       }
       client_users: {
         Row: {
+          avatar_url: string | null
           client_id: string
           created_at: string | null
+          department_id: string | null
+          full_name: string | null
           id: string
+          page_permissions: Json | null
           role: string | null
           updated_at: string | null
           user_id: string
         }
         Insert: {
+          avatar_url?: string | null
           client_id: string
           created_at?: string | null
+          department_id?: string | null
+          full_name?: string | null
           id?: string
+          page_permissions?: Json | null
           role?: string | null
           updated_at?: string | null
           user_id: string
         }
         Update: {
+          avatar_url?: string | null
           client_id?: string
           created_at?: string | null
+          department_id?: string | null
+          full_name?: string | null
           id?: string
+          page_permissions?: Json | null
           role?: string | null
           updated_at?: string | null
           user_id?: string
@@ -232,6 +247,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_users_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
             referencedColumns: ["id"]
           },
           {
@@ -326,6 +348,41 @@ export type Database = {
           },
         ]
       }
+      departments: {
+        Row: {
+          client_id: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "departments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string | null
@@ -393,10 +450,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_page_permission: {
+        Args: { _client_id: string; _page_name: string; _user_id: string }
+        Returns: boolean
+      }
       get_user_client_ids: {
         Args: { user_id: string }
         Returns: {
           client_id: string
+        }[]
+      }
+      get_user_departments: {
+        Args: { _client_id: string }
+        Returns: {
+          description: string
+          id: string
+          name: string
         }[]
       }
       is_admin: {
