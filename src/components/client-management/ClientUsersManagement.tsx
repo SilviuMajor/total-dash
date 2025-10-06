@@ -345,7 +345,7 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">No Department</SelectItem>
-                  {departments.map((dept) => (
+                  {departments.filter(dept => dept.id && dept.id.trim() !== '').map((dept) => (
                     <SelectItem key={dept.id} value={dept.id}>
                       {dept.name}
                     </SelectItem>
@@ -488,7 +488,7 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">No Department</SelectItem>
-                    {departments.map((dept) => (
+                    {departments.filter(dept => dept.id && dept.id.trim() !== '').map((dept) => (
                       <SelectItem key={dept.id} value={dept.id}>
                         {dept.name}
                       </SelectItem>

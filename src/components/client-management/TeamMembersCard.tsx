@@ -315,7 +315,7 @@ export function TeamMembersCard({ clientId }: { clientId: string }) {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">None</SelectItem>
-                      {departments.map((dept) => (
+                      {departments.filter(dept => dept.id && dept.id.trim() !== '').map((dept) => (
                         <SelectItem key={dept.id} value={dept.id}>
                           {dept.name}
                         </SelectItem>
@@ -562,7 +562,7 @@ export function TeamMembersCard({ clientId }: { clientId: string }) {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">None</SelectItem>
-                    {departments.map((dept) => (
+                    {departments.filter(dept => dept.id && dept.id.trim() !== '').map((dept) => (
                       <SelectItem key={dept.id} value={dept.id}>
                         {dept.name}
                       </SelectItem>
