@@ -39,7 +39,7 @@ export default function AdminSettings() {
       const { data, error } = await supabase
         .from('agency_settings')
         .select('agency_domain, agency_name, agency_logo_url')
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       setAgencyDomain(data?.agency_domain || "");
@@ -47,6 +47,26 @@ export default function AdminSettings() {
       setAgencyLogoUrl(data?.agency_logo_url || "");
     } catch (error) {
       console.error('Error loading agency settings:', error);
+    }
+  };
+
+  const handleLogoUpload = async (url: string) => {
+    setAgencyLogoUrl(url);
+    
+    try {
+      const { data: settingsData } = await supabase
+        .from('agency_settings')
+        .select('id')
+        .maybeSingle();
+
+      if (settingsData?.id) {
+        await supabase
+          .from('agency_settings')
+          .update({ agency_logo_url: url })
+          .eq('id', settingsData.id);
+      }
+    } catch (error) {
+      console.error('Error saving logo:', error);
     }
   };
 
@@ -192,7 +212,7 @@ export default function AdminSettings() {
 
           <AgencyLogoUpload
             currentUrl={agencyLogoUrl}
-            onUploadComplete={(url) => setAgencyLogoUrl(url)}
+            onUploadComplete={handleLogoUpload}
           />
           <p className="text-xs text-muted-foreground -mt-4">
             This logo will appear in the top-right of all dashboards and in the sidebar
