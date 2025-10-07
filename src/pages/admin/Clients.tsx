@@ -236,7 +236,7 @@ export default function AdminClients() {
                   <Button
                     variant="outline"
                     className="border-border/50 gap-2"
-                    onClick={() => window.open(`/client/${client.id}/dashboard`, '_blank')}
+                    onClick={() => window.open(`/?preview=true&clientId=${client.id}`, '_blank')}
                   >
                     <ExternalLink className="w-4 h-4" />
                     View Dashboard

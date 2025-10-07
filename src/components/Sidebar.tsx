@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { NavLink } from "react-router-dom";
-import { LayoutDashboard, BarChart3, FileText, Settings, Users, Bot, LogOut } from "lucide-react";
+import { NavLink, useLocation } from "react-router-dom";
+import { LayoutDashboard, BarChart3, FileText, Settings, Users, Bot, LogOut, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "./ui/button";
@@ -22,9 +22,14 @@ const adminNavigation = [
 
 export function Sidebar() {
   const { profile, signOut, hasPageAccess } = useAuth();
+  const location = useLocation();
   const isAdmin = profile?.role === 'admin';
   const [agencyName, setAgencyName] = useState("Fiveleaf");
   const [agencyLogo, setAgencyLogo] = useState(fiveleafLogo);
+  
+  // Check for preview mode
+  const searchParams = new URLSearchParams(location.search);
+  const isPreviewMode = searchParams.get('preview') === 'true';
   
   useEffect(() => {
     const loadAgencyBranding = async () => {
@@ -56,10 +61,19 @@ export function Sidebar() {
             {agencyName}
           </h1>
           <p className="text-xs text-muted-foreground">
-            {isAdmin ? 'Admin Portal' : 'Client Portal'}
+            {isAdmin && !isPreviewMode ? 'Admin Portal' : 'Client Portal'}
           </p>
         </div>
       </div>
+      
+      {isPreviewMode && (
+        <div className="px-4 py-2 bg-blue-600/10 border-b border-blue-600/20">
+          <div className="flex items-center gap-2 text-blue-600 text-sm">
+            <Eye className="w-4 h-4" />
+            <span>Preview Mode</span>
+          </div>
+        </div>
+      )}
 
       <nav className="flex-1 p-4 space-y-1">
         {navigation.map((item) => (

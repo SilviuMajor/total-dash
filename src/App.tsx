@@ -7,6 +7,7 @@ import { AuthProvider } from "./hooks/useAuth";
 import { ClientAgentProvider } from "./hooks/useClientAgentContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { Sidebar } from "./components/Sidebar";
+import { AdminPreviewBanner } from "./components/AdminPreviewBanner";
 import Auth from "./pages/Auth";
 import Settings from "./pages/Settings";
 import AdminClients from "./pages/admin/Clients";
@@ -39,8 +40,10 @@ const App = () => (
                   <ProtectedRoute>
                     <div className="flex min-h-screen w-full bg-background">
                       <Sidebar />
-                      <main className="flex-1 p-8 overflow-y-auto">
-                        <Routes>
+                      <div className="flex-1 flex flex-col">
+                        <AdminPreviewBanner />
+                        <main className="flex-1 p-8 overflow-y-auto">
+                          <Routes>
                           {/* Client Routes - Agent-specific dashboards */}
                           <Route 
                             path="/" 
@@ -119,8 +122,9 @@ const App = () => (
 
                           {/* 404 */}
                           <Route path="*" element={<NotFound />} />
-                        </Routes>
-                      </main>
+                          </Routes>
+                        </main>
+                      </div>
                     </div>
                   </ProtectedRoute>
                 }

@@ -18,6 +18,14 @@ export function ProtectedRoute({
   const { user, profile, loading, hasPageAccess } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  
+  // Parse URL query parameters for preview mode
+  const searchParams = new URLSearchParams(location.search);
+  const isPreviewMode = searchParams.get('preview') === 'true';
+  const previewClientId = searchParams.get('clientId');
+  
+  // Admin in preview mode can access client routes
+  const isAdminPreview = profile?.role === 'admin' && isPreviewMode && previewClientId;
 
   useEffect(() => {
     if (!loading) {
@@ -26,10 +34,11 @@ export function ProtectedRoute({
         navigate('/auth');
       } else if (requireAdmin && profile?.role !== 'admin') {
         navigate('/');
-      } else if (requireClient && profile?.role === 'admin') {
+      } else if (requireClient && profile?.role === 'admin' && !isAdminPreview) {
+        // Only redirect if NOT in preview mode
         navigate('/admin/clients');
-      } else if (requiredPage && !hasPageAccess(requiredPage)) {
-        // Silent redirect to first available page
+      } else if (requiredPage && !hasPageAccess(requiredPage) && !isAdminPreview) {
+        // Skip page permission check for admin preview
         if (hasPageAccess('dashboard')) {
           navigate('/', { replace: true });
         } else if (hasPageAccess('analytics')) {
@@ -43,7 +52,7 @@ export function ProtectedRoute({
         }
       }
     }
-  }, [user, profile, loading, navigate, requireAdmin, requireClient, requiredPage, hasPageAccess, location.pathname]);
+  }, [user, profile, loading, navigate, requireAdmin, requireClient, requiredPage, hasPageAccess, location.pathname, isAdminPreview]);
 
   if (loading) {
     return (
@@ -53,12 +62,12 @@ export function ProtectedRoute({
     );
   }
 
-  if (!user || (requireAdmin && profile?.role !== 'admin') || (requireClient && profile?.role === 'admin')) {
+  if (!user || (requireAdmin && profile?.role !== 'admin') || (requireClient && profile?.role === 'admin' && !isAdminPreview)) {
     return null;
   }
 
-  // Check page permissions for client users
-  if (requiredPage && !hasPageAccess(requiredPage)) {
+  // Check page permissions for client users (skip for admin preview)
+  if (requiredPage && !hasPageAccess(requiredPage) && !isAdminPreview) {
     return null;
   }
 
