@@ -1,7 +1,9 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Users, Bot, Activity, Mail, Phone, MapPin } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
 interface ClientOverviewProps {
@@ -19,6 +21,7 @@ interface ClientOverviewProps {
 }
 
 export function ClientOverview({ client }: ClientOverviewProps) {
+  const navigate = useNavigate();
   const [stats, setStats] = useState({
     totalUsers: 0,
     assignedAgents: 0,
@@ -110,15 +113,19 @@ export function ClientOverview({ client }: ClientOverviewProps) {
           </div>
 
           <div className="flex items-start gap-3 py-3 border-b border-border/50">
-            <Bot className="w-4 h-4 text-muted-foreground mt-1" />
             <div className="flex-1">
               <span className="text-sm text-muted-foreground block mb-2">Assigned Agents</span>
               {stats.assignedAgentNames.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
                   {stats.assignedAgentNames.map((name, index) => (
-                    <Badge key={index} variant="outline" className="bg-primary/5">
+                    <Button
+                      key={index}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate(`/admin/clients/${client.id}?tab=agents`)}
+                    >
                       {name}
-                    </Badge>
+                    </Button>
                   ))}
                 </div>
               ) : (
