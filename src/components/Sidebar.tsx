@@ -82,6 +82,14 @@ export function Sidebar() {
         return selectedAgentPermissions?.[item.permissionKey] === true;
       });
 
+  // Helper to preserve preview params in navigation URLs
+  const getNavHref = (basePath: string) => {
+    if (isPreviewMode && previewClientId) {
+      return `${basePath}?preview=true&clientId=${previewClientId}`;
+    }
+    return basePath;
+  };
+
   return (
     <div className="flex flex-col w-64 border-r border-border bg-card/50 backdrop-blur-sm">
       <div className="flex items-center gap-3 p-6 border-b border-border">
@@ -115,7 +123,7 @@ export function Sidebar() {
         {navigation.map((item) => (
           <NavLink
             key={item.name}
-            to={item.href}
+            to={getNavHref(item.href)}
             end={item.href === "/" || item.href === "/admin"}
             className={({ isActive }) =>
               cn(
