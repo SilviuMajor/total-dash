@@ -93,13 +93,12 @@ export default function AdminClients() {
   };
   return <div className="space-y-8">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-4xl font-bold text-foreground mb-2">Client Management</h1>
-          <p className="text-muted-foreground">Manage your client accounts and assignments.</p>
-        </div>
-        {agencyLogoUrl}
-        
-        <Dialog open={open} onOpenChange={setOpen}>
+      <div>
+        <h1 className="text-4xl font-bold text-foreground mb-2">Client Management</h1>
+        <p className="text-muted-foreground">Manage your client accounts and assignments.</p>
+      </div>
+      
+      <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button className="bg-foreground text-background hover:bg-foreground/90 gap-2">
               <Plus className="w-4 h-4" />
