@@ -1,8 +1,10 @@
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { useClientAgentContext } from "@/hooks/useClientAgentContext";
 import { ClientAgentSelector } from "@/components/ClientAgentSelector";
 import { NoAgentsAssigned } from "@/components/NoAgentsAssigned";
+import { supabase } from "@/integrations/supabase/client";
 
 const callVolumeData = [
   { name: "Mon", calls: 145 },
@@ -23,6 +25,21 @@ const performanceData = [
 
 export default function ClientAgentAnalytics() {
   const { agents } = useClientAgentContext();
+  const [agencyLogoUrl, setAgencyLogoUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadAgencyLogo = async () => {
+      const { data } = await supabase
+        .from('agency_settings')
+        .select('agency_logo_url')
+        .single();
+      
+      if (data?.agency_logo_url) {
+        setAgencyLogoUrl(data.agency_logo_url);
+      }
+    };
+    loadAgencyLogo();
+  }, []);
 
   if (agents.length === 0) {
     return <NoAgentsAssigned />;
@@ -35,7 +52,16 @@ export default function ClientAgentAnalytics() {
           <h1 className="text-4xl font-bold text-foreground mb-2">Analytics</h1>
           <p className="text-muted-foreground">Deep dive into your AI agent performance metrics.</p>
         </div>
-        <ClientAgentSelector />
+        <div className="flex items-center gap-4">
+          <ClientAgentSelector />
+          {agencyLogoUrl && (
+            <img 
+              src={agencyLogoUrl} 
+              alt="Agency logo" 
+              className="w-16 h-16 object-contain"
+            />
+          )}
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">

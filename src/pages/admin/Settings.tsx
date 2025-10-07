@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, UserCog, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { AgencyLogoUpload } from "@/components/agency-management/AgencyLogoUpload";
 
 interface AgencyMember {
   id: string;
@@ -23,7 +24,9 @@ export default function AdminSettings() {
   const [newMemberEmail, setNewMemberEmail] = useState("");
   const [newMemberName, setNewMemberName] = useState("");
   const [agencyDomain, setAgencyDomain] = useState("");
-  const [savingDomain, setSavingDomain] = useState(false);
+  const [agencyName, setAgencyName] = useState("");
+  const [agencyLogoUrl, setAgencyLogoUrl] = useState("");
+  const [savingSettings, setSavingSettings] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -35,31 +38,42 @@ export default function AdminSettings() {
     try {
       const { data, error } = await supabase
         .from('agency_settings')
-        .select('agency_domain')
+        .select('agency_domain, agency_name, agency_logo_url')
         .single();
 
       if (error) throw error;
       setAgencyDomain(data?.agency_domain || "");
+      setAgencyName(data?.agency_name || "");
+      setAgencyLogoUrl(data?.agency_logo_url || "");
     } catch (error) {
       console.error('Error loading agency settings:', error);
     }
   };
 
-  const handleSaveAgencyDomain = async (e: React.FormEvent) => {
+  const handleSaveAgencySettings = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSavingDomain(true);
+    setSavingSettings(true);
 
     try {
+      const { data: settingsData } = await supabase
+        .from('agency_settings')
+        .select('id')
+        .single();
+
       const { error } = await supabase
         .from('agency_settings')
-        .update({ agency_domain: agencyDomain })
-        .eq('id', (await supabase.from('agency_settings').select('id').single()).data?.id);
+        .update({ 
+          agency_domain: agencyDomain,
+          agency_name: agencyName,
+          agency_logo_url: agencyLogoUrl
+        })
+        .eq('id', settingsData?.id);
 
       if (error) throw error;
 
       toast({
         title: "Success",
-        description: "Agency domain updated successfully",
+        description: "Agency settings updated successfully",
       });
     } catch (error: any) {
       toast({
@@ -68,7 +82,7 @@ export default function AdminSettings() {
         variant: "destructive",
       });
     } finally {
-      setSavingDomain(false);
+      setSavingSettings(false);
     }
   };
 
@@ -161,26 +175,49 @@ export default function AdminSettings() {
 
       <Card className="p-6 bg-gradient-card border-border/50">
         <h3 className="text-lg font-semibold text-foreground mb-6">Agency Configuration</h3>
-        <form onSubmit={handleSaveAgencyDomain} className="space-y-4">
+        <form onSubmit={handleSaveAgencySettings} className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="agency_name">Agency Name</Label>
+            <Input
+              id="agency_name"
+              value={agencyName}
+              onChange={(e) => setAgencyName(e.target.value)}
+              placeholder="Your Agency Name"
+              className="bg-muted/50 border-border"
+            />
+            <p className="text-xs text-muted-foreground">
+              This name will appear in the sidebar across all dashboards
+            </p>
+          </div>
+
+          <AgencyLogoUpload
+            currentUrl={agencyLogoUrl}
+            onUploadComplete={(url) => setAgencyLogoUrl(url)}
+          />
+          <p className="text-xs text-muted-foreground -mt-4">
+            This logo will appear in the top-right of all dashboards and in the sidebar
+          </p>
+
           <div className="space-y-2">
             <Label htmlFor="agency_domain">Client Portal Domain</Label>
             <Input
               id="agency_domain"
               value={agencyDomain}
               onChange={(e) => setAgencyDomain(e.target.value)}
-              placeholder="dashboard.fiveleaf.com"
+              placeholder="dashboard.youragency.com"
               className="bg-muted/50 border-border"
             />
             <p className="text-xs text-muted-foreground">
-              This is the universal domain where all clients will sign in to access their dashboards
+              Universal domain where all clients sign in
             </p>
           </div>
+
           <Button
             type="submit"
-            disabled={savingDomain}
+            disabled={savingSettings}
             className="bg-foreground text-background hover:bg-foreground/90"
           >
-            {savingDomain ? "Saving..." : "Save Domain"}
+            {savingSettings ? "Saving..." : "Save Settings"}
           </Button>
         </form>
       </Card>

@@ -1,8 +1,10 @@
+import { useState, useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import { LayoutDashboard, BarChart3, FileText, Settings, Users, Bot, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "./ui/button";
+import { supabase } from "@/integrations/supabase/client";
 import fiveleafLogo from "@/assets/fiveleaf-logo.png";
 
 const clientNavigation = [
@@ -21,6 +23,21 @@ const adminNavigation = [
 export function Sidebar() {
   const { profile, signOut, hasPageAccess } = useAuth();
   const isAdmin = profile?.role === 'admin';
+  const [agencyName, setAgencyName] = useState("Fiveleaf");
+  const [agencyLogo, setAgencyLogo] = useState(fiveleafLogo);
+  
+  useEffect(() => {
+    const loadAgencyBranding = async () => {
+      const { data } = await supabase
+        .from('agency_settings')
+        .select('agency_name, agency_logo_url')
+        .single();
+      
+      if (data?.agency_name) setAgencyName(data.agency_name);
+      if (data?.agency_logo_url) setAgencyLogo(data.agency_logo_url);
+    };
+    loadAgencyBranding();
+  }, []);
   
   // Filter navigation based on permissions for client users
   const navigation = isAdmin 
@@ -33,10 +50,10 @@ export function Sidebar() {
   return (
     <div className="flex flex-col w-64 border-r border-border bg-card/50 backdrop-blur-sm">
       <div className="flex items-center gap-3 p-6 border-b border-border">
-        <img src={fiveleafLogo} alt="Fiveleaf" className="w-10 h-10 object-contain" />
+        <img src={agencyLogo} alt={agencyName} className="w-10 h-10 object-contain" />
         <div>
           <h1 className="text-xl font-semibold text-foreground">
-            Fiveleaf
+            {agencyName}
           </h1>
           <p className="text-xs text-muted-foreground">
             {isAdmin ? 'Admin Portal' : 'Client Portal'}

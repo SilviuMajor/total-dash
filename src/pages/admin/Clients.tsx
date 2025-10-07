@@ -26,11 +26,24 @@ export default function AdminClients() {
   const [open, setOpen] = useState(false);
   const [newClientName, setNewClientName] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("active");
+  const [agencyLogoUrl, setAgencyLogoUrl] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     loadClients();
+    loadAgencyLogo();
   }, []);
+
+  const loadAgencyLogo = async () => {
+    const { data } = await supabase
+      .from('agency_settings')
+      .select('agency_logo_url')
+      .single();
+    
+    if (data?.agency_logo_url) {
+      setAgencyLogoUrl(data.agency_logo_url);
+    }
+  };
 
   const loadClients = async () => {
     try {
@@ -99,6 +112,13 @@ export default function AdminClients() {
           <h1 className="text-4xl font-bold text-foreground mb-2">Client Management</h1>
           <p className="text-muted-foreground">Manage your client accounts and assignments.</p>
         </div>
+        {agencyLogoUrl && (
+          <img 
+            src={agencyLogoUrl} 
+            alt="Agency logo" 
+            className="w-16 h-16 object-contain"
+          />
+        )}
         
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
@@ -196,9 +216,6 @@ export default function AdminClients() {
                     <h3 className="text-xl font-semibold text-foreground truncate">{client.name}</h3>
                     <Badge variant={getStatusBadgeVariant(client.status)} className="capitalize">
                       {client.status || 'active'}
-                    </Badge>
-                    <Badge variant="outline">
-                      {client.subscription_status || "Basic"}
                     </Badge>
                   </div>
                   <p className="text-sm text-muted-foreground">

@@ -34,10 +34,23 @@ export default function AgentDetails() {
   const [agent, setAgent] = useState<Agent | null>(null);
   const [assignedClients, setAssignedClients] = useState<AssignedClient[]>([]);
   const [loading, setLoading] = useState(true);
+  const [agencyLogoUrl, setAgencyLogoUrl] = useState<string | null>(null);
 
   useEffect(() => {
     loadAgentDetails();
+    loadAgencyLogo();
   }, [agentId]);
+
+  const loadAgencyLogo = async () => {
+    const { data } = await supabase
+      .from('agency_settings')
+      .select('agency_logo_url')
+      .single();
+    
+    if (data?.agency_logo_url) {
+      setAgencyLogoUrl(data.agency_logo_url);
+    }
+  };
 
   const loadAgentDetails = async () => {
     if (!agentId) return;
@@ -127,7 +140,8 @@ export default function AgentDetails() {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto p-8 space-y-6">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
           <Button
             variant="ghost"
             size="sm"
@@ -150,6 +164,14 @@ export default function AgentDetails() {
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
+          </div>
+          {agencyLogoUrl && (
+            <img 
+              src={agencyLogoUrl} 
+              alt="Agency logo" 
+              className="w-16 h-16 object-contain"
+            />
+          )}
         </div>
 
         <AgentDetailHeader agent={agent} assignedClients={assignedClients} />

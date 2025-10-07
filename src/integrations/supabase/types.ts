@@ -17,18 +17,24 @@ export type Database = {
       agency_settings: {
         Row: {
           agency_domain: string | null
+          agency_logo_url: string | null
+          agency_name: string | null
           created_at: string | null
           id: string
           updated_at: string | null
         }
         Insert: {
           agency_domain?: string | null
+          agency_logo_url?: string | null
+          agency_name?: string | null
           created_at?: string | null
           id?: string
           updated_at?: string | null
         }
         Update: {
           agency_domain?: string | null
+          agency_logo_url?: string | null
+          agency_name?: string | null
           created_at?: string | null
           id?: string
           updated_at?: string | null
