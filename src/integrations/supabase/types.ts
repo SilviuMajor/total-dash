@@ -210,6 +210,51 @@ export type Database = {
           },
         ]
       }
+      client_user_agent_permissions: {
+        Row: {
+          agent_id: string
+          client_id: string
+          created_at: string
+          id: string
+          permissions: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          agent_id: string
+          client_id: string
+          created_at?: string
+          id?: string
+          permissions?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          agent_id?: string
+          client_id?: string
+          created_at?: string
+          id?: string
+          permissions?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_user_agent_permissions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_user_agent_permissions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_users: {
         Row: {
           avatar_url: string | null

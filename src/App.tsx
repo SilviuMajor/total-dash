@@ -15,9 +15,10 @@ import AdminAgents from "./pages/admin/Agents";
 import AgentDetails from "./pages/admin/AgentDetails";
 import AdminSettings from "./pages/admin/Settings";
 import ClientDetails from "./pages/admin/ClientDetails";
-import ClientAgentDashboard from "./pages/client/ClientAgentDashboard";
-import ClientAgentAnalytics from "./pages/client/ClientAgentAnalytics";
-import ClientAgentTranscripts from "./pages/client/ClientAgentTranscripts";
+import Conversations from "./pages/client/Conversations";
+import Analytics from "./pages/client/Analytics";
+import KnowledgeBase from "./pages/client/KnowledgeBase";
+import AgentSettings from "./pages/client/AgentSettings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -44,12 +45,12 @@ const App = () => (
                         <AdminPreviewBanner />
                         <main className="flex-1 p-8 overflow-y-auto">
                           <Routes>
-                          {/* Client Routes - Agent-specific dashboards */}
+                          {/* Client Routes - Agent-specific pages */}
                           <Route 
                             path="/" 
                             element={
-                              <ProtectedRoute requireClient requiredPage="dashboard">
-                                <ClientAgentDashboard />
+                              <ProtectedRoute requireClient requiredPage="conversations">
+                                <Conversations />
                               </ProtectedRoute>
                             } 
                           />
@@ -57,23 +58,23 @@ const App = () => (
                             path="/analytics" 
                             element={
                               <ProtectedRoute requireClient requiredPage="analytics">
-                                <ClientAgentAnalytics />
+                                <Analytics />
                               </ProtectedRoute>
                             } 
                           />
                           <Route 
-                            path="/transcripts" 
+                            path="/knowledge-base" 
                             element={
-                              <ProtectedRoute requireClient requiredPage="transcripts">
-                                <ClientAgentTranscripts />
+                              <ProtectedRoute requireClient requiredPage="knowledge_base">
+                                <KnowledgeBase />
                               </ProtectedRoute>
                             } 
                           />
                           <Route 
-                            path="/settings" 
+                            path="/agent-settings" 
                             element={
-                              <ProtectedRoute requireClient requiredPage="settings">
-                                <Settings />
+                              <ProtectedRoute requireClient requiredPage="agent_settings">
+                                <AgentSettings />
                               </ProtectedRoute>
                             } 
                           />

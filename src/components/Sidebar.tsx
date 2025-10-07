@@ -1,17 +1,19 @@
 import { useState, useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { LayoutDashboard, BarChart3, FileText, Settings, Users, Bot, LogOut, Eye } from "lucide-react";
+import { MessageSquare, BarChart3, BookOpen, Settings, Users, Bot, LogOut, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import { useClientAgentContext } from "@/hooks/useClientAgentContext";
+import { ClientAgentSelector } from "./ClientAgentSelector";
 import { Button } from "./ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import fiveleafLogo from "@/assets/fiveleaf-logo.png";
 
 const clientNavigation = [
-  { name: "Conversations", href: "/", icon: LayoutDashboard },
-  { name: "Analytics", href: "/analytics", icon: BarChart3 },
-  { name: "Transcripts", href: "/transcripts", icon: FileText },
-  { name: "Settings", href: "/settings", icon: Settings },
+  { name: "Conversations", href: "/", icon: MessageSquare, permissionKey: "conversations" },
+  { name: "Analytics", href: "/analytics", icon: BarChart3, permissionKey: "analytics" },
+  { name: "Knowledge Base", href: "/knowledge-base", icon: BookOpen, permissionKey: "knowledge_base" },
+  { name: "Agent Settings", href: "/agent-settings", icon: Settings, permissionKey: "agent_settings" },
 ];
 
 const adminNavigation = [
@@ -21,7 +23,8 @@ const adminNavigation = [
 ];
 
 export function Sidebar() {
-  const { profile, signOut, hasPageAccess } = useAuth();
+  const { profile, signOut } = useAuth();
+  const { selectedAgentPermissions } = useClientAgentContext();
   const location = useLocation();
   const isAdmin = profile?.role === 'admin';
   const [agencyName, setAgencyName] = useState("Fiveleaf");
@@ -71,13 +74,12 @@ export function Sidebar() {
   const navigation = effectiveRole === 'admin' 
     ? adminNavigation 
     : clientNavigation.filter(item => {
-        const pageName = item.href === '/' ? 'dashboard' : item.href.substring(1);
         // In preview mode, use client's default permissions
         if (isPreviewMode && clientPermissions) {
-          return clientPermissions[pageName] !== false;
+          return clientPermissions[item.permissionKey] !== false;
         }
-        // Otherwise use hasPageAccess for regular client users
-        return hasPageAccess(pageName);
+        // Otherwise use selectedAgentPermissions for regular client users
+        return selectedAgentPermissions?.[item.permissionKey] === true;
       });
 
   return (
@@ -100,6 +102,12 @@ export function Sidebar() {
             <Eye className="w-4 h-4" />
             <span>Preview Mode</span>
           </div>
+        </div>
+      )}
+
+      {effectiveRole === 'client' && (
+        <div className="p-4 border-b border-border">
+          <ClientAgentSelector />
         </div>
       )}
 

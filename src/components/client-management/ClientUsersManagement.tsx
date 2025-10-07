@@ -18,16 +18,9 @@ import { PasswordDisplay } from "@/components/PasswordDisplay";
 interface ClientUser {
   id: string;
   user_id: string;
-  role: string;
   full_name: string | null;
   avatar_url: string | null;
   department_id: string | null;
-  page_permissions: {
-    dashboard?: boolean;
-    analytics?: boolean;
-    transcripts?: boolean;
-    settings?: boolean;
-  };
   profiles: {
     email: string;
   };
@@ -42,9 +35,25 @@ interface Department {
   description: string | null;
 }
 
+interface Agent {
+  id: string;
+  name: string;
+  provider: string;
+  sort_order: number;
+}
+
+interface AgentPermission {
+  agent_id: string;
+  analytics: boolean;
+  conversations: boolean;
+  knowledge_base: boolean;
+  agent_settings: boolean;
+}
+
 export function ClientUsersManagement({ clientId }: { clientId: string }) {
   const [users, setUsers] = useState<ClientUser[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [permissionsOpen, setPermissionsOpen] = useState(false);
@@ -55,22 +64,18 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
   
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserFullName, setNewUserFullName] = useState("");
-  const [newUserRole, setNewUserRole] = useState("user");
   const [newUserDepartment, setNewUserDepartment] = useState<string>("none");
   const [newUserAvatar, setNewUserAvatar] = useState("");
   const [newUserPassword, setNewUserPassword] = useState("");
-  const [newUserPermissions, setNewUserPermissions] = useState({
-    dashboard: true,
-    analytics: true,
-    transcripts: true,
-    settings: false,
-  });
+  const [newUserAgentPermissions, setNewUserAgentPermissions] = useState<Record<string, AgentPermission>>({});
+  const [selectedUserAgentPermissions, setSelectedUserAgentPermissions] = useState<Record<string, AgentPermission>>({});
 
   const { toast } = useToast();
 
   useEffect(() => {
     loadUsers();
     loadDepartments();
+    loadAgents();
   }, [clientId]);
 
   const loadUsers = async () => {
@@ -112,17 +117,89 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
     }
   };
 
+  const loadAgents = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('agent_assignments')
+        .select(`
+          agent_id,
+          sort_order,
+          agents (
+            id,
+            name,
+            provider
+          )
+        `)
+        .eq('client_id', clientId)
+        .order('sort_order', { ascending: true });
+
+      if (error) throw error;
+      
+      const agentsList = data
+        ?.map(a => ({
+          id: (a.agents as any).id,
+          name: (a.agents as any).name,
+          provider: (a.agents as any).provider,
+          sort_order: a.sort_order
+        }))
+        .filter(a => a.id) || [];
+
+      setAgents(agentsList);
+
+      // Initialize permissions for new user
+      const initialPermissions: Record<string, AgentPermission> = {};
+      agentsList.forEach(agent => {
+        initialPermissions[agent.id] = {
+          agent_id: agent.id,
+          analytics: true,
+          conversations: true,
+          knowledge_base: false,
+          agent_settings: false,
+        };
+      });
+      setNewUserAgentPermissions(initialPermissions);
+    } catch (error: any) {
+      console.error('Error loading agents:', error);
+    }
+  };
+
+  const loadUserAgentPermissions = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('client_user_agent_permissions')
+        .select('agent_id, permissions')
+        .eq('user_id', userId)
+        .eq('client_id', clientId);
+
+      if (error) throw error;
+
+      const permissions: Record<string, AgentPermission> = {};
+      data?.forEach(p => {
+        permissions[p.agent_id] = {
+          agent_id: p.agent_id,
+          ...(p.permissions as any),
+        };
+      });
+
+      setSelectedUserAgentPermissions(permissions);
+    } catch (error: any) {
+      console.error('Error loading user permissions:', error);
+    }
+  };
+
   const handleAddUser = async () => {
     try {
+      // Only include agents where user has access
+      const activePermissions = Object.values(newUserAgentPermissions);
+      
       const { data, error } = await supabase.functions.invoke('create-client-user', {
         body: {
           clientId,
           email: newUserEmail,
           fullName: newUserFullName,
-          role: newUserRole,
           departmentId: newUserDepartment === "none" ? null : newUserDepartment || null,
           avatarUrl: newUserAvatar || null,
-          pagePermissions: newUserPermissions,
+          agentPermissions: activePermissions,
           customPassword: newUserPassword || undefined,
         },
       });
@@ -138,16 +215,22 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
         loadUsers();
         setNewUserEmail("");
         setNewUserFullName("");
-        setNewUserRole("user");
         setNewUserDepartment("none");
         setNewUserAvatar("");
         setNewUserPassword("");
-        setNewUserPermissions({
-          dashboard: true,
-          analytics: true,
-          transcripts: true,
-          settings: false,
+        
+        // Reset permissions
+        const initialPermissions: Record<string, AgentPermission> = {};
+        agents.forEach(agent => {
+          initialPermissions[agent.id] = {
+            agent_id: agent.id,
+            analytics: true,
+            conversations: true,
+            knowledge_base: false,
+            agent_settings: false,
+          };
         });
+        setNewUserAgentPermissions(initialPermissions);
       }
     } catch (error: any) {
       setOpen(false);
@@ -164,17 +247,46 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
     if (!selectedUser) return;
 
     try {
-      const { error } = await supabase
+      // Update client_users basic info
+      const { error: userError } = await supabase
         .from('client_users')
         .update({
-          page_permissions: selectedUser.page_permissions,
           full_name: selectedUser.full_name,
-          role: selectedUser.role,
           department_id: selectedUser.department_id,
         })
         .eq('id', selectedUser.id);
 
-      if (error) throw error;
+      if (userError) throw userError;
+
+      // Delete existing permissions
+      const { error: deleteError } = await supabase
+        .from('client_user_agent_permissions')
+        .delete()
+        .eq('user_id', selectedUser.user_id)
+        .eq('client_id', clientId);
+
+      if (deleteError) throw deleteError;
+
+      // Insert new permissions
+      const permissionsToInsert = Object.values(selectedUserAgentPermissions).map(p => ({
+        user_id: selectedUser.user_id,
+        agent_id: p.agent_id,
+        client_id: clientId,
+        permissions: {
+          analytics: p.analytics,
+          conversations: p.conversations,
+          knowledge_base: p.knowledge_base,
+          agent_settings: p.agent_settings,
+        },
+      }));
+
+      if (permissionsToInsert.length > 0) {
+        const { error: insertError } = await supabase
+          .from('client_user_agent_permissions')
+          .insert(permissionsToInsert);
+
+        if (insertError) throw insertError;
+      }
 
       toast({
         title: "Success",
@@ -237,6 +349,26 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
     });
   };
 
+  const toggleAgentPermission = (agentId: string, field: keyof AgentPermission, value: boolean, isNewUser: boolean = true) => {
+    if (isNewUser) {
+      setNewUserAgentPermissions(prev => ({
+        ...prev,
+        [agentId]: {
+          ...prev[agentId],
+          [field]: value,
+        },
+      }));
+    } else {
+      setSelectedUserAgentPermissions(prev => ({
+        ...prev,
+        [agentId]: {
+          ...prev[agentId],
+          [field]: value,
+        },
+      }));
+    }
+  };
+
   if (loading) {
     return (
       <Card className="p-6 bg-gradient-card border-border/50">
@@ -282,7 +414,6 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <p className="font-medium text-foreground truncate">{user.full_name || "Unnamed User"}</p>
-                    <Badge variant="outline">{user.role}</Badge>
                     {user.departments && (
                       <Badge variant="secondary">{user.departments.name}</Badge>
                     )}
@@ -295,8 +426,9 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => {
+                    onClick={async () => {
                       setSelectedUser(user);
+                      await loadUserAgentPermissions(user.user_id);
                       setPermissionsOpen(true);
                     }}
                   >
@@ -321,7 +453,7 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
 
       {/* Add User Dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add New User</DialogTitle>
           </DialogHeader>
@@ -362,19 +494,6 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
               </Select>
             </div>
             <div>
-              <Label htmlFor="role">Role</Label>
-              <Select value={newUserRole} onValueChange={setNewUserRole}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="user">User</SelectItem>
-                  <SelectItem value="viewer">Viewer</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
               <Label htmlFor="avatar">Avatar</Label>
               <AvatarUpload
                 currentUrl={newUserAvatar}
@@ -394,51 +513,63 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
                 If left empty, a secure password will be generated automatically. Minimum 6 characters (Supabase requirement).
               </p>
             </div>
-            <div className="space-y-2">
-              <Label>Page Permissions</Label>
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="dashboard"
-                    checked={newUserPermissions.dashboard}
-                    onCheckedChange={(checked) =>
-                      setNewUserPermissions({ ...newUserPermissions, dashboard: checked as boolean })
-                    }
-                  />
-                  <Label htmlFor="dashboard" className="font-normal">Dashboard</Label>
+            
+            {/* Agent Permissions */}
+            <div className="space-y-3">
+              <Label>Agent Permissions</Label>
+              {agents.map((agent) => (
+                <div key={agent.id} className="border rounded-lg p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold">{agent.name}</p>
+                    <Badge variant="outline">{agent.provider}</Badge>
+                  </div>
+                  
+                  <div className="ml-0 space-y-2 grid grid-cols-2 gap-2">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`new-${agent.id}-analytics`}
+                        checked={newUserAgentPermissions[agent.id]?.analytics || false}
+                        onCheckedChange={(checked) => 
+                          toggleAgentPermission(agent.id, 'analytics', checked as boolean, true)
+                        }
+                      />
+                      <Label htmlFor={`new-${agent.id}-analytics`} className="font-normal">Analytics</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`new-${agent.id}-conversations`}
+                        checked={newUserAgentPermissions[agent.id]?.conversations || false}
+                        onCheckedChange={(checked) => 
+                          toggleAgentPermission(agent.id, 'conversations', checked as boolean, true)
+                        }
+                      />
+                      <Label htmlFor={`new-${agent.id}-conversations`} className="font-normal">Conversations</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`new-${agent.id}-knowledge_base`}
+                        checked={newUserAgentPermissions[agent.id]?.knowledge_base || false}
+                        onCheckedChange={(checked) => 
+                          toggleAgentPermission(agent.id, 'knowledge_base', checked as boolean, true)
+                        }
+                      />
+                      <Label htmlFor={`new-${agent.id}-knowledge_base`} className="font-normal">Knowledge Base</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`new-${agent.id}-agent_settings`}
+                        checked={newUserAgentPermissions[agent.id]?.agent_settings || false}
+                        onCheckedChange={(checked) => 
+                          toggleAgentPermission(agent.id, 'agent_settings', checked as boolean, true)
+                        }
+                      />
+                      <Label htmlFor={`new-${agent.id}-agent_settings`} className="font-normal">Agent Settings</Label>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="analytics"
-                    checked={newUserPermissions.analytics}
-                    onCheckedChange={(checked) =>
-                      setNewUserPermissions({ ...newUserPermissions, analytics: checked as boolean })
-                    }
-                  />
-                  <Label htmlFor="analytics" className="font-normal">Analytics</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="transcripts"
-                    checked={newUserPermissions.transcripts}
-                    onCheckedChange={(checked) =>
-                      setNewUserPermissions({ ...newUserPermissions, transcripts: checked as boolean })
-                    }
-                  />
-                  <Label htmlFor="transcripts" className="font-normal">Call Transcripts</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="settings"
-                    checked={newUserPermissions.settings}
-                    onCheckedChange={(checked) =>
-                      setNewUserPermissions({ ...newUserPermissions, settings: checked as boolean })
-                    }
-                  />
-                  <Label htmlFor="settings" className="font-normal">Settings</Label>
-                </div>
-              </div>
+              ))}
             </div>
+
             {generatedPassword && (
               <div className="p-4 bg-muted rounded-lg">
                 <Label>Temporary Password</Label>
@@ -481,7 +612,7 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
 
       {/* Edit Permissions Dialog */}
       <Dialog open={permissionsOpen} onOpenChange={setPermissionsOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit User Permissions</DialogTitle>
           </DialogHeader>
@@ -531,93 +662,60 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
                 </Select>
               </div>
 
-              <div>
-                <Label htmlFor="editRole">Role</Label>
-                <Select
-                  value={selectedUser.role}
-                  onValueChange={(value) =>
-                    setSelectedUser({ ...selectedUser, role: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="user">User</SelectItem>
-                    <SelectItem value="viewer">Viewer</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Page Access</Label>
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="edit-dashboard"
-                      checked={selectedUser.page_permissions.dashboard}
-                      onCheckedChange={(checked) =>
-                        setSelectedUser({
-                          ...selectedUser,
-                          page_permissions: {
-                            ...selectedUser.page_permissions,
-                            dashboard: checked as boolean,
-                          },
-                        })
-                      }
-                    />
-                    <Label htmlFor="edit-dashboard" className="font-normal">Dashboard</Label>
+              {/* Agent Permissions */}
+              <div className="space-y-3">
+                <Label>Agent Permissions</Label>
+                {agents.map((agent) => (
+                  <div key={agent.id} className="border rounded-lg p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold">{agent.name}</p>
+                      <Badge variant="outline">{agent.provider}</Badge>
+                    </div>
+                    
+                    <div className="ml-0 space-y-2 grid grid-cols-2 gap-2">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`edit-${agent.id}-analytics`}
+                          checked={selectedUserAgentPermissions[agent.id]?.analytics || false}
+                          onCheckedChange={(checked) => 
+                            toggleAgentPermission(agent.id, 'analytics', checked as boolean, false)
+                          }
+                        />
+                        <Label htmlFor={`edit-${agent.id}-analytics`} className="font-normal">Analytics</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`edit-${agent.id}-conversations`}
+                          checked={selectedUserAgentPermissions[agent.id]?.conversations || false}
+                          onCheckedChange={(checked) => 
+                            toggleAgentPermission(agent.id, 'conversations', checked as boolean, false)
+                          }
+                        />
+                        <Label htmlFor={`edit-${agent.id}-conversations`} className="font-normal">Conversations</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`edit-${agent.id}-knowledge_base`}
+                          checked={selectedUserAgentPermissions[agent.id]?.knowledge_base || false}
+                          onCheckedChange={(checked) => 
+                            toggleAgentPermission(agent.id, 'knowledge_base', checked as boolean, false)
+                          }
+                        />
+                        <Label htmlFor={`edit-${agent.id}-knowledge_base`} className="font-normal">Knowledge Base</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`edit-${agent.id}-agent_settings`}
+                          checked={selectedUserAgentPermissions[agent.id]?.agent_settings || false}
+                          onCheckedChange={(checked) => 
+                            toggleAgentPermission(agent.id, 'agent_settings', checked as boolean, false)
+                          }
+                        />
+                        <Label htmlFor={`edit-${agent.id}-agent_settings`} className="font-normal">Agent Settings</Label>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="edit-analytics"
-                      checked={selectedUser.page_permissions.analytics}
-                      onCheckedChange={(checked) =>
-                        setSelectedUser({
-                          ...selectedUser,
-                          page_permissions: {
-                            ...selectedUser.page_permissions,
-                            analytics: checked as boolean,
-                          },
-                        })
-                      }
-                    />
-                    <Label htmlFor="edit-analytics" className="font-normal">Analytics</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="edit-transcripts"
-                      checked={selectedUser.page_permissions.transcripts}
-                      onCheckedChange={(checked) =>
-                        setSelectedUser({
-                          ...selectedUser,
-                          page_permissions: {
-                            ...selectedUser.page_permissions,
-                            transcripts: checked as boolean,
-                          },
-                        })
-                      }
-                    />
-                    <Label htmlFor="edit-transcripts" className="font-normal">Call Transcripts</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="edit-settings"
-                      checked={selectedUser.page_permissions.settings}
-                      onCheckedChange={(checked) =>
-                        setSelectedUser({
-                          ...selectedUser,
-                          page_permissions: {
-                            ...selectedUser.page_permissions,
-                            settings: checked as boolean,
-                          },
-                        })
-                      }
-                    />
-                    <Label htmlFor="edit-settings" className="font-normal">Settings</Label>
-                  </div>
-                </div>
+                ))}
               </div>
 
               <div className="flex gap-2">

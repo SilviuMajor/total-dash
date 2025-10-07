@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useClientAgentContext } from "@/hooks/useClientAgentContext";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -15,7 +16,8 @@ export function ProtectedRoute({
   requireClient = false,
   requiredPage 
 }: ProtectedRouteProps) {
-  const { user, profile, loading, hasPageAccess } = useAuth();
+  const { user, profile, loading } = useAuth();
+  const { selectedAgentPermissions } = useClientAgentContext();
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -37,22 +39,35 @@ export function ProtectedRoute({
       } else if (requireClient && profile?.role === 'admin' && !isAdminPreview) {
         // Only redirect if NOT in preview mode
         navigate('/admin/clients');
-      } else if (requiredPage && !hasPageAccess(requiredPage) && !isAdminPreview) {
-        // Skip page permission check for admin preview
-        if (hasPageAccess('dashboard')) {
-          navigate('/', { replace: true });
-        } else if (hasPageAccess('analytics')) {
-          navigate('/analytics', { replace: true });
-        } else if (hasPageAccess('transcripts')) {
-          navigate('/transcripts', { replace: true });
-        } else if (hasPageAccess('settings')) {
-          navigate('/settings', { replace: true });
-        } else {
-          navigate('/auth', { replace: true });
+      } else if (requiredPage && !isAdminPreview) {
+        // Check agent-based permissions for client users
+        if (profile?.role === 'client' && selectedAgentPermissions) {
+          const hasAccess = selectedAgentPermissions[requiredPage as keyof typeof selectedAgentPermissions];
+          
+          if (!hasAccess) {
+            // Redirect to first available page
+            const redirectOrder = ['conversations', 'analytics', 'knowledge_base', 'agent_settings'];
+            
+            for (const page of redirectOrder) {
+              if (selectedAgentPermissions[page as keyof typeof selectedAgentPermissions]) {
+                const pathMap: Record<string, string> = {
+                  conversations: '/',
+                  analytics: '/analytics',
+                  knowledge_base: '/knowledge-base',
+                  agent_settings: '/agent-settings',
+                };
+                navigate(pathMap[page], { replace: true });
+                return;
+              }
+            }
+            
+            // No permissions at all
+            navigate('/auth', { replace: true });
+          }
         }
       }
     }
-  }, [user, profile, loading, navigate, requireAdmin, requireClient, requiredPage, hasPageAccess, location.pathname, isAdminPreview]);
+  }, [user, profile, loading, navigate, requireAdmin, requireClient, requiredPage, selectedAgentPermissions, location.pathname, isAdminPreview]);
 
   if (loading) {
     return (
@@ -67,8 +82,11 @@ export function ProtectedRoute({
   }
 
   // Check page permissions for client users (skip for admin preview)
-  if (requiredPage && !hasPageAccess(requiredPage) && !isAdminPreview) {
-    return null;
+  if (requiredPage && profile?.role === 'client' && selectedAgentPermissions && !isAdminPreview) {
+    const hasAccess = selectedAgentPermissions[requiredPage as keyof typeof selectedAgentPermissions];
+    if (!hasAccess) {
+      return null;
+    }
   }
 
   return <>{children}</>;
