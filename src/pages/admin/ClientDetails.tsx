@@ -18,6 +18,7 @@ interface ClientData {
   contact_email: string | null;
   contact_phone: string | null;
   company_address: string | null;
+  status: string | null;
   subscription_status: string | null;
   is_active: boolean | null;
   created_at: string;

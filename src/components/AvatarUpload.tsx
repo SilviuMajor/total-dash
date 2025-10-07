@@ -95,7 +95,6 @@ export function AvatarUpload({ onUploadComplete, currentUrl }: AvatarUploadProps
 
   return (
     <div className="space-y-2">
-      <Label>Avatar</Label>
       <div className="flex items-center gap-4">
         {preview && (
           <div className="relative">

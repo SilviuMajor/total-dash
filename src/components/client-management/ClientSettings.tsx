@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface ClientSettingsProps {
   client: {
@@ -13,6 +14,7 @@ interface ClientSettingsProps {
     contact_email: string | null;
     contact_phone: string | null;
     company_address: string | null;
+    status: string | null;
   };
   onUpdate: () => void;
 }
@@ -22,6 +24,7 @@ export function ClientSettings({ client, onUpdate }: ClientSettingsProps) {
     contact_email: client.contact_email || "",
     contact_phone: client.contact_phone || "",
     company_address: client.company_address || "",
+    status: client.status || "active",
   });
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
@@ -93,6 +96,23 @@ export function ClientSettings({ client, onUpdate }: ClientSettingsProps) {
               placeholder="123 Business St, City, Country"
               className="bg-muted/50 border-border"
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="status">Status</Label>
+            <Select
+              value={formData.status}
+              onValueChange={(value) => setFormData({ ...formData, status: value })}
+            >
+              <SelectTrigger className="bg-muted/50 border-border">
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="testing">Testing</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <Button

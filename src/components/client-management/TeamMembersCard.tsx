@@ -189,6 +189,8 @@ export function TeamMembersCard({ clientId }: { clientId: string }) {
 
       loadData();
     } catch (error: any) {
+      setAddDialogOpen(false);
+      setTempPassword(null);
       toast({
         title: "Error",
         description: error.message,
@@ -406,7 +408,7 @@ export function TeamMembersCard({ clientId }: { clientId: string }) {
                   placeholder="Leave empty to auto-generate"
                 />
                 <p className="text-xs text-muted-foreground">
-                  If left empty, a secure password will be generated automatically
+                  If left empty, a secure password will be generated automatically. Minimum 6 characters (Supabase requirement).
                 </p>
               </div>
 
@@ -441,15 +443,17 @@ export function TeamMembersCard({ clientId }: { clientId: string }) {
                     setTempPassword(null);
                   }}
                 >
-                  Cancel
+                  {tempPassword ? "Done" : "Cancel"}
                 </Button>
-                <Button
-                  onClick={handleAddUser}
-                  disabled={!newUser.email || !newUser.full_name}
-                  className="bg-foreground text-background hover:bg-foreground/90"
-                >
-                  Create User
-                </Button>
+                {!tempPassword && (
+                  <Button
+                    onClick={handleAddUser}
+                    disabled={!newUser.email || !newUser.full_name}
+                    className="bg-foreground text-background hover:bg-foreground/90"
+                  >
+                    Create User
+                  </Button>
+                )}
               </div>
             </div>
           </DialogContent>

@@ -7,8 +7,7 @@ import { AuthProvider } from "./hooks/useAuth";
 import { ClientAgentProvider } from "./hooks/useClientAgentContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { Sidebar } from "./components/Sidebar";
-import AdminAuth from "./pages/AdminAuth";
-import ClientAuth from "./pages/ClientAuth";
+import Auth from "./pages/Auth";
 import Settings from "./pages/Settings";
 import AdminClients from "./pages/admin/Clients";
 import AdminAgents from "./pages/admin/Agents";
@@ -30,9 +29,8 @@ const App = () => (
         <AuthProvider>
           <ClientAgentProvider>
             <Routes>
-              {/* Auth Routes */}
-              <Route path="/admin/auth" element={<AdminAuth />} />
-              <Route path="/client/auth" element={<ClientAuth />} />
+              {/* Auth Route */}
+              <Route path="/auth" element={<Auth />} />
               
               <Route
                 path="/*"

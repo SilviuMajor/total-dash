@@ -22,8 +22,8 @@ export function ProtectedRoute({
   useEffect(() => {
     if (!loading) {
       if (!user) {
-        // Default to client auth when not logged in
-        navigate('/client/auth');
+        // Redirect to unified auth page
+        navigate('/auth');
       } else if (requireAdmin && profile?.role !== 'admin') {
         navigate('/');
       } else if (requireClient && profile?.role === 'admin') {
@@ -39,7 +39,7 @@ export function ProtectedRoute({
         } else if (hasPageAccess('settings')) {
           navigate('/settings', { replace: true });
         } else {
-          navigate('/client/auth', { replace: true });
+          navigate('/auth', { replace: true });
         }
       }
     }

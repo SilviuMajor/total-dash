@@ -275,6 +275,7 @@ export type Database = {
           is_active: boolean | null
           logo_url: string | null
           name: string
+          status: string | null
           subscription_status: string | null
           updated_at: string | null
         }
@@ -287,6 +288,7 @@ export type Database = {
           is_active?: boolean | null
           logo_url?: string | null
           name: string
+          status?: string | null
           subscription_status?: string | null
           updated_at?: string | null
         }
@@ -299,6 +301,7 @@ export type Database = {
           is_active?: boolean | null
           logo_url?: string | null
           name?: string
+          status?: string | null
           subscription_status?: string | null
           updated_at?: string | null
         }
@@ -444,6 +447,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_passwords: {
+        Row: {
+          created_at: string | null
+          id: string
+          password_text: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          password_text: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          password_text?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
     }
     Views: {

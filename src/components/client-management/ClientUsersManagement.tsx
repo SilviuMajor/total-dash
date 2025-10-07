@@ -150,6 +150,8 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
         });
       }
     } catch (error: any) {
+      setOpen(false);
+      setGeneratedPassword("");
       toast({
         title: "Error",
         description: error.message,
@@ -389,7 +391,7 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
                 placeholder="Leave empty to auto-generate"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                If left empty, a secure password will be generated automatically
+                If left empty, a secure password will be generated automatically. Minimum 6 characters (Supabase requirement).
               </p>
             </div>
             <div className="space-y-2">
@@ -451,12 +453,27 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
               </div>
             )}
             <div className="flex gap-2">
-              <Button onClick={handleAddUser} className="flex-1 bg-foreground text-background hover:bg-foreground/90">
-                Create User
-              </Button>
-              <Button variant="outline" onClick={() => setOpen(false)}>
-                Cancel
-              </Button>
+              {!generatedPassword ? (
+                <>
+                  <Button onClick={handleAddUser} className="flex-1 bg-foreground text-background hover:bg-foreground/90">
+                    Create User
+                  </Button>
+                  <Button variant="outline" onClick={() => setOpen(false)}>
+                    Cancel
+                  </Button>
+                </>
+              ) : (
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setOpen(false);
+                    setGeneratedPassword("");
+                  }}
+                  className="flex-1"
+                >
+                  Done
+                </Button>
+              )}
             </div>
           </div>
         </DialogContent>

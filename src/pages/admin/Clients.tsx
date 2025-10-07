@@ -16,6 +16,7 @@ interface Client {
   logo_url: string | null;
   created_at: string;
   subscription_status: string | null;
+  status: string | null;
 }
 
 export default function AdminClients() {
@@ -24,6 +25,7 @@ export default function AdminClients() {
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [newClientName, setNewClientName] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("active");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -43,6 +45,23 @@ export default function AdminClients() {
       console.error('Error loading clients:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const filteredClients = clients.filter(
+    (client) => client.status === statusFilter
+  );
+
+  const getStatusBadgeVariant = (status: string | null) => {
+    switch (status) {
+      case 'active':
+        return 'default';
+      case 'testing':
+        return 'secondary';
+      case 'inactive':
+        return 'outline';
+      default:
+        return 'default';
     }
   };
 
@@ -112,6 +131,30 @@ export default function AdminClients() {
         </Dialog>
       </div>
 
+      <div className="flex gap-2 mb-6">
+        <Button
+          variant={statusFilter === 'active' ? 'default' : 'outline'}
+          onClick={() => setStatusFilter('active')}
+          className={statusFilter === 'active' ? 'bg-foreground text-background' : ''}
+        >
+          Active ({clients.filter(c => c.status === 'active').length})
+        </Button>
+        <Button
+          variant={statusFilter === 'testing' ? 'default' : 'outline'}
+          onClick={() => setStatusFilter('testing')}
+          className={statusFilter === 'testing' ? 'bg-foreground text-background' : ''}
+        >
+          Testing ({clients.filter(c => c.status === 'testing').length})
+        </Button>
+        <Button
+          variant={statusFilter === 'inactive' ? 'default' : 'outline'}
+          onClick={() => setStatusFilter('inactive')}
+          className={statusFilter === 'inactive' ? 'bg-foreground text-background' : ''}
+        >
+          Inactive ({clients.filter(c => c.status === 'inactive').length})
+        </Button>
+      </div>
+
       {loading ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {[...Array(6)].map((_, i) => (
@@ -120,16 +163,25 @@ export default function AdminClients() {
             </Card>
           ))}
         </div>
+      ) : filteredClients.length === 0 ? (
+        <Card className="p-12 text-center bg-gradient-card border-border/50">
+          <p className="text-muted-foreground">No {statusFilter} clients found</p>
+        </Card>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {clients.map((client) => (
+          {filteredClients.map((client) => (
             <Card key={client.id} className="p-6 bg-gradient-card border-border/50 hover:border-primary/50 transition-all group">
               <div className="flex items-start gap-4 mb-4">
                 <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
                   <Users className="w-6 h-6 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-foreground truncate">{client.name}</h3>
+                  <div className="flex items-start justify-between mb-2">
+                    <h3 className="font-semibold text-foreground truncate">{client.name}</h3>
+                    <Badge variant={getStatusBadgeVariant(client.status)} className="capitalize ml-2">
+                      {client.status || 'active'}
+                    </Badge>
+                  </div>
                   <p className="text-sm text-muted-foreground">
                     Created {new Date(client.created_at).toLocaleDateString()}
                   </p>

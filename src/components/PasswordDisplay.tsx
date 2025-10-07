@@ -27,9 +27,11 @@ export function PasswordDisplay({ userId }: PasswordDisplayProps) {
       });
 
       if (error) throw error;
-      setPassword(data.password);
+      setPassword(data?.password || null);
     } catch (error: any) {
+      // Handle missing password gracefully
       console.error('Error loading password:', error);
+      setPassword(null);
     } finally {
       setLoading(false);
     }
@@ -40,6 +42,15 @@ export function PasswordDisplay({ userId }: PasswordDisplayProps) {
       toast({
         title: "Error",
         description: "Password cannot be empty",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      toast({
+        title: "Error",
+        description: "Password must be at least 6 characters",
         variant: "destructive",
       });
       return;
@@ -64,16 +75,23 @@ export function PasswordDisplay({ userId }: PasswordDisplayProps) {
         description: "Password updated successfully",
       });
     } catch (error: any) {
+      // Parse Supabase Auth errors for better messaging
+      let errorMessage = error.message;
+      
+      if (error.message?.includes('6 characters') || error.message?.includes('weak password')) {
+        errorMessage = "Password must be at least 6 characters";
+      }
+      
       toast({
         title: "Error",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive",
       });
     }
   };
 
   const getCensoredPassword = () => {
-    if (!password) return "••••••••";
+    if (!password) return "No password set";
     return password.charAt(0) + "••••••••";
   };
 
