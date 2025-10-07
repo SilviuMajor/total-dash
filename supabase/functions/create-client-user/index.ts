@@ -61,13 +61,14 @@ serve(async (req) => {
       role, 
       departmentId, 
       avatarUrl, 
-      pagePermissions 
+      pagePermissions,
+      customPassword 
     } = await req.json();
 
     console.log('Creating user:', { email, fullName, role, clientId });
 
-    // Generate secure password
-    const temporaryPassword = generateSecurePassword();
+    // Use custom password if provided, otherwise generate secure password
+    const temporaryPassword = customPassword || generateSecurePassword();
 
     // Create user in auth.users
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
@@ -105,6 +106,18 @@ serve(async (req) => {
       // Cleanup: delete auth user if client_users insert fails
       await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
       throw clientUserError;
+    }
+
+    // Store password in user_passwords table
+    const { error: passwordError } = await supabaseAdmin
+      .from('user_passwords')
+      .insert({
+        user_id: authData.user.id,
+        password_text: temporaryPassword
+      });
+
+    if (passwordError) {
+      console.error('Password storage error:', passwordError);
     }
 
     console.log('Client user created successfully');

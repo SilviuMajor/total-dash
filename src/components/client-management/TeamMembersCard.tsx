@@ -3,10 +3,12 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Settings, Trash2, UserPlus } from "lucide-react";
+import { Settings, Trash2, UserPlus, Eye, EyeOff, Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { AvatarUpload } from "@/components/AvatarUpload";
+import { PasswordDisplay } from "@/components/PasswordDisplay";
 import {
   Dialog,
   DialogContent,
@@ -55,6 +57,7 @@ interface ClientUser {
   departments: {
     name: string;
   } | null;
+  password?: string;
 }
 
 interface Department {
@@ -86,9 +89,12 @@ export function TeamMembersCard({ clientId }: { clientId: string }) {
     role: "user",
     department_id: "none",
     avatar_url: "",
+    password: "",
   });
 
   const [tempPassword, setTempPassword] = useState<string | null>(null);
+  const [editingPasswordId, setEditingPasswordId] = useState<string | null>(null);
+  const [newPasswordValue, setNewPasswordValue] = useState("");
 
   useEffect(() => {
     loadData();
@@ -160,6 +166,7 @@ export function TeamMembersCard({ clientId }: { clientId: string }) {
           departmentId: newUser.department_id === "none" ? null : newUser.department_id || null,
           avatarUrl: newUser.avatar_url || null,
           pagePermissions: defaultPermissions,
+          customPassword: newUser.password || undefined,
         },
       });
 
@@ -177,6 +184,7 @@ export function TeamMembersCard({ clientId }: { clientId: string }) {
         role: "user",
         department_id: "none",
         avatar_url: "",
+        password: "",
       });
 
       loadData();
@@ -187,6 +195,48 @@ export function TeamMembersCard({ clientId }: { clientId: string }) {
         variant: "destructive",
       });
     }
+  };
+
+  const handleResetPassword = async (userId: string) => {
+    if (!newPasswordValue.trim()) {
+      toast({
+        title: "Error",
+        description: "Password cannot be empty",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase.functions.invoke('reset-user-password', {
+        body: {
+          userId,
+          newPassword: newPasswordValue,
+        },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Password updated successfully",
+      });
+
+      setEditingPasswordId(null);
+      setNewPasswordValue("");
+      loadData();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getCensoredPassword = (password: string | undefined) => {
+    if (!password) return "••••••••";
+    return password.charAt(0) + "••••••••";
   };
 
   const handleUpdateUser = async () => {
@@ -341,14 +391,23 @@ export function TeamMembersCard({ clientId }: { clientId: string }) {
                 </div>
               </div>
 
+              <AvatarUpload
+                currentUrl={newUser.avatar_url}
+                onUploadComplete={(url) => setNewUser({ ...newUser, avatar_url: url })}
+              />
+
               <div className="space-y-2">
-                <Label htmlFor="avatar_url">Avatar URL (optional)</Label>
+                <Label htmlFor="password">Password (optional)</Label>
                 <Input
-                  id="avatar_url"
-                  value={newUser.avatar_url}
-                  onChange={(e) => setNewUser({ ...newUser, avatar_url: e.target.value })}
-                  placeholder="https://example.com/avatar.jpg"
+                  id="password"
+                  type="text"
+                  value={newUser.password}
+                  onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                  placeholder="Leave empty to auto-generate"
                 />
+                <p className="text-xs text-muted-foreground">
+                  If left empty, a secure password will be generated automatically
+                </p>
               </div>
 
               {tempPassword && (
@@ -423,6 +482,7 @@ export function TeamMembersCard({ clientId }: { clientId: string }) {
                 <Badge variant="secondary" className="capitalize">
                   {user.role}
                 </Badge>
+                <PasswordDisplay userId={user.user_id} />
               </div>
               <div className="flex items-center gap-2">
                 <Button

@@ -12,6 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Settings, Trash2, UserPlus, Copy } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { AvatarUpload } from "@/components/AvatarUpload";
+import { PasswordDisplay } from "@/components/PasswordDisplay";
 
 interface ClientUser {
   id: string;
@@ -56,6 +58,7 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
   const [newUserRole, setNewUserRole] = useState("user");
   const [newUserDepartment, setNewUserDepartment] = useState<string>("none");
   const [newUserAvatar, setNewUserAvatar] = useState("");
+  const [newUserPassword, setNewUserPassword] = useState("");
   const [newUserPermissions, setNewUserPermissions] = useState({
     dashboard: true,
     analytics: true,
@@ -120,6 +123,7 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
           departmentId: newUserDepartment === "none" ? null : newUserDepartment || null,
           avatarUrl: newUserAvatar || null,
           pagePermissions: newUserPermissions,
+          customPassword: newUserPassword || undefined,
         },
       });
 
@@ -129,7 +133,7 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
         setGeneratedPassword(data.temporaryPassword);
         toast({
           title: "Success",
-          description: `User created successfully. Password: ${data.temporaryPassword}`,
+          description: `User created successfully`,
         });
         loadUsers();
         setNewUserEmail("");
@@ -137,6 +141,7 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
         setNewUserRole("user");
         setNewUserDepartment("none");
         setNewUserAvatar("");
+        setNewUserPassword("");
         setNewUserPermissions({
           dashboard: true,
           analytics: true,
@@ -281,6 +286,7 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
                     )}
                   </div>
                   <p className="text-sm text-muted-foreground truncate">{user.profiles.email}</p>
+                  <PasswordDisplay userId={user.user_id} />
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -367,13 +373,24 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
               </Select>
             </div>
             <div>
-              <Label htmlFor="avatar">Avatar URL (optional)</Label>
-              <Input
-                id="avatar"
-                value={newUserAvatar}
-                onChange={(e) => setNewUserAvatar(e.target.value)}
-                placeholder="https://..."
+              <Label htmlFor="avatar">Avatar</Label>
+              <AvatarUpload
+                currentUrl={newUserAvatar}
+                onUploadComplete={(url) => setNewUserAvatar(url)}
               />
+            </div>
+            <div>
+              <Label htmlFor="password">Password (optional)</Label>
+              <Input
+                id="password"
+                type="text"
+                value={newUserPassword}
+                onChange={(e) => setNewUserPassword(e.target.value)}
+                placeholder="Leave empty to auto-generate"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                If left empty, a secure password will be generated automatically
+              </p>
             </div>
             <div className="space-y-2">
               <Label>Page Permissions</Label>
