@@ -20,7 +20,6 @@ interface Transcript {
 export default function ClientAgentTranscripts() {
   const [transcripts, setTranscripts] = useState<Transcript[]>([]);
   const [loading, setLoading] = useState(true);
-  const [agencyLogoUrl, setAgencyLogoUrl] = useState<string | null>(null);
   const { selectedAgentId, agents } = useClientAgentContext();
 
   useEffect(() => {
@@ -28,20 +27,6 @@ export default function ClientAgentTranscripts() {
       loadTranscripts();
     }
   }, [selectedAgentId]);
-
-  useEffect(() => {
-    const loadAgencyLogo = async () => {
-      const { data } = await supabase
-        .from('agency_settings')
-        .select('agency_logo_url')
-        .single();
-      
-      if (data?.agency_logo_url) {
-        setAgencyLogoUrl(data.agency_logo_url);
-      }
-    };
-    loadAgencyLogo();
-  }, []);
 
   const loadTranscripts = async () => {
     try {
@@ -73,20 +58,11 @@ export default function ClientAgentTranscripts() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-4xl font-bold text-foreground mb-2">Transcripts</h1>
-          <p className="text-muted-foreground">View and search conversation transcripts.</p>
-        </div>
+      <div className="space-y-3">
+        <h1 className="text-4xl font-bold text-foreground">Transcripts</h1>
         <div className="flex items-center gap-4">
+          <p className="text-muted-foreground">View and search conversation transcripts.</p>
           <ClientAgentSelector />
-          {agencyLogoUrl && (
-            <img 
-              src={agencyLogoUrl} 
-              alt="Agency logo" 
-              className="w-16 h-16 object-contain"
-            />
-          )}
         </div>
       </div>
 

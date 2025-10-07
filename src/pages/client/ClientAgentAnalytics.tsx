@@ -25,21 +25,6 @@ const performanceData = [
 
 export default function ClientAgentAnalytics() {
   const { agents } = useClientAgentContext();
-  const [agencyLogoUrl, setAgencyLogoUrl] = useState<string | null>(null);
-
-  useEffect(() => {
-    const loadAgencyLogo = async () => {
-      const { data } = await supabase
-        .from('agency_settings')
-        .select('agency_logo_url')
-        .single();
-      
-      if (data?.agency_logo_url) {
-        setAgencyLogoUrl(data.agency_logo_url);
-      }
-    };
-    loadAgencyLogo();
-  }, []);
 
   if (agents.length === 0) {
     return <NoAgentsAssigned />;
@@ -47,20 +32,11 @@ export default function ClientAgentAnalytics() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-4xl font-bold text-foreground mb-2">Analytics</h1>
-          <p className="text-muted-foreground">Deep dive into your AI agent performance metrics.</p>
-        </div>
+      <div className="space-y-3">
+        <h1 className="text-4xl font-bold text-foreground">Analytics</h1>
         <div className="flex items-center gap-4">
+          <p className="text-muted-foreground">Deep dive into your AI agent performance metrics.</p>
           <ClientAgentSelector />
-          {agencyLogoUrl && (
-            <img 
-              src={agencyLogoUrl} 
-              alt="Agency logo" 
-              className="w-16 h-16 object-contain"
-            />
-          )}
         </div>
       </div>
 

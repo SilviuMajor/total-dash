@@ -26,10 +26,12 @@ export function Sidebar() {
   const isAdmin = profile?.role === 'admin';
   const [agencyName, setAgencyName] = useState("Fiveleaf");
   const [agencyLogo, setAgencyLogo] = useState(fiveleafLogo);
+  const [clientPermissions, setClientPermissions] = useState<any>(null);
   
   // Check for preview mode
   const searchParams = new URLSearchParams(location.search);
   const isPreviewMode = searchParams.get('preview') === 'true';
+  const previewClientId = searchParams.get('clientId');
   
   useEffect(() => {
     const loadAgencyBranding = async () => {
@@ -43,12 +45,38 @@ export function Sidebar() {
     };
     loadAgencyBranding();
   }, []);
+
+  useEffect(() => {
+    if (isPreviewMode && previewClientId) {
+      const loadClientPermissions = async () => {
+        const { data } = await supabase
+          .from('client_settings')
+          .select('default_user_permissions')
+          .eq('client_id', previewClientId)
+          .single();
+        
+        if (data?.default_user_permissions) {
+          setClientPermissions(data.default_user_permissions);
+        }
+      };
+      loadClientPermissions();
+    }
+  }, [isPreviewMode, previewClientId]);
   
-  // Filter navigation based on permissions for client users
-  const navigation = isAdmin 
+  // Determine which navigation to show
+  // When admin is in preview mode, show client navigation
+  const effectiveRole = (isAdmin && isPreviewMode) ? 'client' : profile?.role;
+  
+  // Filter navigation based on role and permissions
+  const navigation = effectiveRole === 'admin' 
     ? adminNavigation 
     : clientNavigation.filter(item => {
         const pageName = item.href === '/' ? 'dashboard' : item.href.substring(1);
+        // In preview mode, use client's default permissions
+        if (isPreviewMode && clientPermissions) {
+          return clientPermissions[pageName] !== false;
+        }
+        // Otherwise use hasPageAccess for regular client users
         return hasPageAccess(pageName);
       });
 

@@ -25,16 +25,16 @@ export function ClientAgentSelector() {
 
   if (loading) {
     return (
-      <div className="px-6 py-4 rounded-lg bg-muted/50 animate-pulse w-64">
-        <div className="h-10 bg-muted rounded"></div>
+      <div className="px-4 py-2 rounded-lg bg-muted/50 animate-pulse w-48">
+        <div className="h-8 bg-muted rounded"></div>
       </div>
     );
   }
 
   if (agents.length === 0) {
     return (
-      <div className="px-6 py-4 rounded-lg bg-muted/50 w-64">
-        <p className="text-sm text-muted-foreground">No agents assigned</p>
+      <div className="px-4 py-2 rounded-lg bg-muted/50 w-48">
+        <p className="text-xs text-muted-foreground">No agents assigned</p>
       </div>
     );
   }
@@ -46,11 +46,11 @@ export function ClientAgentSelector() {
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-64 justify-between h-auto py-3 bg-card hover:bg-muted border-border"
+          className="w-48 justify-between h-auto py-2 bg-card hover:bg-muted border-border"
         >
           <div className="flex flex-col items-start flex-1 min-w-0">
-            <span className="text-xs text-muted-foreground mb-1">Active Agent</span>
-            <span className="text-base font-semibold truncate w-full text-left text-foreground">
+            <span className="text-xs text-muted-foreground">Active Agent</span>
+            <span className="text-sm font-semibold truncate w-full text-left text-foreground">
               {selectedAgent?.name || "Select agent..."}
             </span>
             {selectedAgent && (
@@ -59,10 +59,10 @@ export function ClientAgentSelector() {
               </span>
             )}
           </div>
-          <ChevronsUpDown className="ml-2 h-5 w-5 shrink-0 opacity-50" />
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-64 p-0 bg-card border-border z-50">
+      <PopoverContent className="w-48 p-0 bg-card border-border z-50">
         <Command className="bg-card">
           <CommandInput placeholder="Search agents..." className="bg-muted/30" />
           <CommandList>
