@@ -23,7 +23,6 @@ export default function AdminAgents() {
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [providerFilter, setProviderFilter] = useState<string>("voiceflow");
-  const [agencyLogoUrl, setAgencyLogoUrl] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     provider: "voiceflow",
@@ -33,19 +32,7 @@ export default function AdminAgents() {
 
   useEffect(() => {
     loadAgents();
-    loadAgencyLogo();
   }, []);
-
-  const loadAgencyLogo = async () => {
-    const { data } = await supabase
-      .from('agency_settings')
-      .select('agency_logo_url')
-      .single();
-    
-    if (data?.agency_logo_url) {
-      setAgencyLogoUrl(data.agency_logo_url);
-    }
-  };
 
   const loadAgents = async () => {
     try {
@@ -101,13 +88,6 @@ export default function AdminAgents() {
           <h1 className="text-4xl font-bold text-foreground mb-2">Agent Management</h1>
           <p className="text-muted-foreground">Create and manage AI agents with API integrations.</p>
         </div>
-        {agencyLogoUrl && (
-          <img 
-            src={agencyLogoUrl} 
-            alt="Agency logo" 
-            className="w-16 h-16 object-contain"
-          />
-        )}
         
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
