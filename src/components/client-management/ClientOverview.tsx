@@ -23,6 +23,7 @@ export function ClientOverview({ client }: ClientOverviewProps) {
     totalUsers: 0,
     assignedAgents: 0,
     totalConversations: 0,
+    assignedAgentNames: [] as string[],
   });
 
   useEffect(() => {
@@ -31,9 +32,13 @@ export function ClientOverview({ client }: ClientOverviewProps) {
 
   const loadStats = async () => {
     try {
-      const [usersResult, agentsResult, conversationsResult] = await Promise.all([
+      const [usersResult, agentsResult, agentsDetailsResult, conversationsResult] = await Promise.all([
         supabase.from('client_users').select('id', { count: 'exact', head: true }).eq('client_id', client.id),
         supabase.from('agent_assignments').select('id', { count: 'exact', head: true }).eq('client_id', client.id),
+        supabase.from('agent_assignments')
+          .select('agents(name)')
+          .eq('client_id', client.id)
+          .order('sort_order'),
         supabase.from('conversations').select('id', { count: 'exact', head: true })
           .in('agent_id', 
             (await supabase.from('agent_assignments').select('agent_id').eq('client_id', client.id))
@@ -41,10 +46,13 @@ export function ClientOverview({ client }: ClientOverviewProps) {
           ),
       ]);
 
+      const agentNames = agentsDetailsResult.data?.map((a: any) => a.agents?.name).filter(Boolean) || [];
+
       setStats({
         totalUsers: usersResult.count || 0,
         assignedAgents: agentsResult.count || 0,
         totalConversations: conversationsResult.count || 0,
+        assignedAgentNames: agentNames,
       });
     } catch (error) {
       console.error('Error loading stats:', error);
@@ -100,12 +108,23 @@ export function ClientOverview({ client }: ClientOverviewProps) {
               {client.is_active ? "Active" : "Inactive"}
             </Badge>
           </div>
-          
-          <div className="flex items-center justify-between py-3 border-b border-border/50">
-            <span className="text-sm text-muted-foreground">Subscription</span>
-            <Badge variant="outline">
-              {client.subscription_status || "Basic"}
-            </Badge>
+
+          <div className="flex items-start gap-3 py-3 border-b border-border/50">
+            <Bot className="w-4 h-4 text-muted-foreground mt-1" />
+            <div className="flex-1">
+              <span className="text-sm text-muted-foreground block mb-2">Assigned Agents</span>
+              {stats.assignedAgentNames.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {stats.assignedAgentNames.map((name, index) => (
+                    <Badge key={index} variant="outline" className="bg-primary/5">
+                      {name}
+                    </Badge>
+                  ))}
+                </div>
+              ) : (
+                <span className="text-sm text-muted-foreground">No agents assigned</span>
+              )}
+            </div>
           </div>
 
           {client.contact_email && (
