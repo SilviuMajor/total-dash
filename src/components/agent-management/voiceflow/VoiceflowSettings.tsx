@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -6,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff } from "lucide-react";
+import { AgentDeletionDialog } from "../AgentDeletionDialog";
 
 interface VoiceflowSettingsProps {
   agent: {
@@ -18,12 +20,31 @@ interface VoiceflowSettingsProps {
 
 export function VoiceflowSettings({ agent, onUpdate }: VoiceflowSettingsProps) {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     voiceflow_api_key: agent.config?.voiceflow_api_key || "",
     voiceflow_project_id: agent.config?.voiceflow_project_id || "",
   });
+
+  useEffect(() => {
+    const checkAdmin = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+      setIsAdmin(data?.role === 'admin');
+    };
+    checkAdmin();
+  }, []);
 
   const handleSave = async () => {
     setLoading(true);
@@ -120,7 +141,40 @@ export function VoiceflowSettings({ agent, onUpdate }: VoiceflowSettingsProps) {
         <Button onClick={handleSave} disabled={loading}>
           {loading ? "Saving..." : "Save Settings"}
         </Button>
+
+        {isAdmin && (
+          <div className="pt-6 border-t border-border">
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-lg font-semibold text-destructive">Danger Zone</h3>
+                <p className="text-sm text-muted-foreground">
+                  Permanently delete this agent and all associated data
+                </p>
+              </div>
+              <Button
+                variant="destructive"
+                onClick={() => setDeleteDialogOpen(true)}
+              >
+                Delete Agent
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
+
+      <AgentDeletionDialog
+        agentId={agent.id}
+        agentName={agent.name}
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onSuccess={() => {
+          toast({
+            title: "Success",
+            description: "Agent deleted successfully"
+          });
+          navigate('/admin/agents');
+        }}
+      />
     </Card>
   );
 }

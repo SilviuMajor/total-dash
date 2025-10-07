@@ -3,7 +3,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Bot, GripVertical, Trash2, Plus } from "lucide-react";
+import { Bot, GripVertical, Trash2, Plus, Settings } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -38,6 +39,7 @@ interface AssignedAgent extends Agent {
 }
 
 function SortableAgentCard({ agent, onRemove }: { agent: AssignedAgent; onRemove: (id: string) => void }) {
+  const navigate = useNavigate();
   const {
     attributes,
     listeners,
@@ -69,6 +71,15 @@ function SortableAgentCard({ agent, onRemove }: { agent: AssignedAgent; onRemove
         <p className="font-medium text-foreground">{agent.name}</p>
         <p className="text-sm text-muted-foreground">{agent.provider}</p>
       </div>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => navigate(`/admin/agents/${agent.id}/settings`)}
+        className="gap-2"
+      >
+        <Settings className="w-4 h-4" />
+        View Settings
+      </Button>
       <Button
         variant="ghost"
         size="icon"

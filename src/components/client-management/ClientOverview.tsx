@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Users, Bot, Activity, Mail, Phone, MapPin } from "lucide-react";
+import { Users, Bot, Activity, Mail, Phone, MapPin, ExternalLink } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,7 +26,7 @@ export function ClientOverview({ client }: ClientOverviewProps) {
     totalUsers: 0,
     assignedAgents: 0,
     totalConversations: 0,
-    assignedAgentNames: [] as string[],
+    assignedAgentData: [] as Array<{ id: string; name: string }>,
   });
 
   useEffect(() => {
@@ -39,7 +39,7 @@ export function ClientOverview({ client }: ClientOverviewProps) {
         supabase.from('client_users').select('id', { count: 'exact', head: true }).eq('client_id', client.id),
         supabase.from('agent_assignments').select('id', { count: 'exact', head: true }).eq('client_id', client.id),
         supabase.from('agent_assignments')
-          .select('agents(name)')
+          .select('agent_id, agents(id, name)')
           .eq('client_id', client.id)
           .order('sort_order'),
         supabase.from('conversations').select('id', { count: 'exact', head: true })
@@ -49,13 +49,16 @@ export function ClientOverview({ client }: ClientOverviewProps) {
           ),
       ]);
 
-      const agentNames = agentsDetailsResult.data?.map((a: any) => a.agents?.name).filter(Boolean) || [];
+      const agentData = agentsDetailsResult.data?.map((a: any) => ({
+        id: a.agent_id,
+        name: a.agents?.name
+      })).filter((item): item is { id: string; name: string } => Boolean(item?.id && item?.name)) || [];
 
       setStats({
         totalUsers: usersResult.count || 0,
         assignedAgents: agentsResult.count || 0,
         totalConversations: conversationsResult.count || 0,
-        assignedAgentNames: agentNames,
+        assignedAgentData: agentData,
       });
     } catch (error) {
       console.error('Error loading stats:', error);
@@ -115,16 +118,18 @@ export function ClientOverview({ client }: ClientOverviewProps) {
           <div className="flex items-start gap-3 py-3 border-b border-border/50">
             <div className="flex-1">
               <span className="text-sm text-muted-foreground block mb-2">Assigned Agents</span>
-              {stats.assignedAgentNames.length > 0 ? (
+              {stats.assignedAgentData.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
-                  {stats.assignedAgentNames.map((name, index) => (
+                  {stats.assignedAgentData.map((agent) => (
                     <Button
-                      key={index}
+                      key={agent.id}
                       variant="outline"
                       size="sm"
-                      onClick={() => navigate(`/admin/clients/${client.id}?tab=agents`)}
+                      onClick={() => navigate(`/admin/agents/${agent.id}/settings`)}
+                      className="gap-2"
                     >
-                      {name}
+                      {agent.name}
+                      <ExternalLink className="w-3 h-3" />
                     </Button>
                   ))}
                 </div>

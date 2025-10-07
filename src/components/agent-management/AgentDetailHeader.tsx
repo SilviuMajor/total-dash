@@ -39,7 +39,7 @@ export function AgentDetailHeader({ agent, assignedClients }: AgentDetailHeaderP
             {assignedClients.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {assignedClients.map((client) => (
-                  <Link key={client.id} to={`/admin/clients/${client.id}`}>
+                  <Link key={client.id} to={`/admin/clients/${client.id}/overview`}>
                     <Badge variant="secondary" className="hover:bg-secondary/80 cursor-pointer">
                       {client.name}
                     </Badge>
