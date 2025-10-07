@@ -98,7 +98,7 @@ export function AgencyLogoUpload({ onUploadComplete, currentUrl }: AgencyLogoUpl
             <img
               src={preview}
               alt="Agency logo preview"
-              className="w-24 h-24 rounded-lg object-cover border-2 border-border"
+              className="w-10 h-10 rounded-lg object-contain border-2 border-border"
             />
             <Button
               type="button"
@@ -111,8 +111,8 @@ export function AgencyLogoUpload({ onUploadComplete, currentUrl }: AgencyLogoUpl
             </Button>
           </div>
         ) : (
-          <div className="w-24 h-24 rounded-lg bg-muted border-2 border-dashed border-border flex items-center justify-center">
-            <Building2 className="w-8 h-8 text-muted-foreground" />
+          <div className="w-10 h-10 rounded-lg bg-muted border-2 border-dashed border-border flex items-center justify-center">
+            <Building2 className="w-4 h-4 text-muted-foreground" />
           </div>
         )}
         <div className="flex-1">
