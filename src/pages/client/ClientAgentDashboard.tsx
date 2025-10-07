@@ -18,7 +18,7 @@ interface Conversation {
 export default function ClientAgentDashboard() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
-  const [clientLogo, setClientLogo] = useState<string | null>(null);
+  const [agencyLogoUrl, setAgencyLogoUrl] = useState<string | null>(null);
   const { selectedAgentId, agents, clientId } = useClientAgentContext();
 
   useEffect(() => {
@@ -28,22 +28,17 @@ export default function ClientAgentDashboard() {
   }, [selectedAgentId]);
 
   useEffect(() => {
-    if (clientId) {
-      loadClientLogo();
-    }
-  }, [clientId]);
+    loadAgencyLogo();
+  }, []);
 
-  const loadClientLogo = async () => {
-    try {
-      const { data } = await supabase
-        .from('clients')
-        .select('logo_url')
-        .eq('id', clientId!)
-        .single();
-      
-      setClientLogo(data?.logo_url || null);
-    } catch (error) {
-      console.error('Error loading client logo:', error);
+  const loadAgencyLogo = async () => {
+    const { data } = await supabase
+      .from('agency_settings')
+      .select('agency_logo_url')
+      .single();
+    
+    if (data?.agency_logo_url) {
+      setAgencyLogoUrl(data.agency_logo_url);
     }
   };
 
@@ -86,11 +81,11 @@ export default function ClientAgentDashboard() {
         </div>
         <div className="flex items-center gap-4">
           <ClientAgentSelector />
-          {clientLogo && (
+          {agencyLogoUrl && (
             <img 
-              src={clientLogo} 
-              alt="Client logo" 
-              className="w-12 h-12 object-cover rounded-lg border-2 border-border"
+              src={agencyLogoUrl} 
+              alt="Agency logo" 
+              className="w-16 h-16 object-contain"
             />
           )}
         </div>
