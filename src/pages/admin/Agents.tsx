@@ -22,6 +22,7 @@ export default function AdminAgents() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
+  const [providerFilter, setProviderFilter] = useState<string>("voiceflow");
   const [agencyLogoUrl, setAgencyLogoUrl] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
@@ -61,6 +62,10 @@ export default function AdminAgents() {
       setLoading(false);
     }
   };
+
+  const filteredAgents = agents.filter(
+    (agent) => agent.provider === providerFilter
+  );
 
   const handleCreateAgent = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -162,6 +167,23 @@ export default function AdminAgents() {
         </Dialog>
       </div>
 
+      <div className="flex gap-2 mb-6">
+        <Button
+          variant={providerFilter === 'voiceflow' ? 'default' : 'outline'}
+          onClick={() => setProviderFilter('voiceflow')}
+          className={providerFilter === 'voiceflow' ? 'bg-foreground text-background' : ''}
+        >
+          Voiceflow ({agents.filter(a => a.provider === 'voiceflow').length})
+        </Button>
+        <Button
+          variant={providerFilter === 'retell' ? 'default' : 'outline'}
+          onClick={() => setProviderFilter('retell')}
+          className={providerFilter === 'retell' ? 'bg-foreground text-background' : ''}
+        >
+          Retell AI ({agents.filter(a => a.provider === 'retell').length})
+        </Button>
+      </div>
+
       {loading ? (
         <div className="space-y-4 w-full">
           {[...Array(6)].map((_, i) => (
@@ -170,9 +192,13 @@ export default function AdminAgents() {
             </Card>
           ))}
         </div>
+      ) : filteredAgents.length === 0 ? (
+        <Card className="p-12 text-center bg-gradient-card border-border/50">
+          <p className="text-muted-foreground">No {providerFilter} agents found</p>
+        </Card>
       ) : (
         <div className="space-y-4 w-full">
-          {agents.map((agent) => (
+          {filteredAgents.map((agent) => (
             <Card 
               key={agent.id} 
               className="w-full p-6 bg-gradient-card border-border/50 hover:border-primary/50 hover:shadow-xl transition-all duration-300 cursor-pointer"
