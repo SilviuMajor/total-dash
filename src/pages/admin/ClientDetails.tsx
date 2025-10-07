@@ -15,10 +15,13 @@ import { DepartmentManagement } from "@/components/client-management/DepartmentM
 interface ClientData {
   id: string;
   name: string;
+  logo_url: string | null;
   contact_email: string | null;
   contact_phone: string | null;
   company_address: string | null;
   status: string | null;
+  deleted_at: string | null;
+  scheduled_deletion_date: string | null;
   subscription_status: string | null;
   is_active: boolean | null;
   created_at: string;
