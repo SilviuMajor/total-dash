@@ -153,10 +153,17 @@ export default function AdminClients() {
         >
           Inactive ({clients.filter(c => c.status === 'inactive').length})
         </Button>
+        <Button
+          variant={statusFilter === 'deleting' ? 'default' : 'outline'}
+          onClick={() => setStatusFilter('deleting')}
+          className={statusFilter === 'deleting' ? 'bg-foreground text-background' : ''}
+        >
+          Deleting ({clients.filter(c => c.status === 'deleting').length})
+        </Button>
       </div>
 
       {loading ? (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="space-y-4 w-full">
           {[...Array(6)].map((_, i) => (
             <Card key={i} className="p-6 bg-gradient-card border-border/50 animate-pulse">
               <div className="h-24"></div>
@@ -168,47 +175,56 @@ export default function AdminClients() {
           <p className="text-muted-foreground">No {statusFilter} clients found</p>
         </Card>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="space-y-4 w-full">
           {filteredClients.map((client) => (
-            <Card key={client.id} className="p-6 bg-gradient-card border-border/50 hover:border-primary/50 transition-all group">
-              <div className="flex items-start gap-4 mb-4">
-                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Users className="w-6 h-6 text-primary" />
+            <Card key={client.id} className="w-full p-6 bg-gradient-card border-border/50 hover:border-primary/50 hover:shadow-xl transition-all duration-300">
+              <div className="flex items-center gap-6">
+                {/* Client Logo */}
+                <div className="flex-shrink-0">
+                  {client.logo_url ? (
+                    <img src={client.logo_url} alt={client.name} className="w-16 h-16 object-cover rounded-lg" />
+                  ) : (
+                    <div className="w-16 h-16 bg-primary/10 rounded-lg flex items-center justify-center">
+                      <Users className="w-8 h-8 text-primary" />
+                    </div>
+                  )}
                 </div>
+
+                {/* Client Info */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="font-semibold text-foreground truncate">{client.name}</h3>
-                    <Badge variant={getStatusBadgeVariant(client.status)} className="capitalize ml-2">
+                  <div className="flex items-center gap-3 mb-2">
+                    <h3 className="text-xl font-semibold text-foreground truncate">{client.name}</h3>
+                    <Badge variant={getStatusBadgeVariant(client.status)} className="capitalize">
                       {client.status || 'active'}
+                    </Badge>
+                    <Badge variant="outline">
+                      {client.subscription_status || "Basic"}
                     </Badge>
                   </div>
                   <p className="text-sm text-muted-foreground">
                     Created {new Date(client.created_at).toLocaleDateString()}
                   </p>
-                  <Badge variant="outline" className="mt-2">
-                    {client.subscription_status || "Basic"}
-                  </Badge>
                 </div>
-              </div>
-              <div className="space-y-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full border-border/50 gap-2"
-                  onClick={() => navigate(`/admin/clients/${client.id}/overview`)}
-                >
-                  <Settings className="w-4 h-4" />
-                  Manage Client
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full border-border/50 gap-2"
-                  onClick={() => window.open(`/client/${client.id}/dashboard`, '_blank')}
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  View Dashboard
-                </Button>
+
+                {/* Action Buttons */}
+                <div className="flex gap-2 flex-shrink-0">
+                  <Button
+                    variant="outline"
+                    className="border-border/50 gap-2"
+                    onClick={() => navigate(`/admin/clients/${client.id}/overview`)}
+                  >
+                    <Settings className="w-4 h-4" />
+                    Manage Client
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="border-border/50 gap-2"
+                    onClick={() => window.open(`/client/${client.id}/dashboard`, '_blank')}
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    View Dashboard
+                  </Button>
+                </div>
               </div>
             </Card>
           ))}

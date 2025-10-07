@@ -143,7 +143,7 @@ export default function AdminAgents() {
       </div>
 
       {loading ? (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="space-y-4 w-full">
           {[...Array(6)].map((_, i) => (
             <Card key={i} className="p-6 bg-gradient-card border-border/50 animate-pulse">
               <div className="h-24"></div>
@@ -151,21 +151,29 @@ export default function AdminAgents() {
           ))}
         </div>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="space-y-4 w-full">
           {agents.map((agent) => (
             <Card 
               key={agent.id} 
-              className="p-6 bg-gradient-card border-border/50 hover:border-primary/50 transition-all cursor-pointer"
+              className="w-full p-6 bg-gradient-card border-border/50 hover:border-primary/50 hover:shadow-xl transition-all duration-300 cursor-pointer"
               onClick={() => navigate(`/admin/agents/${agent.id}`)}
             >
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Bot className="w-6 h-6 text-primary" />
+              <div className="flex items-center gap-6">
+                {/* Agent Icon */}
+                <div className="flex-shrink-0 w-16 h-16 bg-primary/10 rounded-lg flex items-center justify-center">
+                  <Bot className="w-8 h-8 text-primary" />
                 </div>
+
+                {/* Agent Info */}
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-foreground truncate">{agent.name}</h3>
+                  <h3 className="text-xl font-semibold text-foreground truncate">{agent.name}</h3>
                   <p className="text-sm text-muted-foreground capitalize">{agent.provider}</p>
                 </div>
+
+                {/* View Details Button */}
+                <Button variant="outline" className="border-border/50">
+                  View Details
+                </Button>
               </div>
             </Card>
           ))}

@@ -271,10 +271,13 @@ export type Database = {
           contact_email: string | null
           contact_phone: string | null
           created_at: string | null
+          deleted_at: string | null
+          deleted_by: string | null
           id: string
           is_active: boolean | null
           logo_url: string | null
           name: string
+          scheduled_deletion_date: string | null
           status: string | null
           subscription_status: string | null
           updated_at: string | null
@@ -284,10 +287,13 @@ export type Database = {
           contact_email?: string | null
           contact_phone?: string | null
           created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           id?: string
           is_active?: boolean | null
           logo_url?: string | null
           name: string
+          scheduled_deletion_date?: string | null
           status?: string | null
           subscription_status?: string | null
           updated_at?: string | null
@@ -297,10 +303,13 @@ export type Database = {
           contact_email?: string | null
           contact_phone?: string | null
           created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           id?: string
           is_active?: boolean | null
           logo_url?: string | null
           name?: string
+          scheduled_deletion_date?: string | null
           status?: string | null
           subscription_status?: string | null
           updated_at?: string | null

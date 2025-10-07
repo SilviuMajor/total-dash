@@ -18,13 +18,34 @@ interface Conversation {
 export default function ClientAgentDashboard() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
-  const { selectedAgentId, agents } = useClientAgentContext();
+  const [clientLogo, setClientLogo] = useState<string | null>(null);
+  const { selectedAgentId, agents, clientId } = useClientAgentContext();
 
   useEffect(() => {
     if (selectedAgentId) {
       loadConversations();
     }
   }, [selectedAgentId]);
+
+  useEffect(() => {
+    if (clientId) {
+      loadClientLogo();
+    }
+  }, [clientId]);
+
+  const loadClientLogo = async () => {
+    try {
+      const { data } = await supabase
+        .from('clients')
+        .select('logo_url')
+        .eq('id', clientId!)
+        .single();
+      
+      setClientLogo(data?.logo_url || null);
+    } catch (error) {
+      console.error('Error loading client logo:', error);
+    }
+  };
 
   const loadConversations = async () => {
     try {
@@ -63,7 +84,16 @@ export default function ClientAgentDashboard() {
           <h1 className="text-4xl font-bold text-foreground mb-2">Conversations</h1>
           <p className="text-muted-foreground">Monitor live and recent conversations with your AI agent.</p>
         </div>
-        <ClientAgentSelector />
+        <div className="flex items-center gap-4">
+          <ClientAgentSelector />
+          {clientLogo && (
+            <img 
+              src={clientLogo} 
+              alt="Client logo" 
+              className="w-12 h-12 object-cover rounded-lg border-2 border-border"
+            />
+          )}
+        </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
