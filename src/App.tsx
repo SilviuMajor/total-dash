@@ -11,6 +11,7 @@ import Auth from "./pages/Auth";
 import Settings from "./pages/Settings";
 import AdminClients from "./pages/admin/Clients";
 import AdminAgents from "./pages/admin/Agents";
+import AgentDetails from "./pages/admin/AgentDetails";
 import AdminSettings from "./pages/admin/Settings";
 import ClientDetails from "./pages/admin/ClientDetails";
 import ClientAgentDashboard from "./pages/client/ClientAgentDashboard";
@@ -91,14 +92,22 @@ const App = () => (
                               </ProtectedRoute>
                             }
                           />
-                          <Route
-                            path="/admin/agents"
-                            element={
-                              <ProtectedRoute requireAdmin>
-                                <AdminAgents />
-                              </ProtectedRoute>
-                            }
-                          />
+                <Route
+                  path="/admin/agents"
+                  element={
+                    <ProtectedRoute requireAdmin>
+                      <AdminAgents />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/agents/:agentId"
+                  element={
+                    <ProtectedRoute requireAdmin>
+                      <AgentDetails />
+                    </ProtectedRoute>
+                  }
+                />
                           <Route
                             path="/admin/settings"
                             element={

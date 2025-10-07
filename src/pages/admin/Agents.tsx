@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Plus, Bot } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 interface Agent {
   id: string;
@@ -17,6 +18,7 @@ interface Agent {
 }
 
 export default function AdminAgents() {
+  const navigate = useNavigate();
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -151,7 +153,11 @@ export default function AdminAgents() {
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {agents.map((agent) => (
-            <Card key={agent.id} className="p-6 bg-gradient-card border-border/50 hover:border-primary/50 transition-all">
+            <Card 
+              key={agent.id} 
+              className="p-6 bg-gradient-card border-border/50 hover:border-primary/50 transition-all cursor-pointer"
+              onClick={() => navigate(`/admin/agents/${agent.id}`)}
+            >
               <div className="flex items-start gap-4">
                 <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
                   <Bot className="w-6 h-6 text-primary" />
@@ -160,11 +166,6 @@ export default function AdminAgents() {
                   <h3 className="font-semibold text-foreground truncate">{agent.name}</h3>
                   <p className="text-sm text-muted-foreground capitalize">{agent.provider}</p>
                 </div>
-              </div>
-              <div className="mt-4 pt-4 border-t border-border/50">
-                <Button variant="outline" size="sm" className="w-full border-border/50">
-                  Assign to Clients
-                </Button>
               </div>
             </Card>
           ))}
