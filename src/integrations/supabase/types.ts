@@ -180,6 +180,7 @@ export type Database = {
       agent_workflow_categories: {
         Row: {
           agent_id: string
+          color: string | null
           created_at: string | null
           id: string
           name: string
@@ -188,6 +189,7 @@ export type Database = {
         }
         Insert: {
           agent_id: string
+          color?: string | null
           created_at?: string | null
           id?: string
           name: string
@@ -196,6 +198,7 @@ export type Database = {
         }
         Update: {
           agent_id?: string
+          color?: string | null
           created_at?: string | null
           id?: string
           name?: string

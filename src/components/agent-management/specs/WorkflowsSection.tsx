@@ -22,6 +22,7 @@ interface WorkflowCategory {
   id: string;
   name: string;
   sort_order: number;
+  color?: string;
 }
 
 interface WorkflowsSectionProps {
@@ -31,9 +32,21 @@ interface WorkflowsSectionProps {
   onCategoriesChange: (categories: WorkflowCategory[]) => void;
 }
 
+const colorOptions = [
+  { value: "blue", label: "Blue", class: "from-blue-500 to-cyan-500" },
+  { value: "green", label: "Green", class: "from-green-500 to-emerald-500" },
+  { value: "purple", label: "Purple", class: "from-purple-500 to-pink-500" },
+  { value: "orange", label: "Orange", class: "from-orange-500 to-amber-500" },
+  { value: "red", label: "Red", class: "from-red-500 to-rose-500" },
+  { value: "indigo", label: "Indigo", class: "from-indigo-500 to-violet-500" },
+  { value: "teal", label: "Teal", class: "from-teal-500 to-cyan-500" },
+  { value: "pink", label: "Pink", class: "from-pink-500 to-fuchsia-500" },
+];
+
 export function WorkflowsSection({ workflows, categories, onWorkflowsChange, onCategoriesChange }: WorkflowsSectionProps) {
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
   const [newCategoryName, setNewCategoryName] = useState("");
+  const [newCategoryColor, setNewCategoryColor] = useState("blue");
   const [editingWorkflowId, setEditingWorkflowId] = useState<string | null>(null);
   const [workflowForm, setWorkflowForm] = useState({ name: "", description: "", category: "" });
 
@@ -50,9 +63,15 @@ export function WorkflowsSection({ workflows, categories, onWorkflowsChange, onC
       id: `temp_${Date.now()}`,
       name: newCategoryName,
       sort_order: categories.length,
+      color: newCategoryColor,
     };
     onCategoriesChange([...categories, newCategory]);
     setNewCategoryName("");
+    setNewCategoryColor("blue");
+  };
+
+  const updateCategoryColor = (categoryId: string, color: string) => {
+    onCategoriesChange(categories.map(c => c.id === categoryId ? { ...c, color } : c));
   };
 
   const deleteCategory = (categoryId: string) => {
@@ -120,28 +139,62 @@ export function WorkflowsSection({ workflows, categories, onWorkflowsChange, onC
       <div className="space-y-3">
         <Label>Workflow Categories</Label>
         <div className="space-y-2">
-          {categories.map((category) => (
-            <div key={category.id} className="flex items-center gap-2">
-              <div className="flex-1 p-2 rounded-lg border bg-muted/50">
-                <span className="font-medium">{category.name}</span>
+          {categories.map((category) => {
+            const categoryColor = colorOptions.find(c => c.value === category.color) || colorOptions[0];
+            return (
+              <div key={category.id} className="flex items-center gap-2">
+                <div className={`flex-1 p-3 rounded-lg border-2 bg-gradient-to-r ${categoryColor.class} bg-opacity-10`}>
+                  <span className="font-semibold text-foreground">{category.name}</span>
+                </div>
+                <Select value={category.color || "blue"} onValueChange={(color) => updateCategoryColor(category.id, color)}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {colorOptions.map((color) => (
+                      <SelectItem key={color.value} value={color.value}>
+                        <div className="flex items-center gap-2">
+                          <div className={`w-4 h-4 rounded bg-gradient-to-r ${color.class}`} />
+                          {color.label}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => deleteCategory(category.id)}
+                >
+                  <Trash2 className="w-4 h-4 text-destructive" />
+                </Button>
               </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={() => deleteCategory(category.id)}
-              >
-                <Trash2 className="w-4 h-4 text-destructive" />
-              </Button>
-            </div>
-          ))}
+            );
+          })}
           <div className="flex items-center gap-2">
             <Input
               placeholder="New category name"
               value={newCategoryName}
               onChange={(e) => setNewCategoryName(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && addCategory()}
+              className="flex-1"
             />
+            <Select value={newCategoryColor} onValueChange={setNewCategoryColor}>
+              <SelectTrigger className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {colorOptions.map((color) => (
+                  <SelectItem key={color.value} value={color.value}>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-4 h-4 rounded bg-gradient-to-r ${color.class}`} />
+                      {color.label}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Button type="button" onClick={addCategory} size="icon">
               <Plus className="w-4 h-4" />
             </Button>
@@ -153,9 +206,11 @@ export function WorkflowsSection({ workflows, categories, onWorkflowsChange, onC
         <Label>Key Workflows</Label>
         {categories.map((category) => {
           const categoryWorkflows = workflows.filter(w => w.category === category.id);
+          const categoryColor = colorOptions.find(c => c.value === category.color) || colorOptions[0];
           return (
-            <Card key={category.id} className="p-4">
-              <div className="flex items-center justify-between mb-3">
+            <Card key={category.id} className="p-4 border-2 relative overflow-hidden">
+              <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${categoryColor.class}`} />
+              <div className="flex items-center justify-between mb-3 pt-1">
                 <h4 className="font-semibold">{category.name}</h4>
                 <Button
                   type="button"

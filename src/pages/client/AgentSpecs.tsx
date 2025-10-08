@@ -157,13 +157,27 @@ export default function AgentSpecs() {
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
               {domains.map((domain) => {
                 const Icon = domainIcons[domain];
+                const domainColors: Record<string, string> = {
+                  website: "from-blue-500 to-cyan-500",
+                  whatsapp: "from-green-500 to-emerald-500",
+                  telegram: "from-sky-500 to-blue-500",
+                  instagram: "from-pink-500 to-purple-500",
+                  messenger: "from-blue-600 to-indigo-600",
+                  telephony: "from-violet-500 to-purple-500",
+                  sms: "from-orange-500 to-amber-500",
+                };
+                const color = domainColors[domain] || "from-gray-500 to-slate-500";
+                
                 return (
                   <div
                     key={domain}
-                    className="flex items-center gap-2 p-3 rounded-lg border bg-muted/50"
+                    className="relative flex items-center gap-3 p-4 rounded-xl border-2 overflow-hidden"
                   >
-                    {Icon && <Icon className="w-4 h-4" />}
-                    <span className="text-sm font-medium capitalize">{domain}</span>
+                    <div className={`absolute inset-0 bg-gradient-to-br ${color} opacity-10`} />
+                    <div className={`relative p-2 rounded-lg bg-gradient-to-br ${color}`}>
+                      {Icon && <Icon className="w-5 h-5 text-white" />}
+                    </div>
+                    <span className="relative text-sm font-semibold capitalize">{domain}</span>
                   </div>
                 );
               })}
@@ -195,12 +209,27 @@ export default function AgentSpecs() {
               const categoryWorkflows = workflows.filter(w => w.category === category.id);
               if (categoryWorkflows.length === 0) return null;
 
+              const colorMap: Record<string, string> = {
+                blue: "from-blue-500 to-cyan-500",
+                green: "from-green-500 to-emerald-500",
+                purple: "from-purple-500 to-pink-500",
+                orange: "from-orange-500 to-amber-500",
+                red: "from-red-500 to-rose-500",
+                indigo: "from-indigo-500 to-violet-500",
+                teal: "from-teal-500 to-cyan-500",
+                pink: "from-pink-500 to-fuchsia-500",
+              };
+              const categoryColor = colorMap[(category as any).color || "blue"];
+
               return (
-                <div key={category.id}>
-                  <h3 className="font-semibold mb-3">{category.name}</h3>
-                  <div className="space-y-3">
+                <div key={category.id} className="relative">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className={`h-8 w-1.5 rounded-full bg-gradient-to-b ${categoryColor}`} />
+                    <h3 className="font-semibold text-lg">{category.name}</h3>
+                  </div>
+                  <div className="space-y-3 ml-5">
                     {categoryWorkflows.map((workflow) => (
-                      <div key={workflow.id} className="border-l-2 border-primary pl-4">
+                      <div key={workflow.id} className="pl-4 border-l-2 border-border">
                         <p className="font-medium">{workflow.name}</p>
                         <p className="text-sm text-muted-foreground mt-1">{workflow.description}</p>
                       </div>
