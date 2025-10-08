@@ -80,6 +80,9 @@ export function ClientAgentSelector() {
             {selectedAgent && (
               <span className="text-xs text-muted-foreground truncate w-full text-left">
                 {getAgentFunction(selectedAgent.provider)}
+                {selectedAgent.status && selectedAgent.status !== 'testing' && (
+                  <> • {selectedAgent.status === 'active' ? 'Active' : 'In Development'}</>
+                )}
               </span>
             )}
           </div>
@@ -109,7 +112,12 @@ export function ClientAgentSelector() {
                   />
                   <div className="flex flex-col">
                     <span className="font-medium">{agent.name}</span>
-                    <span className="text-xs text-muted-foreground">{getAgentFunction(agent.provider)}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {getAgentFunction(agent.provider)}
+                      {agent.status && agent.status !== 'testing' && (
+                        <> • {agent.status === 'active' ? 'Active' : 'In Development'}</>
+                      )}
+                    </span>
                   </div>
                 </CommandItem>
               ))}

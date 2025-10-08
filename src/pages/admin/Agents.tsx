@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Bot } from "lucide-react";
+import { Plus, Bot, Activity } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -15,6 +16,7 @@ interface Agent {
   name: string;
   provider: string;
   created_at: string;
+  status: 'active' | 'testing' | 'in_development';
 }
 
 export default function AdminAgents() {
@@ -38,7 +40,7 @@ export default function AdminAgents() {
     try {
       const { data, error } = await supabase
         .from('agents')
-        .select('id, name, provider, created_at')
+        .select('id, name, provider, created_at, status')
         .order('name');
 
       if (error) throw error;
@@ -47,6 +49,32 @@ export default function AdminAgents() {
       console.error('Error loading agents:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active':
+        return 'bg-green-500/10 text-green-500 border-green-500/20';
+      case 'testing':
+        return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
+      case 'in_development':
+        return 'bg-gray-500/10 text-gray-500 border-gray-500/20';
+      default:
+        return 'bg-muted text-muted-foreground';
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'active':
+        return 'Active';
+      case 'testing':
+        return 'Testing';
+      case 'in_development':
+        return 'In Development';
+      default:
+        return status;
     }
   };
 
@@ -192,7 +220,13 @@ export default function AdminAgents() {
 
                 {/* Agent Info */}
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-xl font-semibold text-foreground truncate">{agent.name}</h3>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="text-xl font-semibold text-foreground truncate">{agent.name}</h3>
+                    <Badge className={getStatusColor(agent.status)}>
+                      <Activity className="w-3 h-3 mr-1" />
+                      {getStatusLabel(agent.status)}
+                    </Badge>
+                  </div>
                   <p className="text-sm text-muted-foreground capitalize">{agent.provider}</p>
                 </div>
 

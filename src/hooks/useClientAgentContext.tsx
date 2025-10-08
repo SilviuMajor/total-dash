@@ -8,6 +8,7 @@ interface Agent {
   name: string;
   provider: string;
   sort_order: number;
+  status?: 'active' | 'testing' | 'in_development';
 }
 
 interface AgentPermissions {
@@ -72,7 +73,8 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
           agents (
             id,
             name,
-            provider
+            provider,
+            status
           )
         `)
         .eq('client_id', previewClientId)
@@ -85,9 +87,10 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
           id: (a.agents as any).id,
           name: (a.agents as any).name,
           provider: (a.agents as any).provider,
+          status: (a.agents as any).status,
           sort_order: a.sort_order
         }))
-        .filter(a => a.id) || [];
+        .filter(a => a.id && a.status !== 'testing') || [];
 
       setAgents(agentsList);
 
@@ -148,7 +151,8 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
           agents (
             id,
             name,
-            provider
+            provider,
+            status
           )
         `)
         .eq('user_id', user!.id)
@@ -171,10 +175,11 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
           id: (p.agents as any).id,
           name: (p.agents as any).name,
           provider: (p.agents as any).provider,
+          status: (p.agents as any).status,
           sort_order: sortOrderMap.get((p.agents as any).id) || 999,
           permissions: p.permissions as unknown as AgentPermissions,
         }))
-        .filter(a => a.id)
+        .filter(a => a.id && a.status !== 'testing')
         .sort((a, b) => a.sort_order - b.sort_order) || [];
 
       setAgents(agentsList.map(({ permissions, ...agent }) => agent));
