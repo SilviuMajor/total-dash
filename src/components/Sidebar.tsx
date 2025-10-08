@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { MessageSquare, BarChart3, BookOpen, Settings, Users, Bot, LogOut, Eye } from "lucide-react";
+import { MessageSquare, BarChart3, BookOpen, Settings, Users, Bot, LogOut, Eye, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useClientAgentContext } from "@/hooks/useClientAgentContext";
@@ -9,12 +9,13 @@ import { Button } from "./ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import fiveleafLogo from "@/assets/fiveleaf-logo.png";
 
-const clientNavigation = [
-  { name: "Conversations", href: "/", icon: MessageSquare, permissionKey: "conversations" },
-  { name: "Analytics", href: "/analytics", icon: BarChart3, permissionKey: "analytics" },
-  { name: "Knowledge Base", href: "/knowledge-base", icon: BookOpen, permissionKey: "knowledge_base" },
-  { name: "Agent Settings", href: "/agent-settings", icon: Settings, permissionKey: "agent_settings" },
-];
+  const clientNavigation = [
+    { name: "Conversations", href: "/", icon: MessageSquare, permissionKey: "conversations" },
+    { name: "Analytics", href: "/analytics", icon: BarChart3, permissionKey: "analytics" },
+    { name: "Specifications", href: "/specs", icon: FileText, permissionKey: "specs" },
+    { name: "Knowledge Base", href: "/knowledge-base", icon: BookOpen, permissionKey: "knowledge_base" },
+    { name: "Agent Settings", href: "/agent-settings", icon: Settings, permissionKey: "agent_settings" },
+  ];
 
 const adminNavigation = [
   { name: "Clients", href: "/admin/clients", icon: Users },

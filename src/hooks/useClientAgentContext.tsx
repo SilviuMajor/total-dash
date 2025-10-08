@@ -15,6 +15,7 @@ interface AgentPermissions {
   conversations: boolean;
   knowledge_base: boolean;
   agent_settings: boolean;
+  specs: boolean;
 }
 
 interface ClientAgentContextType {
@@ -108,6 +109,7 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
             conversations: true,
             knowledge_base: false,
             agent_settings: false,
+            specs: true,
           });
         }
       }

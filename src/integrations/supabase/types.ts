@@ -80,6 +80,47 @@ export type Database = {
           },
         ]
       }
+      agent_spec_sections: {
+        Row: {
+          agent_id: string
+          content: Json | null
+          created_at: string | null
+          id: string
+          section_type: string
+          sort_order: number | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          agent_id: string
+          content?: Json | null
+          created_at?: string | null
+          id?: string
+          section_type: string
+          sort_order?: number | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          agent_id?: string
+          content?: Json | null
+          created_at?: string | null
+          id?: string
+          section_type?: string
+          sort_order?: number | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_spec_sections_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agent_types: {
         Row: {
           created_at: string
@@ -104,6 +145,114 @@ export type Database = {
         }
         Relationships: []
       }
+      agent_update_logs: {
+        Row: {
+          agent_id: string
+          created_at: string | null
+          created_by: string | null
+          description: string
+          id: string
+        }
+        Insert: {
+          agent_id: string
+          created_at?: string | null
+          created_by?: string | null
+          description: string
+          id?: string
+        }
+        Update: {
+          agent_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_update_logs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_workflow_categories: {
+        Row: {
+          agent_id: string
+          created_at: string | null
+          id: string
+          name: string
+          sort_order: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          agent_id: string
+          created_at?: string | null
+          id?: string
+          name: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          agent_id?: string
+          created_at?: string | null
+          id?: string
+          name?: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_workflow_categories_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_workflows: {
+        Row: {
+          agent_id: string
+          category: string
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          sort_order: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          agent_id: string
+          category: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          agent_id?: string
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_workflows_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agents: {
         Row: {
           api_key: string
@@ -112,6 +261,7 @@ export type Database = {
           id: string
           name: string
           provider: string
+          status: Database["public"]["Enums"]["agent_status"]
           updated_at: string | null
         }
         Insert: {
@@ -121,6 +271,7 @@ export type Database = {
           id?: string
           name: string
           provider: string
+          status?: Database["public"]["Enums"]["agent_status"]
           updated_at?: string | null
         }
         Update: {
@@ -130,6 +281,7 @@ export type Database = {
           id?: string
           name?: string
           provider?: string
+          status?: Database["public"]["Enums"]["agent_status"]
           updated_at?: string | null
         }
         Relationships: []
@@ -589,6 +741,7 @@ export type Database = {
       }
     }
     Enums: {
+      agent_status: "active" | "testing" | "in_development"
       user_role: "admin" | "client"
     }
     CompositeTypes: {
@@ -717,6 +870,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      agent_status: ["active", "testing", "in_development"],
       user_role: ["admin", "client"],
     },
   },

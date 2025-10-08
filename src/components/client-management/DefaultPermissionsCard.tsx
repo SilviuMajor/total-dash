@@ -16,6 +16,7 @@ export function DefaultPermissionsCard({ clientId }: DefaultPermissionsCardProps
     dashboard: true,
     analytics: true,
     transcripts: true,
+    specs: true,
     settings: false,
   });
   const [saving, setSaving] = useState(false);
@@ -137,6 +138,19 @@ export function DefaultPermissionsCard({ clientId }: DefaultPermissionsCardProps
             />
             <Label htmlFor="transcripts" className="font-normal cursor-pointer">
               Transcripts - View call transcripts and recordings
+            </Label>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="specs"
+              checked={permissions.specs}
+              onCheckedChange={(checked) =>
+                setPermissions({ ...permissions, specs: checked as boolean })
+              }
+            />
+            <Label htmlFor="specs" className="font-normal cursor-pointer">
+              Specifications - View agent specifications and updates
             </Label>
           </div>
 

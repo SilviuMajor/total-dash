@@ -12,6 +12,7 @@ import { RetellSettings } from "@/components/agent-management/retell/RetellSetti
 import { RetellKnowledgeBase } from "@/components/agent-management/retell/RetellKnowledgeBase";
 import { RetellWidget } from "@/components/agent-management/retell/RetellWidget";
 import { RetellChannels } from "@/components/agent-management/retell/RetellChannels";
+import { SpecsSettings } from "@/components/agent-management/specs/SpecsSettings";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -21,6 +22,7 @@ interface Agent {
   provider: string;
   config: Record<string, any>;
   created_at: string;
+  status: 'active' | 'testing' | 'in_development';
 }
 
 interface AssignedClient {
@@ -174,13 +176,14 @@ export default function AgentDetails() {
           )}
         </div>
 
-        <AgentDetailHeader agent={agent} assignedClients={assignedClients} />
+        <AgentDetailHeader agent={agent} assignedClients={assignedClients} onUpdate={loadAgentDetails} />
 
         <Tabs defaultValue="settings" className="space-y-6">
           <TabsList>
             <TabsTrigger value="widget">Widget</TabsTrigger>
             <TabsTrigger value="knowledge-base">Knowledge Base</TabsTrigger>
             <TabsTrigger value="channels">Channels</TabsTrigger>
+            <TabsTrigger value="specs">Specs</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
 
@@ -194,6 +197,10 @@ export default function AgentDetails() {
 
           <TabsContent value="channels" className="space-y-6">
             {renderProviderContent("channels")}
+          </TabsContent>
+
+          <TabsContent value="specs" className="space-y-6">
+            <SpecsSettings agent={agent} />
           </TabsContent>
 
           <TabsContent value="settings" className="space-y-6">

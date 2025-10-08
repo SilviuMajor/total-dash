@@ -19,6 +19,7 @@ import Conversations from "./pages/client/Conversations";
 import Analytics from "./pages/client/Analytics";
 import KnowledgeBase from "./pages/client/KnowledgeBase";
 import AgentSettings from "./pages/client/AgentSettings";
+import AgentSpecs from "./pages/client/AgentSpecs";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -75,6 +76,14 @@ const App = () => (
                             element={
                               <ProtectedRoute requireClient requiredPage="agent_settings">
                                 <AgentSettings />
+                              </ProtectedRoute>
+                            } 
+                          />
+                          <Route 
+                            path="/specs" 
+                            element={
+                              <ProtectedRoute requireClient requiredPage="specs">
+                                <AgentSpecs />
                               </ProtectedRoute>
                             } 
                           />

@@ -48,6 +48,7 @@ interface AgentPermission {
   conversations: boolean;
   knowledge_base: boolean;
   agent_settings: boolean;
+  specs: boolean;
 }
 
 export function ClientUsersManagement({ clientId }: { clientId: string }) {
@@ -155,6 +156,7 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
           conversations: true,
           knowledge_base: false,
           agent_settings: false,
+          specs: true,
         };
       });
       setNewUserAgentPermissions(initialPermissions);
@@ -228,6 +230,7 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
             conversations: true,
             knowledge_base: false,
             agent_settings: false,
+            specs: true,
           };
         });
         setNewUserAgentPermissions(initialPermissions);
@@ -277,6 +280,7 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
           conversations: p.conversations,
           knowledge_base: p.knowledge_base,
           agent_settings: p.agent_settings,
+          specs: p.specs,
         },
       }));
 
@@ -547,6 +551,16 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
                     </div>
                     <div className="flex items-center space-x-2">
                       <Checkbox
+                        id={`new-${agent.id}-specs`}
+                        checked={newUserAgentPermissions[agent.id]?.specs || false}
+                        onCheckedChange={(checked) => 
+                          toggleAgentPermission(agent.id, 'specs', checked as boolean, true)
+                        }
+                      />
+                      <Label htmlFor={`new-${agent.id}-specs`} className="font-normal">Specifications</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
                         id={`new-${agent.id}-knowledge_base`}
                         checked={newUserAgentPermissions[agent.id]?.knowledge_base || false}
                         onCheckedChange={(checked) => 
@@ -692,6 +706,16 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
                           }
                         />
                         <Label htmlFor={`edit-${agent.id}-conversations`} className="font-normal">Conversations</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`edit-${agent.id}-specs`}
+                          checked={selectedUserAgentPermissions[agent.id]?.specs || false}
+                          onCheckedChange={(checked) => 
+                            toggleAgentPermission(agent.id, 'specs', checked as boolean, false)
+                          }
+                        />
+                        <Label htmlFor={`edit-${agent.id}-specs`} className="font-normal">Specifications</Label>
                       </div>
                       <div className="flex items-center space-x-2">
                         <Checkbox
