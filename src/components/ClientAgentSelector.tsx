@@ -19,7 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface AgentType {
   provider: string;
-  function_name: string;
+  function_type: string;
 }
 
 export function ClientAgentSelector() {
@@ -36,7 +36,7 @@ export function ClientAgentSelector() {
   const loadAgentTypes = async () => {
     const { data } = await supabase
       .from('agent_types')
-      .select('provider, function_name');
+      .select('provider, function_type');
     
     if (data) {
       setAgentTypes(data);
@@ -44,8 +44,8 @@ export function ClientAgentSelector() {
   };
 
   const getAgentFunction = (provider: string) => {
-    const agentType = agentTypes.find(t => t.provider === provider);
-    return agentType?.function_name || 'Agent';
+    const agentType = agentTypes.find(type => type.provider === provider);
+    return agentType?.function_type || provider;
   };
 
   if (loading) {

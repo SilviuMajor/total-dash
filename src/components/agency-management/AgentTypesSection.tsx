@@ -12,7 +12,6 @@ import { toast } from "sonner";
 interface AgentType {
   id: string;
   provider: string;
-  function_name: string;
   function_type: string;
 }
 
@@ -21,7 +20,6 @@ export function AgentTypesSection() {
   const [loading, setLoading] = useState(true);
   const [editingType, setEditingType] = useState<AgentType | null>(null);
   const [formData, setFormData] = useState({
-    function_name: "",
     function_type: "Voice Agent"
   });
 
@@ -48,7 +46,6 @@ export function AgentTypesSection() {
   const handleEdit = (type: AgentType) => {
     setEditingType(type);
     setFormData({
-      function_name: type.function_name,
       function_type: type.function_type
     });
   };
@@ -59,7 +56,6 @@ export function AgentTypesSection() {
     const { error } = await supabase
       .from('agent_types')
       .update({
-        function_name: formData.function_name,
         function_type: formData.function_type
       })
       .eq('id', editingType.id);
@@ -122,15 +118,6 @@ export function AgentTypesSection() {
                     </DialogHeader>
                     <div className="space-y-4 pt-4">
                       <div className="space-y-2">
-                        <Label htmlFor="function_name">Function Name</Label>
-                        <Input
-                          id="function_name"
-                          value={formData.function_name}
-                          onChange={(e) => setFormData({ ...formData, function_name: e.target.value })}
-                          placeholder="e.g., Assistant, Support Agent"
-                        />
-                      </div>
-                      <div className="space-y-2">
                         <Label htmlFor="function_type">Function Type</Label>
                         <Select
                           value={formData.function_type}
@@ -152,8 +139,7 @@ export function AgentTypesSection() {
                   </DialogContent>
                 </Dialog>
               </div>
-              <div className="text-sm text-muted-foreground space-y-1">
-                <div><span className="font-medium">Function:</span> {type.function_name}</div>
+              <div className="text-sm text-muted-foreground">
                 <div><span className="font-medium">Type:</span> {type.function_type}</div>
               </div>
             </div>

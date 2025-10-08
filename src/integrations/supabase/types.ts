@@ -83,7 +83,6 @@ export type Database = {
       agent_types: {
         Row: {
           created_at: string
-          function_name: string
           function_type: string
           id: string
           provider: string
@@ -91,7 +90,6 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          function_name?: string
           function_type?: string
           id?: string
           provider: string
@@ -99,7 +97,6 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          function_name?: string
           function_type?: string
           id?: string
           provider?: string
