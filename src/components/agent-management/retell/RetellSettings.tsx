@@ -26,6 +26,7 @@ export function RetellSettings({ agent, onUpdate }: RetellSettingsProps) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
+    name: agent.name,
     retell_api_key: agent.config?.retell_api_key || "",
   });
 
@@ -51,6 +52,7 @@ export function RetellSettings({ agent, onUpdate }: RetellSettingsProps) {
       const { error } = await supabase
         .from("agents")
         .update({
+          name: formData.name,
           config: {
             ...agent.config,
             retell_api_key: formData.retell_api_key,
@@ -83,11 +85,24 @@ export function RetellSettings({ agent, onUpdate }: RetellSettingsProps) {
         <div>
           <h2 className="text-xl font-semibold mb-4">Retell AI Configuration</h2>
           <p className="text-sm text-muted-foreground">
-            Configure your Retell AI API credentials to enable agent functionality.
+            Configure your agent name and Retell AI API credentials to enable agent functionality.
           </p>
         </div>
 
         <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="name">Agent Name</Label>
+            <Input
+              id="name"
+              type="text"
+              value={formData.name}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
+              placeholder="Enter agent name"
+            />
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="retell_api_key">Retell AI API Key</Label>
             <div className="relative">

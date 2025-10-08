@@ -80,6 +80,33 @@ export type Database = {
           },
         ]
       }
+      agent_types: {
+        Row: {
+          created_at: string
+          function_name: string
+          function_type: string
+          id: string
+          provider: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          function_name?: string
+          function_type?: string
+          id?: string
+          provider: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          function_name?: string
+          function_type?: string
+          id?: string
+          provider?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       agents: {
         Row: {
           api_key: string

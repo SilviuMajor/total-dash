@@ -26,6 +26,7 @@ export function VoiceflowSettings({ agent, onUpdate }: VoiceflowSettingsProps) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
+    name: agent.name,
     voiceflow_api_key: agent.config?.voiceflow_api_key || "",
     voiceflow_project_id: agent.config?.voiceflow_project_id || "",
   });
@@ -52,6 +53,7 @@ export function VoiceflowSettings({ agent, onUpdate }: VoiceflowSettingsProps) {
       const { error } = await supabase
         .from("agents")
         .update({
+          name: formData.name,
           config: {
             ...agent.config,
             voiceflow_api_key: formData.voiceflow_api_key,
@@ -85,11 +87,24 @@ export function VoiceflowSettings({ agent, onUpdate }: VoiceflowSettingsProps) {
         <div>
           <h2 className="text-xl font-semibold mb-4">Voiceflow Configuration</h2>
           <p className="text-sm text-muted-foreground">
-            Configure your Voiceflow API credentials to enable agent functionality.
+            Configure your agent name and Voiceflow API credentials to enable agent functionality.
           </p>
         </div>
 
         <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="name">Agent Name</Label>
+            <Input
+              id="name"
+              type="text"
+              value={formData.name}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
+              placeholder="Enter agent name"
+            />
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="voiceflow_api_key">Voiceflow API Key</Label>
             <div className="relative">

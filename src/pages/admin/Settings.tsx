@@ -9,6 +9,7 @@ import { Plus, UserCog, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { AgencyLogoUpload } from "@/components/agency-management/AgencyLogoUpload";
+import { AgentTypesSection } from "@/components/agency-management/AgentTypesSection";
 
 interface AgencyMember {
   id: string;
@@ -192,6 +193,8 @@ export default function AdminSettings() {
         <h1 className="text-4xl font-bold text-foreground mb-2">Agency Settings</h1>
         <p className="text-muted-foreground">Manage your agency configuration and team members.</p>
       </div>
+
+      <AgentTypesSection />
 
       <Card className="p-6 bg-gradient-card border-border/50">
         <h3 className="text-lg font-semibold text-foreground mb-6">Agency Configuration</h3>
