@@ -176,7 +176,7 @@ export default function AgentSpecs() {
       {capacity && (
         <Card>
           <CardHeader>
-            <CardTitle>Capacity</CardTitle>
+            <CardTitle>Capacity (per month)</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm">{capacity}</p>

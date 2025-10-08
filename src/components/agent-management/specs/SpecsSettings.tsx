@@ -213,12 +213,12 @@ export function SpecsSettings({ agent }: SpecsSettingsProps) {
         </div>
 
         <div className="space-y-3">
-          <Label htmlFor="capacity">Capacity</Label>
+          <Label htmlFor="capacity">Capacity (per month)</Label>
           <Input
             id="capacity"
             value={capacity}
             onChange={(e) => setCapacity(e.target.value)}
-            placeholder="e.g., 1000 calls per month"
+            placeholder="e.g., 1000 calls"
           />
         </div>
 

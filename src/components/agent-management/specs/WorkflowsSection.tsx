@@ -6,6 +6,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Trash2, GripVertical, Edit2, Check, X } from "lucide-react";
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface Workflow {
   id: string;
@@ -33,6 +36,13 @@ export function WorkflowsSection({ workflows, categories, onWorkflowsChange, onC
   const [newCategoryName, setNewCategoryName] = useState("");
   const [editingWorkflowId, setEditingWorkflowId] = useState<string | null>(null);
   const [workflowForm, setWorkflowForm] = useState({ name: "", description: "", category: "" });
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   const addCategory = () => {
     if (!newCategoryName.trim()) return;
@@ -84,6 +94,27 @@ export function WorkflowsSection({ workflows, categories, onWorkflowsChange, onC
     setWorkflowForm({ name: workflow.name, description: workflow.description, category: workflow.category });
   };
 
+  const handleDragEnd = (event: DragEndEvent, categoryId: string) => {
+    const { active, over } = event;
+    
+    if (over && active.id !== over.id) {
+      const categoryWorkflows = workflows.filter(w => w.category === categoryId);
+      const oldIndex = categoryWorkflows.findIndex(w => w.id === active.id);
+      const newIndex = categoryWorkflows.findIndex(w => w.id === over.id);
+      
+      const reorderedCategoryWorkflows = arrayMove(categoryWorkflows, oldIndex, newIndex);
+      const otherWorkflows = workflows.filter(w => w.category !== categoryId);
+      
+      // Update sort_order
+      const updatedCategoryWorkflows = reorderedCategoryWorkflows.map((w, idx) => ({
+        ...w,
+        sort_order: idx,
+      }));
+      
+      onWorkflowsChange([...otherWorkflows, ...updatedCategoryWorkflows]);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="space-y-3">
@@ -120,88 +151,151 @@ export function WorkflowsSection({ workflows, categories, onWorkflowsChange, onC
 
       <div className="space-y-4">
         <Label>Key Workflows</Label>
-        {categories.map((category) => (
-          <Card key={category.id} className="p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h4 className="font-semibold">{category.name}</h4>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => addWorkflow(category.id)}
+        {categories.map((category) => {
+          const categoryWorkflows = workflows.filter(w => w.category === category.id);
+          return (
+            <Card key={category.id} className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-semibold">{category.name}</h4>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => addWorkflow(category.id)}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Workflow
+                </Button>
+              </div>
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={(event) => handleDragEnd(event, category.id)}
               >
-                <Plus className="w-4 h-4 mr-2" />
-                Add Workflow
-              </Button>
-            </div>
-            <div className="space-y-3">
-              {workflows
-                .filter(w => w.category === category.id)
-                .map((workflow) => (
-                  <div key={workflow.id} className="p-3 rounded-lg border bg-background">
-                    {editingWorkflowId === workflow.id ? (
-                      <div className="space-y-2">
-                        <Input
-                          placeholder="Workflow name"
-                          value={workflowForm.name}
-                          onChange={(e) => setWorkflowForm({ ...workflowForm, name: e.target.value })}
-                        />
-                        <Textarea
-                          placeholder="Workflow description"
-                          value={workflowForm.description}
-                          onChange={(e) => setWorkflowForm({ ...workflowForm, description: e.target.value })}
-                          rows={3}
-                        />
-                        <div className="flex items-center gap-2">
-                          <Button type="button" size="sm" onClick={() => updateWorkflow(workflow.id)}>
-                            <Check className="w-4 h-4 mr-1" />
-                            Save
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => setEditingWorkflowId(null)}
-                          >
-                            <X className="w-4 h-4 mr-1" />
-                            Cancel
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div>
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <p className="font-medium">{workflow.name || "Untitled Workflow"}</p>
-                            <p className="text-sm text-muted-foreground mt-1">{workflow.description}</p>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => startEditWorkflow(workflow)}
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => deleteWorkflow(workflow.id)}
-                            >
-                              <Trash2 className="w-4 h-4 text-destructive" />
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    )}
+                <SortableContext
+                  items={categoryWorkflows.map(w => w.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="space-y-3">
+                    {categoryWorkflows.map((workflow) => (
+                      <SortableWorkflowItem
+                        key={workflow.id}
+                        workflow={workflow}
+                        isEditing={editingWorkflowId === workflow.id}
+                        workflowForm={workflowForm}
+                        onFormChange={setWorkflowForm}
+                        onUpdate={() => updateWorkflow(workflow.id)}
+                        onEdit={() => startEditWorkflow(workflow)}
+                        onDelete={() => deleteWorkflow(workflow.id)}
+                        onCancelEdit={() => setEditingWorkflowId(null)}
+                      />
+                    ))}
                   </div>
-                ))}
-            </div>
-          </Card>
-        ))}
+                </SortableContext>
+              </DndContext>
+            </Card>
+          );
+        })}
       </div>
+    </div>
+  );
+}
+
+interface SortableWorkflowItemProps {
+  workflow: Workflow;
+  isEditing: boolean;
+  workflowForm: { name: string; description: string; category: string };
+  onFormChange: (form: { name: string; description: string; category: string }) => void;
+  onUpdate: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+  onCancelEdit: () => void;
+}
+
+function SortableWorkflowItem({ workflow, isEditing, workflowForm, onFormChange, onUpdate, onEdit, onDelete, onCancelEdit }: SortableWorkflowItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: workflow.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="p-3 rounded-lg border bg-background"
+    >
+      {isEditing ? (
+        <div className="space-y-2">
+          <Input
+            placeholder="Workflow name"
+            value={workflowForm.name}
+            onChange={(e) => onFormChange({ ...workflowForm, name: e.target.value })}
+          />
+          <Textarea
+            placeholder="Workflow description"
+            value={workflowForm.description}
+            onChange={(e) => onFormChange({ ...workflowForm, description: e.target.value })}
+            rows={3}
+          />
+          <div className="flex items-center gap-2">
+            <Button type="button" size="sm" onClick={onUpdate}>
+              <Check className="w-4 h-4 mr-1" />
+              Save
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={onCancelEdit}
+            >
+              <X className="w-4 h-4 mr-1" />
+              Cancel
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-start gap-2">
+          <button
+            className="cursor-grab active:cursor-grabbing mt-1"
+            {...attributes}
+            {...listeners}
+          >
+            <GripVertical className="w-4 h-4 text-muted-foreground" />
+          </button>
+          <div className="flex-1">
+            <p className="font-medium">{workflow.name || "Untitled Workflow"}</p>
+            <p className="text-sm text-muted-foreground mt-1">{workflow.description}</p>
+          </div>
+          <div className="flex items-center gap-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={onEdit}
+            >
+              <Edit2 className="w-4 h-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={onDelete}
+            >
+              <Trash2 className="w-4 h-4 text-destructive" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
