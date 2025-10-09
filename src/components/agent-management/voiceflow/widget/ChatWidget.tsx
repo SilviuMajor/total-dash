@@ -254,7 +254,7 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
 
   return (
     <div 
-      className="w-[400px] h-[600px] flex flex-col bg-background rounded-2xl shadow-2xl overflow-hidden"
+      className="w-full h-full flex flex-col bg-background shadow-2xl overflow-hidden"
       style={{ fontFamily: appearance.font_family || 'Inter' }}
     >
       {/* Header with gradient */}

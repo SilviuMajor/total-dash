@@ -56,7 +56,7 @@ export function WidgetTestPanel({ agent, children }: WidgetTestPanelProps) {
                 [writing-mode:vertical-lr] 
                 rotate-180
               "
-              style={{ height: '120px', display: 'flex', alignItems: 'center' }}
+              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >
               Widget Test
             </span>
@@ -68,17 +68,15 @@ export function WidgetTestPanel({ agent, children }: WidgetTestPanelProps) {
       <div 
         className={`
           fixed top-0 right-0 h-screen w-[500px] bg-background border-l shadow-2xl 
-          transform transition-transform duration-300 z-40 overflow-y-auto
+          transform transition-transform duration-300 z-40 overflow-hidden
           ${isPanelOpen ? 'translate-x-0' : 'translate-x-full'}
         `}
       >
-        <div className="h-full flex items-center justify-center p-4">
-          <ChatWidget 
-            agent={agent}
-            isTestMode={true}
-            onClose={() => setIsPanelOpen(false)}
-          />
-        </div>
+        <ChatWidget 
+          agent={agent}
+          isTestMode={true}
+          onClose={() => setIsPanelOpen(false)}
+        />
       </div>
     </div>
   );

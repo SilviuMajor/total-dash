@@ -37,23 +37,10 @@ export default function AgentDetails() {
   const [agent, setAgent] = useState<Agent | null>(null);
   const [assignedClients, setAssignedClients] = useState<AssignedClient[]>([]);
   const [loading, setLoading] = useState(true);
-  const [agencyLogoUrl, setAgencyLogoUrl] = useState<string | null>(null);
 
   useEffect(() => {
     loadAgentDetails();
-    loadAgencyLogo();
   }, [agentId]);
-
-  const loadAgencyLogo = async () => {
-    const { data } = await supabase
-      .from('agency_settings')
-      .select('agency_logo_url')
-      .single();
-    
-    if (data?.agency_logo_url) {
-      setAgencyLogoUrl(data.agency_logo_url);
-    }
-  };
 
   const loadAgentDetails = async () => {
     if (!agentId) return;
@@ -168,13 +155,6 @@ export default function AgentDetails() {
             </BreadcrumbList>
           </Breadcrumb>
           </div>
-          {agencyLogoUrl && (
-            <img 
-              src={agencyLogoUrl} 
-              alt="Agency logo" 
-              className="w-16 h-16 object-contain"
-            />
-          )}
         </div>
 
         <AgentDetailHeader agent={agent} assignedClients={assignedClients} onUpdate={loadAgentDetails} />
