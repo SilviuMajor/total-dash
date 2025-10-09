@@ -37,6 +37,7 @@ export default function AgentDetails() {
   const [agent, setAgent] = useState<Agent | null>(null);
   const [assignedClients, setAssignedClients] = useState<AssignedClient[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("settings");
 
   useEffect(() => {
     loadAgentDetails();
@@ -159,7 +160,7 @@ export default function AgentDetails() {
 
         <AgentDetailHeader agent={agent} assignedClients={assignedClients} onUpdate={loadAgentDetails} />
 
-        <Tabs defaultValue="settings" className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList>
             <TabsTrigger value="widget">Widget</TabsTrigger>
             <TabsTrigger value="knowledge-base">Knowledge Base</TabsTrigger>

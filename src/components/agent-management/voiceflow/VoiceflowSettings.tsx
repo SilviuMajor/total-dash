@@ -183,11 +183,15 @@ export function VoiceflowSettings({ agent, onUpdate }: VoiceflowSettingsProps) {
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
         onSuccess={() => {
+          console.log("Delete success callback triggered");
           toast({
             title: "Success",
             description: "Agent deleted successfully"
           });
-          navigate('/admin/agents');
+          setTimeout(() => {
+            console.log("Navigating to /admin/agents");
+            navigate('/admin/agents');
+          }, 100);
         }}
       />
     </Card>

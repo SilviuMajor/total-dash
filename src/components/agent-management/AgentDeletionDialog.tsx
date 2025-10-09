@@ -77,33 +77,55 @@ export function AgentDeletionDialog({
         return;
       }
 
+      console.log("Password verified, starting deletion process for agent:", agentId);
+
       // Delete in order: conversations (which will cascade to transcripts), agent_assignments, then agent
       const { data: conversations } = await supabase
         .from("conversations")
         .select("id")
         .eq("agent_id", agentId);
 
+      console.log("Found conversations to delete:", conversations?.length || 0);
+
       if (conversations && conversations.length > 0) {
         const conversationIds = conversations.map((c) => c.id);
         
         // Delete transcripts
-        await supabase
+        const { error: transcriptsError } = await supabase
           .from("transcripts")
           .delete()
           .in("conversation_id", conversationIds);
 
+        if (transcriptsError) {
+          console.error("Error deleting transcripts:", transcriptsError);
+          throw transcriptsError;
+        }
+        console.log("Transcripts deleted");
+
         // Delete conversations
-        await supabase
+        const { error: conversationsError } = await supabase
           .from("conversations")
           .delete()
           .eq("agent_id", agentId);
+
+        if (conversationsError) {
+          console.error("Error deleting conversations:", conversationsError);
+          throw conversationsError;
+        }
+        console.log("Conversations deleted");
       }
 
       // Delete agent assignments
-      await supabase
+      const { error: assignmentsError } = await supabase
         .from("agent_assignments")
         .delete()
         .eq("agent_id", agentId);
+
+      if (assignmentsError) {
+        console.error("Error deleting agent assignments:", assignmentsError);
+        throw assignmentsError;
+      }
+      console.log("Agent assignments deleted");
 
       // Delete the agent
       const { error: deleteError } = await supabase
@@ -112,6 +134,7 @@ export function AgentDeletionDialog({
         .eq("id", agentId);
 
       if (deleteError) throw deleteError;
+      console.log("Agent deleted successfully");
 
       toast({
         title: "Success",
@@ -119,6 +142,7 @@ export function AgentDeletionDialog({
       });
 
       handleClose();
+      console.log("Calling onSuccess callback");
       onSuccess();
     } catch (error: any) {
       console.error("Error deleting agent:", error);
