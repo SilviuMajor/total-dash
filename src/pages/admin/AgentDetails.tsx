@@ -13,6 +13,7 @@ import { RetellKnowledgeBase } from "@/components/agent-management/retell/Retell
 import { RetellWidget } from "@/components/agent-management/retell/RetellWidget";
 import { RetellChannels } from "@/components/agent-management/retell/RetellChannels";
 import { SpecsSettings } from "@/components/agent-management/specs/SpecsSettings";
+import { WidgetTestPanel } from "@/components/agent-management/voiceflow/widget/WidgetTestPanel";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -112,7 +113,7 @@ export default function AgentDetails() {
     if (agent.provider === "voiceflow") {
       switch (tab) {
         case "widget":
-          return <VoiceflowWidget agent={agent} />;
+          return <VoiceflowWidget agent={agent} onUpdate={loadAgentDetails} />;
         case "knowledge-base":
           return <VoiceflowKnowledgeBase agent={agent} />;
         case "channels":
@@ -208,6 +209,11 @@ export default function AgentDetails() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Widget Test Panel - Visible across all tabs for Voiceflow agents */}
+      {agent.provider === 'voiceflow' && (
+        <WidgetTestPanel agent={agent} />
+      )}
     </div>
   );
 }

@@ -21,6 +21,7 @@ interface Conversation {
   status: string;
   started_at: string;
   duration: number;
+  is_widget_test?: boolean;
 }
 
 interface Transcript {
@@ -167,6 +168,11 @@ export default function Conversations() {
                   >
                     <div className="flex items-center gap-2 mb-1">
                       <p className="font-medium text-sm">{conv.caller_phone || 'Unknown'}</p>
+                      {conv.is_widget_test && (
+                        <Badge variant="outline" className="text-xs">
+                          🧪 Test
+                        </Badge>
+                      )}
                       <Badge variant={conv.status === 'active' ? 'default' : 'secondary'} className="text-xs">
                         {conv.status}
                       </Badge>

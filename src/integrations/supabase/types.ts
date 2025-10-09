@@ -601,6 +601,7 @@ export type Database = {
           duration: number | null
           ended_at: string | null
           id: string
+          is_widget_test: boolean | null
           metadata: Json | null
           sentiment: string | null
           started_at: string | null
@@ -612,6 +613,7 @@ export type Database = {
           duration?: number | null
           ended_at?: string | null
           id?: string
+          is_widget_test?: boolean | null
           metadata?: Json | null
           sentiment?: string | null
           started_at?: string | null
@@ -623,6 +625,7 @@ export type Database = {
           duration?: number | null
           ended_at?: string | null
           id?: string
+          is_widget_test?: boolean | null
           metadata?: Json | null
           sentiment?: string | null
           started_at?: string | null
