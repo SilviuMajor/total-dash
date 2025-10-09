@@ -74,7 +74,7 @@ function SortableAgentCard({ agent, onRemove }: { agent: AssignedAgent; onRemove
       <Button
         variant="outline"
         size="sm"
-        onClick={() => navigate(`/admin/agents/${agent.id}/settings`)}
+        onClick={() => navigate(`/admin/agents/${agent.id}`)}
         className="gap-2"
       >
         <Settings className="w-4 h-4" />

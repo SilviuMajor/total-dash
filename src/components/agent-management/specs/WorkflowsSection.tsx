@@ -1,14 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, GripVertical, Edit2, Check, X } from "lucide-react";
+import { Plus, Trash2, GripVertical, Edit2, Check, X, Palette } from "lucide-react";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { cn } from "@/lib/utils";
 
 interface Workflow {
   id: string;
@@ -33,18 +34,20 @@ interface WorkflowsSectionProps {
 }
 
 const colorOptions = [
-  { value: "blue", label: "Blue", class: "from-blue-500 to-cyan-500" },
-  { value: "green", label: "Green", class: "from-green-500 to-emerald-500" },
-  { value: "purple", label: "Purple", class: "from-purple-500 to-pink-500" },
-  { value: "orange", label: "Orange", class: "from-orange-500 to-amber-500" },
-  { value: "red", label: "Red", class: "from-red-500 to-rose-500" },
-  { value: "indigo", label: "Indigo", class: "from-indigo-500 to-violet-500" },
-  { value: "teal", label: "Teal", class: "from-teal-500 to-cyan-500" },
-  { value: "pink", label: "Pink", class: "from-pink-500 to-fuchsia-500" },
+  { value: 'blue', label: 'Blue', classes: 'from-blue-500/20 to-cyan-500/20 border-blue-500/30' },
+  { value: 'green', label: 'Green', classes: 'from-green-500/20 to-emerald-500/20 border-green-500/30' },
+  { value: 'purple', label: 'Purple', classes: 'from-purple-500/20 to-pink-500/20 border-purple-500/30' },
+  { value: 'orange', label: 'Orange', classes: 'from-orange-500/20 to-red-500/20 border-orange-500/30' },
+  { value: 'red', label: 'Red', classes: 'from-red-500/20 to-rose-500/20 border-red-500/30' },
+  { value: 'indigo', label: 'Indigo', classes: 'from-indigo-500/20 to-blue-500/20 border-indigo-500/30' },
+  { value: 'teal', label: 'Teal', classes: 'from-teal-500/20 to-green-500/20 border-teal-500/30' },
+  { value: 'pink', label: 'Pink', classes: 'from-pink-500/20 to-rose-500/20 border-pink-500/30' },
+  { value: 'yellow', label: 'Yellow', classes: 'from-yellow-500/20 to-orange-500/20 border-yellow-500/30' },
 ];
 
 export function WorkflowsSection({ workflows, categories, onWorkflowsChange, onCategoriesChange }: WorkflowsSectionProps) {
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  const [renamingCategoryId, setRenamingCategoryId] = useState<string | null>(null);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryColor, setNewCategoryColor] = useState("blue");
   const [editingWorkflowId, setEditingWorkflowId] = useState<string | null>(null);
@@ -56,6 +59,29 @@ export function WorkflowsSection({ workflows, categories, onWorkflowsChange, onC
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
+
+  const handleDragEndCategory = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const oldIndex = categories.findIndex((c) => c.id === active.id);
+      const newIndex = categories.findIndex((c) => c.id === over.id);
+      const newOrder = arrayMove(categories, oldIndex, newIndex).map((cat, index) => ({
+        ...cat,
+        sort_order: index,
+      }));
+      onCategoriesChange(newOrder);
+    }
+  };
+
+  const handleRenameCategorySubmit = (categoryId: string, newName: string) => {
+    if (newName.trim()) {
+      const updated = categories.map((cat) =>
+        cat.id === categoryId ? { ...cat, name: newName.trim() } : cat
+      );
+      onCategoriesChange(updated);
+    }
+    setRenamingCategoryId(null);
+  };
 
   const addCategory = () => {
     if (!newCategoryName.trim()) return;
@@ -136,69 +162,70 @@ export function WorkflowsSection({ workflows, categories, onWorkflowsChange, onC
 
   return (
     <div className="space-y-6">
-      <div className="space-y-3">
-        <Label>Workflow Categories</Label>
-        <div className="space-y-2">
-          {categories.map((category) => {
-            const categoryColor = colorOptions.find(c => c.value === category.color) || colorOptions[0];
-            return (
-              <div key={category.id} className="flex items-center gap-2">
-                <div className={`flex-1 p-3 rounded-lg border-2 bg-gradient-to-r ${categoryColor.class} bg-opacity-10`}>
-                  <span className="font-semibold text-foreground">{category.name}</span>
-                </div>
-                <Select value={category.color || "blue"} onValueChange={(color) => updateCategoryColor(category.id, color)}>
-                  <SelectTrigger className="w-32">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {colorOptions.map((color) => (
-                      <SelectItem key={color.value} value={color.value}>
-                        <div className="flex items-center gap-2">
-                          <div className={`w-4 h-4 rounded bg-gradient-to-r ${color.class}`} />
-                          {color.label}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => deleteCategory(category.id)}
-                >
-                  <Trash2 className="w-4 h-4 text-destructive" />
-                </Button>
-              </div>
-            );
-          })}
-          <div className="flex items-center gap-2">
-            <Input
-              placeholder="New category name"
-              value={newCategoryName}
-              onChange={(e) => setNewCategoryName(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && addCategory()}
-              className="flex-1"
-            />
-            <Select value={newCategoryColor} onValueChange={setNewCategoryColor}>
-              <SelectTrigger className="w-32">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {colorOptions.map((color) => (
-                  <SelectItem key={color.value} value={color.value}>
-                    <div className="flex items-center gap-2">
-                      <div className={`w-4 h-4 rounded bg-gradient-to-r ${color.class}`} />
-                      {color.label}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button type="button" onClick={addCategory} size="icon">
-              <Plus className="w-4 h-4" />
-            </Button>
-          </div>
+      <div className="space-y-4">
+        <Label className="text-base font-semibold">Workflow Categories</Label>
+        
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEndCategory}
+        >
+          <SortableContext
+            items={categories.map((c) => c.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            <div className="space-y-3">
+              {categories.map((category) => {
+                const colorOption = colorOptions.find((c) => c.value === category.color);
+                return (
+                  <SortableCategoryItem
+                    key={category.id}
+                    category={category}
+                    colorOption={colorOption}
+                    isEditing={editingCategoryId === category.id}
+                    isRenaming={renamingCategoryId === category.id}
+                    onStartEdit={() => setEditingCategoryId(category.id)}
+                    onStopEdit={() => setEditingCategoryId(null)}
+                    onStartRename={() => setRenamingCategoryId(category.id)}
+                    onRename={(newName) => handleRenameCategorySubmit(category.id, newName)}
+                    onColorChange={(color) => {
+                      const updated = categories.map((cat) =>
+                        cat.id === category.id ? { ...cat, color } : cat
+                      );
+                      onCategoriesChange(updated);
+                    }}
+                    onDelete={() => deleteCategory(category.id)}
+                    colorOptions={colorOptions}
+                  />
+                );
+              })}
+            </div>
+          </SortableContext>
+        </DndContext>
+
+        <div className="flex items-center gap-2">
+          <Input
+            placeholder="New category name"
+            value={newCategoryName}
+            onChange={(e) => setNewCategoryName(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && addCategory()}
+            className="flex-1"
+          />
+          <Select value={newCategoryColor} onValueChange={setNewCategoryColor}>
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {colorOptions.map((color) => (
+                <SelectItem key={color.value} value={color.value}>
+                  {color.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button type="button" onClick={addCategory} size="icon">
+            <Plus className="w-4 h-4" />
+          </Button>
         </div>
       </div>
 
@@ -209,7 +236,7 @@ export function WorkflowsSection({ workflows, categories, onWorkflowsChange, onC
           const categoryColor = colorOptions.find(c => c.value === category.color) || colorOptions[0];
           return (
             <Card key={category.id} className="p-4 border-2 relative overflow-hidden">
-              <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${categoryColor.class}`} />
+              <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${categoryColor.classes}`} />
               <div className="flex items-center justify-between mb-3 pt-1">
                 <h4 className="font-semibold">{category.name}</h4>
                 <Button
@@ -251,6 +278,124 @@ export function WorkflowsSection({ workflows, categories, onWorkflowsChange, onC
             </Card>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+interface SortableCategoryItemProps {
+  category: WorkflowCategory;
+  colorOption: { value: string; label: string; classes: string } | undefined;
+  isEditing: boolean;
+  isRenaming: boolean;
+  onStartEdit: () => void;
+  onStopEdit: () => void;
+  onStartRename: () => void;
+  onRename: (newName: string) => void;
+  onColorChange: (color: string) => void;
+  onDelete: () => void;
+  colorOptions: { value: string; label: string; classes: string }[];
+}
+
+function SortableCategoryItem({
+  category,
+  colorOption,
+  isEditing,
+  isRenaming,
+  onStartEdit,
+  onStopEdit,
+  onStartRename,
+  onRename,
+  onColorChange,
+  onDelete,
+  colorOptions,
+}: SortableCategoryItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id: category.id });
+
+  const [tempName, setTempName] = useState(category.name);
+
+  useEffect(() => {
+    setTempName(category.name);
+  }, [category.name, isRenaming]);
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "p-4 rounded-lg border-2 bg-gradient-to-r",
+        colorOption?.classes || colorOptions[0].classes
+      )}
+    >
+      <div className="flex items-center gap-3">
+        <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
+          <GripVertical className="w-5 h-5 text-muted-foreground" />
+        </div>
+        
+        {isRenaming ? (
+          <Input
+            value={tempName}
+            onChange={(e) => setTempName(e.target.value)}
+            onBlur={() => onRename(tempName)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                onRename(tempName);
+              } else if (e.key === 'Escape') {
+                setTempName(category.name);
+                onRename(category.name);
+              }
+            }}
+            autoFocus
+            className="text-sm font-semibold h-8 flex-1"
+          />
+        ) : (
+          <span 
+            className="text-sm font-semibold text-foreground cursor-pointer hover:underline"
+            onClick={onStartRename}
+          >
+            {category.name}
+          </span>
+        )}
+        
+        {isEditing ? (
+          <>
+            <Select value={category.color} onValueChange={onColorChange}>
+              <SelectTrigger className="w-32 h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {colorOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button type="button" variant="ghost" size="sm" onClick={onStopEdit}>
+              Done
+            </Button>
+          </>
+        ) : (
+          <div className="flex items-center gap-2 ml-auto">
+            <Button type="button" variant="ghost" size="sm" onClick={onStartEdit}>
+              <Palette className="w-4 h-4" />
+            </Button>
+            <Button type="button" variant="ghost" size="sm" onClick={onDelete}>
+              <Trash2 className="w-4 h-4 text-destructive" />
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

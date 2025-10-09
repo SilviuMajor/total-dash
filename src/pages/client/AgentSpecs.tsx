@@ -2,10 +2,11 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Globe, MessageCircle, Send, Instagram, Facebook, Phone, MessageSquare, Activity, ChevronDown, ChevronUp } from "lucide-react";
+import { Globe, MessageCircle, Send, Instagram, Facebook, Phone, MessageSquare, Activity, ChevronDown, ChevronUp, Database, Ticket, Hash, Mail, Calendar, FileText, Folder, Settings as SettingsIcon, Users, Building, Package, ShoppingCart, CreditCard, BarChart, Zap, Cloud, Lock, Key } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useClientAgentContext } from "@/hooks/useClientAgentContext";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 const domainIcons: Record<string, any> = {
   website: Globe,
@@ -15,6 +16,12 @@ const domainIcons: Record<string, any> = {
   messenger: Facebook,
   telephony: Phone,
   sms: MessageSquare,
+};
+
+const integrationIconMap: Record<string, any> = {
+  Database, Ticket, MessageSquare, Hash, Mail, Calendar, FileText, Folder, 
+  Settings: SettingsIcon, Globe, Phone, Users, Building, Package, ShoppingCart, 
+  CreditCard, BarChart, Zap, Cloud, Lock, Key
 };
 
 const getStatusColor = (status: string) => {
@@ -37,6 +44,7 @@ export default function AgentSpecs() {
   const [agent, setAgent] = useState<any>(null);
   const [capacity, setCapacity] = useState("");
   const [domains, setDomains] = useState<string[]>([]);
+  const [integrations, setIntegrations] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [workflows, setWorkflows] = useState<any[]>([]);
   const [updateLogs, setUpdateLogs] = useState<any[]>([]);
@@ -104,6 +112,26 @@ export default function AgentSpecs() {
         .order('created_at', { ascending: false });
 
       if (logsData) setUpdateLogs(logsData);
+
+      // Load integrations
+      const { data: integrationsData } = await supabase
+        .from('agent_integrations')
+        .select(`
+          integration_id,
+          integration_options (
+            id,
+            name,
+            icon,
+            is_custom
+          )
+        `)
+        .eq('agent_id', selectedAgentId)
+        .order('sort_order');
+
+      if (integrationsData) {
+        const integrationsList = integrationsData.map((item: any) => item.integration_options).filter(Boolean);
+        setIntegrations(integrationsList);
+      }
     } catch (error) {
       console.error('Error loading agent specs:', error);
     } finally {
@@ -154,30 +182,76 @@ export default function AgentSpecs() {
             <CardTitle>Domains</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
               {domains.map((domain) => {
                 const Icon = domainIcons[domain];
                 const domainColors: Record<string, string> = {
-                  website: "from-blue-500 to-cyan-500",
-                  whatsapp: "from-green-500 to-emerald-500",
-                  telegram: "from-sky-500 to-blue-500",
-                  instagram: "from-pink-500 to-purple-500",
-                  messenger: "from-blue-600 to-indigo-600",
-                  telephony: "from-violet-500 to-purple-500",
-                  sms: "from-orange-500 to-amber-500",
+                  website: "from-blue-500/20 to-cyan-500/20",
+                  whatsapp: "from-green-500/20 to-emerald-500/20",
+                  telegram: "from-sky-500/20 to-blue-500/20",
+                  instagram: "from-pink-500/20 to-purple-500/20",
+                  messenger: "from-blue-600/20 to-indigo-600/20",
+                  telephony: "from-violet-500/20 to-purple-500/20",
+                  sms: "from-orange-500/20 to-amber-500/20",
                 };
-                const color = domainColors[domain] || "from-gray-500 to-slate-500";
+                const color = domainColors[domain] || "from-gray-500/20 to-slate-500/20";
                 
                 return (
                   <div
                     key={domain}
-                    className="relative flex items-center gap-3 p-4 rounded-xl border-2 overflow-hidden"
+                    className={cn(
+                      "relative flex items-center gap-3 p-3 rounded-lg border-2 bg-gradient-to-br",
+                      color,
+                      "border-border/50"
+                    )}
                   >
-                    <div className={`absolute inset-0 bg-gradient-to-br ${color} opacity-10`} />
-                    <div className={`relative p-2 rounded-lg bg-gradient-to-br ${color}`}>
-                      {Icon && <Icon className="w-5 h-5 text-white" />}
+                    <div className="w-8 h-8 rounded-lg bg-background/50 flex items-center justify-center flex-shrink-0">
+                      {Icon && <Icon className="w-5 h-5 text-muted-foreground" />}
                     </div>
-                    <span className="relative text-sm font-semibold capitalize">{domain}</span>
+                    <span className="text-sm font-medium capitalize text-foreground">{domain}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Integrations */}
+      {integrations.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Integrations</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              {integrations.map((integration: any, index) => {
+                const Icon = integrationIconMap[integration.icon] || Database;
+                const gradients = [
+                  "from-blue-500/20 to-cyan-500/20",
+                  "from-green-500/20 to-emerald-500/20",
+                  "from-purple-500/20 to-pink-500/20",
+                  "from-orange-500/20 to-red-500/20",
+                  "from-indigo-500/20 to-blue-500/20",
+                  "from-teal-500/20 to-green-500/20",
+                  "from-pink-500/20 to-rose-500/20",
+                  "from-yellow-500/20 to-orange-500/20",
+                ];
+                const gradient = gradients[index % gradients.length];
+                
+                return (
+                  <div
+                    key={integration.id}
+                    className={cn(
+                      "relative flex items-center gap-3 p-3 rounded-lg border-2 bg-gradient-to-br",
+                      gradient,
+                      "border-border/50"
+                    )}
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-background/50 flex items-center justify-center flex-shrink-0">
+                      <Icon className="w-5 h-5 text-muted-foreground" />
+                    </div>
+                    <span className="text-sm font-medium text-foreground">{integration.name}</span>
                   </div>
                 );
               })}

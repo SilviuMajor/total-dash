@@ -80,6 +80,48 @@ export type Database = {
           },
         ]
       }
+      agent_integrations: {
+        Row: {
+          agent_id: string
+          created_at: string
+          id: string
+          integration_id: string
+          sort_order: number | null
+          updated_at: string
+        }
+        Insert: {
+          agent_id: string
+          created_at?: string
+          id?: string
+          integration_id: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Update: {
+          agent_id?: string
+          created_at?: string
+          id?: string
+          integration_id?: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_integrations_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_integrations_integration_id_fkey"
+            columns: ["integration_id"]
+            isOneToOne: false
+            referencedRelation: "integration_options"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agent_spec_sections: {
         Row: {
           agent_id: string
@@ -624,6 +666,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      integration_options: {
+        Row: {
+          created_at: string
+          icon: string
+          id: string
+          is_custom: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          icon: string
+          id?: string
+          is_custom?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          icon?: string
+          id?: string
+          is_custom?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {

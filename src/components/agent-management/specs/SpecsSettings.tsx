@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { DomainsSection } from "./DomainsSection";
 import { WorkflowsSection } from "./WorkflowsSection";
 import { UpdateLogsSection } from "./UpdateLogsSection";
+import { IntegrationsSection } from "./IntegrationsSection";
 
 interface SpecsSettingsProps {
   agent: {
@@ -21,6 +22,7 @@ export function SpecsSettings({ agent }: SpecsSettingsProps) {
   const [loading, setLoading] = useState(false);
   const [capacity, setCapacity] = useState("");
   const [domains, setDomains] = useState<string[]>([]);
+  const [integrations, setIntegrations] = useState<string[]>([]);
   const [workflows, setWorkflows] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [updateLogs, setUpdateLogs] = useState<any[]>([]);
@@ -75,6 +77,16 @@ export function SpecsSettings({ agent }: SpecsSettingsProps) {
         .order('created_at', { ascending: false });
 
       if (logsData) setUpdateLogs(logsData);
+
+      // Load integrations
+      const { data: integrationsData } = await supabase
+        .from('agent_integrations')
+        .select('integration_id')
+        .eq('agent_id', agent.id);
+
+      if (integrationsData) {
+        setIntegrations(integrationsData.map((item: any) => item.integration_id));
+      }
     } catch (error) {
       console.error('Error loading specs:', error);
     }
@@ -185,6 +197,26 @@ export function SpecsSettings({ agent }: SpecsSettingsProps) {
         if (logsError) throw logsError;
       }
 
+      // Handle integrations
+      await supabase
+        .from('agent_integrations')
+        .delete()
+        .eq('agent_id', agent.id);
+
+      if (integrations.length > 0) {
+        const integrationsToInsert = integrations.map((integrationId, idx) => ({
+          agent_id: agent.id,
+          integration_id: integrationId,
+          sort_order: idx,
+        }));
+
+        const { error: integrationsError } = await supabase
+          .from('agent_integrations')
+          .insert(integrationsToInsert);
+
+        if (integrationsError) throw integrationsError;
+      }
+
       toast({
         title: "Success",
         description: "Agent specifications saved successfully",
@@ -225,6 +257,11 @@ export function SpecsSettings({ agent }: SpecsSettingsProps) {
         <DomainsSection 
           selectedDomains={domains} 
           onDomainsChange={setDomains} 
+        />
+
+        <IntegrationsSection
+          selectedIntegrations={integrations}
+          onIntegrationsChange={setIntegrations}
         />
 
         <WorkflowsSection

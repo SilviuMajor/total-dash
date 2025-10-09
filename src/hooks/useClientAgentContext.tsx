@@ -90,7 +90,7 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
           status: (a.agents as any).status,
           sort_order: a.sort_order
         }))
-        .filter(a => a.id && a.status !== 'testing') || [];
+        .filter(a => a.id) || [];
 
       setAgents(agentsList);
 
@@ -179,7 +179,7 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
           sort_order: sortOrderMap.get((p.agents as any).id) || 999,
           permissions: p.permissions as unknown as AgentPermissions,
         }))
-        .filter(a => a.id && a.status !== 'testing')
+        .filter(a => a.id)
         .sort((a, b) => a.sort_order - b.sort_order) || [];
 
       setAgents(agentsList.map(({ permissions, ...agent }) => agent));

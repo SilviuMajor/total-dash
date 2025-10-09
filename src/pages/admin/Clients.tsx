@@ -59,8 +59,6 @@ export default function AdminClients() {
     switch (status) {
       case 'active':
         return 'default';
-      case 'testing':
-        return 'secondary';
       case 'inactive':
         return 'outline';
       default:
@@ -125,9 +123,6 @@ export default function AdminClients() {
       <div className="flex gap-2 mb-6">
         <Button variant={statusFilter === 'active' ? 'default' : 'outline'} onClick={() => setStatusFilter('active')} className={statusFilter === 'active' ? 'bg-foreground text-background' : ''}>
           Active ({clients.filter(c => c.status === 'active').length})
-        </Button>
-        <Button variant={statusFilter === 'testing' ? 'default' : 'outline'} onClick={() => setStatusFilter('testing')} className={statusFilter === 'testing' ? 'bg-foreground text-background' : ''}>
-          Testing ({clients.filter(c => c.status === 'testing').length})
         </Button>
         <Button variant={statusFilter === 'inactive' ? 'default' : 'outline'} onClick={() => setStatusFilter('inactive')} className={statusFilter === 'inactive' ? 'bg-foreground text-background' : ''}>
           Inactive ({clients.filter(c => c.status === 'inactive').length})
