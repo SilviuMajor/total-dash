@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -6,10 +6,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, X, Plus, Trash2 } from "lucide-react";
+import { Upload, X, Plus, Trash2, Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 interface WidgetAppearanceSettingsProps {
@@ -28,8 +28,8 @@ const GOOGLE_FONTS = [
 
 export function WidgetAppearanceSettings({ agent, onUpdate }: WidgetAppearanceSettingsProps) {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const widgetSettings = agent.config?.widget_settings || {};
   
@@ -48,10 +48,59 @@ export function WidgetAppearanceSettings({ agent, onUpdate }: WidgetAppearanceSe
       button_style: widgetSettings.appearance?.button_style || "rounded"
     },
     tabs: {
-      enabled: widgetSettings.tabs?.enabled !== false,
-      tab_names: widgetSettings.tabs?.tab_names || ["Home", "Chats"]
+      home: {
+        enabled: widgetSettings.tabs?.home?.enabled !== false,
+        title: widgetSettings.tabs?.home?.title || "Welcome",
+        subtitle: widgetSettings.tabs?.home?.subtitle || "How can we help you today?",
+        buttons: widgetSettings.tabs?.home?.buttons || [
+          { id: 1, text: "Start a new chat", enabled: true, action: "new_chat" }
+        ]
+      },
+      chats: {
+        enabled: widgetSettings.tabs?.chats?.enabled !== false
+      },
+      faq: {
+        enabled: widgetSettings.tabs?.faq?.enabled || false,
+        items: widgetSettings.tabs?.faq?.items || []
+      }
     }
   });
+
+  // Debounced auto-save
+  const debouncedSave = useCallback(
+    (() => {
+      let timeout: NodeJS.Timeout;
+      return (data: typeof formData) => {
+        clearTimeout(timeout);
+        timeout = setTimeout(async () => {
+          setIsSaving(true);
+          try {
+            const { error } = await supabase
+              .from('agents')
+              .update({
+                config: {
+                  ...agent.config,
+                  widget_settings: data
+                }
+              })
+              .eq('id', agent.id);
+
+            if (error) throw error;
+            onUpdate();
+          } catch (error) {
+            console.error('Auto-save error:', error);
+          } finally {
+            setIsSaving(false);
+          }
+        }, 500);
+      };
+    })(),
+    [agent.id, agent.config, onUpdate]
+  );
+
+  useEffect(() => {
+    debouncedSave(formData);
+  }, [formData, debouncedSave]);
 
   const handleImageUpload = async (type: 'logo' | 'header' | 'background', file: File) => {
     if (file.size > 5 * 1024 * 1024) {
@@ -110,93 +159,111 @@ export function WidgetAppearanceSettings({ agent, onUpdate }: WidgetAppearanceSe
     }));
   };
 
-  const addTab = () => {
+  const addHomeButton = () => {
     setFormData(prev => ({
       ...prev,
       tabs: {
         ...prev.tabs,
-        tab_names: [...prev.tabs.tab_names, `Tab ${prev.tabs.tab_names.length + 1}`]
+        home: {
+          ...prev.tabs.home,
+          buttons: [
+            ...prev.tabs.home.buttons,
+            { id: Date.now(), text: `Button ${prev.tabs.home.buttons.length + 1}`, enabled: false, action: "custom" }
+          ]
+        }
       }
     }));
   };
 
-  const removeTab = (index: number) => {
+  const removeHomeButton = (id: number) => {
     setFormData(prev => ({
       ...prev,
       tabs: {
         ...prev.tabs,
-        tab_names: prev.tabs.tab_names.filter((_, i) => i !== index)
+        home: {
+          ...prev.tabs.home,
+          buttons: prev.tabs.home.buttons.filter(btn => btn.id !== id)
+        }
       }
     }));
   };
 
-  const updateTabName = (index: number, value: string) => {
+  const updateHomeButton = (id: number, field: string, value: any) => {
     setFormData(prev => ({
       ...prev,
       tabs: {
         ...prev.tabs,
-        tab_names: prev.tabs.tab_names.map((name, i) => i === index ? value : name)
+        home: {
+          ...prev.tabs.home,
+          buttons: prev.tabs.home.buttons.map(btn =>
+            btn.id === id ? { ...btn, [field]: value } : btn
+          )
+        }
       }
     }));
   };
 
-  const handleSave = async () => {
-    setLoading(true);
-    try {
-      const { error } = await supabase
-        .from('agents')
-        .update({
-          config: {
-            ...agent.config,
-            widget_settings: formData
-          }
-        })
-        .eq('id', agent.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Widget settings saved successfully"
-      });
-      onUpdate();
-    } catch (error) {
-      console.error('Save error:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save settings",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleReset = () => {
-    setFormData({
-      title: "Chat with us",
-      description: "We're here to help",
-      branding_url: "",
-      appearance: {
-        logo_url: "",
-        header_image_url: "",
-        background_image_url: "",
-        primary_color: "#5B4FFF",
-        secondary_color: "#FFFFFF",
-        text_color: "#000000",
-        font_family: "Inter",
-        button_style: "rounded"
-      },
+  const addFAQItem = () => {
+    setFormData(prev => ({
+      ...prev,
       tabs: {
-        enabled: true,
-        tab_names: ["Home", "Chats"]
+        ...prev.tabs,
+        faq: {
+          ...prev.tabs.faq,
+          items: [
+            ...prev.tabs.faq.items,
+            { question: "", answer: "" }
+          ]
+        }
       }
-    });
+    }));
   };
+
+  const removeFAQItem = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      tabs: {
+        ...prev.tabs,
+        faq: {
+          ...prev.tabs.faq,
+          items: prev.tabs.faq.items.filter((_, i) => i !== index)
+        }
+      }
+    }));
+  };
+
+  const updateFAQItem = (index: number, field: 'question' | 'answer', value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      tabs: {
+        ...prev.tabs,
+        faq: {
+          ...prev.tabs.faq,
+          items: prev.tabs.faq.items.map((item, i) =>
+            i === index ? { ...item, [field]: value } : item
+          )
+        }
+      }
+    }));
+  };
+
+  const buttonStyles = [
+    { value: 'rounded', label: 'Rounded', radius: 'rounded-lg' },
+    { value: 'square', label: 'Square', radius: 'rounded-none' },
+    { value: 'pill', label: 'Pill', radius: 'rounded-full' }
+  ];
 
   return (
     <Card className="p-6">
       <div className="space-y-6">
+        {/* Auto-save indicator */}
+        {isSaving && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>Saving...</span>
+          </div>
+        )}
+
         {/* Basic Information */}
         <div>
           <h3 className="text-lg font-semibold mb-4">Basic Information</h3>
@@ -360,107 +427,194 @@ export function WidgetAppearanceSettings({ agent, onUpdate }: WidgetAppearanceSe
               </Select>
             </div>
 
-            {/* Button Style */}
+            {/* Button Style with Visual Preview */}
             <div>
               <Label>Button Style</Label>
-              <RadioGroup
-                value={formData.appearance.button_style}
-                onValueChange={(value) => setFormData(prev => ({
-                  ...prev,
-                  appearance: {
-                    ...prev.appearance,
-                    button_style: value
-                  }
-                }))}
-                className="mt-2 flex gap-4"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="rounded" id="rounded" />
-                  <Label htmlFor="rounded" className="cursor-pointer">Rounded</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="square" id="square" />
-                  <Label htmlFor="square" className="cursor-pointer">Square</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="pill" id="pill" />
-                  <Label htmlFor="pill" className="cursor-pointer">Pill</Label>
-                </div>
-              </RadioGroup>
+              <div className="grid grid-cols-3 gap-4 mt-2">
+                {buttonStyles.map(style => (
+                  <div
+                    key={style.value}
+                    className={`
+                      relative cursor-pointer border-2 p-4 transition-all
+                      ${formData.appearance.button_style === style.value 
+                        ? 'border-primary bg-primary/5' 
+                        : 'border-muted hover:border-muted-foreground/50'}
+                      ${style.radius}
+                    `}
+                    onClick={() => setFormData(prev => ({
+                      ...prev,
+                      appearance: { ...prev.appearance, button_style: style.value }
+                    }))}
+                  >
+                    <div 
+                      className={`h-10 flex items-center justify-center text-sm font-medium ${style.radius}`}
+                      style={{ 
+                        backgroundColor: formData.appearance.primary_color,
+                        color: formData.appearance.secondary_color
+                      }}
+                    >
+                      {style.label}
+                    </div>
+                    <p className="text-xs text-center mt-2 text-muted-foreground">{style.label}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
 
         <Separator />
 
-        {/* Tabs Configuration */}
+        {/* Tab Configuration */}
         <div>
-          <h3 className="text-lg font-semibold mb-4">Tabs Configuration</h3>
-          <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="tabs-enabled"
-                checked={formData.tabs.enabled}
-                onCheckedChange={(checked) => setFormData(prev => ({
-                  ...prev,
-                  tabs: {
-                    ...prev.tabs,
-                    enabled: checked
-                  }
-                }))}
-              />
-              <Label htmlFor="tabs-enabled">Enable Tabs</Label>
-            </div>
-
-            {formData.tabs.enabled && (
-              <div className="space-y-2">
-                <Label>Tab Names</Label>
-                {formData.tabs.tab_names.map((name, index) => (
-                  <div key={index} className="flex gap-2">
+          <h3 className="text-lg font-semibold mb-4">Tab Configuration</h3>
+          <Accordion type="single" collapsible className="space-y-2">
+            {/* Home Tab */}
+            <AccordionItem value="home" className="border rounded-lg px-4">
+              <AccordionTrigger>
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={formData.tabs.home.enabled}
+                    onCheckedChange={(checked) => setFormData(prev => ({
+                      ...prev,
+                      tabs: { ...prev.tabs, home: { ...prev.tabs.home, enabled: checked } }
+                    }))}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  <span>Home Tab</span>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4 pt-4">
+                  <div>
+                    <Label>Title</Label>
                     <Input
-                      value={name}
-                      onChange={(e) => updateTabName(index, e.target.value)}
-                      placeholder={`Tab ${index + 1}`}
+                      value={formData.tabs.home.title}
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        tabs: { ...prev.tabs, home: { ...prev.tabs.home, title: e.target.value } }
+                      }))}
                     />
-                    {formData.tabs.tab_names.length > 1 && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeTab(index)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
                   </div>
-                ))}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={addTab}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Tab
-                </Button>
-              </div>
-            )}
-          </div>
-        </div>
+                  <div>
+                    <Label>Subtitle</Label>
+                    <Input
+                      value={formData.tabs.home.subtitle}
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        tabs: { ...prev.tabs, home: { ...prev.tabs.home, subtitle: e.target.value } }
+                      }))}
+                    />
+                  </div>
+                  <div>
+                    <Label>Quick Action Buttons</Label>
+                    <div className="space-y-2 mt-2">
+                      {formData.tabs.home.buttons.map(btn => (
+                        <div key={btn.id} className="flex items-center gap-2 p-3 border rounded-lg">
+                          <Switch
+                            checked={btn.enabled}
+                            onCheckedChange={(checked) => updateHomeButton(btn.id, 'enabled', checked)}
+                          />
+                          <Input
+                            value={btn.text}
+                            onChange={(e) => updateHomeButton(btn.id, 'text', e.target.value)}
+                            className="flex-1"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeHomeButton(btn.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                      <Button variant="outline" size="sm" onClick={addHomeButton}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Button
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
 
-        {/* Actions */}
-        <div className="flex gap-3 justify-end pt-4">
-          <Button
-            variant="outline"
-            onClick={handleReset}
-            disabled={loading}
-          >
-            Reset to Defaults
-          </Button>
-          <Button
-            onClick={handleSave}
-            disabled={loading}
-          >
-            {loading ? "Saving..." : "Save Settings"}
-          </Button>
+            {/* Chats Tab */}
+            <AccordionItem value="chats" className="border rounded-lg px-4">
+              <AccordionTrigger>
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={formData.tabs.chats.enabled}
+                    onCheckedChange={(checked) => setFormData(prev => ({
+                      ...prev,
+                      tabs: { ...prev.tabs, chats: { enabled: checked } }
+                    }))}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  <span>Chats Tab</span>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent>
+                <p className="text-sm text-muted-foreground pt-4">
+                  Displays conversation history and "Start New Chat" button. No additional configuration needed.
+                </p>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* FAQ Tab */}
+            <AccordionItem value="faq" className="border rounded-lg px-4">
+              <AccordionTrigger>
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={formData.tabs.faq.enabled}
+                    onCheckedChange={(checked) => setFormData(prev => ({
+                      ...prev,
+                      tabs: { ...prev.tabs, faq: { ...prev.tabs.faq, enabled: checked } }
+                    }))}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  <span>FAQ Tab</span>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4 pt-4">
+                  {formData.tabs.faq.items.map((item, idx) => (
+                    <Card key={idx} className="p-4">
+                      <div className="space-y-2">
+                        <div>
+                          <Label>Question</Label>
+                          <Input
+                            value={item.question}
+                            onChange={(e) => updateFAQItem(idx, 'question', e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <Label>Answer</Label>
+                          <Textarea
+                            value={item.answer}
+                            onChange={(e) => updateFAQItem(idx, 'answer', e.target.value)}
+                            rows={3}
+                          />
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeFAQItem(idx)}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Remove
+                        </Button>
+                      </div>
+                    </Card>
+                  ))}
+                  <Button variant="outline" size="sm" onClick={addFAQItem}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add FAQ Item
+                  </Button>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
         </div>
       </div>
     </Card>

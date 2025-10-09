@@ -140,7 +140,7 @@ export default function AgentDetails() {
     return null;
   };
 
-  return (
+  const content = (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto p-8 space-y-6">
         <div className="flex items-center justify-between">
@@ -209,11 +209,12 @@ export default function AgentDetails() {
           </TabsContent>
         </Tabs>
       </div>
-
-      {/* Widget Test Panel - Visible across all tabs for Voiceflow agents */}
-      {agent.provider === 'voiceflow' && (
-        <WidgetTestPanel agent={agent} />
-      )}
     </div>
   );
+
+  return agent.provider === 'voiceflow' ? (
+    <WidgetTestPanel agent={agent}>
+      {content}
+    </WidgetTestPanel>
+  ) : content;
 }
