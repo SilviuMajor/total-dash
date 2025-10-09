@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Bot, Activity, Trash2 } from "lucide-react";
+import { Plus, Bot, Activity, Trash2, Copy, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -33,6 +33,8 @@ export default function AdminAgents() {
   });
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [agentToDelete, setAgentToDelete] = useState<Agent | null>(null);
+  const [duplicating, setDuplicating] = useState(false);
+  const [agentToDuplicate, setAgentToDuplicate] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -121,6 +123,37 @@ export default function AdminAgents() {
   const handleDeleteSuccess = () => {
     loadAgents();
     setAgentToDelete(null);
+  };
+
+  const handleDuplicateClick = async (e: React.MouseEvent, agentId: string) => {
+    e.stopPropagation();
+    setAgentToDuplicate(agentId);
+    setDuplicating(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('duplicate-agent', {
+        body: { agentId }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: `Agent duplicated successfully as "${data.newAgentName}"`,
+      });
+
+      loadAgents(); // Refresh list
+    } catch (error: any) {
+      console.error('Duplication error:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to duplicate agent",
+        variant: "destructive",
+      });
+    } finally {
+      setDuplicating(false);
+      setAgentToDuplicate(null);
+    }
   };
 
   return (
@@ -250,24 +283,37 @@ export default function AdminAgents() {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex gap-2 flex-shrink-0">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="border-border/50"
-                    onClick={() => navigate(`/admin/agents/${agent.id}`)}
-                  >
-                    View Details
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                    onClick={(e) => handleDeleteClick(e, agent)}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
+                  <div className="flex gap-2 flex-shrink-0">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="border-border/50"
+                      onClick={() => navigate(`/admin/agents/${agent.id}`)}
+                    >
+                      View Details
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="border-border/50"
+                      onClick={(e) => handleDuplicateClick(e, agent.id)}
+                      disabled={duplicating && agentToDuplicate === agent.id}
+                    >
+                      {duplicating && agentToDuplicate === agent.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Copy className="w-4 h-4" />
+                      )}
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={(e) => handleDeleteClick(e, agent)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
               </div>
             </Card>
           ))}
