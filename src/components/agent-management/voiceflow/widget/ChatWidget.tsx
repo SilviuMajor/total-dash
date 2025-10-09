@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Send, Paperclip, X, Plus } from "lucide-react";
+import { Send, Paperclip, X, Plus, MessageSquare, ChevronRight, ArrowLeft, MessageCircle, Clock, Bot } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -28,11 +28,47 @@ interface ChatWidgetProps {
   onClose: () => void;
 }
 
+const WaveDecoration = ({ color }: { color: string }) => (
+  <svg viewBox="0 0 400 50" className="w-full h-8" preserveAspectRatio="none">
+    <path
+      d="M0,25 Q100,10 200,25 T400,25 L400,50 L0,50 Z"
+      fill={color}
+      opacity="0.15"
+    />
+  </svg>
+);
+
 const TypingIndicator = () => (
-  <div className="flex items-center gap-1 p-3 bg-muted rounded-lg w-fit">
-    <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-    <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-    <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+  <div className="flex items-center gap-1 p-3 bg-muted/50 rounded-2xl w-fit">
+    <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+    <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+    <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+  </div>
+);
+
+const ConversationCard = ({ conv, onClick, primaryColor }: any) => (
+  <div
+    className="p-4 rounded-xl cursor-pointer transition-all hover:shadow-md group"
+    style={{ backgroundColor: `${primaryColor}15` }}
+    onClick={onClick}
+  >
+    <div className="flex items-start gap-3">
+      <div 
+        className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+        style={{ backgroundColor: `${primaryColor}30` }}
+      >
+        <MessageCircle className="w-5 h-5" style={{ color: primaryColor }} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="font-medium text-sm line-clamp-2 mb-1">{conv.preview}</p>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Clock className="w-3 h-3" />
+          <span>{formatDistanceToNow(new Date(conv.timestamp), { addSuffix: true })}</span>
+          <Badge variant="secondary" className="ml-auto">{conv.messageCount}</Badge>
+        </div>
+      </div>
+      <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+    </div>
   </div>
 );
 
@@ -212,41 +248,64 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
     { key: 'FAQ', enabled: faqTab.enabled }
   ].filter(tab => tab.enabled);
 
+  const primaryColor = appearance.primary_color || '#5B4FFF';
+  const secondaryColor = appearance.secondary_color || '#FFFFFF';
+  const hasActiveChat = messages.length > 0;
+
   return (
     <div 
-      className="w-[400px] h-[600px] flex flex-col bg-card rounded-lg shadow-xl border"
+      className="w-[400px] h-[600px] flex flex-col bg-background rounded-2xl shadow-2xl overflow-hidden"
       style={{ fontFamily: appearance.font_family || 'Inter' }}
     >
-      {/* Header */}
+      {/* Header with gradient */}
       <div 
-        className="p-4 flex items-center justify-between border-b"
+        className="relative"
         style={{ 
-          backgroundColor: appearance.primary_color || '#5B4FFF',
-          color: appearance.secondary_color || '#FFFFFF'
+          background: `linear-gradient(135deg, ${primaryColor} 0%, ${primaryColor}dd 100%)`,
+          color: secondaryColor
         }}
       >
-        <div className="flex items-center gap-3">
-          {appearance.logo_url && (
-            <img 
-              src={appearance.logo_url} 
-              alt="Logo" 
-              className="h-8 w-8 object-contain rounded"
-            />
-          )}
-          <div>
-            <h3 className="font-semibold">{widgetSettings.title || "Chat with us"}</h3>
-            <p className="text-xs opacity-90">{widgetSettings.description || "We're here to help"}</p>
+        <div className="p-5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {hasActiveChat && messages.length > 0 && (
+              <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={startNewChat}
+                className="hover:bg-white/20 -ml-2"
+                style={{ color: secondaryColor }}
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+            )}
+            {appearance.logo_url && (
+              <div 
+                className="w-11 h-11 rounded-full flex items-center justify-center border-2 overflow-hidden bg-white"
+                style={{ borderColor: `${secondaryColor}40` }}
+              >
+                <img 
+                  src={appearance.logo_url} 
+                  alt="Logo" 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
+            <div>
+              <h3 className="font-semibold text-base">{widgetSettings.title || "Chat with us"}</h3>
+              <p className="text-xs opacity-90">{widgetSettings.description || "We're here to help"}</p>
+            </div>
           </div>
+          <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={onClose}
+            className="hover:bg-white/20"
+            style={{ color: secondaryColor }}
+          >
+            <X className="h-5 w-5" />
+          </Button>
         </div>
-        <Button 
-          variant="ghost" 
-          size="icon"
-          onClick={onClose}
-          className="hover:bg-white/20"
-          style={{ color: appearance.secondary_color || '#FFFFFF' }}
-        >
-          <X className="h-4 w-4" />
-        </Button>
+        <WaveDecoration color={secondaryColor} />
       </div>
 
       {/* Tabs */}
@@ -271,59 +330,77 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
         <div className="flex-1 flex flex-col overflow-hidden">
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-8 text-center flex-1">
-              <h2 className="text-2xl font-bold mb-2" style={{ color: appearance.text_color || '#000000' }}>
+              <h2 className="text-3xl font-bold mb-3" style={{ color: appearance.text_color || '#000000' }}>
                 {homeTab.title}
               </h2>
-              <p className="text-muted-foreground mb-6">{homeTab.subtitle}</p>
+              <p className="text-muted-foreground mb-8 text-base">{homeTab.subtitle}</p>
               
-              <div className="space-y-3 w-full max-w-xs">
+              <div className="space-y-3 w-full px-4">
                 {homeTab.buttons
                   ?.filter((btn: any) => btn.enabled)
                   .map((btn: any) => (
-                    <Button
+                    <button
                       key={btn.id}
-                      className={`w-full ${buttonRadiusClass}`}
+                      className="w-full p-4 rounded-xl flex items-center justify-between transition-all hover:shadow-md group"
                       style={{ 
-                        backgroundColor: appearance.primary_color || '#5B4FFF',
-                        color: appearance.secondary_color || '#FFFFFF'
+                        backgroundColor: `${primaryColor}15`,
+                        color: appearance.text_color || '#000000'
                       }}
                       onClick={() => handleButtonAction(btn.action)}
                     >
-                      {btn.text}
-                    </Button>
+                      <div className="flex items-center gap-3">
+                        <MessageSquare className="w-5 h-5" style={{ color: primaryColor }} />
+                        <span className="font-medium">{btn.text}</span>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+                    </button>
                   ))}
               </div>
             </div>
           ) : (
             <>
               <ScrollArea className="flex-1 p-4">
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {messages.map((message) => (
                     <div
                       key={message.id}
-                      className={`flex ${message.speaker === 'user' ? 'justify-end' : 'justify-start'}`}
+                      className={`flex gap-2 ${message.speaker === 'user' ? 'justify-end' : 'justify-start items-start'}`}
                     >
+                      {message.speaker === 'assistant' && (
+                        <div 
+                          className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-1"
+                          style={{ backgroundColor: `${primaryColor}20` }}
+                        >
+                          <Bot className="w-4 h-4" style={{ color: primaryColor }} />
+                        </div>
+                      )}
                       <div
-                        className={`max-w-[80%] p-3 ${buttonRadiusClass} ${
+                        className={`max-w-[75%] p-3.5 rounded-2xl shadow-sm ${
                           message.speaker === 'user'
-                            ? 'text-white'
-                            : 'bg-muted'
+                            ? ''
+                            : 'bg-muted/80'
                         }`}
                         style={
                           message.speaker === 'user'
                             ? { 
-                                backgroundColor: appearance.primary_color || '#5B4FFF',
-                                color: appearance.secondary_color || '#FFFFFF'
+                                backgroundColor: primaryColor,
+                                color: secondaryColor
                               }
                             : { color: appearance.text_color || '#000000' }
                         }
                       >
-                        <p className="text-sm whitespace-pre-wrap">{message.text}</p>
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.text}</p>
                       </div>
                     </div>
                   ))}
                   {isTyping && (
-                    <div className="flex justify-start">
+                    <div className="flex gap-2 items-start">
+                      <div 
+                        className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+                        style={{ backgroundColor: `${primaryColor}20` }}
+                      >
+                        <Bot className="w-4 h-4" style={{ color: primaryColor }} />
+                      </div>
                       <TypingIndicator />
                     </div>
                   )}
@@ -331,7 +408,7 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
                 </div>
               </ScrollArea>
 
-              <div className="p-4 border-t">
+              <div className="p-4" style={{ backgroundColor: `${primaryColor}08` }}>
                 <div className="flex items-center gap-2">
                   <input
                     type="file"
@@ -345,6 +422,7 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
                       variant="ghost" 
                       size="icon"
                       type="button"
+                      className="rounded-full"
                       asChild
                     >
                       <span>
@@ -356,15 +434,16 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage(inputValue)}
-                    placeholder="Type message..."
-                    className={buttonRadiusClass}
+                    placeholder="Type your message..."
+                    className="rounded-full bg-background border-0 shadow-sm"
                   />
                   <Button 
                     onClick={() => sendMessage(inputValue)}
-                    className={buttonRadiusClass}
+                    className="rounded-full shadow-sm"
+                    size="icon"
                     style={{ 
-                      backgroundColor: appearance.primary_color || '#5B4FFF',
-                      color: appearance.secondary_color || '#FFFFFF'
+                      backgroundColor: primaryColor,
+                      color: secondaryColor
                     }}
                   >
                     <Send className="w-4 h-4" />
@@ -378,39 +457,66 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
 
       {selectedTab === "Chats" && chatsTab.enabled && (
         <div className="flex flex-col flex-1 overflow-hidden">
-          <div className="p-4 border-b">
-            <Button
-              className={`w-full ${buttonRadiusClass}`}
+          <div className="p-5 space-y-4">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="w-5 h-5" style={{ color: primaryColor }} />
+              <h3 className="font-semibold text-lg">Chats</h3>
+            </div>
+            
+            <button
+              className="w-full p-4 rounded-xl flex items-center justify-between transition-all hover:shadow-md group"
+              style={{ backgroundColor: `${primaryColor}15` }}
               onClick={startNewChat}
-              style={{ 
-                backgroundColor: appearance.primary_color || '#5B4FFF',
-                color: appearance.secondary_color || '#FFFFFF'
-              }}
             >
-              <Plus className="mr-2 h-4 w-4" /> Start New Chat
-            </Button>
+              <div className="flex items-center gap-3">
+                <Plus className="w-5 h-5" style={{ color: primaryColor }} />
+                <span className="font-medium">New Chat</span>
+              </div>
+              <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+            </button>
           </div>
           
           <ScrollArea className="flex-1">
-            <div className="p-4 space-y-2">
+            <div className="px-5 pb-5 space-y-4">
               {conversationHistory.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">No conversations yet</p>
+                <div className="text-center py-12">
+                  <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                  <p className="text-muted-foreground">No conversations yet</p>
+                  <p className="text-sm text-muted-foreground mt-1">Start a new chat to get going</p>
+                </div>
               ) : (
-                conversationHistory.map(conv => (
-                  <div
-                    key={conv.id}
-                    className="p-4 border rounded-lg hover:bg-muted cursor-pointer transition-colors"
-                    onClick={() => loadConversation(conv.id)}
-                  >
-                    <div className="flex justify-between items-start mb-2">
-                      <p className="font-medium text-sm line-clamp-1">{conv.preview}</p>
-                      <Badge variant="secondary" className="ml-2 text-xs">{conv.messageCount}</Badge>
+                <>
+                  {conversationHistory[0] && (
+                    <div>
+                      <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                        Continue recent conversation
+                      </h4>
+                      <ConversationCard 
+                        conv={conversationHistory[0]} 
+                        onClick={() => loadConversation(conversationHistory[0].id)}
+                        primaryColor={primaryColor}
+                      />
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(new Date(conv.timestamp), { addSuffix: true })}
-                    </p>
-                  </div>
-                ))
+                  )}
+                  
+                  {conversationHistory.length > 1 && (
+                    <div>
+                      <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                        Previous conversations
+                      </h4>
+                      <div className="space-y-2">
+                        {conversationHistory.slice(1).map(conv => (
+                          <ConversationCard 
+                            key={conv.id}
+                            conv={conv} 
+                            onClick={() => loadConversation(conv.id)}
+                            primaryColor={primaryColor}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </ScrollArea>
