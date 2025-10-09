@@ -40,9 +40,9 @@ const App = () => (
                 path="/*"
                 element={
                   <ProtectedRoute>
-                    <div className="flex min-h-screen w-full bg-background">
+                    <div className="flex h-screen w-full bg-background overflow-hidden">
                       <Sidebar />
-                      <div className="flex-1 flex flex-col">
+                      <div className="flex-1 flex flex-col overflow-hidden">
                         <AdminPreviewBanner />
                         <main className="flex-1 p-8 overflow-y-auto">
                           <Routes>

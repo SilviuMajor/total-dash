@@ -5,11 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Bot, Activity } from "lucide-react";
+import { Plus, Bot, Activity, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { AgentDeletionDialog } from "@/components/agent-management/AgentDeletionDialog";
 
 interface Agent {
   id: string;
@@ -30,6 +31,8 @@ export default function AdminAgents() {
     provider: "voiceflow",
     api_key: "",
   });
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [agentToDelete, setAgentToDelete] = useState<Agent | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -109,6 +112,17 @@ export default function AdminAgents() {
     }
   };
 
+  const handleDeleteClick = (e: React.MouseEvent, agent: Agent) => {
+    e.stopPropagation();
+    setAgentToDelete(agent);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteSuccess = () => {
+    loadAgents();
+    setAgentToDelete(null);
+  };
+
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
@@ -175,18 +189,18 @@ export default function AdminAgents() {
         </Dialog>
       </div>
 
-      <div className="flex gap-2 mb-6">
+      <div className="flex gap-1.5 mb-6">
         <Button
           variant={providerFilter === 'voiceflow' ? 'default' : 'outline'}
           onClick={() => setProviderFilter('voiceflow')}
-          className={providerFilter === 'voiceflow' ? 'bg-foreground text-background' : ''}
+          className={providerFilter === 'voiceflow' ? 'bg-foreground text-background px-3 py-2 text-sm' : 'px-3 py-2 text-sm'}
         >
           Voiceflow ({agents.filter(a => a.provider === 'voiceflow').length})
         </Button>
         <Button
           variant={providerFilter === 'retell' ? 'default' : 'outline'}
           onClick={() => setProviderFilter('retell')}
-          className={providerFilter === 'retell' ? 'bg-foreground text-background' : ''}
+          className={providerFilter === 'retell' ? 'bg-foreground text-background px-3 py-2 text-sm' : 'px-3 py-2 text-sm'}
         >
           Retell AI ({agents.filter(a => a.provider === 'retell').length})
         </Button>
@@ -209,17 +223,22 @@ export default function AdminAgents() {
           {filteredAgents.map((agent) => (
             <Card 
               key={agent.id} 
-              className="w-full p-4 bg-gradient-card border-border/50 hover:border-primary/50 hover:shadow-xl transition-all duration-300 cursor-pointer"
-              onClick={() => navigate(`/admin/agents/${agent.id}`)}
+              className="w-full p-4 bg-gradient-card border-border/50 hover:border-primary/50 hover:shadow-xl transition-all duration-300"
             >
               <div className="flex items-center gap-4">
                 {/* Agent Icon */}
-                <div className="flex-shrink-0 w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
+                <div 
+                  className="flex-shrink-0 w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center cursor-pointer"
+                  onClick={() => navigate(`/admin/agents/${agent.id}`)}
+                >
                   <Bot className="w-6 h-6 text-primary" />
                 </div>
 
                 {/* Agent Info */}
-                <div className="flex-1 min-w-0">
+                <div 
+                  className="flex-1 min-w-0 cursor-pointer"
+                  onClick={() => navigate(`/admin/agents/${agent.id}`)}
+                >
                   <div className="flex items-center gap-2 mb-1">
                     <h3 className="text-lg font-semibold text-foreground truncate">{agent.name}</h3>
                     <Badge className={getStatusColor(agent.status)}>
@@ -230,14 +249,39 @@ export default function AdminAgents() {
                   <p className="text-sm text-muted-foreground capitalize">{agent.provider}</p>
                 </div>
 
-                {/* View Details Button */}
-                <Button variant="outline" size="sm" className="border-border/50">
-                  View Details
-                </Button>
+                {/* Action Buttons */}
+                <div className="flex gap-2 flex-shrink-0">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="border-border/50"
+                    onClick={() => navigate(`/admin/agents/${agent.id}`)}
+                  >
+                    View Details
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={(e) => handleDeleteClick(e, agent)}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
             </Card>
           ))}
         </div>
+      )}
+
+      {agentToDelete && (
+        <AgentDeletionDialog
+          agentId={agentToDelete.id}
+          agentName={agentToDelete.name}
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          onSuccess={handleDeleteSuccess}
+        />
       )}
     </div>
   );

@@ -92,7 +92,7 @@ export function Sidebar() {
   };
 
   return (
-    <div className="flex flex-col w-64 border-r border-border bg-card/50 backdrop-blur-sm">
+    <div className="flex flex-col w-64 h-screen border-r border-border bg-card/50 backdrop-blur-sm overflow-hidden flex-shrink-0">
       <div className="flex items-center justify-center p-6 border-b border-border">
         <img src={agencyLogo} alt={agencyName} className="w-12 h-12 object-contain" />
       </div>
@@ -112,7 +112,7 @@ export function Sidebar() {
         </div>
       )}
 
-      <nav className="flex-1 p-4 space-y-1">
+      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         {navigation.map((item) => (
           <NavLink
             key={item.name}
