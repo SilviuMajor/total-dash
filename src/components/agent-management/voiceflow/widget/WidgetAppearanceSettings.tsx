@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,6 +30,10 @@ export function WidgetAppearanceSettings({ agent, onUpdate }: WidgetAppearanceSe
   const { toast } = useToast();
   const [uploading, setUploading] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Refs to prevent autosave loop
+  const hasMountedRef = useRef(false);
+  const lastSavedRef = useRef<string>("");
 
   const widgetSettings = agent.config?.widget_settings || {};
   
@@ -66,7 +70,13 @@ export function WidgetAppearanceSettings({ agent, onUpdate }: WidgetAppearanceSe
     }
   });
 
-  // Debounced auto-save
+  // Reset refs when agent changes
+  useEffect(() => {
+    lastSavedRef.current = JSON.stringify(widgetSettings);
+    hasMountedRef.current = false;
+  }, [agent.id]);
+
+  // Debounced auto-save (stable - no onUpdate call to prevent loop)
   const debouncedSave = useCallback(
     (() => {
       let timeout: NodeJS.Timeout;
@@ -86,20 +96,38 @@ export function WidgetAppearanceSettings({ agent, onUpdate }: WidgetAppearanceSe
               .eq('id', agent.id);
 
             if (error) throw error;
-            onUpdate();
+            
+            // Update lastSaved after successful save
+            lastSavedRef.current = JSON.stringify(data);
           } catch (error) {
             console.error('Auto-save error:', error);
+            toast({
+              title: "Error",
+              description: "Failed to save changes",
+              variant: "destructive"
+            });
           } finally {
             setIsSaving(false);
           }
         }, 500);
       };
     })(),
-    [agent.id, agent.config, onUpdate]
+    [agent.id, agent.config, toast]
   );
 
+  // Auto-save when formData changes (skip first mount, compare data)
   useEffect(() => {
-    debouncedSave(formData);
+    // Skip first mount
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true;
+      return;
+    }
+
+    // Only save if data actually changed
+    const currentData = JSON.stringify(formData);
+    if (currentData !== lastSavedRef.current) {
+      debouncedSave(formData);
+    }
   }, [formData, debouncedSave]);
 
   const handleImageUpload = async (type: 'logo' | 'header' | 'background', file: File) => {
