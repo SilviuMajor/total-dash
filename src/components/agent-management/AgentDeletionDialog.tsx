@@ -139,22 +139,24 @@ export function AgentDeletionDialog({
           <>
             <AlertDialogHeader>
               <AlertDialogTitle>Delete Agent</AlertDialogTitle>
-              <AlertDialogDescription className="space-y-2">
-                <p className="font-semibold text-destructive">
-                  Warning: This action cannot be undone.
-                </p>
-                <p>
-                  Deleting "{agentName}" will permanently remove:
-                </p>
-                <ul className="list-disc list-inside space-y-1 text-sm">
-                  <li>All conversations associated with this agent</li>
-                  <li>All transcripts from those conversations</li>
-                  <li>All client assignments for this agent</li>
-                  <li>The agent configuration and settings</li>
-                </ul>
-                <p className="mt-4">
-                  Are you sure you want to proceed?
-                </p>
+              <AlertDialogDescription asChild>
+                <div className="space-y-2">
+                  <p className="font-semibold text-destructive">
+                    Warning: This action cannot be undone.
+                  </p>
+                  <p>
+                    Deleting "{agentName}" will permanently remove:
+                  </p>
+                  <ul className="list-disc list-inside space-y-1 text-sm">
+                    <li>All conversations associated with this agent</li>
+                    <li>All transcripts from those conversations</li>
+                    <li>All client assignments for this agent</li>
+                    <li>The agent configuration and settings</li>
+                  </ul>
+                  <p className="mt-4">
+                    Are you sure you want to proceed?
+                  </p>
+                </div>
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

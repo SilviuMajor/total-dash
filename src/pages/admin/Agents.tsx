@@ -5,12 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Bot, Activity, Trash2, Copy, Loader2 } from "lucide-react";
+import { Plus, Bot, Activity, Copy, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { AgentDeletionDialog } from "@/components/agent-management/AgentDeletionDialog";
 
 interface Agent {
   id: string;
@@ -31,8 +30,6 @@ export default function AdminAgents() {
     provider: "voiceflow",
     api_key: "",
   });
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [agentToDelete, setAgentToDelete] = useState<Agent | null>(null);
   const [duplicating, setDuplicating] = useState(false);
   const [agentToDuplicate, setAgentToDuplicate] = useState<string | null>(null);
   const { toast } = useToast();
@@ -112,17 +109,6 @@ export default function AdminAgents() {
         variant: "destructive",
       });
     }
-  };
-
-  const handleDeleteClick = (e: React.MouseEvent, agent: Agent) => {
-    e.stopPropagation();
-    setAgentToDelete(agent);
-    setDeleteDialogOpen(true);
-  };
-
-  const handleDeleteSuccess = () => {
-    loadAgents();
-    setAgentToDelete(null);
   };
 
   const handleDuplicateClick = async (e: React.MouseEvent, agentId: string) => {
@@ -305,29 +291,11 @@ export default function AdminAgents() {
                         <Copy className="w-4 h-4" />
                       )}
                     </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                      onClick={(e) => handleDeleteClick(e, agent)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
                   </div>
               </div>
             </Card>
           ))}
         </div>
-      )}
-
-      {agentToDelete && (
-        <AgentDeletionDialog
-          agentId={agentToDelete.id}
-          agentName={agentToDelete.name}
-          open={deleteDialogOpen}
-          onOpenChange={setDeleteDialogOpen}
-          onSuccess={handleDeleteSuccess}
-        />
       )}
     </div>
   );
