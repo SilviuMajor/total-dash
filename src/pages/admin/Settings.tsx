@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, UserCog, Trash2 } from "lucide-react";
+import { Plus, UserCog, Trash2, Brain, Mic } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { AgencyLogoUpload } from "@/components/agency-management/AgencyLogoUpload";
@@ -28,11 +29,25 @@ export default function AdminSettings() {
   const [agencyName, setAgencyName] = useState("");
   const [agencyLogoUrl, setAgencyLogoUrl] = useState("");
   const [savingSettings, setSavingSettings] = useState(false);
+  
+  // API Keys state
+  const [apiKeys, setApiKeys] = useState({
+    openai: { connected: false, maskedValue: '' },
+    elevenLabs: { connected: false, maskedValue: '' },
+  });
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [disconnectingKey, setDisconnectingKey] = useState<'openai' | 'elevenLabs' | null>(null);
+  const [adminPassword, setAdminPassword] = useState('');
+  const [newKeyValue, setNewKeyValue] = useState('');
+  const [connectingKey, setConnectingKey] = useState<'openai' | 'elevenLabs' | null>(null);
+  const [loadingKeys, setLoadingKeys] = useState(false);
+  
   const { toast } = useToast();
 
   useEffect(() => {
     loadMembers();
     loadAgencySettings();
+    loadApiKeyStatuses();
   }, []);
 
   const loadAgencySettings = async () => {
@@ -104,6 +119,108 @@ export default function AdminSettings() {
       });
     } finally {
       setSavingSettings(false);
+    }
+  };
+
+  // API Key Management Functions
+  const loadApiKeyStatuses = async () => {
+    try {
+      setLoadingKeys(true);
+      const [openaiResult, elevenLabsResult] = await Promise.all([
+        supabase.functions.invoke('get-api-key-status', {
+          body: { keyName: 'OPENAI_API_KEY' }
+        }),
+        supabase.functions.invoke('get-api-key-status', {
+          body: { keyName: 'ELEVENLABS_API_KEY' }
+        })
+      ]);
+
+      setApiKeys({
+        openai: {
+          connected: openaiResult.data?.exists || false,
+          maskedValue: openaiResult.data?.maskedValue || ''
+        },
+        elevenLabs: {
+          connected: elevenLabsResult.data?.exists || false,
+          maskedValue: elevenLabsResult.data?.maskedValue || ''
+        }
+      });
+    } catch (error) {
+      console.error('Error loading API key statuses:', error);
+    } finally {
+      setLoadingKeys(false);
+    }
+  };
+
+  const handleConnectKey = async (keyType: 'openai' | 'elevenLabs') => {
+    if (!newKeyValue.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter an API key",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const keyName = keyType === 'openai' ? 'OPENAI_API_KEY' : 'ELEVENLABS_API_KEY';
+    
+    try {
+      setLoadingKeys(true);
+      const { error } = await supabase.functions.invoke('save-api-key', {
+        body: { keyName, keyValue: newKeyValue }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: `${keyType === 'openai' ? 'OpenAI' : 'Eleven Labs'} API key connected successfully`,
+      });
+
+      setNewKeyValue('');
+      setConnectingKey(null);
+      await loadApiKeyStatuses();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save API key",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingKeys(false);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    if (!disconnectingKey || !adminPassword) return;
+
+    const keyName = disconnectingKey === 'openai' ? 'OPENAI_API_KEY' : 'ELEVENLABS_API_KEY';
+    
+    try {
+      setLoadingKeys(true);
+      const { error } = await supabase.functions.invoke('delete-api-key', {
+        body: { keyName, adminPassword }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: `${disconnectingKey === 'openai' ? 'OpenAI' : 'Eleven Labs'} API key disconnected`,
+      });
+
+      setShowPasswordDialog(false);
+      setAdminPassword('');
+      setDisconnectingKey(null);
+      await loadApiKeyStatuses();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to disconnect API key",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingKeys(false);
     }
   };
 
@@ -244,6 +361,198 @@ export default function AdminSettings() {
           </Button>
         </form>
       </Card>
+
+      {/* API Integrations Section */}
+      <Card className="p-6 bg-gradient-card border-border/50">
+        <h3 className="text-lg font-semibold text-foreground mb-2">API Integrations</h3>
+        <p className="text-sm text-muted-foreground mb-6">Manage your API keys for third-party integrations</p>
+        
+        <div className="space-y-6">
+          {/* OpenAI Integration */}
+          <div className="border border-border/50 rounded-lg p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Brain className="w-5 h-5 text-primary" />
+              </div>
+              <div className="flex-1">
+                <h4 className="font-semibold text-foreground">OpenAI API Key</h4>
+                <p className="text-xs text-muted-foreground">Connect your OpenAI account</p>
+              </div>
+              <Badge variant={apiKeys.openai.connected ? "default" : "secondary"} className="ml-auto">
+                {apiKeys.openai.connected ? "Connected" : "Not Connected"}
+              </Badge>
+            </div>
+
+            {apiKeys.openai.connected ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 p-2 bg-muted/30 rounded">
+                  <code className="text-xs font-mono flex-1">{apiKeys.openai.maskedValue}</code>
+                </div>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => {
+                    setDisconnectingKey('openai');
+                    setShowPasswordDialog(true);
+                  }}
+                  disabled={loadingKeys}
+                >
+                  Disconnect
+                </Button>
+              </div>
+            ) : connectingKey === 'openai' ? (
+              <div className="space-y-3">
+                <Input
+                  type="password"
+                  value={newKeyValue}
+                  onChange={(e) => setNewKeyValue(e.target.value)}
+                  placeholder="sk-..."
+                  className="bg-muted/50 border-border font-mono text-xs"
+                />
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => handleConnectKey('openai')}
+                    disabled={loadingKeys}
+                    className="bg-foreground text-background hover:bg-foreground/90"
+                  >
+                    Save
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setConnectingKey(null);
+                      setNewKeyValue('');
+                    }}
+                    disabled={loadingKeys}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setConnectingKey('openai')}
+                disabled={loadingKeys}
+              >
+                Connect
+              </Button>
+            )}
+          </div>
+
+          {/* Eleven Labs Integration */}
+          <div className="border border-border/50 rounded-lg p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Mic className="w-5 h-5 text-primary" />
+              </div>
+              <div className="flex-1">
+                <h4 className="font-semibold text-foreground">Eleven Labs API Key</h4>
+                <p className="text-xs text-muted-foreground">Connect your Eleven Labs account</p>
+              </div>
+              <Badge variant={apiKeys.elevenLabs.connected ? "default" : "secondary"} className="ml-auto">
+                {apiKeys.elevenLabs.connected ? "Connected" : "Not Connected"}
+              </Badge>
+            </div>
+
+            {apiKeys.elevenLabs.connected ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 p-2 bg-muted/30 rounded">
+                  <code className="text-xs font-mono flex-1">{apiKeys.elevenLabs.maskedValue}</code>
+                </div>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => {
+                    setDisconnectingKey('elevenLabs');
+                    setShowPasswordDialog(true);
+                  }}
+                  disabled={loadingKeys}
+                >
+                  Disconnect
+                </Button>
+              </div>
+            ) : connectingKey === 'elevenLabs' ? (
+              <div className="space-y-3">
+                <Input
+                  type="password"
+                  value={newKeyValue}
+                  onChange={(e) => setNewKeyValue(e.target.value)}
+                  placeholder="Enter API key..."
+                  className="bg-muted/50 border-border font-mono text-xs"
+                />
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => handleConnectKey('elevenLabs')}
+                    disabled={loadingKeys}
+                    className="bg-foreground text-background hover:bg-foreground/90"
+                  >
+                    Save
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setConnectingKey(null);
+                      setNewKeyValue('');
+                    }}
+                    disabled={loadingKeys}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setConnectingKey('elevenLabs')}
+                disabled={loadingKeys}
+              >
+                Connect
+              </Button>
+            )}
+          </div>
+        </div>
+      </Card>
+
+      {/* Password Verification Dialog */}
+      <AlertDialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
+        <AlertDialogContent className="bg-card border-border">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Disconnection</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-4">
+              <p>Enter your admin password to disconnect {disconnectingKey === 'openai' ? 'OpenAI' : 'Eleven Labs'} API key:</p>
+              <Input
+                type="password"
+                placeholder="Admin password"
+                value={adminPassword}
+                onChange={(e) => setAdminPassword(e.target.value)}
+                className="bg-muted/50 border-border"
+              />
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setAdminPassword('');
+              setDisconnectingKey(null);
+            }}>
+              Cancel
+            </AlertDialogCancel>
+            <Button
+              onClick={handleDisconnect}
+              disabled={!adminPassword || loadingKeys}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {loadingKeys ? "Disconnecting..." : "Confirm"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-semibold text-foreground">Agency Team Members</h2>

@@ -97,24 +97,14 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
       if (agentsList.length > 0) {
         setSelectedAgentId(agentsList[0].id);
         
-        // Load default permissions for preview mode
-        const { data: clientSettings } = await supabase
-          .from('client_settings')
-          .select('default_user_permissions')
-          .eq('client_id', previewClientId)
-          .single();
-        
-        if (clientSettings?.default_user_permissions) {
-          setSelectedAgentPermissions(clientSettings.default_user_permissions as unknown as AgentPermissions);
-        } else {
-          setSelectedAgentPermissions({
-            analytics: true,
-            conversations: true,
-            knowledge_base: false,
-            agent_settings: false,
-            specs: true,
-          });
-        }
+        // Admin preview mode: grant full permissions to all tabs
+        setSelectedAgentPermissions({
+          analytics: true,
+          conversations: true,
+          knowledge_base: true,
+          agent_settings: true,
+          specs: true,
+        });
       }
     } catch (error) {
       console.error('Error loading client agents for preview:', error);

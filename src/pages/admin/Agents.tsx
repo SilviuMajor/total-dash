@@ -209,19 +209,19 @@ export default function AdminAgents() {
           {filteredAgents.map((agent) => (
             <Card 
               key={agent.id} 
-              className="w-full p-6 bg-gradient-card border-border/50 hover:border-primary/50 hover:shadow-xl transition-all duration-300 cursor-pointer"
+              className="w-full p-4 bg-gradient-card border-border/50 hover:border-primary/50 hover:shadow-xl transition-all duration-300 cursor-pointer"
               onClick={() => navigate(`/admin/agents/${agent.id}`)}
             >
-              <div className="flex items-center gap-6">
+              <div className="flex items-center gap-4">
                 {/* Agent Icon */}
-                <div className="flex-shrink-0 w-16 h-16 bg-primary/10 rounded-lg flex items-center justify-center">
-                  <Bot className="w-8 h-8 text-primary" />
+                <div className="flex-shrink-0 w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
+                  <Bot className="w-6 h-6 text-primary" />
                 </div>
 
                 {/* Agent Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <h3 className="text-xl font-semibold text-foreground truncate">{agent.name}</h3>
+                    <h3 className="text-lg font-semibold text-foreground truncate">{agent.name}</h3>
                     <Badge className={getStatusColor(agent.status)}>
                       <Activity className="w-3 h-3 mr-1" />
                       {getStatusLabel(agent.status)}
@@ -231,7 +231,7 @@ export default function AdminAgents() {
                 </div>
 
                 {/* View Details Button */}
-                <Button variant="outline" className="border-border/50">
+                <Button variant="outline" size="sm" className="border-border/50">
                   View Details
                 </Button>
               </div>

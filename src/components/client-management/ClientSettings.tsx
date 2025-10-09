@@ -220,7 +220,32 @@ export function ClientSettings({ client, onUpdate }: ClientSettingsProps) {
 
           <ClientLogoUpload
             currentUrl={formData.logo_url}
-            onUploadComplete={(url) => setFormData({ ...formData, logo_url: url })}
+            onUploadComplete={async (url) => {
+              setFormData({ ...formData, logo_url: url });
+              
+              // Auto-save logo to database immediately
+              try {
+                const { error } = await supabase
+                  .from('clients')
+                  .update({ logo_url: url })
+                  .eq('id', client.id);
+
+                if (error) throw error;
+
+                toast({
+                  title: "Success",
+                  description: "Logo uploaded successfully",
+                });
+
+                onUpdate();
+              } catch (error: any) {
+                toast({
+                  title: "Error",
+                  description: error.message,
+                  variant: "destructive",
+                });
+              }
+            }}
           />
 
           <div className="space-y-2">

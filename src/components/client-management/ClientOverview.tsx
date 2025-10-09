@@ -25,7 +25,6 @@ export function ClientOverview({ client }: ClientOverviewProps) {
   const [stats, setStats] = useState({
     totalUsers: 0,
     assignedAgents: 0,
-    totalConversations: 0,
     assignedAgentData: [] as Array<{ id: string; name: string }>,
   });
 
@@ -35,18 +34,13 @@ export function ClientOverview({ client }: ClientOverviewProps) {
 
   const loadStats = async () => {
     try {
-      const [usersResult, agentsResult, agentsDetailsResult, conversationsResult] = await Promise.all([
+      const [usersResult, agentsResult, agentsDetailsResult] = await Promise.all([
         supabase.from('client_users').select('id', { count: 'exact', head: true }).eq('client_id', client.id),
         supabase.from('agent_assignments').select('id', { count: 'exact', head: true }).eq('client_id', client.id),
         supabase.from('agent_assignments')
           .select('agent_id, agents(id, name)')
           .eq('client_id', client.id)
           .order('sort_order'),
-        supabase.from('conversations').select('id', { count: 'exact', head: true })
-          .in('agent_id', 
-            (await supabase.from('agent_assignments').select('agent_id').eq('client_id', client.id))
-              .data?.map(a => a.agent_id) || []
-          ),
       ]);
 
       const agentData = agentsDetailsResult.data?.map((a: any) => ({
@@ -57,7 +51,6 @@ export function ClientOverview({ client }: ClientOverviewProps) {
       setStats({
         totalUsers: usersResult.count || 0,
         assignedAgents: agentsResult.count || 0,
-        totalConversations: conversationsResult.count || 0,
         assignedAgentData: agentData,
       });
     } catch (error) {
@@ -67,7 +60,7 @@ export function ClientOverview({ client }: ClientOverviewProps) {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2">
         <Card className="p-6 bg-gradient-card border-border/50">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -88,18 +81,6 @@ export function ClientOverview({ client }: ClientOverviewProps) {
             <div>
               <p className="text-sm text-muted-foreground">Assigned Agents</p>
               <p className="text-2xl font-bold text-foreground">{stats.assignedAgents}</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-6 bg-gradient-card border-border/50">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Activity className="w-6 h-6 text-primary" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Total Conversations</p>
-              <p className="text-2xl font-bold text-foreground">{stats.totalConversations}</p>
             </div>
           </div>
         </Card>
@@ -125,7 +106,7 @@ export function ClientOverview({ client }: ClientOverviewProps) {
                       key={agent.id}
                       variant="outline"
                       size="sm"
-                      onClick={() => navigate(`/admin/agents/${agent.id}/settings`)}
+                      onClick={() => navigate(`/admin/agents/${agent.id}`)}
                       className="gap-2"
                     >
                       {agent.name}
