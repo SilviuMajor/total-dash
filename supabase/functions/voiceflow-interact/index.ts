@@ -108,90 +108,123 @@ serve(async (req) => {
     const voiceflowData = await voiceflowResponse.json();
     console.log('Voiceflow response:', voiceflowData);
 
-    // Extract bot messages AND buttons from response
-    interface BotResponse {
-      type: 'text' | 'buttons';
-      text?: string;
-      buttons?: Array<{ text: string; payload: any }>;
-    }
-
-    const botResponses: BotResponse[] = [];
-    if (Array.isArray(voiceflowData)) {
-      voiceflowData.forEach((item: any) => {
+    // Parse Voiceflow response and extract variables
+    const botResponses: any[] = [];
+    let voiceflowVariables: Record<string, any> = {};
+    
+    if (voiceflowData && Array.isArray(voiceflowData)) {
+      // Extract variables from Voiceflow state
+      const lastItem = voiceflowData[voiceflowData.length - 1];
+      if (lastItem && lastItem.variables) {
+        voiceflowVariables = lastItem.variables;
+      }
+      
+      for (const item of voiceflowData) {
         if (item.type === 'text' && item.payload?.message) {
           botResponses.push({
             type: 'text',
             text: item.payload.message
           });
         } else if (item.type === 'choice' && item.payload?.buttons) {
-          // Voiceflow sends buttons as "choice" type
           botResponses.push({
-            type: 'buttons',
+            type: 'choice',
             buttons: item.payload.buttons.map((btn: any) => ({
-              text: btn.name || btn.label,
-              payload: btn.request || btn.payload
+              text: btn.name,
+              payload: btn.request
             }))
           });
         }
-      });
+      }
     }
 
-    // Create or update conversation
+    // Create or get conversation
     let currentConversationId = conversationId;
-
+    
     if (!currentConversationId) {
-      const { data: newConv, error: convError } = await supabaseClient
+      // Create new conversation
+      const { data: newConversation, error: convError } = await supabaseClient
         .from('conversations')
         .insert({
           agent_id: agentId,
           caller_phone: userId,
           status: 'active',
           is_widget_test: isTestMode,
-          metadata: { source: 'widget_test' },
-          started_at: new Date().toISOString(),
+          metadata: { 
+            source: isTestMode ? 'widget_test' : 'widget',
+            variables: {}
+          }
         })
-        .select('id')
+        .select()
         .single();
 
       if (convError) {
-        console.error('Conversation creation error:', convError);
+        console.error('Error creating conversation:', convError);
         throw convError;
       }
 
-      currentConversationId = newConv.id;
+      currentConversationId = newConversation.id;
     }
 
-    // Only insert user transcript for text messages, not launch
-    if (action !== 'launch' && message) {
+    // Update conversation with captured variables
+    if (currentConversationId && Object.keys(voiceflowVariables).length > 0) {
+      const { error: updateError } = await supabaseClient
+        .from('conversations')
+        .update({
+          metadata: {
+            source: isTestMode ? 'widget_test' : 'widget',
+            variables: voiceflowVariables,
+            last_updated: new Date().toISOString()
+          }
+        })
+        .eq('id', currentConversationId);
+      
+      if (updateError) {
+        console.error('Error updating conversation metadata:', updateError);
+      }
+    }
+
+    // Store user message in transcripts
+    if (action === 'text' || action === 'button') {
+      const userMessageText = action === 'button' 
+        ? JSON.parse(message).payload?.label || 'Button clicked'
+        : message;
+      
       const { error: userTranscriptError } = await supabaseClient
         .from('transcripts')
         .insert({
           conversation_id: currentConversationId,
           speaker: 'user',
-          text: message,
-          timestamp: new Date().toISOString(),
+          text: userMessageText,
+          metadata: action === 'button' ? {
+            button_click: true,
+            payload: JSON.parse(message),
+            timestamp: new Date().toISOString()
+          } : {}
         });
 
       if (userTranscriptError) {
-        console.error('User transcript error:', userTranscriptError);
+        console.error('Error inserting user transcript:', userTranscriptError);
       }
     }
 
-    // Insert bot response transcripts
+    // Store bot responses in transcripts with buttons and full trace
     for (const response of botResponses) {
-      if (response.type === 'text' && response.text) {
-        const { error: botTranscriptError } = await supabaseClient
-          .from('transcripts')
-          .insert({
-            conversation_id: currentConversationId,
-            speaker: 'assistant',
-            text: response.text,
+      const { error: botTranscriptError } = await supabaseClient
+        .from('transcripts')
+        .insert({
+          conversation_id: currentConversationId,
+          speaker: 'assistant',
+          text: response.text || null,
+          buttons: response.buttons || null,
+          metadata: {
+            response_type: response.type,
             timestamp: new Date().toISOString(),
-          });
+            full_trace: voiceflowData
+          }
+        });
 
-        if (botTranscriptError) {
-          console.error('Bot transcript error:', botTranscriptError);
-        }
+      if (botTranscriptError) {
+        console.error('Error inserting bot transcript:', botTranscriptError);
       }
     }
 

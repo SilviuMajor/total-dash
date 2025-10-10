@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useClientAgentContext } from "@/hooks/useClientAgentContext";
 import { NoAgentsAssigned } from "@/components/NoAgentsAssigned";
 import { MetricCard } from "@/components/MetricCard";
+import { MessageBubble } from "@/components/MessageBubble";
 import { formatDistanceToNow, format } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -22,13 +23,25 @@ interface Conversation {
   started_at: string;
   duration: number;
   is_widget_test?: boolean;
+  metadata?: {
+    variables?: {
+      user_name?: string;
+      user_email?: string;
+      [key: string]: any;
+    };
+  };
 }
 
 interface Transcript {
   id: string;
-  speaker: string;
-  text: string;
+  speaker: 'user' | 'assistant';
+  text?: string;
+  buttons?: Array<{ text: string; payload: any }>;
   timestamp: string;
+  metadata?: {
+    button_click?: boolean;
+    [key: string]: any;
+  };
 }
 
 export default function Conversations() {
@@ -37,13 +50,30 @@ export default function Conversations() {
   const [transcripts, setTranscripts] = useState<Transcript[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [agentConfig, setAgentConfig] = useState<any>(null);
   const { selectedAgentId, agents } = useClientAgentContext();
 
   useEffect(() => {
     if (selectedAgentId) {
+      loadAgentConfig();
       loadConversations();
     }
   }, [selectedAgentId]);
+
+  const loadAgentConfig = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('agents')
+        .select('config')
+        .eq('id', selectedAgentId!)
+        .single();
+      
+      if (error) throw error;
+      setAgentConfig(data?.config || {});
+    } catch (error) {
+      console.error('Error loading agent config:', error);
+    }
+  };
 
   useEffect(() => {
     if (selectedConversation) {
@@ -61,7 +91,7 @@ export default function Conversations() {
         .limit(50);
 
       if (error) throw error;
-      setConversations(data || []);
+      setConversations((data || []) as Conversation[]);
     } catch (error) {
       console.error('Error loading conversations:', error);
     } finally {
@@ -73,12 +103,12 @@ export default function Conversations() {
     try {
       const { data, error } = await supabase
         .from('transcripts')
-        .select('*')
+        .select('id, speaker, text, buttons, timestamp, metadata')
         .eq('conversation_id', conversationId)
         .order('timestamp', { ascending: true });
 
       if (error) throw error;
-      setTranscripts(data || []);
+      setTranscripts((data || []) as Transcript[]);
     } catch (error) {
       console.error('Error loading transcripts:', error);
     }
@@ -96,9 +126,14 @@ export default function Conversations() {
     activeNow: conversations.filter(c => c.status === 'active').length,
   };
 
-  const filteredConversations = conversations.filter(c => 
-    c.caller_phone?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredConversations = conversations.filter(c => {
+    const searchLower = searchQuery.toLowerCase();
+    return (
+      c.caller_phone?.toLowerCase().includes(searchLower) ||
+      c.metadata?.variables?.user_name?.toLowerCase().includes(searchLower) ||
+      c.metadata?.variables?.user_email?.toLowerCase().includes(searchLower)
+    );
+  });
 
   return (
     <div className="space-y-6">
@@ -167,7 +202,9 @@ export default function Conversations() {
                     onClick={() => setSelectedConversation(conv)}
                   >
                     <div className="flex items-center gap-2 mb-1">
-                      <p className="font-medium text-sm">{conv.caller_phone || 'Unknown'}</p>
+                      <p className="font-medium text-sm">
+                        {conv.metadata?.variables?.user_name || conv.caller_phone || 'Unknown'}
+                      </p>
                       {conv.is_widget_test && (
                         <Badge variant="outline" className="text-xs">
                           🧪 Test
@@ -192,7 +229,9 @@ export default function Conversations() {
           {selectedConversation ? (
             <>
               <div className="p-4 border-b border-border">
-                <h3 className="font-semibold text-lg">{selectedConversation.caller_phone}</h3>
+                <h3 className="font-semibold text-lg">
+                  {selectedConversation.metadata?.variables?.user_name || selectedConversation.caller_phone || 'Unknown'}
+                </h3>
                 <p className="text-sm text-muted-foreground">
                   Started {format(new Date(selectedConversation.started_at), 'PPp')}
                 </p>
@@ -204,18 +243,37 @@ export default function Conversations() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {transcripts.map((t) => (
-                      <div key={t.id} className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-medium text-muted-foreground">{t.speaker}</span>
-                          <span className="text-xs text-muted-foreground">•</span>
-                          <span className="text-xs text-muted-foreground">
-                            {format(new Date(t.timestamp), 'HH:mm')}
-                          </span>
-                        </div>
-                        <p className="text-sm">{t.text}</p>
-                      </div>
-                    ))}
+                    {transcripts.map((t, index) => {
+                      const selectedButton = t.metadata?.button_click 
+                        ? t.text 
+                        : undefined;
+                      
+                      const prevMessage = index > 0 ? transcripts[index - 1] : null;
+                      const buttonsToDisplay = t.speaker === 'user' && selectedButton && prevMessage?.buttons
+                        ? prevMessage.buttons
+                        : t.buttons;
+                      
+                      return (
+                        <MessageBubble
+                          key={t.id}
+                          speaker={t.speaker}
+                          text={t.text}
+                          buttons={buttonsToDisplay}
+                          timestamp={t.timestamp}
+                          appearance={{
+                            primaryColor: agentConfig?.widget_settings?.appearance?.primary_color || '#000000',
+                            secondaryColor: agentConfig?.widget_settings?.appearance?.secondary_color || '#ffffff',
+                            textColor: agentConfig?.widget_settings?.appearance?.text_color || '#000000',
+                            chatIconUrl: agentConfig?.widget_settings?.appearance?.chat_icon_url,
+                            messageTextColor: agentConfig?.widget_settings?.functions?.message_text_color,
+                            messageBgColor: agentConfig?.widget_settings?.functions?.message_background_color,
+                            fontSize: agentConfig?.widget_settings?.functions?.font_size
+                          }}
+                          selectedButton={selectedButton}
+                          isWidget={false}
+                        />
+                      );
+                    })}
                   </div>
                 )}
               </ScrollArea>
@@ -231,6 +289,36 @@ export default function Conversations() {
         <div className="w-80 border-l border-border p-4 space-y-4 overflow-y-auto">
           {selectedConversation ? (
             <>
+              {selectedConversation?.metadata?.variables && 
+               Object.keys(selectedConversation.metadata.variables).length > 0 && (
+                <div>
+                  <Label className="mb-2 block">Captured Information</Label>
+                  <div className="space-y-2 p-3 bg-muted rounded-lg">
+                    {selectedConversation.metadata.variables.user_name && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Name:</span>
+                        <span className="font-medium">{selectedConversation.metadata.variables.user_name}</span>
+                      </div>
+                    )}
+                    {selectedConversation.metadata.variables.user_email && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Email:</span>
+                        <span className="font-medium">{selectedConversation.metadata.variables.user_email}</span>
+                      </div>
+                    )}
+                    {Object.entries(selectedConversation.metadata.variables)
+                      .filter(([key]) => key !== 'user_name' && key !== 'user_email')
+                      .map(([key, value]) => (
+                        <div key={key} className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">{key}:</span>
+                          <span className="font-medium">{String(value)}</span>
+                        </div>
+                      ))
+                    }
+                  </div>
+                </div>
+              )}
+              
               <div>
                 <Label className="mb-2 block">Actions</Label>
                 <div className="flex gap-2">

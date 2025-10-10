@@ -157,6 +157,65 @@ export function VoiceflowSettings({ agent, onUpdate }: VoiceflowSettingsProps) {
           {loading ? "Saving..." : "Save Settings"}
         </Button>
 
+        {/* Key Variables Section */}
+        <div className="pt-6 border-t border-border">
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold">Key Variables</h3>
+              <p className="text-sm text-muted-foreground">
+                Configure which Voiceflow variables are used to enhance your dashboard experience
+              </p>
+            </div>
+            
+            <div className="space-y-3 p-4 bg-muted rounded-lg">
+              <div className="space-y-2">
+                <div className="flex items-start gap-2">
+                  <div className="px-2 py-1 bg-secondary text-secondary-foreground text-xs font-mono rounded">
+                    user_name
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">User Name Variable</p>
+                    <p className="text-xs text-muted-foreground">
+                      When your Voiceflow agent captures this variable (e.g., through a "Capture Response" block), 
+                      the conversation name in your dashboard will automatically update from "user-xxx" to the actual name.
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      <strong>Example:</strong> User provides "John Smith" → Conversation shows "John Smith"
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <div className="flex items-start gap-2">
+                  <div className="px-2 py-1 bg-secondary text-secondary-foreground text-xs font-mono rounded">
+                    user_email
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">User Email Variable</p>
+                    <p className="text-xs text-muted-foreground">
+                      When captured, this variable stores the user's email address for future reference.
+                      You can view this in the conversation details panel.
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      <strong>Example:</strong> User provides "john@example.com" → Stored in conversation metadata
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/20 rounded border border-blue-200 dark:border-blue-800">
+                <p className="text-xs text-blue-900 dark:text-blue-100">
+                  <strong>💡 Setup Tip:</strong> In your Voiceflow canvas, use "Capture Response" blocks to save user inputs 
+                  into variables named exactly <code className="px-1 py-0.5 bg-blue-100 dark:bg-blue-900 rounded font-mono">user_name</code> and{' '}
+                  <code className="px-1 py-0.5 bg-blue-100 dark:bg-blue-900 rounded font-mono">user_email</code>. 
+                  These will automatically sync with your dashboard.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {isAdmin && (
           <div className="pt-6 border-t border-border">
             <div className="space-y-4">

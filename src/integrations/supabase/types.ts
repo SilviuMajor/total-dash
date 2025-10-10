@@ -732,25 +732,31 @@ export type Database = {
       }
       transcripts: {
         Row: {
+          buttons: Json | null
           confidence: number | null
           conversation_id: string
           id: string
+          metadata: Json | null
           speaker: string
           text: string
           timestamp: string | null
         }
         Insert: {
+          buttons?: Json | null
           confidence?: number | null
           conversation_id: string
           id?: string
+          metadata?: Json | null
           speaker: string
           text: string
           timestamp?: string | null
         }
         Update: {
+          buttons?: Json | null
           confidence?: number | null
           conversation_id?: string
           id?: string
+          metadata?: Json | null
           speaker?: string
           text?: string
           timestamp?: string | null
