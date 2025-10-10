@@ -55,6 +55,22 @@ serve(async (req) => {
         }
       };
       console.log('Sending launch request to Voiceflow');
+    } else if (action === 'button') {
+      // Button action - send button request payload directly
+      try {
+        const buttonPayload = JSON.parse(message);
+        voiceflowRequestBody = {
+          action: buttonPayload,
+          config: {
+            tts: false,
+            stripSSML: true,
+          }
+        };
+        console.log('Sending button action to Voiceflow:', buttonPayload);
+      } catch (error) {
+        console.error('Failed to parse button payload:', error);
+        throw new Error('Invalid button payload');
+      }
     } else {
       // Text action - normal user message
       voiceflowRequestBody = {
