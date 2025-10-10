@@ -92,6 +92,13 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
   const chatsTab = tabsConfig.chats || { enabled: true };
   const faqTab = tabsConfig.faq || { enabled: false, items: [] };
 
+  const primaryColor = appearance.primary_color || '#5B4FFF';
+  const secondaryColor = appearance.secondary_color || '#FFFFFF';
+  const messageTextColor = functions.message_text_color || '#000000';
+  const messageBgColor = functions.message_background_color || '#f3f4f6';
+  const fontSize = functions.font_size || '14px';
+  const typingDelay = functions.typing_delay_ms || 500;
+
   // Notification sound
   const playNotificationSound = () => {
     if (!functions.notification_sound_enabled) return;
@@ -202,7 +209,7 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
           
           // Show typing indicator
           setIsTyping(true);
-          await new Promise(resolve => setTimeout(resolve, 500));
+          await new Promise(resolve => setTimeout(resolve, typingDelay));
           
           const botMsg: Message = {
             id: crypto.randomUUID(),
@@ -218,7 +225,7 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
           
           // Brief pause between messages
           if (i < data.botMessages.length - 1) {
-            await new Promise(resolve => setTimeout(resolve, 300));
+            await new Promise(resolve => setTimeout(resolve, typingDelay * 0.6));
           }
         }
       } else {
@@ -328,7 +335,7 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
           const msg = data.botMessages[i];
           
           setIsTyping(true);
-          await new Promise(resolve => setTimeout(resolve, 500));
+          await new Promise(resolve => setTimeout(resolve, typingDelay));
           
           const botMsg: Message = {
             id: crypto.randomUUID(),
@@ -343,7 +350,7 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
           playNotificationSound();
           
           if (i < data.botMessages.length - 1) {
-            await new Promise(resolve => setTimeout(resolve, 300));
+            await new Promise(resolve => setTimeout(resolve, typingDelay * 0.6));
           }
         }
       } else {
@@ -395,8 +402,6 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
     { key: 'Chats', enabled: chatsTab.enabled, icon: MessageSquare },
   ].filter(tab => tab.enabled);
 
-  const primaryColor = appearance.primary_color || '#5B4FFF';
-  const secondaryColor = appearance.secondary_color || '#FFFFFF';
   const hasActiveChat = messages.length > 0 && (selectedTab !== "Chats" || isInActiveChat);
 
   return (
@@ -514,18 +519,23 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
                           className={`max-w-[75%] p-3.5 rounded-2xl shadow-sm ${
                             message.speaker === 'user'
                               ? ''
-                              : 'bg-muted/80'
+                              : ''
                           }`}
                           style={
                             message.speaker === 'user'
                               ? { 
                                   backgroundColor: primaryColor,
-                                  color: secondaryColor
+                                  color: secondaryColor,
+                                  fontSize: fontSize
                                 }
-                              : { color: appearance.text_color || '#000000' }
+                              : { 
+                                  backgroundColor: messageBgColor,
+                                  color: messageTextColor,
+                                  fontSize: fontSize
+                                }
                           }
                         >
-                          <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.text}</p>
+                          <p className="leading-relaxed whitespace-pre-wrap">{message.text}</p>
                         </div>
                       </div>
                     ))}
@@ -624,18 +634,23 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
                           className={`max-w-[75%] p-3.5 rounded-2xl shadow-sm ${
                             message.speaker === 'user'
                               ? ''
-                              : 'bg-muted/80'
+                              : ''
                           }`}
                           style={
                             message.speaker === 'user'
                               ? { 
                                   backgroundColor: primaryColor,
-                                  color: secondaryColor
+                                  color: secondaryColor,
+                                  fontSize: fontSize
                                 }
-                              : { color: appearance.text_color || '#000000' }
+                              : { 
+                                  backgroundColor: messageBgColor,
+                                  color: messageTextColor,
+                                  fontSize: fontSize
+                                }
                           }
                         >
-                          <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.text}</p>
+                          <p className="leading-relaxed whitespace-pre-wrap">{message.text}</p>
                         </div>
                       </div>
                     ))}

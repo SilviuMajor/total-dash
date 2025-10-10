@@ -295,9 +295,9 @@ export function WidgetAppearanceSettings({ agent, onUpdate }: WidgetAppearanceSe
   ];
 
   return (
-    <Card>
+    <Card className="overflow-hidden">
       {/* Sticky Header */}
-      <div className="sticky top-0 z-10 bg-background pb-4 border-b px-6 pt-6">
+      <div className="sticky top-0 z-10 bg-background border-b px-6 py-4">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-lg font-semibold">Widget Appearance</h3>
@@ -309,7 +309,7 @@ export function WidgetAppearanceSettings({ agent, onUpdate }: WidgetAppearanceSe
         </div>
       </div>
 
-      <div className="p-6 space-y-6">
+      <div className="px-6 py-6 space-y-8">
         {/* Basic Information */}
         <div>
           <h3 className="text-lg font-semibold mb-4">Basic Information</h3>
@@ -684,7 +684,7 @@ export function WidgetAppearanceSettings({ agent, onUpdate }: WidgetAppearanceSe
       </div>
 
       {/* Sticky Footer */}
-      <div className="sticky bottom-0 z-10 bg-background pt-4 border-t px-6 pb-6">
+      <div className="sticky bottom-0 z-10 bg-background border-t px-6 py-4">
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
             {hasUnsavedChanges ? 'You have unsaved changes' : 'All changes saved'}
