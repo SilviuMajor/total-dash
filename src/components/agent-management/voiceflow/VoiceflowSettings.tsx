@@ -27,8 +27,8 @@ export function VoiceflowSettings({ agent, onUpdate }: VoiceflowSettingsProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: agent.name,
-    voiceflow_api_key: agent.config?.voiceflow_api_key || "",
-    voiceflow_project_id: agent.config?.voiceflow_project_id || "",
+    api_key: agent.config?.api_key || "",
+    project_id: agent.config?.project_id || "",
   });
 
   useEffect(() => {
@@ -56,8 +56,8 @@ export function VoiceflowSettings({ agent, onUpdate }: VoiceflowSettingsProps) {
           name: formData.name,
           config: {
             ...agent.config,
-            voiceflow_api_key: formData.voiceflow_api_key,
-            voiceflow_project_id: formData.voiceflow_project_id,
+            api_key: formData.api_key,
+            project_id: formData.project_id,
           },
         })
         .eq("id", agent.id);
@@ -106,14 +106,14 @@ export function VoiceflowSettings({ agent, onUpdate }: VoiceflowSettingsProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="voiceflow_api_key">Voiceflow API Key</Label>
+            <Label htmlFor="api_key">Voiceflow API Key</Label>
             <div className="relative">
               <Input
-                id="voiceflow_api_key"
+                id="api_key"
                 type={showApiKey ? "text" : "password"}
-                value={formData.voiceflow_api_key}
+                value={formData.api_key}
                 onChange={(e) =>
-                  setFormData({ ...formData, voiceflow_api_key: e.target.value })
+                  setFormData({ ...formData, api_key: e.target.value })
                 }
                 placeholder="VF.xxxxxxxx.xxxxxxxx"
               />
@@ -137,13 +137,13 @@ export function VoiceflowSettings({ agent, onUpdate }: VoiceflowSettingsProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="voiceflow_project_id">Voiceflow Project ID</Label>
+            <Label htmlFor="project_id">Voiceflow Project ID</Label>
             <Input
-              id="voiceflow_project_id"
+              id="project_id"
               type="text"
-              value={formData.voiceflow_project_id}
+              value={formData.project_id}
               onChange={(e) =>
-                setFormData({ ...formData, voiceflow_project_id: e.target.value })
+                setFormData({ ...formData, project_id: e.target.value })
               }
               placeholder="proj_xxxxxxxx"
             />

@@ -28,7 +28,7 @@ export function WidgetTestPanel({ agent, children }: WidgetTestPanelProps) {
   return (
     <div className="relative min-h-screen">
       {/* Main content wrapper - shifts left when panel open */}
-      <div className={`transition-all duration-300 ${isPanelOpen ? 'mr-[500px]' : 'mr-0'}`}>
+      <div className={`transition-all duration-300 ${isPanelOpen ? 'mr-[350px]' : 'mr-0'}`}>
         {children}
       </div>
 
@@ -67,7 +67,7 @@ export function WidgetTestPanel({ agent, children }: WidgetTestPanelProps) {
       {/* Sliding Panel - Fixed width pushing content */}
       <div 
         className={`
-          fixed top-0 right-0 h-screen w-[500px] bg-background border-l shadow-2xl 
+          fixed top-0 right-0 h-screen w-[350px] bg-background border-l shadow-2xl 
           transform transition-transform duration-300 z-40 overflow-hidden
           ${isPanelOpen ? 'translate-x-0' : 'translate-x-full'}
         `}

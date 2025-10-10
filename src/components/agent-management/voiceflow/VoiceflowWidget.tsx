@@ -13,6 +13,8 @@ interface VoiceflowWidgetProps {
 }
 
 export function VoiceflowWidget({ agent, onUpdate }: VoiceflowWidgetProps) {
+  const [activeWidgetTab, setActiveWidgetTab] = useState("appearance");
+
   return (
     <div className="space-y-4">
       <div>
@@ -22,7 +24,7 @@ export function VoiceflowWidget({ agent, onUpdate }: VoiceflowWidgetProps) {
         </p>
       </div>
 
-      <Tabs defaultValue="appearance" className="w-full">
+      <Tabs value={activeWidgetTab} onValueChange={setActiveWidgetTab} className="w-full">
         <TabsList>
           <TabsTrigger value="appearance">Appearance & Branding</TabsTrigger>
           <TabsTrigger value="deployment">Website Deployment</TabsTrigger>

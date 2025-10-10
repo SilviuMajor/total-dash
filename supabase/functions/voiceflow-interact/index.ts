@@ -12,9 +12,9 @@ serve(async (req) => {
   }
 
   try {
-    const { agentId, userId, message, conversationId, isTestMode } = await req.json();
+    const { agentId, userId, message, action, conversationId, isTestMode } = await req.json();
 
-    console.log('Voiceflow interact request:', { agentId, userId, isTestMode });
+    console.log('Voiceflow interact request:', { agentId, userId, action, isTestMode });
 
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -40,6 +40,36 @@ serve(async (req) => {
       throw new Error('Agent missing Voiceflow credentials');
     }
 
+    // Build Voiceflow request based on action type
+    let voiceflowRequestBody: any;
+
+    if (action === 'launch') {
+      // Launch action - starts conversation with Voiceflow's opening message
+      voiceflowRequestBody = {
+        action: {
+          type: 'launch'
+        },
+        config: {
+          tts: false,
+          stripSSML: true,
+        }
+      };
+      console.log('Sending launch request to Voiceflow');
+    } else {
+      // Text action - normal user message
+      voiceflowRequestBody = {
+        action: {
+          type: 'text',
+          payload: message,
+        },
+        config: {
+          tts: false,
+          stripSSML: true,
+        }
+      };
+      console.log('Sending text message to Voiceflow:', message);
+    }
+
     // Call Voiceflow Interact API
     const voiceflowResponse = await fetch(
       `https://general-runtime.voiceflow.com/state/user/${userId}/interact`,
@@ -49,16 +79,7 @@ serve(async (req) => {
           'Authorization': apiKey,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          action: {
-            type: 'text',
-            payload: message,
-          },
-          config: {
-            tts: false,
-            stripSSML: true,
-          },
-        }),
+        body: JSON.stringify(voiceflowRequestBody),
       }
     );
 

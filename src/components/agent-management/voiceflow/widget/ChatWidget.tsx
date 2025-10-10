@@ -129,6 +129,16 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
   const sendMessage = async (text: string) => {
     if (!text.trim()) return;
 
+    // Check credentials
+    if (!agent.config?.api_key || !agent.config?.project_id) {
+      toast({
+        title: "Configuration Error",
+        description: "Voiceflow API credentials are missing.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     const userMsg: Message = {
       id: crypto.randomUUID(),
       speaker: 'user',
@@ -215,11 +225,71 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
     }
   };
 
-  const startNewChat = () => {
+  const startNewChat = async () => {
+    // Check for credentials first
+    if (!agent.config?.api_key || !agent.config?.project_id) {
+      toast({
+        title: "Configuration Error",
+        description: "Voiceflow API credentials are missing. Please configure them in Settings.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Clear current state
     widgetSessionManager.startNewConversation(agent.id);
     setMessages([]);
     setConversationId(null);
     setSelectedTab("Home");
+    
+    // Launch Voiceflow conversation to get opening message
+    setIsTyping(true);
+    try {
+      console.log('Launching new Voiceflow conversation for agent:', agent.id);
+      
+      const { data, error } = await supabase.functions.invoke('voiceflow-interact', {
+        body: {
+          agentId: agent.id,
+          userId,
+          action: 'launch',
+          conversationId: null,
+          isTestMode
+        }
+      });
+
+      if (error) {
+        console.error('Launch error:', error);
+        throw error;
+      }
+
+      console.log('Launch response:', data);
+
+      // Set conversation ID
+      if (data.conversationId) {
+        setConversationId(data.conversationId);
+      }
+
+      // Add bot's opening messages to chat
+      if (data.botMessages && data.botMessages.length > 0) {
+        const openingMessages = data.botMessages.map((msg: string) => ({
+          id: crypto.randomUUID(),
+          speaker: 'assistant' as const,
+          text: msg,
+          timestamp: new Date().toISOString()
+        }));
+        setMessages(openingMessages);
+        console.log('Added opening messages:', openingMessages.length);
+      }
+    } catch (error) {
+      console.error('Error launching conversation:', error);
+      toast({
+        title: "Error",
+        description: "Failed to start conversation. Please check your Voiceflow credentials.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   const loadConversation = (convId: string) => {

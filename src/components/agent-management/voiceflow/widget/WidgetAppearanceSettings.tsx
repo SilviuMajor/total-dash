@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, X, Plus, Trash2, Loader2 } from "lucide-react";
+import { Upload, X, Plus, Trash2, Save, Check, Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 interface WidgetAppearanceSettingsProps {
@@ -30,9 +30,9 @@ export function WidgetAppearanceSettings({ agent, onUpdate }: WidgetAppearanceSe
   const { toast } = useToast();
   const [uploading, setUploading] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   
-  // Refs to prevent autosave loop
-  const hasMountedRef = useRef(false);
+  // Ref to track last saved state
   const lastSavedRef = useRef<string>("");
 
   const widgetSettings = agent.config?.widget_settings || {};
@@ -70,65 +70,78 @@ export function WidgetAppearanceSettings({ agent, onUpdate }: WidgetAppearanceSe
     }
   });
 
-  // Reset refs when agent changes
+  // Initialize lastSaved on mount
   useEffect(() => {
-    lastSavedRef.current = JSON.stringify(widgetSettings);
-    hasMountedRef.current = false;
+    lastSavedRef.current = JSON.stringify(formData);
   }, [agent.id]);
 
-  // Debounced auto-save (stable - no onUpdate call to prevent loop)
-  const debouncedSave = useCallback(
-    (() => {
-      let timeout: NodeJS.Timeout;
-      return (data: typeof formData) => {
-        clearTimeout(timeout);
-        timeout = setTimeout(async () => {
-          setIsSaving(true);
-          try {
-            const { error } = await supabase
-              .from('agents')
-              .update({
-                config: {
-                  ...agent.config,
-                  widget_settings: data
-                }
-              })
-              .eq('id', agent.id);
-
-            if (error) throw error;
-            
-            // Update lastSaved after successful save
-            lastSavedRef.current = JSON.stringify(data);
-          } catch (error) {
-            console.error('Auto-save error:', error);
-            toast({
-              title: "Error",
-              description: "Failed to save changes",
-              variant: "destructive"
-            });
-          } finally {
-            setIsSaving(false);
-          }
-        }, 500);
-      };
-    })(),
-    [agent.id, agent.config, toast]
-  );
-
-  // Auto-save when formData changes (skip first mount, compare data)
+  // Track changes
   useEffect(() => {
-    // Skip first mount
-    if (!hasMountedRef.current) {
-      hasMountedRef.current = true;
-      return;
-    }
-
-    // Only save if data actually changed
     const currentData = JSON.stringify(formData);
-    if (currentData !== lastSavedRef.current) {
-      debouncedSave(formData);
+    setHasUnsavedChanges(currentData !== lastSavedRef.current);
+  }, [formData]);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from('agents')
+        .update({
+          config: {
+            ...agent.config,
+            widget_settings: formData
+          }
+        })
+        .eq('id', agent.id);
+
+      if (error) throw error;
+      
+      lastSavedRef.current = JSON.stringify(formData);
+      setHasUnsavedChanges(false);
+      
+      toast({
+        title: "Success",
+        description: "Widget appearance saved successfully"
+      });
+      
+      // Trigger parent update to reload agent data
+      onUpdate();
+    } catch (error) {
+      console.error('Save error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save changes",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSaving(false);
     }
-  }, [formData, debouncedSave]);
+  };
+
+  const SaveButton = () => (
+    <Button 
+      onClick={handleSave}
+      disabled={!hasUnsavedChanges || isSaving}
+      className="min-w-[140px]"
+    >
+      {isSaving ? (
+        <>
+          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          Saving...
+        </>
+      ) : hasUnsavedChanges ? (
+        <>
+          <Save className="h-4 w-4 mr-2" />
+          Save Changes
+        </>
+      ) : (
+        <>
+          <Check className="h-4 w-4 mr-2" />
+          Saved
+        </>
+      )}
+    </Button>
+  );
 
   const handleImageUpload = async (type: 'logo' | 'header' | 'background', file: File) => {
     if (file.size > 5 * 1024 * 1024) {
@@ -283,15 +296,20 @@ export function WidgetAppearanceSettings({ agent, onUpdate }: WidgetAppearanceSe
 
   return (
     <Card className="p-6">
-      <div className="space-y-6">
-        {/* Auto-save indicator */}
-        {isSaving && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <span>Saving...</span>
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-10 bg-background pb-4 mb-6 border-b -mt-6 -mx-6 px-6 pt-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-semibold">Widget Appearance</h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              Configure how your widget looks and feels
+            </p>
           </div>
-        )}
+          <SaveButton />
+        </div>
+      </div>
 
+      <div className="space-y-6">
         {/* Basic Information */}
         <div>
           <h3 className="text-lg font-semibold mb-4">Basic Information</h3>
@@ -496,9 +514,9 @@ export function WidgetAppearanceSettings({ agent, onUpdate }: WidgetAppearanceSe
         {/* Tab Configuration */}
         <div>
           <h3 className="text-lg font-semibold mb-4">Tab Configuration</h3>
-          <Accordion type="single" collapsible className="space-y-2">
+          <Accordion type="multiple" className="w-full">
             {/* Home Tab */}
-            <AccordionItem value="home" className="border rounded-lg px-4">
+            <AccordionItem value="home">
               <AccordionTrigger>
                 <div className="flex items-center gap-2">
                   <Switch
@@ -546,8 +564,21 @@ export function WidgetAppearanceSettings({ agent, onUpdate }: WidgetAppearanceSe
                           <Input
                             value={btn.text}
                             onChange={(e) => updateHomeButton(btn.id, 'text', e.target.value)}
+                            placeholder="Button text"
                             className="flex-1"
                           />
+                          <Select
+                            value={btn.action}
+                            onValueChange={(value) => updateHomeButton(btn.id, 'action', value)}
+                          >
+                            <SelectTrigger className="w-[150px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="new_chat">New Chat</SelectItem>
+                              <SelectItem value="custom">Custom</SelectItem>
+                            </SelectContent>
+                          </Select>
                           <Button
                             variant="ghost"
                             size="icon"
@@ -557,7 +588,12 @@ export function WidgetAppearanceSettings({ agent, onUpdate }: WidgetAppearanceSe
                           </Button>
                         </div>
                       ))}
-                      <Button variant="outline" size="sm" onClick={addHomeButton}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={addHomeButton}
+                        className="w-full"
+                      >
                         <Plus className="h-4 w-4 mr-2" />
                         Add Button
                       </Button>
@@ -568,14 +604,14 @@ export function WidgetAppearanceSettings({ agent, onUpdate }: WidgetAppearanceSe
             </AccordionItem>
 
             {/* Chats Tab */}
-            <AccordionItem value="chats" className="border rounded-lg px-4">
+            <AccordionItem value="chats">
               <AccordionTrigger>
                 <div className="flex items-center gap-2">
                   <Switch
                     checked={formData.tabs.chats.enabled}
                     onCheckedChange={(checked) => setFormData(prev => ({
                       ...prev,
-                      tabs: { ...prev.tabs, chats: { enabled: checked } }
+                      tabs: { ...prev.tabs, chats: { ...prev.tabs.chats, enabled: checked } }
                     }))}
                     onClick={(e) => e.stopPropagation()}
                   />
@@ -584,13 +620,13 @@ export function WidgetAppearanceSettings({ agent, onUpdate }: WidgetAppearanceSe
               </AccordionTrigger>
               <AccordionContent>
                 <p className="text-sm text-muted-foreground pt-4">
-                  Displays conversation history and "Start New Chat" button. No additional configuration needed.
+                  The Chats tab shows conversation history and allows users to start new chats.
                 </p>
               </AccordionContent>
             </AccordionItem>
 
             {/* FAQ Tab */}
-            <AccordionItem value="faq" className="border rounded-lg px-4">
+            <AccordionItem value="faq">
               <AccordionTrigger>
                 <div className="flex items-center gap-2">
                   <Switch
@@ -606,36 +642,37 @@ export function WidgetAppearanceSettings({ agent, onUpdate }: WidgetAppearanceSe
               </AccordionTrigger>
               <AccordionContent>
                 <div className="space-y-4 pt-4">
-                  {formData.tabs.faq.items.map((item, idx) => (
-                    <Card key={idx} className="p-4">
-                      <div className="space-y-2">
-                        <div>
-                          <Label>Question</Label>
-                          <Input
-                            value={item.question}
-                            onChange={(e) => updateFAQItem(idx, 'question', e.target.value)}
-                          />
-                        </div>
-                        <div>
-                          <Label>Answer</Label>
-                          <Textarea
-                            value={item.answer}
-                            onChange={(e) => updateFAQItem(idx, 'answer', e.target.value)}
-                            rows={3}
-                          />
-                        </div>
+                  {formData.tabs.faq.items.map((item, index) => (
+                    <div key={index} className="p-4 border rounded-lg space-y-2">
+                      <div className="flex justify-between items-start">
+                        <Label>FAQ Item {index + 1}</Label>
                         <Button
                           variant="ghost"
-                          size="sm"
-                          onClick={() => removeFAQItem(idx)}
+                          size="icon"
+                          onClick={() => removeFAQItem(index)}
                         >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Remove
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
-                    </Card>
+                      <Input
+                        value={item.question}
+                        onChange={(e) => updateFAQItem(index, 'question', e.target.value)}
+                        placeholder="Question"
+                      />
+                      <Textarea
+                        value={item.answer}
+                        onChange={(e) => updateFAQItem(index, 'answer', e.target.value)}
+                        placeholder="Answer"
+                        rows={3}
+                      />
+                    </div>
                   ))}
-                  <Button variant="outline" size="sm" onClick={addFAQItem}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={addFAQItem}
+                    className="w-full"
+                  >
                     <Plus className="h-4 w-4 mr-2" />
                     Add FAQ Item
                   </Button>
@@ -643,6 +680,16 @@ export function WidgetAppearanceSettings({ agent, onUpdate }: WidgetAppearanceSe
               </AccordionContent>
             </AccordionItem>
           </Accordion>
+        </div>
+      </div>
+
+      {/* Sticky Footer */}
+      <div className="sticky bottom-0 z-10 bg-background pt-4 mt-6 border-t -mb-6 -mx-6 px-6 pb-6">
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            {hasUnsavedChanges ? 'You have unsaved changes' : 'All changes saved'}
+          </p>
+          <SaveButton />
         </div>
       </div>
     </Card>
