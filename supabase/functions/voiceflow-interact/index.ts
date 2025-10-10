@@ -127,18 +127,20 @@ serve(async (req) => {
       currentConversationId = newConv.id;
     }
 
-    // Insert user message transcript
-    const { error: userTranscriptError } = await supabaseClient
-      .from('transcripts')
-      .insert({
-        conversation_id: currentConversationId,
-        speaker: 'user',
-        text: message,
-        timestamp: new Date().toISOString(),
-      });
+    // Only insert user transcript for text messages, not launch
+    if (action !== 'launch' && message) {
+      const { error: userTranscriptError } = await supabaseClient
+        .from('transcripts')
+        .insert({
+          conversation_id: currentConversationId,
+          speaker: 'user',
+          text: message,
+          timestamp: new Date().toISOString(),
+        });
 
-    if (userTranscriptError) {
-      console.error('User transcript error:', userTranscriptError);
+      if (userTranscriptError) {
+        console.error('User transcript error:', userTranscriptError);
+      }
     }
 
     // Insert bot response transcripts

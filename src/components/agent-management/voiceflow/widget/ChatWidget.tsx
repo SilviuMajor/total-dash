@@ -3,9 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Send, Paperclip, X, Plus, MessageSquare, ChevronRight, ArrowLeft, MessageCircle, Clock, Bot } from "lucide-react";
+import { Send, Paperclip, X, Plus, MessageSquare, ChevronRight, ArrowLeft, MessageCircle, Clock, Bot, Home } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { widgetSessionManager } from "@/lib/widgetSession";
@@ -82,14 +81,37 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
   const [userId, setUserId] = useState<string>("");
   const [selectedTab, setSelectedTab] = useState("Home");
   const [conversationHistory, setConversationHistory] = useState<any[]>([]);
+  const [isInActiveChat, setIsInActiveChat] = useState(false);
 
   const widgetSettings = agent.config?.widget_settings || {};
   const appearance = widgetSettings.appearance || {};
   const tabsConfig = widgetSettings.tabs || {};
+  const functions = widgetSettings.functions || {};
   
   const homeTab = tabsConfig.home || { enabled: true, title: "Welcome", subtitle: "How can we help you today?", buttons: [] };
   const chatsTab = tabsConfig.chats || { enabled: true };
   const faqTab = tabsConfig.faq || { enabled: false, items: [] };
+
+  // Notification sound
+  const playNotificationSound = () => {
+    if (!functions.notification_sound_enabled) return;
+    
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    oscillator.frequency.value = 800;
+    oscillator.type = 'sine';
+    
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+    
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.2);
+  };
 
   // Initialize session on mount
   useEffect(() => {
@@ -102,7 +124,7 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
       if (conv) {
         setMessages(conv.messages);
         setConversationId(conv.id);
-        setSelectedTab("Home");
+        setIsInActiveChat(true);
       }
     }
     
@@ -124,7 +146,7 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, isTyping]);
 
   const sendMessage = async (text: string) => {
     if (!text.trim()) return;
@@ -150,24 +172,38 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
     setIsTyping(true);
 
     try {
+      console.log('Sending message:', text);
       const { data, error } = await supabase.functions.invoke('voiceflow-interact', {
         body: {
           agentId: agent.id,
           userId,
           message: text,
+          action: 'text',
           conversationId,
           isTestMode
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Message send error:', error);
+        throw error;
+      }
+
+      console.log('Message response:', data);
 
       if (!conversationId && data.conversationId) {
         setConversationId(data.conversationId);
       }
 
+      // Display bot messages sequentially with typing effect
       if (data.botMessages && data.botMessages.length > 0) {
-        data.botMessages.forEach((msg: string) => {
+        for (let i = 0; i < data.botMessages.length; i++) {
+          const msg = data.botMessages[i];
+          
+          // Show typing indicator
+          setIsTyping(true);
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
           const botMsg: Message = {
             id: crypto.randomUUID(),
             speaker: 'assistant',
@@ -175,7 +211,18 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
             timestamp: new Date().toISOString()
           };
           setMessages(prev => [...prev, botMsg]);
-        });
+          setIsTyping(false);
+          
+          // Play notification sound
+          playNotificationSound();
+          
+          // Brief pause between messages
+          if (i < data.botMessages.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 300));
+          }
+        }
+      } else {
+        setIsTyping(false);
       }
     } catch (error) {
       console.error('Error sending message:', error);
@@ -184,7 +231,6 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
         description: "Failed to send message",
         variant: "destructive"
       });
-    } finally {
       setIsTyping(false);
     }
   };
@@ -240,7 +286,14 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
     widgetSessionManager.startNewConversation(agent.id);
     setMessages([]);
     setConversationId(null);
-    setSelectedTab("Home");
+    
+    // If in Chats tab, stay there and show chat overlay
+    if (selectedTab === "Chats") {
+      setIsInActiveChat(true);
+    } else {
+      // Otherwise go to Home tab
+      setSelectedTab("Home");
+    }
     
     // Launch Voiceflow conversation to get opening message
     setIsTyping(true);
@@ -269,16 +322,32 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
         setConversationId(data.conversationId);
       }
 
-      // Add bot's opening messages to chat
+      // Add bot's opening messages sequentially
       if (data.botMessages && data.botMessages.length > 0) {
-        const openingMessages = data.botMessages.map((msg: string) => ({
-          id: crypto.randomUUID(),
-          speaker: 'assistant' as const,
-          text: msg,
-          timestamp: new Date().toISOString()
-        }));
-        setMessages(openingMessages);
-        console.log('Added opening messages:', openingMessages.length);
+        for (let i = 0; i < data.botMessages.length; i++) {
+          const msg = data.botMessages[i];
+          
+          setIsTyping(true);
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          const botMsg: Message = {
+            id: crypto.randomUUID(),
+            speaker: 'assistant',
+            text: msg,
+            timestamp: new Date().toISOString()
+          };
+          setMessages(prev => [...prev, botMsg]);
+          setIsTyping(false);
+          
+          // Play notification sound
+          playNotificationSound();
+          
+          if (i < data.botMessages.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 300));
+          }
+        }
+      } else {
+        setIsTyping(false);
       }
     } catch (error) {
       console.error('Error launching conversation:', error);
@@ -287,7 +356,6 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
         description: "Failed to start conversation. Please check your Voiceflow credentials.",
         variant: "destructive"
       });
-    } finally {
       setIsTyping(false);
     }
   };
@@ -297,7 +365,17 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
     if (conv) {
       setMessages(conv.messages);
       setConversationId(conv.id);
-      setSelectedTab("Home");
+      setIsInActiveChat(true);
+    }
+  };
+
+  const handleBackButton = () => {
+    if (selectedTab === "Chats" && isInActiveChat) {
+      // Return to chat list
+      setIsInActiveChat(false);
+    } else {
+      // Start new chat
+      startNewChat();
     }
   };
 
@@ -313,14 +391,13 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
     'rounded-lg';
 
   const enabledTabs = [
-    { key: 'Home', enabled: homeTab.enabled },
-    { key: 'Chats', enabled: chatsTab.enabled },
-    { key: 'FAQ', enabled: faqTab.enabled }
+    { key: 'Home', enabled: homeTab.enabled, icon: Home },
+    { key: 'Chats', enabled: chatsTab.enabled, icon: MessageSquare },
   ].filter(tab => tab.enabled);
 
   const primaryColor = appearance.primary_color || '#5B4FFF';
   const secondaryColor = appearance.secondary_color || '#FFFFFF';
-  const hasActiveChat = messages.length > 0;
+  const hasActiveChat = messages.length > 0 && (selectedTab !== "Chats" || isInActiveChat);
 
   return (
     <div 
@@ -337,11 +414,11 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
       >
         <div className="p-5 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {hasActiveChat && messages.length > 0 && (
+            {hasActiveChat && (
               <Button 
                 variant="ghost" 
                 size="icon"
-                onClick={startNewChat}
+                onClick={handleBackButton}
                 className="hover:bg-white/20 -ml-2"
                 style={{ color: secondaryColor }}
               >
@@ -378,239 +455,374 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
         <WaveDecoration color={secondaryColor} />
       </div>
 
-      {/* Tabs */}
-      {enabledTabs.length > 1 && (
-        <Tabs value={selectedTab} onValueChange={setSelectedTab} className="border-b">
-          <TabsList className="w-full justify-start rounded-none h-auto p-0 bg-transparent">
-            {enabledTabs.map((tab) => (
-              <TabsTrigger 
-                key={tab.key} 
-                value={tab.key}
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary"
-              >
-                {tab.key}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
-      )}
-
-      {/* Tab Content */}
-      {selectedTab === "Home" && homeTab.enabled && (
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center p-8 text-center flex-1">
-              <h2 className="text-3xl font-bold mb-3" style={{ color: appearance.text_color || '#000000' }}>
-                {homeTab.title}
-              </h2>
-              <p className="text-muted-foreground mb-8 text-base">{homeTab.subtitle}</p>
-              
-              <div className="space-y-3 w-full px-4">
-                {homeTab.buttons
-                  ?.filter((btn: any) => btn.enabled)
-                  .map((btn: any) => (
-                    <button
-                      key={btn.id}
-                      className="w-full p-4 rounded-xl flex items-center justify-between transition-all hover:shadow-md group"
-                      style={{ 
-                        backgroundColor: `${primaryColor}15`,
-                        color: appearance.text_color || '#000000'
-                      }}
-                      onClick={() => handleButtonAction(btn.action)}
-                    >
-                      <div className="flex items-center gap-3">
-                        <MessageSquare className="w-5 h-5" style={{ color: primaryColor }} />
-                        <span className="font-medium">{btn.text}</span>
-                      </div>
-                      <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
-                    </button>
-                  ))}
-              </div>
-            </div>
-          ) : (
-            <>
-              <ScrollArea className="flex-1 p-4">
-                <div className="space-y-3">
-                  {messages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={`flex gap-2 ${message.speaker === 'user' ? 'justify-end' : 'justify-start items-start'}`}
-                    >
-                      {message.speaker === 'assistant' && (
-                        <div 
-                          className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-1"
-                          style={{ backgroundColor: `${primaryColor}20` }}
-                        >
-                          <Bot className="w-4 h-4" style={{ color: primaryColor }} />
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Home Tab Content */}
+        {selectedTab === "Home" && homeTab.enabled && (
+          <>
+            {messages.length === 0 ? (
+              <div className="flex flex-col items-center justify-center p-8 text-center flex-1">
+                <h2 className="text-3xl font-bold mb-3" style={{ color: appearance.text_color || '#000000' }}>
+                  {homeTab.title}
+                </h2>
+                <p className="text-muted-foreground mb-8 text-base">{homeTab.subtitle}</p>
+                
+                <div className="space-y-3 w-full px-4">
+                  {homeTab.buttons
+                    ?.filter((btn: any) => btn.enabled)
+                    .map((btn: any) => (
+                      <button
+                        key={btn.id}
+                        className="w-full p-4 rounded-xl flex items-center justify-between transition-all hover:shadow-md group"
+                        style={{ 
+                          backgroundColor: `${primaryColor}15`,
+                          color: appearance.text_color || '#000000'
+                        }}
+                        onClick={() => handleButtonAction(btn.action)}
+                      >
+                        <div className="flex items-center gap-3">
+                          <MessageSquare className="w-5 h-5" style={{ color: primaryColor }} />
+                          <span className="font-medium">{btn.text}</span>
                         </div>
-                      )}
+                        <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+                      </button>
+                    ))}
+                </div>
+              </div>
+            ) : (
+              <>
+                <ScrollArea className="flex-1 p-4">
+                  <div className="space-y-3">
+                    {messages.map((message) => (
                       <div
-                        className={`max-w-[75%] p-3.5 rounded-2xl shadow-sm ${
-                          message.speaker === 'user'
-                            ? ''
-                            : 'bg-muted/80'
-                        }`}
-                        style={
-                          message.speaker === 'user'
-                            ? { 
-                                backgroundColor: primaryColor,
-                                color: secondaryColor
-                              }
-                            : { color: appearance.text_color || '#000000' }
-                        }
+                        key={message.id}
+                        className={`flex gap-2 ${message.speaker === 'user' ? 'justify-end' : 'justify-start items-start'}`}
                       >
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.text}</p>
+                        {message.speaker === 'assistant' && (
+                          <div 
+                            className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-1 overflow-hidden"
+                            style={{ backgroundColor: appearance.chat_icon_url ? 'transparent' : `${primaryColor}20` }}
+                          >
+                            {appearance.chat_icon_url ? (
+                              <img src={appearance.chat_icon_url} alt="Bot" className="w-8 h-8 object-cover" />
+                            ) : (
+                              <Bot className="w-4 h-4" style={{ color: primaryColor }} />
+                            )}
+                          </div>
+                        )}
+                        <div
+                          className={`max-w-[75%] p-3.5 rounded-2xl shadow-sm ${
+                            message.speaker === 'user'
+                              ? ''
+                              : 'bg-muted/80'
+                          }`}
+                          style={
+                            message.speaker === 'user'
+                              ? { 
+                                  backgroundColor: primaryColor,
+                                  color: secondaryColor
+                                }
+                              : { color: appearance.text_color || '#000000' }
+                          }
+                        >
+                          <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.text}</p>
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                  {isTyping && (
-                    <div className="flex gap-2 items-start">
-                      <div 
-                        className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-                        style={{ backgroundColor: `${primaryColor}20` }}
-                      >
-                        <Bot className="w-4 h-4" style={{ color: primaryColor }} />
+                    ))}
+                    {isTyping && (
+                      <div className="flex gap-2 items-start">
+                        <div 
+                          className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden"
+                          style={{ backgroundColor: appearance.chat_icon_url ? 'transparent' : `${primaryColor}20` }}
+                        >
+                          {appearance.chat_icon_url ? (
+                            <img src={appearance.chat_icon_url} alt="Bot" className="w-8 h-8 object-cover" />
+                          ) : (
+                            <Bot className="w-4 h-4" style={{ color: primaryColor }} />
+                          )}
+                        </div>
+                        <TypingIndicator />
                       </div>
-                      <TypingIndicator />
-                    </div>
-                  )}
-                  <div ref={messagesEndRef} />
-                </div>
-              </ScrollArea>
+                    )}
+                    <div ref={messagesEndRef} />
+                  </div>
+                </ScrollArea>
 
-              <div className="p-4" style={{ backgroundColor: `${primaryColor}08` }}>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="file"
-                    id="file-upload"
-                    className="hidden"
-                    accept="image/*,.pdf,.doc,.docx"
-                    onChange={handleFileUpload}
-                  />
-                  <label htmlFor="file-upload" className="cursor-pointer">
+                <div className="p-4" style={{ backgroundColor: `${primaryColor}08` }}>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="file"
+                      id="file-upload"
+                      className="hidden"
+                      accept="image/*,.pdf,.doc,.docx"
+                      onChange={handleFileUpload}
+                    />
+                    <label htmlFor="file-upload" className="cursor-pointer">
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        type="button"
+                        className="rounded-full"
+                        asChild
+                      >
+                        <span>
+                          <Paperclip className="w-5 h-5" />
+                        </span>
+                      </Button>
+                    </label>
+                    <Input
+                      value={inputValue}
+                      onChange={(e) => setInputValue(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage(inputValue)}
+                      placeholder="Type your message..."
+                      className="rounded-full bg-background border-0 shadow-sm"
+                    />
                     <Button 
-                      variant="ghost" 
+                      onClick={() => sendMessage(inputValue)}
+                      className="rounded-full shadow-sm"
                       size="icon"
-                      type="button"
-                      className="rounded-full"
-                      asChild
+                      style={{ 
+                        backgroundColor: primaryColor,
+                        color: secondaryColor
+                      }}
                     >
-                      <span>
-                        <Paperclip className="w-5 h-5" />
-                      </span>
+                      <Send className="w-4 h-4" />
                     </Button>
-                  </label>
-                  <Input
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage(inputValue)}
-                    placeholder="Type your message..."
-                    className="rounded-full bg-background border-0 shadow-sm"
-                  />
-                  <Button 
-                    onClick={() => sendMessage(inputValue)}
-                    className="rounded-full shadow-sm"
-                    size="icon"
-                    style={{ 
-                      backgroundColor: primaryColor,
-                      color: secondaryColor
-                    }}
-                  >
-                    <Send className="w-4 h-4" />
-                  </Button>
+                  </div>
                 </div>
-              </div>
-            </>
-          )}
-        </div>
-      )}
+              </>
+            )}
+          </>
+        )}
 
-      {selectedTab === "Chats" && chatsTab.enabled && (
-        <div className="flex flex-col flex-1 overflow-hidden">
-          <div className="p-5 space-y-4">
-            <div className="flex items-center gap-2">
-              <MessageSquare className="w-5 h-5" style={{ color: primaryColor }} />
-              <h3 className="font-semibold text-lg">Chats</h3>
-            </div>
-            
-            <button
-              className="w-full p-4 rounded-xl flex items-center justify-between transition-all hover:shadow-md group"
-              style={{ backgroundColor: `${primaryColor}15` }}
-              onClick={startNewChat}
-            >
-              <div className="flex items-center gap-3">
-                <Plus className="w-5 h-5" style={{ color: primaryColor }} />
-                <span className="font-medium">New Chat</span>
-              </div>
-              <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
-            </button>
-          </div>
-          
-          <ScrollArea className="flex-1">
-            <div className="px-5 pb-5 space-y-4">
-              {conversationHistory.length === 0 ? (
-                <div className="text-center py-12">
-                  <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                  <p className="text-muted-foreground">No conversations yet</p>
-                  <p className="text-sm text-muted-foreground mt-1">Start a new chat to get going</p>
-                </div>
-              ) : (
-                <>
-                  {conversationHistory[0] && (
-                    <div>
-                      <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-                        Continue recent conversation
-                      </h4>
-                      <ConversationCard 
-                        conv={conversationHistory[0]} 
-                        onClick={() => loadConversation(conversationHistory[0].id)}
-                        primaryColor={primaryColor}
-                      />
-                    </div>
-                  )}
-                  
-                  {conversationHistory.length > 1 && (
-                    <div>
-                      <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-                        Previous conversations
-                      </h4>
-                      <div className="space-y-2">
-                        {conversationHistory.slice(1).map(conv => (
-                          <ConversationCard 
-                            key={conv.id}
-                            conv={conv} 
-                            onClick={() => loadConversation(conv.id)}
-                            primaryColor={primaryColor}
-                          />
-                        ))}
+        {/* Chats Tab Content */}
+        {selectedTab === "Chats" && chatsTab.enabled && (
+          <>
+            {isInActiveChat && messages.length > 0 ? (
+              // Active chat overlay
+              <>
+                <ScrollArea className="flex-1 p-4">
+                  <div className="space-y-3">
+                    {messages.map((message) => (
+                      <div
+                        key={message.id}
+                        className={`flex gap-2 ${message.speaker === 'user' ? 'justify-end' : 'justify-start items-start'}`}
+                      >
+                        {message.speaker === 'assistant' && (
+                          <div 
+                            className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-1 overflow-hidden"
+                            style={{ backgroundColor: appearance.chat_icon_url ? 'transparent' : `${primaryColor}20` }}
+                          >
+                            {appearance.chat_icon_url ? (
+                              <img src={appearance.chat_icon_url} alt="Bot" className="w-8 h-8 object-cover" />
+                            ) : (
+                              <Bot className="w-4 h-4" style={{ color: primaryColor }} />
+                            )}
+                          </div>
+                        )}
+                        <div
+                          className={`max-w-[75%] p-3.5 rounded-2xl shadow-sm ${
+                            message.speaker === 'user'
+                              ? ''
+                              : 'bg-muted/80'
+                          }`}
+                          style={
+                            message.speaker === 'user'
+                              ? { 
+                                  backgroundColor: primaryColor,
+                                  color: secondaryColor
+                                }
+                              : { color: appearance.text_color || '#000000' }
+                          }
+                        >
+                          <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.text}</p>
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          </ScrollArea>
-        </div>
-      )}
+                    ))}
+                    {isTyping && (
+                      <div className="flex gap-2 items-start">
+                        <div 
+                          className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden"
+                          style={{ backgroundColor: appearance.chat_icon_url ? 'transparent' : `${primaryColor}20` }}
+                        >
+                          {appearance.chat_icon_url ? (
+                            <img src={appearance.chat_icon_url} alt="Bot" className="w-8 h-8 object-cover" />
+                          ) : (
+                            <Bot className="w-4 h-4" style={{ color: primaryColor }} />
+                          )}
+                        </div>
+                        <TypingIndicator />
+                      </div>
+                    )}
+                    <div ref={messagesEndRef} />
+                  </div>
+                </ScrollArea>
 
-      {selectedTab === "FAQ" && faqTab.enabled && (
-        <ScrollArea className="flex-1 p-4">
-          <Accordion type="single" collapsible className="space-y-2">
-            {faqTab.items?.map((item: any, idx: number) => (
-              <AccordionItem key={idx} value={`faq-${idx}`} className="border rounded-lg px-4">
-                <AccordionTrigger className="text-left hover:no-underline">
-                  <span className="font-medium">{item.question}</span>
-                </AccordionTrigger>
-                <AccordionContent>
-                  <p className="text-sm text-muted-foreground">{item.answer}</p>
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
-          {(!faqTab.items || faqTab.items.length === 0) && (
-            <p className="text-center text-muted-foreground py-8">No FAQ items yet</p>
-          )}
-        </ScrollArea>
+                <div className="p-4" style={{ backgroundColor: `${primaryColor}08` }}>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="file"
+                      id="file-upload-chats"
+                      className="hidden"
+                      accept="image/*,.pdf,.doc,.docx"
+                      onChange={handleFileUpload}
+                    />
+                    <label htmlFor="file-upload-chats" className="cursor-pointer">
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        type="button"
+                        className="rounded-full"
+                        asChild
+                      >
+                        <span>
+                          <Paperclip className="w-5 h-5" />
+                        </span>
+                      </Button>
+                    </label>
+                    <Input
+                      value={inputValue}
+                      onChange={(e) => setInputValue(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage(inputValue)}
+                      placeholder="Type your message..."
+                      className="rounded-full bg-background border-0 shadow-sm"
+                    />
+                    <Button 
+                      onClick={() => sendMessage(inputValue)}
+                      className="rounded-full shadow-sm"
+                      size="icon"
+                      style={{ 
+                        backgroundColor: primaryColor,
+                        color: secondaryColor
+                      }}
+                    >
+                      <Send className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              </>
+            ) : (
+              // Chats list view
+              <div className="flex flex-col flex-1 overflow-hidden">
+                <div className="p-5 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <MessageSquare className="w-5 h-5" style={{ color: primaryColor }} />
+                    <h3 className="font-semibold text-lg">Chats</h3>
+                  </div>
+                  
+                  <button
+                    className="w-full p-4 rounded-xl flex items-center justify-between transition-all hover:shadow-md group"
+                    style={{ backgroundColor: `${primaryColor}15` }}
+                    onClick={startNewChat}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Plus className="w-5 h-5" style={{ color: primaryColor }} />
+                      <span className="font-medium">New Chat</span>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+                  </button>
+                </div>
+                
+                <ScrollArea className="flex-1">
+                  <div className="px-5 pb-5 space-y-4">
+                    {conversationHistory.length === 0 ? (
+                      <div className="text-center py-12">
+                        <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                        <p className="text-muted-foreground">No conversations yet</p>
+                        <p className="text-sm text-muted-foreground mt-1">Start a new chat to get going</p>
+                      </div>
+                    ) : (
+                      <>
+                        {conversationHistory[0] && (
+                          <div>
+                            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                              Continue recent conversation
+                            </h4>
+                            <ConversationCard 
+                              conv={conversationHistory[0]} 
+                              onClick={() => loadConversation(conversationHistory[0].id)}
+                              primaryColor={primaryColor}
+                            />
+                          </div>
+                        )}
+                        
+                        {conversationHistory.length > 1 && (
+                          <div>
+                            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                              Previous conversations
+                            </h4>
+                            <div className="space-y-2">
+                              {conversationHistory.slice(1).map(conv => (
+                                <ConversationCard 
+                                  key={conv.id}
+                                  conv={conv} 
+                                  onClick={() => loadConversation(conv.id)}
+                                  primaryColor={primaryColor}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </ScrollArea>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* FAQ Tab Content */}
+        {selectedTab === "FAQ" && faqTab.enabled && (
+          <ScrollArea className="flex-1 p-4">
+            <Accordion type="single" collapsible className="space-y-2">
+              {faqTab.items?.map((item: any, idx: number) => (
+                <AccordionItem key={idx} value={`faq-${idx}`} className="border rounded-lg px-4">
+                  <AccordionTrigger className="text-left hover:no-underline">
+                    <span className="font-medium">{item.question}</span>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <p className="text-sm text-muted-foreground">{item.answer}</p>
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+            {(!faqTab.items || faqTab.items.length === 0) && (
+              <p className="text-center text-muted-foreground py-8">No FAQ items yet</p>
+            )}
+          </ScrollArea>
+        )}
+      </div>
+
+      {/* Bottom Navigation Tabs */}
+      {enabledTabs.length > 1 && (
+        <div className="border-t bg-background">
+          <div className="flex items-center justify-around p-2">
+            {enabledTabs.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = selectedTab === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => {
+                    setSelectedTab(tab.key);
+                    if (tab.key !== "Chats") {
+                      setIsInActiveChat(false);
+                    }
+                  }}
+                  className="flex flex-col items-center gap-1 p-3 rounded-lg transition-colors flex-1"
+                  style={{
+                    backgroundColor: isActive ? `${primaryColor}15` : 'transparent',
+                    color: isActive ? primaryColor : 'inherit'
+                  }}
+                >
+                  <Icon className="w-5 h-5" />
+                  <span className="text-xs font-medium">{tab.key}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       )}
     </div>
   );

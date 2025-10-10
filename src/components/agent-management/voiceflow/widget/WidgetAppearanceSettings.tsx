@@ -43,7 +43,7 @@ export function WidgetAppearanceSettings({ agent, onUpdate }: WidgetAppearanceSe
     branding_url: widgetSettings.branding_url || "",
     appearance: {
       logo_url: widgetSettings.appearance?.logo_url || "",
-      header_image_url: widgetSettings.appearance?.header_image_url || "",
+      chat_icon_url: widgetSettings.appearance?.chat_icon_url || "",
       background_image_url: widgetSettings.appearance?.background_image_url || "",
       primary_color: widgetSettings.appearance?.primary_color || "#5B4FFF",
       secondary_color: widgetSettings.appearance?.secondary_color || "#FFFFFF",
@@ -143,7 +143,7 @@ export function WidgetAppearanceSettings({ agent, onUpdate }: WidgetAppearanceSe
     </Button>
   );
 
-  const handleImageUpload = async (type: 'logo' | 'header' | 'background', file: File) => {
+  const handleImageUpload = async (type: 'logo' | 'chat_icon' | 'background', file: File) => {
     if (file.size > 5 * 1024 * 1024) {
       toast({
         title: "Error",
@@ -190,7 +190,7 @@ export function WidgetAppearanceSettings({ agent, onUpdate }: WidgetAppearanceSe
     }
   };
 
-  const removeImage = (type: 'logo' | 'header' | 'background') => {
+  const removeImage = (type: 'logo' | 'chat_icon' | 'background') => {
     setFormData(prev => ({
       ...prev,
       appearance: {
@@ -295,9 +295,9 @@ export function WidgetAppearanceSettings({ agent, onUpdate }: WidgetAppearanceSe
   ];
 
   return (
-    <Card className="p-6">
+    <Card>
       {/* Sticky Header */}
-      <div className="sticky top-0 z-10 bg-background pb-4 mb-6 border-b -mt-6 -mx-6 px-6 pt-6">
+      <div className="sticky top-0 z-10 bg-background pb-4 border-b px-6 pt-6">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-lg font-semibold">Widget Appearance</h3>
@@ -309,7 +309,7 @@ export function WidgetAppearanceSettings({ agent, onUpdate }: WidgetAppearanceSe
         </div>
       </div>
 
-      <div className="space-y-6">
+      <div className="p-6 space-y-6">
         {/* Basic Information */}
         <div>
           <h3 className="text-lg font-semibold mb-4">Basic Information</h3>
@@ -356,7 +356,7 @@ export function WidgetAppearanceSettings({ agent, onUpdate }: WidgetAppearanceSe
             <div className="grid gap-4">
               {[
                 { type: 'logo' as const, label: 'Logo', key: 'logo_url' },
-                { type: 'header' as const, label: 'Header Image', key: 'header_image_url' },
+                { type: 'chat_icon' as const, label: 'Chat Icon', key: 'chat_icon_url' },
                 { type: 'background' as const, label: 'Background Image', key: 'background_image_url' }
               ].map(({ type, label, key }) => (
                 <div key={type}>
@@ -684,7 +684,7 @@ export function WidgetAppearanceSettings({ agent, onUpdate }: WidgetAppearanceSe
       </div>
 
       {/* Sticky Footer */}
-      <div className="sticky bottom-0 z-10 bg-background pt-4 mt-6 border-t -mb-6 -mx-6 px-6 pb-6">
+      <div className="sticky bottom-0 z-10 bg-background pt-4 border-t px-6 pb-6">
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
             {hasUnsavedChanges ? 'You have unsaved changes' : 'All changes saved'}

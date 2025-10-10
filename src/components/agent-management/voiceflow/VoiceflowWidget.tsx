@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { WidgetAppearanceSettings } from "./widget/WidgetAppearanceSettings";
+import { WidgetFunctionsSettings } from "./widget/WidgetFunctionsSettings";
 import { WidgetCodeGenerator } from "./widget/WidgetCodeGenerator";
 
 interface VoiceflowWidgetProps {
@@ -27,11 +28,16 @@ export function VoiceflowWidget({ agent, onUpdate }: VoiceflowWidgetProps) {
       <Tabs value={activeWidgetTab} onValueChange={setActiveWidgetTab} className="w-full">
         <TabsList>
           <TabsTrigger value="appearance">Appearance & Branding</TabsTrigger>
+          <TabsTrigger value="functions">Functions</TabsTrigger>
           <TabsTrigger value="deployment">Website Deployment</TabsTrigger>
         </TabsList>
 
         <TabsContent value="appearance" className="mt-6">
           <WidgetAppearanceSettings agent={agent} onUpdate={onUpdate} />
+        </TabsContent>
+
+        <TabsContent value="functions" className="mt-6">
+          <WidgetFunctionsSettings agent={agent} onUpdate={onUpdate} />
         </TabsContent>
 
         <TabsContent value="deployment" className="mt-6">
