@@ -92,12 +92,30 @@ serve(async (req) => {
     const voiceflowData = await voiceflowResponse.json();
     console.log('Voiceflow response:', voiceflowData);
 
-    // Extract bot messages from response
-    const botMessages: string[] = [];
+    // Extract bot messages AND buttons from response
+    interface BotResponse {
+      type: 'text' | 'buttons';
+      text?: string;
+      buttons?: Array<{ text: string; payload: any }>;
+    }
+
+    const botResponses: BotResponse[] = [];
     if (Array.isArray(voiceflowData)) {
       voiceflowData.forEach((item: any) => {
         if (item.type === 'text' && item.payload?.message) {
-          botMessages.push(item.payload.message);
+          botResponses.push({
+            type: 'text',
+            text: item.payload.message
+          });
+        } else if (item.type === 'choice' && item.payload?.buttons) {
+          // Voiceflow sends buttons as "choice" type
+          botResponses.push({
+            type: 'buttons',
+            buttons: item.payload.buttons.map((btn: any) => ({
+              text: btn.name || btn.label,
+              payload: btn.request || btn.payload
+            }))
+          });
         }
       });
     }
@@ -144,25 +162,27 @@ serve(async (req) => {
     }
 
     // Insert bot response transcripts
-    for (const botMsg of botMessages) {
-      const { error: botTranscriptError } = await supabaseClient
-        .from('transcripts')
-        .insert({
-          conversation_id: currentConversationId,
-          speaker: 'assistant',
-          text: botMsg,
-          timestamp: new Date().toISOString(),
-        });
+    for (const response of botResponses) {
+      if (response.type === 'text' && response.text) {
+        const { error: botTranscriptError } = await supabaseClient
+          .from('transcripts')
+          .insert({
+            conversation_id: currentConversationId,
+            speaker: 'assistant',
+            text: response.text,
+            timestamp: new Date().toISOString(),
+          });
 
-      if (botTranscriptError) {
-        console.error('Bot transcript error:', botTranscriptError);
+        if (botTranscriptError) {
+          console.error('Bot transcript error:', botTranscriptError);
+        }
       }
     }
 
     return new Response(
       JSON.stringify({
         conversationId: currentConversationId,
-        botMessages,
+        botResponses,
         userId,
       }),
       {

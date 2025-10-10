@@ -1,7 +1,8 @@
 interface Message {
   id: string;
   speaker: 'user' | 'assistant';
-  text: string;
+  text?: string;
+  buttons?: Array<{ text: string; payload: any }>;
   timestamp: string;
 }
 
@@ -65,7 +66,7 @@ export const widgetSessionManager = {
     const firstUserMsg = conversation.messages.find(m => m.speaker === 'user');
     const conversationData: Conversation = {
       id: conversation.id,
-      preview: firstUserMsg?.text.substring(0, 50) || "New conversation",
+      preview: firstUserMsg?.text?.substring(0, 50) || "New conversation",
       timestamp: new Date().toISOString(),
       messageCount: conversation.messages.length,
       messages: conversation.messages

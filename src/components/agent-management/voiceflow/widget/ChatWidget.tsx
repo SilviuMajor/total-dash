@@ -13,7 +13,8 @@ import { formatDistanceToNow } from "date-fns";
 interface Message {
   id: string;
   speaker: 'user' | 'assistant';
-  text: string;
+  text?: string;
+  buttons?: Array<{ text: string; payload: any }>;
   timestamp: string;
 }
 
@@ -100,25 +101,62 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
   const typingDelay = functions.typing_delay_ms || 500;
 
   // Notification sound
+  // Shared AudioContext - created once
+  const audioContextRef = useRef<AudioContext | null>(null);
+
+  const initAudioContext = () => {
+    if (!audioContextRef.current) {
+      try {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      } catch (error) {
+        console.warn('Failed to create AudioContext:', error);
+      }
+    }
+  };
+
   const playNotificationSound = () => {
     if (!functions.notification_sound_enabled) return;
     
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-    
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-    
-    oscillator.frequency.value = 800;
-    oscillator.type = 'sine';
-    
-    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
-    
-    oscillator.start(audioContext.currentTime);
-    oscillator.stop(audioContext.currentTime + 0.2);
+    try {
+      // Initialize on first use (requires user interaction)
+      if (!audioContextRef.current) {
+        initAudioContext();
+      }
+      
+      const audioContext = audioContextRef.current;
+      if (!audioContext) {
+        console.warn('AudioContext not available');
+        return;
+      }
+      
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.value = 800;
+      oscillator.type = 'sine';
+      
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.2);
+    } catch (error) {
+      console.warn('Failed to play notification sound:', error);
+    }
   };
+
+  // Initialize audio context on first user interaction
+  useEffect(() => {
+    const initAudio = () => {
+      initAudioContext();
+      document.removeEventListener('click', initAudio);
+    };
+    document.addEventListener('click', initAudio);
+    return () => document.removeEventListener('click', initAudio);
+  }, []);
 
   // Initialize session on mount
   useEffect(() => {
@@ -202,29 +240,30 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
         setConversationId(data.conversationId);
       }
 
-      // Display bot messages sequentially with typing effect
-      if (data.botMessages && data.botMessages.length > 0) {
-        for (let i = 0; i < data.botMessages.length; i++) {
-          const msg = data.botMessages[i];
+      // Display bot responses sequentially with typing effect
+      if (data.botResponses && data.botResponses.length > 0) {
+        for (let i = 0; i < data.botResponses.length; i++) {
+          const response = data.botResponses[i];
           
-          // Show typing indicator
+          // Show typing indicator before each message
           setIsTyping(true);
           await new Promise(resolve => setTimeout(resolve, typingDelay));
           
           const botMsg: Message = {
             id: crypto.randomUUID(),
             speaker: 'assistant',
-            text: msg,
+            text: response.text,
+            buttons: response.buttons,
             timestamp: new Date().toISOString()
           };
           setMessages(prev => [...prev, botMsg]);
           setIsTyping(false);
           
-          // Play notification sound
+          // Play notification sound for each response
           playNotificationSound();
           
-          // Brief pause between messages
-          if (i < data.botMessages.length - 1) {
+          // Small pause between multiple messages
+          if (i < data.botResponses.length - 1) {
             await new Promise(resolve => setTimeout(resolve, typingDelay * 0.6));
           }
         }
@@ -293,14 +332,10 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
     widgetSessionManager.startNewConversation(agent.id);
     setMessages([]);
     setConversationId(null);
-    
-    // If in Chats tab, stay there and show chat overlay
-    if (selectedTab === "Chats") {
-      setIsInActiveChat(true);
-    } else {
-      // Otherwise go to Home tab
-      setSelectedTab("Home");
-    }
+
+    // ALWAYS stay/go to Chats tab when starting a conversation
+    setSelectedTab("Chats");
+    setIsInActiveChat(true);
     
     // Launch Voiceflow conversation to get opening message
     setIsTyping(true);
@@ -329,10 +364,10 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
         setConversationId(data.conversationId);
       }
 
-      // Add bot's opening messages sequentially
-      if (data.botMessages && data.botMessages.length > 0) {
-        for (let i = 0; i < data.botMessages.length; i++) {
-          const msg = data.botMessages[i];
+      // Display initial bot responses
+      if (data.botResponses && data.botResponses.length > 0) {
+        for (let i = 0; i < data.botResponses.length; i++) {
+          const response = data.botResponses[i];
           
           setIsTyping(true);
           await new Promise(resolve => setTimeout(resolve, typingDelay));
@@ -340,21 +375,19 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
           const botMsg: Message = {
             id: crypto.randomUUID(),
             speaker: 'assistant',
-            text: msg,
+            text: response.text,
+            buttons: response.buttons,
             timestamp: new Date().toISOString()
           };
           setMessages(prev => [...prev, botMsg]);
           setIsTyping(false);
           
-          // Play notification sound
           playNotificationSound();
           
-          if (i < data.botMessages.length - 1) {
+          if (i < data.botResponses.length - 1) {
             await new Promise(resolve => setTimeout(resolve, typingDelay * 0.6));
           }
         }
-      } else {
-        setIsTyping(false);
       }
     } catch (error) {
       console.error('Error launching conversation:', error);
@@ -388,8 +421,19 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
 
   const handleButtonAction = (action: string) => {
     if (action === 'new_chat') {
+      // Switch to Chats tab and start conversation there
+      setSelectedTab("Chats");
+      setIsInActiveChat(true);
       startNewChat();
     }
+  };
+
+  const handleButtonClick = async (payload: any) => {
+    // Convert payload to string if it's an object
+    const payloadText = typeof payload === 'string' ? payload : JSON.stringify(payload);
+    
+    // Send the button payload as a user message
+    await sendMessage(payloadText);
   };
 
   const buttonRadiusClass = 
@@ -535,7 +579,28 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
                                 }
                           }
                         >
-                          <p className="leading-relaxed whitespace-pre-wrap">{message.text}</p>
+                          {message.text && (
+                            <p className="leading-relaxed whitespace-pre-wrap">{message.text}</p>
+                          )}
+                          
+                          {message.buttons && message.buttons.length > 0 && (
+                            <div className="flex flex-col gap-2 mt-2">
+                              {message.buttons.map((button, idx) => (
+                                <button
+                                  key={idx}
+                                  onClick={() => handleButtonClick(button.payload)}
+                                  className="px-4 py-2 rounded-lg font-medium transition-all hover:shadow-md hover:opacity-90"
+                                  style={{
+                                    backgroundColor: primaryColor,
+                                    color: secondaryColor,
+                                    border: `1px solid ${primaryColor}`
+                                  }}
+                                >
+                                  {button.text}
+                                </button>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -650,7 +715,28 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
                                 }
                           }
                         >
-                          <p className="leading-relaxed whitespace-pre-wrap">{message.text}</p>
+                          {message.text && (
+                            <p className="leading-relaxed whitespace-pre-wrap">{message.text}</p>
+                          )}
+                          
+                          {message.buttons && message.buttons.length > 0 && (
+                            <div className="flex flex-col gap-2 mt-2">
+                              {message.buttons.map((button, idx) => (
+                                <button
+                                  key={idx}
+                                  onClick={() => handleButtonClick(button.payload)}
+                                  className="px-4 py-2 rounded-lg font-medium transition-all hover:shadow-md hover:opacity-90"
+                                  style={{
+                                    backgroundColor: primaryColor,
+                                    color: secondaryColor,
+                                    border: `1px solid ${primaryColor}`
+                                  }}
+                                >
+                                  {button.text}
+                                </button>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -809,8 +895,8 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
         )}
       </div>
 
-      {/* Bottom Navigation Tabs */}
-      {enabledTabs.length > 1 && (
+        {/* Bottom Navigation Tabs - Hide when in active chat from Chats tab */}
+        {enabledTabs.length > 1 && !(selectedTab === "Chats" && isInActiveChat) && (
         <div className="border-t bg-background">
           <div className="flex items-center justify-around p-2">
             {enabledTabs.map((tab) => {
