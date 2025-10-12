@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Plus, X } from "lucide-react";
 import { AgentDeletionDialog } from "../AgentDeletionDialog";
 
 interface VoiceflowSettingsProps {
@@ -30,6 +30,9 @@ export function VoiceflowSettings({ agent, onUpdate }: VoiceflowSettingsProps) {
     api_key: agent.config?.api_key || "",
     project_id: agent.config?.project_id || "",
   });
+  const [customVariables, setCustomVariables] = useState<string[]>(
+    agent.config?.custom_tracked_variables || []
+  );
 
   useEffect(() => {
     const checkAdmin = async () => {
@@ -58,6 +61,7 @@ export function VoiceflowSettings({ agent, onUpdate }: VoiceflowSettingsProps) {
             ...agent.config,
             api_key: formData.api_key,
             project_id: formData.project_id,
+            custom_tracked_variables: customVariables.filter(v => v.trim()),
           },
         })
         .eq("id", agent.id);
@@ -79,6 +83,20 @@ export function VoiceflowSettings({ agent, onUpdate }: VoiceflowSettingsProps) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const addCustomVariable = () => {
+    setCustomVariables([...customVariables, ""]);
+  };
+
+  const removeCustomVariable = (index: number) => {
+    setCustomVariables(customVariables.filter((_, i) => i !== index));
+  };
+
+  const updateCustomVariable = (index: number, value: string) => {
+    const updated = [...customVariables];
+    updated[index] = value;
+    setCustomVariables(updated);
   };
 
   return (
@@ -211,6 +229,46 @@ export function VoiceflowSettings({ agent, onUpdate }: VoiceflowSettingsProps) {
                   <code className="px-1 py-0.5 bg-blue-100 dark:bg-blue-900 rounded font-mono">user_email</code>. 
                   These will automatically sync with your dashboard.
                 </p>
+              </div>
+            </div>
+
+            {/* Custom Variables Section */}
+            <div className="space-y-3 p-4 bg-muted rounded-lg mt-4">
+              <div>
+                <h4 className="text-sm font-semibold mb-1">Custom Variables (Optional)</h4>
+                <p className="text-xs text-muted-foreground">
+                  Add additional Voiceflow variable names you want to track and display in conversation details.
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                {customVariables.map((varName, index) => (
+                  <div key={index} className="flex gap-2">
+                    <Input 
+                      value={varName}
+                      onChange={(e) => updateCustomVariable(index, e.target.value)}
+                      placeholder="e.g., phone_number, company_name"
+                      className="font-mono text-sm flex-1"
+                    />
+                    <Button 
+                      size="icon" 
+                      variant="ghost"
+                      onClick={() => removeCustomVariable(index)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={addCustomVariable}
+                  className="w-full"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Custom Variable
+                </Button>
               </div>
             </div>
           </div>

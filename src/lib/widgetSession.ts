@@ -102,5 +102,13 @@ export const widgetSessionManager = {
     const session = widgetSessionManager.initSession(agentId);
     session.currentConversationId = null;
     localStorage.setItem(storageKey, JSON.stringify(session));
+  },
+
+  // Clear current session completely
+  clearCurrentSession: (agentId: string) => {
+    const storageKey = `voiceflow_session_${agentId}`;
+    const session = widgetSessionManager.initSession(agentId);
+    session.currentConversationId = null;
+    localStorage.setItem(storageKey, JSON.stringify(session));
   }
 };

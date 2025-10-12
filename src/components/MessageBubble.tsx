@@ -23,6 +23,7 @@ interface MessageBubbleProps {
   selectedButton?: string;
   isWidget?: boolean;
   onButtonClick?: (payload: any, text: string) => void;
+  buttonsDisabled?: boolean;
 }
 
 export function MessageBubble({
@@ -33,7 +34,8 @@ export function MessageBubble({
   appearance,
   selectedButton,
   isWidget = false,
-  onButtonClick
+  onButtonClick,
+  buttonsDisabled = false
 }: MessageBubbleProps) {
   const isUser = speaker === 'user';
   
@@ -75,9 +77,9 @@ export function MessageBubble({
                   <button
                     key={idx}
                     onClick={() => isWidget && onButtonClick?.(button.payload, button.text)}
-                    disabled={!isWidget}
+                    disabled={!isWidget || buttonsDisabled}
                     className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                      isWidget ? 'hover:shadow-md cursor-pointer' : 'cursor-default'
+                      (!isWidget || buttonsDisabled) ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-md cursor-pointer'
                     } ${isSelected ? 'ring-2 ring-green-500' : ''}`}
                     style={{
                       backgroundColor: isSelected 
@@ -87,7 +89,7 @@ export function MessageBubble({
                         ? appearance.secondaryColor 
                         : appearance.primaryColor,
                       border: `2px solid ${appearance.primaryColor}`,
-                      opacity: !isWidget && !isSelected ? 0.6 : 1
+                      opacity: (!isWidget && !isSelected) || buttonsDisabled ? 0.6 : 1
                     }}
                   >
                     <span className="flex items-center gap-2 justify-center">

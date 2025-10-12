@@ -108,16 +108,32 @@ serve(async (req) => {
     const voiceflowData = await voiceflowResponse.json();
     console.log('Voiceflow response:', voiceflowData);
 
-    // Parse Voiceflow response and extract variables
-    const botResponses: any[] = [];
+    // Fetch current state to get variables
     let voiceflowVariables: Record<string, any> = {};
+    try {
+      const stateResponse = await fetch(
+        `https://general-runtime.voiceflow.com/state/user/${userId}`,
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': apiKey,
+          },
+        }
+      );
+      
+      if (stateResponse.ok) {
+        const stateData = await stateResponse.json();
+        voiceflowVariables = stateData?.variables || {};
+        console.log('Extracted Voiceflow variables:', voiceflowVariables);
+      }
+    } catch (stateError) {
+      console.error('Error fetching Voiceflow state:', stateError);
+    }
+
+    // Parse Voiceflow response
+    const botResponses: any[] = [];
     
     if (voiceflowData && Array.isArray(voiceflowData)) {
-      // Extract variables from Voiceflow state
-      const lastItem = voiceflowData[voiceflowData.length - 1];
-      if (lastItem && lastItem.variables) {
-        voiceflowVariables = lastItem.variables;
-      }
       
       for (const item of voiceflowData) {
         if (item.type === 'text' && item.payload?.message) {

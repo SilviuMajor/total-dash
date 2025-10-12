@@ -76,10 +76,82 @@ export default function Conversations() {
   };
 
   useEffect(() => {
-    if (selectedConversation) {
+    if (selectedConversation?.id) {
       loadTranscripts(selectedConversation.id);
     }
   }, [selectedConversation]);
+
+  // Real-time subscriptions for conversations
+  useEffect(() => {
+    if (!selectedAgentId) return;
+    
+    const channel = supabase
+      .channel('conversations-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'conversations',
+          filter: `agent_id=eq.${selectedAgentId}`
+        },
+        (payload) => {
+          console.log('Conversation change:', payload);
+          
+          if (payload.eventType === 'INSERT') {
+            loadConversations();
+          } else if (payload.eventType === 'UPDATE') {
+            setConversations(prev => 
+              prev.map(c => 
+                c.id === payload.new.id ? payload.new as Conversation : c
+              )
+            );
+            
+            if (selectedConversation?.id === payload.new.id) {
+              setSelectedConversation(payload.new as Conversation);
+            }
+          }
+        }
+      )
+      .subscribe();
+    
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [selectedAgentId]);
+
+  // Real-time subscriptions for transcripts
+  useEffect(() => {
+    if (!selectedConversation?.id) return;
+    
+    const transcriptChannel = supabase
+      .channel('transcripts-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'transcripts',
+          filter: `conversation_id=eq.${selectedConversation.id}`
+        },
+        (payload) => {
+          console.log('New transcript:', payload);
+          setTranscripts(prev => [...prev, payload.new as Transcript]);
+          
+          setTimeout(() => {
+            const scrollArea = document.querySelector('[data-radix-scroll-area-viewport]');
+            if (scrollArea) {
+              scrollArea.scrollTop = scrollArea.scrollHeight;
+            }
+          }, 100);
+        }
+      )
+      .subscribe();
+    
+    return () => {
+      transcriptChannel.unsubscribe();
+    };
+  }, [selectedConversation?.id]);
 
   const loadConversations = async () => {
     try {
@@ -292,30 +364,82 @@ export default function Conversations() {
               {selectedConversation?.metadata?.variables && 
                Object.keys(selectedConversation.metadata.variables).length > 0 && (
                 <div>
-                  <Label className="mb-2 block">Captured Information</Label>
-                  <div className="space-y-2 p-3 bg-muted rounded-lg">
-                    {selectedConversation.metadata.variables.user_name && (
+                  <Label className="mb-3 block font-semibold">Captured Information</Label>
+                  
+                  {/* Standard Variables */}
+                  <div className="space-y-2 p-3 bg-muted rounded-lg mb-3">
+                    <div className="text-xs font-medium text-muted-foreground uppercase mb-2">
+                      Standard Fields
+                    </div>
+                    
+                    <div className="space-y-2">
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Name:</span>
-                        <span className="font-medium">{selectedConversation.metadata.variables.user_name}</span>
+                        <span className={`font-medium ${!selectedConversation.metadata.variables.user_name ? 'text-muted-foreground italic' : ''}`}>
+                          {selectedConversation.metadata.variables.user_name || 'Not captured yet'}
+                        </span>
                       </div>
-                    )}
-                    {selectedConversation.metadata.variables.user_email && (
+                      
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Email:</span>
-                        <span className="font-medium">{selectedConversation.metadata.variables.user_email}</span>
+                        <span className={`font-medium ${!selectedConversation.metadata.variables.user_email ? 'text-muted-foreground italic' : ''}`}>
+                          {selectedConversation.metadata.variables.user_email || 'Not captured yet'}
+                        </span>
                       </div>
-                    )}
-                    {Object.entries(selectedConversation.metadata.variables)
-                      .filter(([key]) => key !== 'user_name' && key !== 'user_email')
-                      .map(([key, value]) => (
-                        <div key={key} className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">{key}:</span>
-                          <span className="font-medium">{String(value)}</span>
-                        </div>
-                      ))
-                    }
+                    </div>
                   </div>
+                  
+                  {/* Custom Variables */}
+                  {agentConfig?.custom_tracked_variables?.length > 0 && (
+                    <div className="space-y-2 p-3 bg-muted rounded-lg">
+                      <div className="text-xs font-medium text-muted-foreground uppercase mb-2">
+                        Custom Fields
+                      </div>
+                      
+                      <div className="space-y-2">
+                        {agentConfig.custom_tracked_variables.map((varName: string) => (
+                          <div key={varName} className="flex justify-between text-sm">
+                            <span className="text-muted-foreground capitalize">
+                              {varName.replace(/_/g, ' ')}:
+                            </span>
+                            <span className={`font-medium ${!selectedConversation.metadata?.variables?.[varName] ? 'text-muted-foreground italic' : ''}`}>
+                              {selectedConversation.metadata?.variables?.[varName] || 'Not captured yet'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Other Variables */}
+                  {Object.entries(selectedConversation.metadata.variables)
+                    .filter(([key]) => 
+                      key !== 'user_name' && 
+                      key !== 'user_email' && 
+                      !agentConfig?.custom_tracked_variables?.includes(key)
+                    )
+                    .length > 0 && (
+                    <div className="space-y-2 p-3 bg-muted rounded-lg mt-3">
+                      <div className="text-xs font-medium text-muted-foreground uppercase mb-2">
+                        Other Variables
+                      </div>
+                      <div className="space-y-2">
+                        {Object.entries(selectedConversation.metadata.variables)
+                          .filter(([key]) => 
+                            key !== 'user_name' && 
+                            key !== 'user_email' && 
+                            !agentConfig?.custom_tracked_variables?.includes(key)
+                          )
+                          .map(([key, value]) => (
+                            <div key={key} className="flex justify-between text-sm">
+                              <span className="text-muted-foreground capitalize">{key.replace(/_/g, ' ')}:</span>
+                              <span className="font-medium">{String(value)}</span>
+                            </div>
+                          ))
+                        }
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
               

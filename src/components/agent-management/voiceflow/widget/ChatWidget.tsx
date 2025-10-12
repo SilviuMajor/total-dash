@@ -48,7 +48,7 @@ const TypingIndicator = () => (
 
 const ConversationCard = ({ conv, onClick, primaryColor }: any) => (
   <div
-    className="p-4 rounded-xl cursor-pointer transition-all hover:shadow-md group"
+    className="w-full p-4 rounded-xl cursor-pointer transition-all hover:shadow-md group"
     style={{ backgroundColor: `${primaryColor}15` }}
     onClick={onClick}
   >
@@ -83,6 +83,7 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
   const [selectedTab, setSelectedTab] = useState("Home");
   const [conversationHistory, setConversationHistory] = useState<any[]>([]);
   const [isInActiveChat, setIsInActiveChat] = useState(false);
+  const [clickedButtonMessageIds, setClickedButtonMessageIds] = useState<Set<string>>(new Set());
 
   const widgetSettings = agent.config?.widget_settings || {};
   const appearance = widgetSettings.appearance || {};
@@ -138,7 +139,7 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
       oscillator.frequency.value = 800;
       oscillator.type = 'sine';
       
-      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.setValueAtTime(0.6, audioContext.currentTime);
       gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
       
       oscillator.start(audioContext.currentTime);
@@ -328,10 +329,11 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
       return;
     }
 
-    // Clear current state
-    widgetSessionManager.startNewConversation(agent.id);
+    // Clear ALL state FIRST to prevent duplication
     setMessages([]);
     setConversationId(null);
+    setClickedButtonMessageIds(new Set());
+    widgetSessionManager.startNewConversation(agent.id);
 
     // ALWAYS stay/go to Chats tab when starting a conversation
     setSelectedTab("Chats");
@@ -428,7 +430,10 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
     }
   };
 
-  const handleButtonClick = async (buttonText: string, payload: any) => {
+  const handleButtonClick = async (buttonText: string, payload: any, messageId: string) => {
+    // Mark this message's buttons as used
+    setClickedButtonMessageIds(prev => new Set(prev).add(messageId));
+    
     // Show user message with clean button text
     const userMsg: Message = {
       id: crypto.randomUUID(),
@@ -640,24 +645,29 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
                             <p className="leading-relaxed whitespace-pre-wrap">{message.text}</p>
                           )}
                           
-                          {message.buttons && message.buttons.length > 0 && (
-                            <div className="flex flex-col gap-2 mt-2">
-                              {message.buttons.map((button, idx) => (
-                                <button
-                                  key={idx}
-                                  onClick={() => handleButtonClick(button.text, button.payload)}
-                                  className="px-4 py-2 rounded-lg font-medium transition-all hover:shadow-md hover:opacity-90"
-                                  style={{
-                                    backgroundColor: primaryColor,
-                                    color: secondaryColor,
-                                    border: `1px solid ${primaryColor}`
-                                  }}
-                                >
-                                  {button.text}
-                                </button>
-                              ))}
-                            </div>
-                          )}
+                        {message.buttons && message.buttons.length > 0 && (
+                          <div className="flex flex-col gap-2 mt-2">
+                            {message.buttons.map((button, idx) => (
+                              <button
+                                key={idx}
+                                onClick={() => handleButtonClick(button.text, button.payload, message.id)}
+                                disabled={clickedButtonMessageIds.has(message.id)}
+                                className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                                  clickedButtonMessageIds.has(message.id) 
+                                    ? 'opacity-50 cursor-not-allowed' 
+                                    : 'hover:shadow-md hover:opacity-90 cursor-pointer'
+                                }`}
+                                style={{
+                                  backgroundColor: primaryColor,
+                                  color: secondaryColor,
+                                  border: `1px solid ${primaryColor}`
+                                }}
+                              >
+                                {button.text}
+                              </button>
+                            ))}
+                          </div>
+                        )}
                         </div>
                       </div>
                     ))}
