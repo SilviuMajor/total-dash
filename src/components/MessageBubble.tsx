@@ -1,5 +1,5 @@
 import { Avatar } from "@/components/ui/avatar";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, Bot } from "lucide-react";
 
 interface Button {
   text: string;
@@ -41,13 +41,22 @@ export function MessageBubble({
   
   return (
     <div className={`flex gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
-      {!isUser && appearance.chatIconUrl && (
+      {!isUser && (
         <Avatar className="h-8 w-8 flex-shrink-0">
-          <img 
-            src={appearance.chatIconUrl} 
-            alt="Agent" 
-            className="object-cover"
-          />
+          {appearance.chatIconUrl ? (
+            <img 
+              src={appearance.chatIconUrl} 
+              alt="Agent" 
+              className="object-cover w-full h-full"
+            />
+          ) : (
+            <div 
+              className="w-full h-full rounded-full flex items-center justify-center"
+              style={{ backgroundColor: `${appearance.primaryColor}20` }}
+            >
+              <Bot className="w-4 h-4" style={{ color: appearance.primaryColor }} />
+            </div>
+          )}
         </Avatar>
       )}
       
@@ -56,11 +65,11 @@ export function MessageBubble({
           className="rounded-2xl px-4 py-2.5 shadow-sm"
           style={{
             backgroundColor: isUser 
-              ? appearance.messageBgColor || '#f3f4f6'
-              : appearance.primaryColor,
+              ? appearance.primaryColor
+              : appearance.messageBgColor || '#f3f4f6',
             color: isUser 
-              ? appearance.messageTextColor || '#1f2937'
-              : appearance.secondaryColor || '#ffffff',
+              ? appearance.secondaryColor
+              : appearance.messageTextColor || '#1f2937',
             fontSize: `${appearance.fontSize || 14}px`
           }}
         >

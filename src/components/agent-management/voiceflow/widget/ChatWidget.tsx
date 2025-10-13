@@ -9,6 +9,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Badge } from "@/components/ui/badge";
 import { widgetSessionManager } from "@/lib/widgetSession";
 import { formatDistanceToNow } from "date-fns";
+import { MessageBubble } from "@/components/MessageBubble";
 
 interface Message {
   id: string;
@@ -430,7 +431,7 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
     }
   };
 
-  const handleButtonClick = async (buttonText: string, payload: any, messageId: string) => {
+  const handleButtonClick = async (payload: any, buttonText: string, messageId: string) => {
     // Mark this message's buttons as used
     setClickedButtonMessageIds(prev => new Set(prev).add(messageId));
     
@@ -603,74 +604,29 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
               // Active chat overlay
               <>
                 <ScrollArea className="flex-1 p-4">
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     {messages.map((message) => (
-                      <div
+                      <MessageBubble
                         key={message.id}
-                        className={`flex gap-2 ${message.speaker === 'user' ? 'justify-end' : 'justify-start items-start'}`}
-                      >
-                        {message.speaker === 'assistant' && (
-                          <div 
-                            className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-1 overflow-hidden"
-                            style={{ backgroundColor: appearance.chat_icon_url ? 'transparent' : `${primaryColor}20` }}
-                          >
-                            {appearance.chat_icon_url ? (
-                              <img src={appearance.chat_icon_url} alt="Bot" className="w-8 h-8 object-cover" />
-                            ) : (
-                              <Bot className="w-4 h-4" style={{ color: primaryColor }} />
-                            )}
-                          </div>
-                        )}
-                        <div
-                          className={`max-w-[75%] p-3.5 rounded-2xl shadow-sm ${
-                            message.speaker === 'user'
-                              ? ''
-                              : ''
-                          }`}
-                          style={
-                            message.speaker === 'user'
-                              ? { 
-                                  backgroundColor: primaryColor,
-                                  color: secondaryColor,
-                                  fontSize: fontSize
-                                }
-                              : { 
-                                  backgroundColor: messageBgColor,
-                                  color: messageTextColor,
-                                  fontSize: fontSize
-                                }
-                          }
-                        >
-                          {message.text && (
-                            <p className="leading-relaxed whitespace-pre-wrap">{message.text}</p>
-                          )}
-                          
-                        {message.buttons && message.buttons.length > 0 && (
-                          <div className="flex flex-col gap-2 mt-2">
-                            {message.buttons.map((button, idx) => (
-                              <button
-                                key={idx}
-                                onClick={() => handleButtonClick(button.text, button.payload, message.id)}
-                                disabled={clickedButtonMessageIds.has(message.id)}
-                                className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                                  clickedButtonMessageIds.has(message.id) 
-                                    ? 'opacity-50 cursor-not-allowed' 
-                                    : 'hover:shadow-md hover:opacity-90 cursor-pointer'
-                                }`}
-                                style={{
-                                  backgroundColor: primaryColor,
-                                  color: secondaryColor,
-                                  border: `1px solid ${primaryColor}`
-                                }}
-                              >
-                                {button.text}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                        </div>
-                      </div>
+                        speaker={message.speaker}
+                        text={message.text}
+                        buttons={message.buttons}
+                        timestamp={message.timestamp}
+                        appearance={{
+                          primaryColor: primaryColor,
+                          secondaryColor: secondaryColor,
+                          textColor: appearance.text_color || '#000000',
+                          chatIconUrl: appearance.chat_icon_url,
+                          messageTextColor: messageTextColor,
+                          messageBgColor: messageBgColor,
+                          fontSize: fontSize
+                        }}
+                        isWidget={true}
+                        onButtonClick={(payload, text) => handleButtonClick(payload, text, message.id)}
+                        buttonsDisabled={clickedButtonMessageIds.has(message.id)}
+                      />
                     ))}
+                    
                     {isTyping && (
                       <div className="flex gap-2 items-start">
                         <div 
