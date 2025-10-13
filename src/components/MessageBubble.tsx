@@ -19,6 +19,8 @@ interface MessageBubbleProps {
     messageTextColor?: string;
     messageBgColor?: string;
     fontSize?: number;
+    messageBubbleStyle?: string;
+    interactiveButtonStyle?: string;
   };
   selectedButton?: string;
   isWidget?: boolean;
@@ -38,6 +40,48 @@ export function MessageBubble({
   buttonsDisabled = false
 }: MessageBubbleProps) {
   const isUser = speaker === 'user';
+  
+  const getBubbleStyle = () => {
+    const style = appearance.messageBubbleStyle || 'rounded';
+    switch (style) {
+      case 'square': return 'rounded-none';
+      case 'pill': return 'rounded-full';
+      default: return 'rounded-2xl';
+    }
+  };
+
+  const getButtonStyle = (isSelected: boolean) => {
+    const buttonStyle = appearance.interactiveButtonStyle || 'solid';
+    
+    if (isSelected) {
+      return {
+        backgroundColor: appearance.primaryColor,
+        color: appearance.secondaryColor,
+        border: `2px solid ${appearance.primaryColor}`
+      };
+    }
+    
+    switch (buttonStyle) {
+      case 'outlined':
+        return {
+          backgroundColor: 'transparent',
+          color: appearance.primaryColor,
+          border: `2px solid ${appearance.primaryColor}`
+        };
+      case 'soft':
+        return {
+          backgroundColor: `${appearance.primaryColor}20`,
+          color: appearance.primaryColor,
+          border: `1px solid ${appearance.primaryColor}50`
+        };
+      default: // solid
+        return {
+          backgroundColor: appearance.primaryColor,
+          color: appearance.secondaryColor,
+          border: 'none'
+        };
+    }
+  };
   
   return (
     <div className={`flex gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
@@ -62,7 +106,7 @@ export function MessageBubble({
       
       <div className={`flex flex-col gap-1 max-w-[80%] ${isUser ? 'items-end' : 'items-start'}`}>
         <div
-          className="rounded-2xl px-4 py-2.5 shadow-sm"
+          className={`${getBubbleStyle()} px-4 py-2.5 shadow-sm`}
           style={{
             backgroundColor: isUser 
               ? appearance.primaryColor
@@ -91,13 +135,7 @@ export function MessageBubble({
                       (!isWidget || buttonsDisabled) ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-md cursor-pointer'
                     } ${isSelected ? 'ring-2 ring-green-500' : ''}`}
                     style={{
-                      backgroundColor: isSelected 
-                        ? appearance.primaryColor 
-                        : 'transparent',
-                      color: isSelected 
-                        ? appearance.secondaryColor 
-                        : appearance.primaryColor,
-                      border: `2px solid ${appearance.primaryColor}`,
+                      ...getButtonStyle(isSelected),
                       opacity: (!isWidget && !isSelected) || buttonsDisabled ? 0.6 : 1
                     }}
                   >

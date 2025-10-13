@@ -627,7 +627,9 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
                           chatIconUrl: appearance.chat_icon_url,
                           messageTextColor: messageTextColor,
                           messageBgColor: messageBgColor,
-                          fontSize: fontSize
+                          fontSize: appearance.font_size || 14,
+                          messageBubbleStyle: appearance.message_bubble_style || 'rounded',
+                          interactiveButtonStyle: appearance.interactive_button_style || 'solid'
                         }}
                         isWidget={true}
                         onButtonClick={(payload, text) => handleButtonClick(payload, text, message.id)}

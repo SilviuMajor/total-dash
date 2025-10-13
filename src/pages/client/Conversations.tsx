@@ -214,32 +214,6 @@ export default function Conversations() {
         <p className="text-muted-foreground">Monitor and review conversations with your AI agent.</p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <MetricCard
-          title="Total Conversations"
-          value={stats.totalCalls}
-          icon={Phone}
-          trend="neutral"
-        />
-        <MetricCard
-          title="Avg Duration"
-          value={`${stats.avgDuration}m`}
-          icon={Clock}
-          trend="neutral"
-        />
-        <MetricCard
-          title="Active Now"
-          value={stats.activeNow}
-          icon={MessageSquare}
-          trend="neutral"
-        />
-        <MetricCard
-          title="Completed"
-          value={conversations.filter(c => c.status === 'completed').length}
-          icon={CheckCircle}
-          trend="neutral"
-        />
-      </div>
 
       <div className="flex h-[600px] gap-4 border border-border rounded-lg overflow-hidden bg-card">
         {/* Left Panel: Conversation List */}
@@ -339,7 +313,9 @@ export default function Conversations() {
                             chatIconUrl: agentConfig?.widget_settings?.appearance?.chat_icon_url,
                             messageTextColor: agentConfig?.widget_settings?.functions?.message_text_color,
                             messageBgColor: agentConfig?.widget_settings?.functions?.message_background_color,
-                            fontSize: agentConfig?.widget_settings?.functions?.font_size
+                            fontSize: agentConfig?.widget_settings?.appearance?.font_size || 14,
+                            messageBubbleStyle: agentConfig?.widget_settings?.appearance?.message_bubble_style || 'rounded',
+                            interactiveButtonStyle: agentConfig?.widget_settings?.appearance?.interactive_button_style || 'solid'
                           }}
                           selectedButton={selectedButton}
                           isWidget={false}
@@ -369,7 +345,7 @@ export default function Conversations() {
                   {/* Standard Variables */}
                   <div className="space-y-2 p-3 bg-muted rounded-lg mb-3">
                     <div className="text-xs font-medium text-muted-foreground uppercase mb-2">
-                      Standard Fields
+                      Customer Details
                     </div>
                     
                     <div className="space-y-2">
@@ -411,35 +387,6 @@ export default function Conversations() {
                     </div>
                   )}
                   
-                  {/* Other Variables */}
-                  {Object.entries(selectedConversation.metadata.variables)
-                    .filter(([key]) => 
-                      key !== 'user_name' && 
-                      key !== 'user_email' && 
-                      !agentConfig?.custom_tracked_variables?.includes(key)
-                    )
-                    .length > 0 && (
-                    <div className="space-y-2 p-3 bg-muted rounded-lg mt-3">
-                      <div className="text-xs font-medium text-muted-foreground uppercase mb-2">
-                        Other Variables
-                      </div>
-                      <div className="space-y-2">
-                        {Object.entries(selectedConversation.metadata.variables)
-                          .filter(([key]) => 
-                            key !== 'user_name' && 
-                            key !== 'user_email' && 
-                            !agentConfig?.custom_tracked_variables?.includes(key)
-                          )
-                          .map(([key, value]) => (
-                            <div key={key} className="flex justify-between text-sm">
-                              <span className="text-muted-foreground capitalize">{key.replace(/_/g, ' ')}:</span>
-                              <span className="font-medium">{String(value)}</span>
-                            </div>
-                          ))
-                        }
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
               

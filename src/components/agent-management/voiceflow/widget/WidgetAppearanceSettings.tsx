@@ -49,7 +49,9 @@ export function WidgetAppearanceSettings({ agent, onUpdate }: WidgetAppearanceSe
       secondary_color: widgetSettings.appearance?.secondary_color || "#FFFFFF",
       text_color: widgetSettings.appearance?.text_color || "#000000",
       font_family: widgetSettings.appearance?.font_family || "Inter",
-      button_style: widgetSettings.appearance?.button_style || "rounded"
+      font_size: widgetSettings.appearance?.font_size || 14,
+      message_bubble_style: widgetSettings.appearance?.message_bubble_style || "rounded",
+      interactive_button_style: widgetSettings.appearance?.interactive_button_style || "solid"
     },
     tabs: {
       home: {
@@ -288,10 +290,16 @@ export function WidgetAppearanceSettings({ agent, onUpdate }: WidgetAppearanceSe
     }));
   };
 
-  const buttonStyles = [
-    { value: 'rounded', label: 'Rounded', radius: 'rounded-lg' },
-    { value: 'square', label: 'Square', radius: 'rounded-none' },
-    { value: 'pill', label: 'Pill', radius: 'rounded-full' }
+  const messageBubbleStyles = [
+    { value: 'rounded', label: 'Rounded', preview: 'rounded-lg' },
+    { value: 'square', label: 'Square', preview: 'rounded-none' },
+    { value: 'pill', label: 'Pill', preview: 'rounded-full' }
+  ];
+
+  const interactiveButtonStyles = [
+    { value: 'solid', label: 'Solid', description: 'Filled background' },
+    { value: 'outlined', label: 'Outlined', description: 'Transparent with border' },
+    { value: 'soft', label: 'Soft', description: 'Light background' }
   ];
 
   return (
@@ -473,27 +481,47 @@ export function WidgetAppearanceSettings({ agent, onUpdate }: WidgetAppearanceSe
               </Select>
             </div>
 
-            {/* Button Style with Visual Preview */}
+            {/* Font Size */}
             <div>
-              <Label>Button Style</Label>
+              <Label htmlFor="font_size">Font Size</Label>
+              <div className="flex items-center gap-3 mt-2">
+                <Input
+                  id="font_size"
+                  type="number"
+                  min="12"
+                  max="20"
+                  value={formData.appearance.font_size}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    appearance: { ...prev.appearance, font_size: parseInt(e.target.value) || 14 }
+                  }))}
+                  className="w-20"
+                />
+                <span className="text-sm text-muted-foreground">px (12-20)</span>
+              </div>
+            </div>
+
+            {/* Message Bubble Style with Visual Preview */}
+            <div>
+              <Label>Message Bubble Style</Label>
               <div className="grid grid-cols-3 gap-4 mt-2">
-                {buttonStyles.map(style => (
+                {messageBubbleStyles.map(style => (
                   <div
                     key={style.value}
                     className={`
                       relative cursor-pointer border-2 p-4 transition-all
-                      ${formData.appearance.button_style === style.value 
+                      ${formData.appearance.message_bubble_style === style.value 
                         ? 'border-primary bg-primary/5' 
                         : 'border-muted hover:border-muted-foreground/50'}
-                      ${style.radius}
+                      ${style.preview}
                     `}
                     onClick={() => setFormData(prev => ({
                       ...prev,
-                      appearance: { ...prev.appearance, button_style: style.value }
+                      appearance: { ...prev.appearance, message_bubble_style: style.value }
                     }))}
                   >
                     <div 
-                      className={`h-10 flex items-center justify-center text-sm font-medium ${style.radius}`}
+                      className={`h-10 flex items-center justify-center text-sm font-medium ${style.preview}`}
                       style={{ 
                         backgroundColor: formData.appearance.primary_color,
                         color: formData.appearance.secondary_color
@@ -503,6 +531,53 @@ export function WidgetAppearanceSettings({ agent, onUpdate }: WidgetAppearanceSe
                     </div>
                     <p className="text-xs text-center mt-2 text-muted-foreground">{style.label}</p>
                   </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Interactive Button Style */}
+            <div>
+              <Label>Interactive Button Style</Label>
+              <p className="text-xs text-muted-foreground mb-2 mt-1">
+                Style for clickable buttons presented in conversations
+              </p>
+              <div className="space-y-2 mt-2">
+                {interactiveButtonStyles.map((style) => (
+                  <button
+                    key={style.value}
+                    type="button"
+                    onClick={() => setFormData(prev => ({
+                      ...prev,
+                      appearance: { ...prev.appearance, interactive_button_style: style.value }
+                    }))}
+                    className={`w-full p-3 border-2 transition-all text-left ${
+                      formData.appearance.interactive_button_style === style.value
+                        ? 'border-primary bg-primary/10'
+                        : 'border-border hover:border-primary/50'
+                    } rounded-lg`}
+                  >
+                    <div className="text-sm font-medium mb-1">{style.label}</div>
+                    <div className="text-xs text-muted-foreground mb-2">{style.description}</div>
+                    <div 
+                      className="h-8 rounded-lg flex items-center justify-center text-xs font-medium"
+                      style={
+                        style.value === 'solid' ? {
+                          backgroundColor: formData.appearance.primary_color,
+                          color: formData.appearance.secondary_color
+                        } : style.value === 'outlined' ? {
+                          backgroundColor: 'transparent',
+                          color: formData.appearance.primary_color,
+                          border: `2px solid ${formData.appearance.primary_color}`
+                        } : {
+                          backgroundColor: `${formData.appearance.primary_color}20`,
+                          color: formData.appearance.primary_color,
+                          border: `1px solid ${formData.appearance.primary_color}50`
+                        }
+                      }
+                    >
+                      Sample Button
+                    </div>
+                  </button>
                 ))}
               </div>
             </div>
