@@ -49,7 +49,7 @@ const TypingIndicator = () => (
 
 const ConversationCard = ({ conv, onClick, primaryColor }: any) => (
   <div
-    className="w-full max-w-full overflow-hidden p-4 rounded-xl cursor-pointer transition-all hover:shadow-md group"
+    className="w-full max-w-full overflow-hidden p-4 pr-2 rounded-xl cursor-pointer transition-all hover:shadow-md group"
     style={{ backgroundColor: `${primaryColor}15` }}
     onClick={onClick}
   >
@@ -62,7 +62,7 @@ const ConversationCard = ({ conv, onClick, primaryColor }: any) => (
       </div>
       <div className="flex-1 min-w-0">
         <p 
-          className="font-medium text-sm mb-1 break-words overflow-hidden"
+          className="font-medium text-sm mb-1 break-all overflow-hidden"
           style={{
             display: '-webkit-box',
             WebkitLineClamp: 2,
@@ -77,7 +77,7 @@ const ConversationCard = ({ conv, onClick, primaryColor }: any) => (
           <Badge variant="secondary" className="ml-auto">{conv.messageCount}</Badge>
         </div>
       </div>
-      <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+      <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
     </div>
   </div>
 );
@@ -612,8 +612,8 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
             {isInActiveChat && messages.length > 0 ? (
               // Active chat overlay
               <>
-            <ScrollArea className="flex-1 min-h-0 p-4 overscroll-contain">
-                  <div className="space-y-4">
+            <ScrollArea className="flex-1 min-h-0 p-4 overscroll-contain" style={{ scrollbarGutter: 'stable both-edges' }}>
+                  <div className="space-y-4 pr-3">
                     {messages.map((message) => (
                       <MessageBubble
                         key={message.id}
@@ -708,7 +708,7 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
                   </div>
                   
                   <button
-                    className="w-full p-4 rounded-xl flex items-center justify-between transition-all hover:shadow-md group"
+                    className="w-full p-4 pr-2 rounded-xl flex items-center justify-between transition-all hover:shadow-md group"
                     style={{ backgroundColor: `${primaryColor}15` }}
                     onClick={startNewChat}
                   >
@@ -716,12 +716,12 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
                       <Plus className="w-5 h-5" style={{ color: primaryColor }} />
                       <span className="font-medium">New Chat</span>
                     </div>
-                    <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+                    <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
                   </button>
                 </div>
                 
-                <ScrollArea className="flex-1 min-h-0 overscroll-contain">
-                  <div className="px-5 pb-5 space-y-4">
+                <ScrollArea className="flex-1 min-h-0 overscroll-contain" style={{ scrollbarGutter: 'stable both-edges' }}>
+                  <div className="pl-5 pr-3 pb-5 space-y-4 max-w-full">
                     {conversationHistory.length === 0 ? (
                       <div className="text-center py-12">
                         <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-30" />
