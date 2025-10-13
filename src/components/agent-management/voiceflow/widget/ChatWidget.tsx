@@ -691,8 +691,8 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
               </>
             ) : (
               // Chats list view
-              <div className="flex flex-col flex-1 overflow-hidden">
-                <div className="p-5 space-y-4">
+              <div className="flex flex-col h-full overflow-hidden">
+                <div className="flex-shrink-0 p-5 space-y-4">
                   <div className="flex items-center gap-2">
                     <MessageSquare className="w-5 h-5" style={{ color: primaryColor }} />
                     <h3 className="font-semibold text-lg">Chats</h3>
@@ -711,7 +711,7 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
                   </button>
                 </div>
                 
-                <ScrollArea className="flex-1">
+                <ScrollArea className="flex-1 min-h-0">
                   <div className="px-5 pb-5 space-y-4">
                     {conversationHistory.length === 0 ? (
                       <div className="text-center py-12">
