@@ -38,7 +38,7 @@ export function WidgetTestPanel({ agent, children }: WidgetTestPanelProps) {
       <div 
         className={`
           fixed top-0 right-0 h-screen w-[350px] bg-background border-l shadow-2xl 
-          transform transition-transform duration-300 z-40
+          transform transition-transform duration-300 z-40 overflow-hidden
           ${isPanelOpen ? 'translate-x-0' : 'translate-x-full'}
         `}
       >

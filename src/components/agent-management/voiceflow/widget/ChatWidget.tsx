@@ -49,7 +49,7 @@ const TypingIndicator = () => (
 
 const ConversationCard = ({ conv, onClick, primaryColor }: any) => (
   <div
-    className="w-full p-4 rounded-xl cursor-pointer transition-all hover:shadow-md group"
+    className="w-full max-w-full overflow-hidden p-4 rounded-xl cursor-pointer transition-all hover:shadow-md group"
     style={{ backgroundColor: `${primaryColor}15` }}
     onClick={onClick}
   >
@@ -61,7 +61,16 @@ const ConversationCard = ({ conv, onClick, primaryColor }: any) => (
         <MessageCircle className="w-5 h-5" style={{ color: primaryColor }} />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="font-medium text-sm line-clamp-2 mb-1">{conv.preview}</p>
+        <p 
+          className="font-medium text-sm mb-1 break-words overflow-hidden"
+          style={{
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical'
+          }}
+        >
+          {conv.preview}
+        </p>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Clock className="w-3 h-3" />
           <span>{formatDistanceToNow(new Date(conv.timestamp), { addSuffix: true })}</span>
@@ -563,8 +572,8 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
         <WaveDecoration color={secondaryColor} />
       </div>
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Main Content Area */}
+          <div className="flex-1 flex flex-col overflow-hidden min-h-0">
         {/* Home Tab Content */}
         {selectedTab === "Home" && homeTab.enabled && (
           <div className="flex flex-col items-center justify-center p-8 text-center flex-1">
@@ -603,7 +612,7 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
             {isInActiveChat && messages.length > 0 ? (
               // Active chat overlay
               <>
-                <ScrollArea className="flex-1 p-4">
+            <ScrollArea className="flex-1 min-h-0 p-4 overscroll-contain">
                   <div className="space-y-4">
                     {messages.map((message) => (
                       <MessageBubble
@@ -691,7 +700,7 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
               </>
             ) : (
               // Chats list view
-              <div className="flex flex-col h-full overflow-hidden">
+              <div className="flex flex-col h-full overflow-hidden min-h-0">
                 <div className="flex-shrink-0 p-5 space-y-4">
                   <div className="flex items-center gap-2">
                     <MessageSquare className="w-5 h-5" style={{ color: primaryColor }} />
@@ -711,7 +720,7 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
                   </button>
                 </div>
                 
-                <ScrollArea className="flex-1 min-h-0">
+                <ScrollArea className="flex-1 min-h-0 overscroll-contain">
                   <div className="px-5 pb-5 space-y-4">
                     {conversationHistory.length === 0 ? (
                       <div className="text-center py-12">
