@@ -345,8 +345,7 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
     setClickedButtonMessageIds(new Set());
     widgetSessionManager.startNewConversation(agent.id);
 
-    // ALWAYS stay/go to Chats tab when starting a conversation
-    setSelectedTab("Chats");
+    // Navigate directly to active chat
     setIsInActiveChat(true);
     
     // Launch Voiceflow conversation to get opening message
