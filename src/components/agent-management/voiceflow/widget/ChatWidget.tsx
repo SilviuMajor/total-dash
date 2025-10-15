@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Send, Paperclip, X, Plus, MessageSquare, ChevronRight, ArrowLeft, MessageCircle, Clock, Bot, Home, User } from "lucide-react";
+import { Send, Paperclip, X, Plus, MessageSquare, ChevronRight, ArrowLeft, MessageCircle, Clock, Bot, Home, User, Phone } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
@@ -430,12 +430,30 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
     }
   };
 
-  const handleButtonAction = (action: string) => {
+  const handleButtonAction = (action: string, phoneNumber?: string) => {
     if (action === 'new_chat') {
       // Switch to Chats tab and start conversation there
       setSelectedTab("Chats");
       setIsInActiveChat(true);
       startNewChat();
+    } else if (action === 'call' && phoneNumber) {
+      // Trigger phone call
+      window.location.href = `tel:${phoneNumber}`;
+    } else if (action === 'custom') {
+      // Handle custom action
+      console.log('Custom action triggered');
+    }
+  };
+
+  const getButtonIcon = (action: string) => {
+    switch (action) {
+      case "new_chat":
+        return <MessageSquare className="w-5 h-5" style={{ color: primaryColor }} />;
+      case "call":
+        return <Phone className="w-5 h-5" style={{ color: primaryColor }} />;
+      case "custom":
+      default:
+        return <MessageSquare className="w-5 h-5" style={{ color: primaryColor }} />;
     }
   };
 
@@ -520,8 +538,8 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
       className="w-full h-full flex flex-col bg-background shadow-2xl overflow-hidden"
       style={{ fontFamily: appearance.font_family || 'Inter' }}
     >
-      {/* Header with gradient - Only show on non-Home tabs OR when in active chat */}
-      {(selectedTab !== "Home" || isInActiveChat) && (
+      {/* Header with gradient - Hide completely on Home tab */}
+      {selectedTab !== "Home" && (
         <div 
           className="relative"
           style={{ 
@@ -598,54 +616,43 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
                 background: `linear-gradient(160deg, ${primaryColor} 0%, ${primaryColor}dd 50%, transparent 100%)`,
               }}
             >
-              {/* Main Heading - Widget Title */}
-              <h2 
-                className="text-3xl font-bold mb-3" 
-                style={{ color: secondaryColor }}
-              >
-                {homeTab.title || appearance.widget_title || agent.name}
-              </h2>
-              
-              {/* Subtitle - Widget Description */}
-              <p 
-                className="text-lg font-medium leading-relaxed" 
-                style={{ color: secondaryColor, opacity: 0.95 }}
-              >
-                {homeTab.subtitle || "How can we help you today?"}
-              </p>
+              <div className="flex items-center gap-4">
+                {/* Logo on the left */}
+                {appearance.logo_url && (
+                  <div 
+                    className="w-16 h-16 rounded-full flex items-center justify-center overflow-hidden bg-white shadow-lg flex-shrink-0"
+                    style={{ borderColor: secondaryColor, borderWidth: '3px', borderStyle: 'solid' }}
+                  >
+                    <img 
+                      src={appearance.logo_url} 
+                      alt="Logo" 
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
+                
+                {/* Text content on the right */}
+                <div className="flex-1">
+                  <h2 
+                    className="text-3xl font-bold mb-2" 
+                    style={{ color: secondaryColor }}
+                  >
+                    {widgetSettings.title || agent.name}
+                  </h2>
+                  
+                  <p 
+                    className="text-lg font-medium leading-relaxed" 
+                    style={{ color: secondaryColor, opacity: 0.95 }}
+                  >
+                    {widgetSettings.description || "How can we help you today?"}
+                  </p>
+                </div>
+              </div>
             </div>
 
             {/* Content Section - overlaps gradient slightly */}
             <div className="flex-1 bg-background px-6 -mt-16 relative z-10">
               <div className="space-y-3">
-                {/* Recent Conversation Card (if exists) */}
-                {conversationHistory.length > 0 && (
-                  <div className="bg-muted/50 rounded-2xl p-4 mb-3">
-                    <h3 className="text-sm font-semibold mb-3 text-foreground/70">
-                      Continue recent conversation
-                    </h3>
-                    <button
-                      onClick={() => loadConversation(conversationHistory[0].conversationId)}
-                      className="w-full bg-background rounded-xl p-3 flex items-center justify-between hover:bg-accent transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                          <User className="w-5 h-5 text-muted-foreground" />
-                        </div>
-                        <div className="text-left">
-                          <p className="text-sm font-medium line-clamp-1">
-                            {conversationHistory[0].messages[conversationHistory[0].messages.length - 1]?.text || "Previous conversation"}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatDistanceToNow(new Date(conversationHistory[0].timestamp), { addSuffix: true })}
-                          </p>
-                        </div>
-                      </div>
-                      <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                    </button>
-                  </div>
-                )}
-
                 {/* Action Buttons */}
                 {homeTab.buttons
                   ?.filter((btn: any) => btn.enabled)
@@ -653,13 +660,13 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
                     <button
                       key={btn.id}
                       className="w-full p-4 rounded-2xl flex items-center justify-between transition-all hover:shadow-md group bg-muted/50 hover:bg-muted/70"
-                      onClick={() => handleButtonAction(btn.action)}
+                      onClick={() => handleButtonAction(btn.action, btn.phoneNumber)}
                     >
                       <div className="flex items-center gap-3">
                         <div 
                           className="w-10 h-10 rounded-full flex items-center justify-center bg-background"
                         >
-                          <MessageSquare className="w-5 h-5" style={{ color: primaryColor }} />
+                          {getButtonIcon(btn.action)}
                         </div>
                         <span className="font-semibold text-sm">{btn.text}</span>
                       </div>

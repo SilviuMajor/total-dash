@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, X, Plus, Trash2, Save, Check, Loader2 } from "lucide-react";
+import { Upload, X, Plus, Trash2, Save, Check, Loader2, Phone, MessageSquare, Link } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 interface WidgetAppearanceSettingsProps {
@@ -650,10 +650,35 @@ export function WidgetAppearanceSettings({ agent, onUpdate }: WidgetAppearanceSe
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="new_chat">New Chat</SelectItem>
-                              <SelectItem value="custom">Custom</SelectItem>
+                              <SelectItem value="new_chat">
+                                <div className="flex items-center gap-2">
+                                  <MessageSquare className="w-4 h-4" />
+                                  <span>New Chat</span>
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="call">
+                                <div className="flex items-center gap-2">
+                                  <Phone className="w-4 h-4" />
+                                  <span>Call</span>
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="custom">
+                                <div className="flex items-center gap-2">
+                                  <Link className="w-4 h-4" />
+                                  <span>Custom</span>
+                                </div>
+                              </SelectItem>
                             </SelectContent>
                           </Select>
+                          {btn.action === "call" && (
+                            <Input
+                              type="tel"
+                              placeholder="+1 (555) 123-4567"
+                              value={btn.phoneNumber || ""}
+                              onChange={(e) => updateHomeButton(btn.id, 'phoneNumber', e.target.value)}
+                              className="mt-2"
+                            />
+                          )}
                           <Button
                             variant="ghost"
                             size="icon"
