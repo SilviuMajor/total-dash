@@ -5,3 +5,6 @@ verify_jwt = true
 
 [functions.voiceflow-interact]
 verify_jwt = false
+
+[functions.voiceflow-kb]
+verify_jwt = true

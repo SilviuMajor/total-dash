@@ -184,8 +184,8 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
       }
     }
     
-    // Load conversation history
-    setConversationHistory(widgetSessionManager.getConversationHistory(agent.id));
+    // Load conversation history (limit to 5 most recent)
+    setConversationHistory(widgetSessionManager.getConversationHistory(agent.id).slice(0, 5));
   }, [agent.id]);
 
   // Save conversation after each message

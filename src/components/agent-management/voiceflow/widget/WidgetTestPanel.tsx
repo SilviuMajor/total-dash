@@ -56,18 +56,8 @@ export function WidgetTestPanel({ agent, children }: WidgetTestPanelProps) {
             background: `linear-gradient(135deg, ${primaryColor} 0%, ${primaryColor}dd 100%)` 
           }}
         >
-          <div className="flex flex-col items-center justify-center gap-3" style={{ height: '160px' }}>
-            <MessageSquare className="h-6 w-6" />
-            <span 
-              className="
-                text-sm font-semibold tracking-wider uppercase
-                [writing-mode:vertical-lr] 
-                rotate-180
-              "
-              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-            >
-              Widget Test
-            </span>
+          <div className="flex items-center justify-center">
+            <MessageSquare className="h-7 w-7" />
           </div>
         </Button>
       </div>

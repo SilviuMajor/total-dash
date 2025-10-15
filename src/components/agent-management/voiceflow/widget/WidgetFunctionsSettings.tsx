@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Save, Check, Loader2 } from "lucide-react";
+import { Save, Check, Loader2, Trash2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface WidgetFunctionsSettingsProps {
   agent: {
@@ -33,7 +34,8 @@ export function WidgetFunctionsSettings({ agent, onUpdate }: WidgetFunctionsSett
       message_text_color: widgetSettings.functions?.message_text_color || "#000000",
       message_background_color: widgetSettings.functions?.message_background_color || "#f3f4f6",
       font_size: widgetSettings.functions?.font_size || "14px",
-      typing_delay_ms: widgetSettings.functions?.typing_delay_ms || 500
+      typing_delay_ms: widgetSettings.functions?.typing_delay_ms || 500,
+      conversation_tags: widgetSettings.functions?.conversation_tags || []
     }
   });
 
@@ -328,6 +330,164 @@ export function WidgetFunctionsSettings({ agent, onUpdate }: WidgetFunctionsSett
                 Delay between sequential messages (default: 500ms)
               </p>
             </div>
+          </div>
+        </div>
+
+        <Separator />
+
+        {/* Conversation Tags Configuration */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-lg font-semibold">Conversation Tags</h3>
+              <p className="text-sm text-muted-foreground">
+                Create tags that can be assigned to conversations
+              </p>
+            </div>
+            <Button
+              size="sm"
+              onClick={() => {
+                const newTag = {
+                  id: Date.now().toString(),
+                  label: "New Tag",
+                  color: "#6b7280",
+                  enabled: true
+                };
+                setFormData(prev => ({
+                  ...prev,
+                  functions: {
+                    ...prev.functions,
+                    conversation_tags: [...(prev.functions.conversation_tags || []), newTag]
+                  }
+                }));
+              }}
+            >
+              Add Tag
+            </Button>
+          </div>
+
+          <div className="space-y-3">
+            {(formData.functions.conversation_tags || []).map((tag: any, index: number) => (
+              <div key={tag.id} className="flex items-center gap-3 p-3 border rounded-lg">
+                <Switch
+                  checked={tag.enabled}
+                  onCheckedChange={(checked) => {
+                    const newTags = [...formData.functions.conversation_tags];
+                    newTags[index] = { ...newTags[index], enabled: checked };
+                    setFormData(prev => ({
+                      ...prev,
+                      functions: { ...prev.functions, conversation_tags: newTags }
+                    }));
+                  }}
+                />
+                
+                <Input
+                  value={tag.label}
+                  maxLength={15}
+                  placeholder="Tag name"
+                  onChange={(e) => {
+                    const newTags = [...formData.functions.conversation_tags];
+                    newTags[index] = { ...newTags[index], label: e.target.value };
+                    setFormData(prev => ({
+                      ...prev,
+                      functions: { ...prev.functions, conversation_tags: newTags }
+                    }));
+                  }}
+                  className="flex-1"
+                />
+                
+                <Select
+                  value={tag.color}
+                  onValueChange={(color) => {
+                    const newTags = [...formData.functions.conversation_tags];
+                    newTags[index] = { ...newTags[index], color };
+                    setFormData(prev => ({
+                      ...prev,
+                      functions: { ...prev.functions, conversation_tags: newTags }
+                    }));
+                  }}
+                >
+                  <SelectTrigger className="w-32">
+                    <SelectValue>
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: tag.color }} />
+                        <span className="text-sm">Color</span>
+                      </div>
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="#ef4444">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-red-500" />
+                        <span>Red</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="#f97316">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-orange-500" />
+                        <span>Orange</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="#eab308">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                        <span>Yellow</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="#22c55e">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-green-500" />
+                        <span>Green</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="#3b82f6">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-blue-500" />
+                        <span>Blue</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="#8b5cf6">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-purple-500" />
+                        <span>Purple</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="#ec4899">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-pink-500" />
+                        <span>Pink</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="#6b7280">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-gray-500" />
+                        <span>Gray</span>
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    const newTags = formData.functions.conversation_tags.filter((_: any, i: number) => i !== index);
+                    setFormData(prev => ({
+                      ...prev,
+                      functions: { ...prev.functions, conversation_tags: newTags }
+                    }));
+                  }}
+                >
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </div>
+            ))}
+            
+            {(!formData.functions.conversation_tags || formData.functions.conversation_tags.length === 0) && (
+              <div className="text-center py-8 text-muted-foreground border border-dashed rounded-lg">
+                No tags configured yet. Click "Add Tag" to create one.
+              </div>
+            )}
           </div>
         </div>
       </div>

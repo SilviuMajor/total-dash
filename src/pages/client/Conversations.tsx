@@ -15,6 +15,7 @@ import { MetricCard } from "@/components/MetricCard";
 import { MessageBubble } from "@/components/MessageBubble";
 import { formatDistanceToNow, format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 interface Conversation {
   id: string;
@@ -29,6 +30,8 @@ interface Conversation {
       user_email?: string;
       [key: string]: any;
     };
+    note?: string;
+    tags?: string[];
   };
 }
 
@@ -51,7 +54,10 @@ export default function Conversations() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [agentConfig, setAgentConfig] = useState<any>(null);
+  const [note, setNote] = useState("");
+  const [assignedTags, setAssignedTags] = useState<string[]>([]);
   const { selectedAgentId, agents } = useClientAgentContext();
+  const { toast } = useToast();
 
   useEffect(() => {
     if (selectedAgentId) {
@@ -78,6 +84,8 @@ export default function Conversations() {
   useEffect(() => {
     if (selectedConversation?.id) {
       loadTranscripts(selectedConversation.id);
+      setNote(selectedConversation.metadata?.note || "");
+      setAssignedTags(selectedConversation.metadata?.tags || []);
     }
   }, [selectedConversation]);
 
@@ -186,6 +194,81 @@ export default function Conversations() {
     }
   };
 
+  const saveNote = async () => {
+    if (!selectedConversation) return;
+
+    try {
+      const { error } = await supabase
+        .from('conversations')
+        .update({
+          metadata: {
+            ...selectedConversation.metadata,
+            note: note
+          }
+        })
+        .eq('id', selectedConversation.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Note saved successfully"
+      });
+
+      setConversations(prev => 
+        prev.map(c => c.id === selectedConversation.id 
+          ? { ...c, metadata: { ...c.metadata, note } }
+          : c
+        )
+      );
+    } catch (error) {
+      console.error('Error saving note:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save note",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const toggleTag = async (tagLabel: string) => {
+    if (!selectedConversation) return;
+
+    const newTags = assignedTags.includes(tagLabel)
+      ? assignedTags.filter(t => t !== tagLabel)
+      : [...assignedTags, tagLabel];
+
+    try {
+      const { error } = await supabase
+        .from('conversations')
+        .update({
+          metadata: {
+            ...selectedConversation.metadata,
+            tags: newTags
+          }
+        })
+        .eq('id', selectedConversation.id);
+
+      if (error) throw error;
+
+      setAssignedTags(newTags);
+
+      setConversations(prev => 
+        prev.map(c => c.id === selectedConversation.id 
+          ? { ...c, metadata: { ...c.metadata, tags: newTags } }
+          : c
+        )
+      );
+    } catch (error) {
+      console.error('Error toggling tag:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update tags",
+        variant: "destructive"
+      });
+    }
+  };
+
   if (agents.length === 0) {
     return <NoAgentsAssigned />;
   }
@@ -247,7 +330,7 @@ export default function Conversations() {
                     )}
                     onClick={() => setSelectedConversation(conv)}
                   >
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <p className="font-medium text-sm">
                         {conv.metadata?.variables?.user_name || conv.caller_phone || 'Unknown'}
                       </p>
@@ -259,6 +342,25 @@ export default function Conversations() {
                       <Badge variant={conv.status === 'active' ? 'default' : 'secondary'} className="text-xs">
                         {conv.status}
                       </Badge>
+                      {conv.metadata?.tags?.map((tag: string) => {
+                        const tagConfig = agentConfig?.widget_settings?.functions?.conversation_tags?.find(
+                          (t: any) => t.label === tag
+                        );
+                        return tagConfig ? (
+                          <Badge 
+                            key={tag} 
+                            variant="outline" 
+                            className="text-xs"
+                            style={{ 
+                              backgroundColor: `${tagConfig.color}20`,
+                              borderColor: tagConfig.color,
+                              color: tagConfig.color
+                            }}
+                          >
+                            {tag}
+                          </Badge>
+                        ) : null;
+                      })}
                     </div>
                     <p className="text-xs text-muted-foreground">
                       {formatDistanceToNow(new Date(conv.started_at))} ago
@@ -390,14 +492,41 @@ export default function Conversations() {
                 </div>
               )}
               
+              {/* Tags Section */}
               <div>
-                <Label className="mb-2 block">Actions</Label>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline" className="flex-1">Export</Button>
-                  <Button size="sm" variant="outline" className="flex-1">Delete</Button>
+                <Label className="mb-2 block">Tags</Label>
+                <div className="flex flex-wrap gap-2">
+                  {agentConfig?.widget_settings?.functions?.conversation_tags
+                    ?.filter((tag: any) => tag.enabled)
+                    .map((tag: any) => {
+                      const isAssigned = assignedTags.includes(tag.label);
+                      return (
+                        <Button
+                          key={tag.id}
+                          size="sm"
+                          variant={isAssigned ? "default" : "outline"}
+                          onClick={() => toggleTag(tag.label)}
+                          style={isAssigned ? {
+                            backgroundColor: tag.color,
+                            borderColor: tag.color,
+                            color: '#ffffff'
+                          } : {
+                            borderColor: tag.color,
+                            color: tag.color,
+                            backgroundColor: 'transparent'
+                          }}
+                        >
+                          {tag.label}
+                        </Button>
+                      );
+                    })}
+                  {(!agentConfig?.widget_settings?.functions?.conversation_tags?.length) && (
+                    <p className="text-sm text-muted-foreground">No tags configured</p>
+                  )}
                 </div>
               </div>
-              
+
+              {/* Settings toggles */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="intent-confidence">Intent Confidence</Label>
@@ -410,14 +539,19 @@ export default function Conversations() {
                 </div>
               </div>
               
+              {/* Notes Section */}
               <div>
                 <Label htmlFor="note" className="mb-2 block">Note</Label>
                 <Textarea 
                   id="note"
                   placeholder="Add a note about this conversation..."
                   className="min-h-[100px]"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
                 />
-                <Button size="sm" className="mt-2 w-full">Save Note</Button>
+                <Button size="sm" className="mt-2 w-full" onClick={saveNote}>
+                  Save Note
+                </Button>
               </div>
             </>
           ) : (
