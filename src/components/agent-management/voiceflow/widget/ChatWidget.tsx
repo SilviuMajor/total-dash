@@ -631,22 +631,22 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
                   </div>
                 )}
                 
-                {/* Text content on the right */}
-                <div className="flex-1">
-                  <h2 
-                    className="text-3xl font-bold mb-2" 
-                    style={{ color: secondaryColor }}
-                  >
-                    {widgetSettings.title || agent.name}
-                  </h2>
-                  
-                  <p 
-                    className="text-lg font-medium leading-relaxed" 
-                    style={{ color: secondaryColor, opacity: 0.95 }}
-                  >
-                    {widgetSettings.description || "How can we help you today?"}
-                  </p>
-                </div>
+            {/* Text content on the right */}
+            <div className="flex-1">
+              <h2 
+                className="text-3xl font-bold mb-2" 
+                style={{ color: secondaryColor }}
+              >
+                {homeTab.title || appearance.widget_title || agent.name}
+              </h2>
+              
+              <p 
+                className="text-lg font-medium leading-relaxed" 
+                style={{ color: secondaryColor, opacity: 0.95 }}
+              >
+                {homeTab.subtitle || "How can we help you today?"}
+              </p>
+            </div>
               </div>
             </div>
 

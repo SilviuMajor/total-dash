@@ -30,14 +30,14 @@ export function WidgetTestPanel({ agent, children }: WidgetTestPanelProps) {
   return (
     <div className="relative min-h-screen">
       {/* Main content wrapper */}
-      <div className={`transition-all duration-300 ${isPanelOpen ? 'mr-[350px]' : 'mr-0'}`}>
+      <div className={`transition-all duration-300 ${isPanelOpen ? 'mr-[403px]' : 'mr-0'}`}>
         {children}
       </div>
 
       {/* Vertical Tab Button - Fixed to viewport, always visible */}
       <div 
         className={`fixed top-1/2 -translate-y-1/2 transition-all duration-300 z-[100] ${
-          isPanelOpen ? 'right-[350px]' : 'right-0'
+          isPanelOpen ? 'right-[403px]' : 'right-0'
         }`}
       >
         <Button
@@ -75,7 +75,7 @@ export function WidgetTestPanel({ agent, children }: WidgetTestPanelProps) {
       {/* Sliding Panel - Fixed width pushing content */}
       <div 
         className={`
-          fixed top-0 right-0 h-screen w-[350px] bg-background border-l shadow-2xl 
+          fixed top-0 right-0 h-screen w-[403px] bg-background border-l shadow-2xl 
           transform transition-transform duration-300 z-[90] overflow-hidden
           ${isPanelOpen ? 'translate-x-0' : 'translate-x-full'}
         `}
