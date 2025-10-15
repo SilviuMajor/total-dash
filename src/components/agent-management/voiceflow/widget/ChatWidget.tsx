@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Send, Paperclip, X, Plus, MessageSquare, ChevronRight, ArrowLeft, MessageCircle, Clock, Bot, Home } from "lucide-react";
+import { Send, Paperclip, X, Plus, MessageSquare, ChevronRight, ArrowLeft, MessageCircle, Clock, Bot, Home, User } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
@@ -513,7 +513,7 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
     { key: 'Chats', enabled: chatsTab.enabled, icon: MessageSquare },
   ].filter(tab => tab.enabled);
 
-  const hasActiveChat = messages.length > 0 && (selectedTab !== "Chats" || isInActiveChat);
+  const hasActiveChat = isInActiveChat && messages.length > 0;
 
   return (
     <div 
@@ -575,32 +575,102 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
           <div className="flex-1 flex flex-col overflow-hidden min-h-0">
         {/* Home Tab Content */}
         {selectedTab === "Home" && homeTab.enabled && (
-          <div className="flex flex-col items-center justify-center p-8 text-center flex-1">
-            <h2 className="text-3xl font-bold mb-3" style={{ color: appearance.text_color || '#000000' }}>
-              {homeTab.title}
-            </h2>
-            <p className="text-muted-foreground mb-8 text-base">{homeTab.subtitle}</p>
-            
-            <div className="space-y-3 w-full px-4">
-              {homeTab.buttons
-                ?.filter((btn: any) => btn.enabled)
-                .map((btn: any) => (
-                  <button
-                    key={btn.id}
-                    className="w-full p-4 rounded-xl flex items-center justify-between transition-all hover:shadow-md group"
-                    style={{ 
-                      backgroundColor: `${primaryColor}15`,
-                      color: appearance.text_color || '#000000'
-                    }}
-                    onClick={() => handleButtonAction(btn.action)}
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {/* Greeting section - on gradient background */}
+            <div 
+              className="px-6 pt-4 pb-8"
+              style={{ 
+                background: `linear-gradient(135deg, ${primaryColor} 0%, ${primaryColor}dd 100%)`,
+              }}
+            >
+              {/* Avatar Group */}
+              <div className="flex items-center gap-2 mb-6">
+                {/* Main Logo */}
+                {appearance.logo_url && (
+                  <div 
+                    className="w-16 h-16 rounded-full flex items-center justify-center border-3 overflow-hidden bg-white shadow-lg"
+                    style={{ borderColor: secondaryColor }}
                   >
-                    <div className="flex items-center gap-3">
-                      <MessageSquare className="w-5 h-5" style={{ color: primaryColor }} />
-                      <span className="font-medium">{btn.text}</span>
+                    <img 
+                      src={appearance.logo_url} 
+                      alt="Logo" 
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
+                
+                {/* Divider */}
+                <div className="w-px h-12 bg-white/30 mx-1" />
+                
+                {/* Team Member Avatars - placeholder circles with online indicators */}
+                <div className="flex items-center -space-x-2">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="relative">
+                      <div 
+                        className="w-12 h-12 rounded-full bg-white/90 border-2 flex items-center justify-center shadow-md"
+                        style={{ borderColor: secondaryColor }}
+                      >
+                        <User className="w-6 h-6" style={{ color: primaryColor }} />
+                      </div>
+                      {/* Green online indicator */}
+                      <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white" />
                     </div>
-                    <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
-                  </button>
-                ))}
+                  ))}
+                </div>
+              </div>
+
+              {/* Greeting Text */}
+              <h2 
+                className="text-4xl font-bold mb-2" 
+                style={{ color: secondaryColor }}
+              >
+                {homeTab.title}
+              </h2>
+              <p 
+                className="text-lg font-medium" 
+                style={{ color: secondaryColor, opacity: 0.95 }}
+              >
+                {homeTab.subtitle}
+              </p>
+            </div>
+
+            {/* Wave decoration */}
+            <div className="relative -mt-1">
+              <WaveDecoration color={secondaryColor} />
+            </div>
+
+            {/* Button section - on white background */}
+            <div className="flex-1 bg-background px-6 pt-6">
+              <div className="space-y-3">
+                {homeTab.buttons
+                  ?.filter((btn: any) => btn.enabled)
+                  .map((btn: any) => (
+                    <button
+                      key={btn.id}
+                      className="w-full p-5 rounded-2xl flex items-center justify-between transition-all hover:shadow-lg group border"
+                      style={{ 
+                        backgroundColor: `${primaryColor}20`,
+                        borderColor: `${primaryColor}30`,
+                        color: appearance.text_color || '#000000'
+                      }}
+                      onClick={() => handleButtonAction(btn.action)}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div 
+                          className="w-10 h-10 rounded-full flex items-center justify-center"
+                          style={{ backgroundColor: `${primaryColor}30` }}
+                        >
+                          <MessageSquare className="w-5 h-5" style={{ color: primaryColor }} />
+                        </div>
+                        <span className="font-semibold text-base">{btn.text}</span>
+                      </div>
+                      <ChevronRight 
+                        className="w-6 h-6 group-hover:translate-x-1 transition-transform" 
+                        style={{ color: primaryColor }}
+                      />
+                    </button>
+                  ))}
+              </div>
             </div>
           </div>
         )}
