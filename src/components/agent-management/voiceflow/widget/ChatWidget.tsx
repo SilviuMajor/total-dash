@@ -520,153 +520,151 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
       className="w-full h-full flex flex-col bg-background shadow-2xl overflow-hidden"
       style={{ fontFamily: appearance.font_family || 'Inter' }}
     >
-      {/* Header with gradient */}
-      <div 
-        className="relative"
-        style={{ 
-          background: `linear-gradient(135deg, ${primaryColor} 0%, ${primaryColor}dd 100%)`,
-          color: secondaryColor
-        }}
-      >
-        <div className="p-5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {hasActiveChat && (
-              <Button 
-                variant="ghost" 
-                size="icon"
-                onClick={handleBackButton}
-                className="hover:bg-white/20 -ml-2"
-                style={{ color: secondaryColor }}
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            )}
-            {appearance.logo_url && (
-              <div 
-                className="w-11 h-11 rounded-full flex items-center justify-center border-2 overflow-hidden bg-white"
-                style={{ borderColor: `${secondaryColor}40` }}
-              >
-                <img 
-                  src={appearance.logo_url} 
-                  alt="Logo" 
-                  className="w-full h-full object-cover"
-                />
+      {/* Header with gradient - Only show on non-Home tabs OR when in active chat */}
+      {(selectedTab !== "Home" || isInActiveChat) && (
+        <div 
+          className="relative"
+          style={{ 
+            background: `linear-gradient(135deg, ${primaryColor} 0%, ${primaryColor}dd 100%)`,
+            color: secondaryColor
+          }}
+        >
+          <div className="p-5 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {hasActiveChat && (
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={handleBackButton}
+                  className="hover:bg-white/20 -ml-2"
+                  style={{ color: secondaryColor }}
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+              )}
+              {appearance.logo_url && (
+                <div 
+                  className="w-11 h-11 rounded-full flex items-center justify-center border-2 overflow-hidden bg-white"
+                  style={{ borderColor: `${secondaryColor}40` }}
+                >
+                  <img 
+                    src={appearance.logo_url} 
+                    alt="Logo" 
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
+              <div>
+                <h3 className="font-semibold text-base">{widgetSettings.title || "Chat with us"}</h3>
+                <p className="text-xs opacity-90">{widgetSettings.description || "We're here to help"}</p>
               </div>
-            )}
-            <div>
-              <h3 className="font-semibold text-base">{widgetSettings.title || "Chat with us"}</h3>
-              <p className="text-xs opacity-90">{widgetSettings.description || "We're here to help"}</p>
             </div>
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={onClose}
+              className="hover:bg-white/20"
+              style={{ color: secondaryColor }}
+            >
+              <X className="h-5 w-5" />
+            </Button>
           </div>
-          <Button 
-            variant="ghost" 
-            size="icon"
-            onClick={onClose}
-            className="hover:bg-white/20"
-            style={{ color: secondaryColor }}
-          >
-            <X className="h-5 w-5" />
-          </Button>
+          <WaveDecoration color={secondaryColor} />
         </div>
-        <WaveDecoration color={secondaryColor} />
-      </div>
+      )}
+
+      {/* Floating close button - only on Home tab when no active chat */}
+      {selectedTab === "Home" && !isInActiveChat && (
+        <Button
+          onClick={onClose}
+          variant="ghost"
+          size="icon"
+          className="absolute top-4 right-4 z-50 w-10 h-10 p-0 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm border-none shadow-lg"
+          style={{ color: secondaryColor }}
+        >
+          <X className="w-5 h-5" />
+        </Button>
+      )}
 
           {/* Main Content Area */}
           <div className="flex-1 flex flex-col overflow-hidden min-h-0">
         {/* Home Tab Content */}
         {selectedTab === "Home" && homeTab.enabled && (
-          <div className="flex-1 flex flex-col overflow-hidden">
-            {/* Greeting section - on gradient background */}
+          <div className="flex-1 flex flex-col overflow-hidden relative">
+            {/* Gradient Header Section - extends to ~50% with fade */}
             <div 
-              className="px-6 pt-4 pb-8"
+              className="relative px-6 pt-12 pb-24"
               style={{ 
-                background: `linear-gradient(135deg, ${primaryColor} 0%, ${primaryColor}dd 100%)`,
+                background: `linear-gradient(160deg, ${primaryColor} 0%, ${primaryColor}dd 50%, transparent 100%)`,
               }}
             >
-              {/* Avatar Group */}
-              <div className="flex items-center gap-2 mb-6">
-                {/* Main Logo */}
-                {appearance.logo_url && (
-                  <div 
-                    className="w-16 h-16 rounded-full flex items-center justify-center border-3 overflow-hidden bg-white shadow-lg"
-                    style={{ borderColor: secondaryColor }}
-                  >
-                    <img 
-                      src={appearance.logo_url} 
-                      alt="Logo" 
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                )}
-                
-                {/* Divider */}
-                <div className="w-px h-12 bg-white/30 mx-1" />
-                
-                {/* Team Member Avatars - placeholder circles with online indicators */}
-                <div className="flex items-center -space-x-2">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="relative">
-                      <div 
-                        className="w-12 h-12 rounded-full bg-white/90 border-2 flex items-center justify-center shadow-md"
-                        style={{ borderColor: secondaryColor }}
-                      >
-                        <User className="w-6 h-6" style={{ color: primaryColor }} />
-                      </div>
-                      {/* Green online indicator */}
-                      <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Greeting Text */}
+              {/* Main Heading - Widget Title */}
               <h2 
-                className="text-4xl font-bold mb-2" 
+                className="text-3xl font-bold mb-3" 
                 style={{ color: secondaryColor }}
               >
-                {homeTab.title}
+                {homeTab.title || appearance.widget_title || agent.name}
               </h2>
+              
+              {/* Subtitle - Widget Description */}
               <p 
-                className="text-lg font-medium" 
+                className="text-lg font-medium leading-relaxed" 
                 style={{ color: secondaryColor, opacity: 0.95 }}
               >
-                {homeTab.subtitle}
+                {homeTab.subtitle || "How can we help you today?"}
               </p>
             </div>
 
-            {/* Wave decoration */}
-            <div className="relative -mt-1">
-              <WaveDecoration color={secondaryColor} />
-            </div>
-
-            {/* Button section - on white background */}
-            <div className="flex-1 bg-background px-6 pt-6">
+            {/* Content Section - overlaps gradient slightly */}
+            <div className="flex-1 bg-background px-6 -mt-16 relative z-10">
               <div className="space-y-3">
+                {/* Recent Conversation Card (if exists) */}
+                {conversationHistory.length > 0 && (
+                  <div className="bg-muted/50 rounded-2xl p-4 mb-3">
+                    <h3 className="text-sm font-semibold mb-3 text-foreground/70">
+                      Continue recent conversation
+                    </h3>
+                    <button
+                      onClick={() => loadConversation(conversationHistory[0].conversationId)}
+                      className="w-full bg-background rounded-xl p-3 flex items-center justify-between hover:bg-accent transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                          <User className="w-5 h-5 text-muted-foreground" />
+                        </div>
+                        <div className="text-left">
+                          <p className="text-sm font-medium line-clamp-1">
+                            {conversationHistory[0].messages[conversationHistory[0].messages.length - 1]?.text || "Previous conversation"}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatDistanceToNow(new Date(conversationHistory[0].timestamp), { addSuffix: true })}
+                          </p>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                    </button>
+                  </div>
+                )}
+
+                {/* Action Buttons */}
                 {homeTab.buttons
                   ?.filter((btn: any) => btn.enabled)
                   .map((btn: any) => (
                     <button
                       key={btn.id}
-                      className="w-full p-5 rounded-2xl flex items-center justify-between transition-all hover:shadow-lg group border"
-                      style={{ 
-                        backgroundColor: `${primaryColor}20`,
-                        borderColor: `${primaryColor}30`,
-                        color: appearance.text_color || '#000000'
-                      }}
+                      className="w-full p-4 rounded-2xl flex items-center justify-between transition-all hover:shadow-md group bg-muted/50 hover:bg-muted/70"
                       onClick={() => handleButtonAction(btn.action)}
                     >
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-3">
                         <div 
-                          className="w-10 h-10 rounded-full flex items-center justify-center"
-                          style={{ backgroundColor: `${primaryColor}30` }}
+                          className="w-10 h-10 rounded-full flex items-center justify-center bg-background"
                         >
                           <MessageSquare className="w-5 h-5" style={{ color: primaryColor }} />
                         </div>
-                        <span className="font-semibold text-base">{btn.text}</span>
+                        <span className="font-semibold text-sm">{btn.text}</span>
                       </div>
                       <ChevronRight 
-                        className="w-6 h-6 group-hover:translate-x-1 transition-transform" 
-                        style={{ color: primaryColor }}
+                        className="w-5 h-5 group-hover:translate-x-1 transition-transform text-muted-foreground" 
                       />
                     </button>
                   ))}
