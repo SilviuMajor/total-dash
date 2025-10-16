@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Bot, Activity, Copy, Loader2 } from "lucide-react";
+import { Plus, Bot, Activity, Copy, Loader2, Settings } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -270,14 +270,15 @@ export default function AdminAgents() {
 
                 {/* Action Buttons */}
                   <div className="flex gap-2 flex-shrink-0">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="border-border/50"
-                      onClick={() => navigate(`/admin/agents/${agent.id}`)}
-                    >
-                      View Details
-                    </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-border/50 gap-2"
+                    onClick={() => navigate(`/admin/agents/${agent.id}`)}
+                  >
+                    <Settings className="h-4 w-4" />
+                    Manage Agent
+                  </Button>
                     <Button 
                       variant="outline" 
                       size="sm" 

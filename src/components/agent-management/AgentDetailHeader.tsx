@@ -1,11 +1,13 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Link } from "react-router-dom";
-import { Building2, Activity } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Link, useNavigate } from "react-router-dom";
+import { Building2, Activity, Trash2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
+import { AgentDeletionDialog } from "./AgentDeletionDialog";
 
 interface Agent {
   id: string;
@@ -53,7 +55,9 @@ const getStatusLabel = (status: string) => {
 
 export function AgentDetailHeader({ agent, assignedClients, onUpdate }: AgentDetailHeaderProps) {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   useEffect(() => {
     const checkAdmin = async () => {
@@ -95,12 +99,19 @@ export function AgentDetailHeader({ agent, assignedClients, onUpdate }: AgentDet
     }
   };
 
+  const handleDeleteSuccess = () => {
+    toast({
+      title: "Success",
+      description: "Agent deleted successfully",
+    });
+    navigate("/admin/agents");
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-2">
-            <h1 className="text-3xl font-bold">{agent.name}</h1>
             <Badge variant="outline" className="capitalize">
               {agent.provider}
             </Badge>
@@ -128,9 +139,27 @@ export function AgentDetailHeader({ agent, assignedClients, onUpdate }: AgentDet
                 <SelectItem value="in_development">In Development</SelectItem>
               </SelectContent>
             </Select>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setDeleteDialogOpen(true)}
+              className="gap-2 border-destructive/50 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete Agent
+            </Button>
           </div>
         )}
       </div>
+
+      <AgentDeletionDialog
+        agentId={agent.id}
+        agentName={agent.name}
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onSuccess={handleDeleteSuccess}
+      />
     </div>
   );
 }

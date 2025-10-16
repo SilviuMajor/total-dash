@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useClientAgentContext } from "@/hooks/useClientAgentContext";
 import { NoAgentsAssigned } from "@/components/NoAgentsAssigned";
+import { ClientAgentSelector } from "@/components/ClientAgentSelector";
 import { MetricCard } from "@/components/MetricCard";
 import { MessageBubble } from "@/components/MessageBubble";
 import { formatDistanceToNow, format } from "date-fns";
@@ -352,41 +353,21 @@ export default function Conversations() {
   });
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden p-6 space-y-6">
-      <div className="flex-shrink-0">
-        <h1 className="text-4xl font-bold text-foreground">Conversations</h1>
-        <p className="text-muted-foreground">Monitor and review conversations with your AI agent.</p>
+    <div className="flex flex-col h-[calc(100vh-4rem)] p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="flex-1">
+          <h1 className="text-3xl font-bold mb-2">Conversations</h1>
+          <p className="text-muted-foreground">
+            Review and manage your agent conversations
+          </p>
+        </div>
+        <ClientAgentSelector />
       </div>
 
-      {selectedAgentId && (
-        <div className="flex-shrink-0 grid grid-cols-4 gap-6">
-          <MetricCard
-            title="Total Calls"
-            value={stats.totalCalls.toString()}
-            icon={Phone}
-          />
-          <MetricCard
-            title="Avg Duration"
-            value={`${stats.avgDuration}m`}
-            icon={Clock}
-          />
-          <MetricCard
-            title="Active Now"
-            value={stats.activeNow.toString()}
-            icon={MessageSquare}
-          />
-          <MetricCard
-            title="Success Rate"
-            value="94%"
-            icon={CheckCircle}
-          />
-        </div>
-      )}
-
-      <div className="flex-1 min-h-0 overflow-hidden">
+      <div className="flex-1 min-h-0">
         <div className="grid grid-cols-12 h-full">
           {/* Left Panel: Conversation List */}
-          <Card className="col-span-3 p-0 flex flex-col rounded-r-none border-r-0">
+          <Card className="col-span-3 p-0 flex flex-col rounded-r-none border-r-0 h-full">
           <div className="p-4 border-b border-border">
             <Input 
               placeholder="Search conversations..." 
@@ -432,7 +413,7 @@ export default function Conversations() {
                           conv.status === 'owned' && "bg-yellow-500 text-white hover:bg-yellow-600"
                         )}
                       >
-                        {conv.status === 'owned' ? 'Owned' : conv.status}
+                        {conv.status === 'owned' ? 'Owned' : conv.status.charAt(0).toUpperCase() + conv.status.slice(1)}
                       </Badge>
                       {conv.metadata?.tags?.map((tag: string) => {
                         const tagConfig = agentConfig?.widget_settings?.functions?.conversation_tags?.find(
@@ -465,7 +446,7 @@ export default function Conversations() {
         </Card>
 
           {/* Middle Panel: Transcript */}
-          <Card className="col-span-6 flex flex-col rounded-none border-r-0">
+          <Card className="col-span-6 flex flex-col rounded-none border-r-0 h-full">
           {selectedConversation ? (
             <>
               <div className="p-4 border-b border-border">
@@ -528,7 +509,7 @@ export default function Conversations() {
         </Card>
 
           {/* Right Panel: Details */}
-          <Card className="col-span-3 p-6 flex flex-col rounded-l-none overflow-y-auto space-y-4">
+          <Card className="col-span-3 p-6 flex flex-col rounded-l-none h-full overflow-y-auto space-y-4">
           {selectedConversation ? (
             <>
               {selectedConversation?.metadata?.variables && 

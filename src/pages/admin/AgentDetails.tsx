@@ -131,30 +131,17 @@ export default function AgentDetails() {
   const content = (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto p-8 space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 mb-6">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => navigate("/admin/agents")}
-            className="gap-2"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to Agents
           </Button>
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink asChild>
-                  <Link to="/admin/agents">Agents</Link>
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage>{agent.name}</BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
+          <div>
+            <h1 className="text-3xl font-bold mb-1">{agent.name}</h1>
+            <p className="text-muted-foreground">Agent Management Dashboard</p>
           </div>
         </div>
 
