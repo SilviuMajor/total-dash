@@ -367,9 +367,10 @@ export default function Conversations() {
       </div>
 
       <div className="flex-1 min-h-0 overflow-hidden">
-        <div className="grid grid-cols-12 gap-6 h-full">
-          {/* Left Panel: Conversation List */}
-          <Card className="col-span-3 p-0 flex flex-col rounded-r-none border-r-0 h-full">
+        <Card className="h-full overflow-hidden">
+          <div className="grid grid-cols-12 h-full">
+            {/* Left Panel: Conversation List */}
+            <div className="col-span-3 flex flex-col border-r border-border h-full">
           <div className="p-4 border-b border-border">
             <Input 
               placeholder="Search conversations..." 
@@ -445,10 +446,10 @@ export default function Conversations() {
               )}
             </div>
           </ScrollArea>
-        </Card>
+            </div>
 
-          {/* Middle Panel: Transcript */}
-          <Card className="col-span-6 flex flex-col rounded-none border-r-0 h-full">
+            {/* Middle Panel: Transcript */}
+            <div className="col-span-6 flex flex-col border-r border-border h-full">
           {selectedConversation ? (
             <>
               <div className="p-4 border-b border-border">
@@ -508,10 +509,10 @@ export default function Conversations() {
               Select a conversation to view details
             </div>
           )}
-        </Card>
+            </div>
 
-          {/* Right Panel: Details */}
-          <Card className="col-span-3 p-6 flex flex-col rounded-l-none h-full overflow-y-auto space-y-4">
+            {/* Right Panel: Details */}
+            <div className="col-span-3 p-6 flex flex-col h-full overflow-y-auto space-y-4">
           {selectedConversation ? (
             <>
               {selectedConversation?.metadata?.variables && 
@@ -655,8 +656,9 @@ export default function Conversations() {
               Select a conversation to view options
             </div>
           )}
-          </Card>
-        </div>
+            </div>
+          </div>
+        </Card>
       </div>
     </div>
   );
