@@ -353,19 +353,21 @@ export default function Conversations() {
   });
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold mb-2">Conversations</h1>
-          <p className="text-muted-foreground">
-            Review and manage your agent conversations
-          </p>
+    <div className="flex flex-col h-[calc(100vh-4rem)] p-6">
+      <div className="flex-shrink-0 mb-6">
+        <div className="flex items-center justify-between">
+          <div className="flex-1">
+            <h1 className="text-3xl font-bold mb-2">Conversations</h1>
+            <p className="text-muted-foreground">
+              Review and manage your agent conversations
+            </p>
+          </div>
+          <ClientAgentSelector />
         </div>
-        <ClientAgentSelector />
       </div>
 
-      <div className="flex-1 min-h-0">
-        <div className="grid grid-cols-12 h-full">
+      <div className="flex-1 min-h-0 overflow-hidden">
+        <div className="grid grid-cols-12 gap-6 h-full">
           {/* Left Panel: Conversation List */}
           <Card className="col-span-3 p-0 flex flex-col rounded-r-none border-r-0 h-full">
           <div className="p-4 border-b border-border">

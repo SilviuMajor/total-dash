@@ -131,16 +131,17 @@ export default function AgentDetails() {
   const content = (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto p-8 space-y-6">
-        <div className="flex items-center gap-4 mb-6">
+        <div className="flex items-center gap-4">
           <Button
-            variant="ghost"
-            size="sm"
+            variant="outline"
+            size="icon"
             onClick={() => navigate("/admin/agents")}
+            className="border-border/50"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="w-4 h-4" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold mb-1">{agent.name}</h1>
+            <h1 className="text-4xl font-bold text-foreground">{agent.name}</h1>
             <p className="text-muted-foreground">Agent Management Dashboard</p>
           </div>
         </div>
