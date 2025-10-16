@@ -42,7 +42,8 @@ export function AgentDeletionDialog({
     onOpenChange(false);
   };
 
-  const handleWarningConfirm = () => {
+  const handleWarningConfirm = (e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent dialog from closing
     setStep("password");
   };
 
@@ -257,12 +258,15 @@ export function AgentDeletionDialog({
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleWarningConfirm}
-                className="bg-destructive hover:bg-destructive/90"
-              >
-                Continue
-              </AlertDialogAction>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleWarningConfirm(e);
+              }}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              Continue
+            </AlertDialogAction>
             </AlertDialogFooter>
           </>
         ) : (

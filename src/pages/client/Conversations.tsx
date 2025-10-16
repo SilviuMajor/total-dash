@@ -362,7 +362,6 @@ export default function Conversations() {
               Review and manage your agent conversations
             </p>
           </div>
-          <ClientAgentSelector />
         </div>
       </div>
 
