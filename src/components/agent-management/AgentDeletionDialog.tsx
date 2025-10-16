@@ -127,6 +127,78 @@ export function AgentDeletionDialog({
       }
       console.log("Agent assignments deleted");
 
+      // Delete client user agent permissions
+      const { error: permissionsError } = await supabase
+        .from("client_user_agent_permissions")
+        .delete()
+        .eq("agent_id", agentId);
+
+      if (permissionsError) {
+        console.error("Error deleting agent permissions:", permissionsError);
+        throw permissionsError;
+      }
+      console.log("Agent permissions deleted");
+
+      // Delete agent update logs
+      const { error: logsError } = await supabase
+        .from("agent_update_logs")
+        .delete()
+        .eq("agent_id", agentId);
+
+      if (logsError) {
+        console.error("Error deleting update logs:", logsError);
+        throw logsError;
+      }
+      console.log("Update logs deleted");
+
+      // Delete agent integrations
+      const { error: integrationsError } = await supabase
+        .from("agent_integrations")
+        .delete()
+        .eq("agent_id", agentId);
+
+      if (integrationsError) {
+        console.error("Error deleting integrations:", integrationsError);
+        throw integrationsError;
+      }
+      console.log("Integrations deleted");
+
+      // Delete agent workflows
+      const { error: workflowsError } = await supabase
+        .from("agent_workflows")
+        .delete()
+        .eq("agent_id", agentId);
+
+      if (workflowsError) {
+        console.error("Error deleting workflows:", workflowsError);
+        throw workflowsError;
+      }
+      console.log("Workflows deleted");
+
+      // Delete agent workflow categories
+      const { error: categoriesError } = await supabase
+        .from("agent_workflow_categories")
+        .delete()
+        .eq("agent_id", agentId);
+
+      if (categoriesError) {
+        console.error("Error deleting workflow categories:", categoriesError);
+        throw categoriesError;
+      }
+      console.log("Workflow categories deleted");
+
+      // Delete agent spec sections
+      const { error: specsError } = await supabase
+        .from("agent_spec_sections")
+        .delete()
+        .eq("agent_id", agentId);
+
+      if (specsError) {
+        console.error("Error deleting spec sections:", specsError);
+        throw specsError;
+      }
+      console.log("Spec sections deleted");
+
       // Delete the agent
       const { error: deleteError } = await supabase
         .from("agents")
@@ -158,7 +230,7 @@ export function AgentDeletionDialog({
 
   return (
     <AlertDialog open={open} onOpenChange={handleClose}>
-      <AlertDialogContent>
+      <AlertDialogContent className="z-[100]">
         {step === "warning" ? (
           <>
             <AlertDialogHeader>
