@@ -30,9 +30,22 @@ export function VoiceflowSettings({ agent, onUpdate }: VoiceflowSettingsProps) {
     api_key: agent.config?.api_key || "",
     project_id: agent.config?.project_id || "",
   });
-  const [customVariables, setCustomVariables] = useState<string[]>(
-    agent.config?.custom_tracked_variables || []
-  );
+  const [customVariables, setCustomVariables] = useState<Array<{
+    voiceflow_name: string;
+    display_name: string;
+  }>>(() => {
+    const vars = agent.config?.custom_tracked_variables || [];
+    
+    // If it's the old format (array of strings), convert to new format
+    if (vars.length > 0 && typeof vars[0] === 'string') {
+      return vars.map((varName: string) => ({
+        voiceflow_name: varName,
+        display_name: varName.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())
+      }));
+    }
+    
+    return vars;
+  });
 
   useEffect(() => {
     const checkAdmin = async () => {
@@ -61,7 +74,9 @@ export function VoiceflowSettings({ agent, onUpdate }: VoiceflowSettingsProps) {
             ...agent.config,
             api_key: formData.api_key,
             project_id: formData.project_id,
-            custom_tracked_variables: customVariables.filter(v => v.trim()),
+            custom_tracked_variables: customVariables.filter(v => 
+              v.voiceflow_name.trim() && v.display_name.trim()
+            ),
           },
         })
         .eq("id", agent.id);
@@ -86,16 +101,16 @@ export function VoiceflowSettings({ agent, onUpdate }: VoiceflowSettingsProps) {
   };
 
   const addCustomVariable = () => {
-    setCustomVariables([...customVariables, ""]);
+    setCustomVariables([...customVariables, { voiceflow_name: '', display_name: '' }]);
   };
 
   const removeCustomVariable = (index: number) => {
     setCustomVariables(customVariables.filter((_, i) => i !== index));
   };
 
-  const updateCustomVariable = (index: number, value: string) => {
+  const updateCustomVariable = (index: number, field: 'voiceflow_name' | 'display_name', value: string) => {
     const updated = [...customVariables];
-    updated[index] = value;
+    updated[index] = { ...updated[index], [field]: value };
     setCustomVariables(updated);
   };
 
@@ -237,23 +252,31 @@ export function VoiceflowSettings({ agent, onUpdate }: VoiceflowSettingsProps) {
               <div>
                 <h4 className="text-sm font-semibold mb-1">Custom Variables (Optional)</h4>
                 <p className="text-xs text-muted-foreground">
-                  Add additional Voiceflow variable names you want to track and display in conversation details.
+                  Add additional Voiceflow variables to track and customize how they display in the dashboard.
                 </p>
               </div>
               
               <div className="space-y-2">
-                {customVariables.map((varName, index) => (
+                {customVariables.map((variable, index) => (
                   <div key={index} className="flex gap-2">
-                    <Input 
-                      value={varName}
-                      onChange={(e) => updateCustomVariable(index, e.target.value)}
-                      placeholder="e.g., phone_number, company_name"
-                      className="font-mono text-sm flex-1"
-                    />
+                    <div className="flex-1 space-y-2">
+                      <Input 
+                        value={variable.voiceflow_name}
+                        onChange={(e) => updateCustomVariable(index, 'voiceflow_name', e.target.value)}
+                        placeholder="Voiceflow variable name (e.g., phone_number)"
+                        className="font-mono text-sm"
+                      />
+                      <Input 
+                        value={variable.display_name}
+                        onChange={(e) => updateCustomVariable(index, 'display_name', e.target.value)}
+                        placeholder="Display name (e.g., Phone Number)"
+                      />
+                    </div>
                     <Button 
                       size="icon" 
                       variant="ghost"
                       onClick={() => removeCustomVariable(index)}
+                      className="self-start"
                     >
                       <X className="h-4 w-4" />
                     </Button>
@@ -269,6 +292,16 @@ export function VoiceflowSettings({ agent, onUpdate }: VoiceflowSettingsProps) {
                   <Plus className="h-4 w-4 mr-2" />
                   Add Custom Variable
                 </Button>
+              </div>
+
+              <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-950/20 rounded border border-blue-200 dark:border-blue-800">
+                <p className="text-xs text-blue-900 dark:text-blue-100">
+                  <strong>💡 How it works:</strong>
+                  <br />
+                  • <strong>Voiceflow variable name:</strong> The exact variable name in your Voiceflow agent (e.g., <code className="px-1 py-0.5 bg-blue-100 dark:bg-blue-900 rounded font-mono">phone_number</code>)
+                  <br />
+                  • <strong>Display name:</strong> How it appears in your dashboard (e.g., "Phone Number")
+                </p>
               </div>
             </div>
           </div>

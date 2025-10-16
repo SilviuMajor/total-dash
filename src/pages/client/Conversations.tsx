@@ -352,17 +352,41 @@ export default function Conversations() {
   });
 
   return (
-    <div className="space-y-6">
-      <div>
+    <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden p-6 space-y-6">
+      <div className="flex-shrink-0">
         <h1 className="text-4xl font-bold text-foreground">Conversations</h1>
         <p className="text-muted-foreground">Monitor and review conversations with your AI agent.</p>
       </div>
 
+      {selectedAgentId && (
+        <div className="flex-shrink-0 grid grid-cols-4 gap-6">
+          <MetricCard
+            title="Total Calls"
+            value={stats.totalCalls.toString()}
+            icon={Phone}
+          />
+          <MetricCard
+            title="Avg Duration"
+            value={`${stats.avgDuration}m`}
+            icon={Clock}
+          />
+          <MetricCard
+            title="Active Now"
+            value={stats.activeNow.toString()}
+            icon={MessageSquare}
+          />
+          <MetricCard
+            title="Success Rate"
+            value="94%"
+            icon={CheckCircle}
+          />
+        </div>
+      )}
 
-      <div className="flex flex-1 min-h-0">
-        <div className="grid grid-cols-12 gap-6 flex-1">
-        {/* Left Panel: Conversation List */}
-        <Card className="col-span-3 p-0 flex flex-col">
+      <div className="flex-1 min-h-0 overflow-hidden">
+        <div className="grid grid-cols-12 h-full">
+          {/* Left Panel: Conversation List */}
+          <Card className="col-span-3 p-0 flex flex-col rounded-r-none border-r-0">
           <div className="p-4 border-b border-border">
             <Input 
               placeholder="Search conversations..." 
@@ -401,8 +425,14 @@ export default function Conversations() {
                           🧪 Test
                         </Badge>
                       )}
-                      <Badge variant={conv.status === 'active' ? 'default' : 'secondary'} className="text-xs">
-                        {conv.status}
+                      <Badge 
+                        variant={conv.status === 'active' ? 'default' : 'secondary'} 
+                        className={cn(
+                          "text-xs",
+                          conv.status === 'owned' && "bg-yellow-500 text-white hover:bg-yellow-600"
+                        )}
+                      >
+                        {conv.status === 'owned' ? 'Owned' : conv.status}
                       </Badge>
                       {conv.metadata?.tags?.map((tag: string) => {
                         const tagConfig = agentConfig?.widget_settings?.functions?.conversation_tags?.find(
@@ -434,8 +464,8 @@ export default function Conversations() {
           </ScrollArea>
         </Card>
 
-        {/* Middle Panel: Transcript */}
-        <Card className="col-span-6 flex flex-col">
+          {/* Middle Panel: Transcript */}
+          <Card className="col-span-6 flex flex-col rounded-none border-r-0">
           {selectedConversation ? (
             <>
               <div className="p-4 border-b border-border">
@@ -497,8 +527,8 @@ export default function Conversations() {
           )}
         </Card>
 
-        {/* Right Panel: Details */}
-        <Card className="col-span-3 p-6 flex flex-col overflow-y-auto">
+          {/* Right Panel: Details */}
+          <Card className="col-span-3 p-6 flex flex-col rounded-l-none overflow-y-auto space-y-4">
           {selectedConversation ? (
             <>
               {selectedConversation?.metadata?.variables && 
@@ -506,13 +536,10 @@ export default function Conversations() {
                 <div>
                   <Label className="mb-3 block font-semibold">Captured Information</Label>
                   
-                  {/* Standard Variables */}
-                  <div className="space-y-2 p-3 bg-muted rounded-lg mb-3">
-                    <div className="text-xs font-medium text-muted-foreground uppercase mb-2">
-                      Customer Details
-                    </div>
-                    
+                  {/* Unified list - standard and custom variables merged */}
+                  <div className="space-y-2 p-3 bg-muted rounded-lg">
                     <div className="space-y-2">
+                      {/* Standard Variables */}
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Name:</span>
                         <span className={`font-medium ${!selectedConversation.metadata.variables.user_name ? 'text-muted-foreground italic' : ''}`}>
@@ -526,31 +553,28 @@ export default function Conversations() {
                           {selectedConversation.metadata.variables.user_email || 'Not captured yet'}
                         </span>
                       </div>
-                    </div>
-                  </div>
-                  
-                  {/* Custom Variables */}
-                  {agentConfig?.custom_tracked_variables?.length > 0 && (
-                    <div className="space-y-2 p-3 bg-muted rounded-lg">
-                      <div className="text-xs font-medium text-muted-foreground uppercase mb-2">
-                        Custom Fields
-                      </div>
                       
-                      <div className="space-y-2">
-                        {agentConfig.custom_tracked_variables.map((varName: string) => (
-                          <div key={varName} className="flex justify-between text-sm">
-                            <span className="text-muted-foreground capitalize">
-                              {varName.replace(/_/g, ' ')}:
+                      {/* Custom Variables - integrated into same list */}
+                      {agentConfig?.custom_tracked_variables?.map((variable: any) => {
+                        // Handle both old format (string) and new format (object)
+                        const voiceflowName = typeof variable === 'string' ? variable : variable.voiceflow_name;
+                        const displayName = typeof variable === 'string' 
+                          ? variable.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())
+                          : variable.display_name;
+                          
+                        return (
+                          <div key={voiceflowName} className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">
+                              {displayName}:
                             </span>
-                            <span className={`font-medium ${!selectedConversation.metadata?.variables?.[varName] ? 'text-muted-foreground italic' : ''}`}>
-                              {selectedConversation.metadata?.variables?.[varName] || 'Not captured yet'}
+                            <span className={`font-medium ${!selectedConversation.metadata?.variables?.[voiceflowName] ? 'text-muted-foreground italic' : ''}`}>
+                              {selectedConversation.metadata?.variables?.[voiceflowName] || 'Not captured yet'}
                             </span>
                           </div>
-                        ))}
-                      </div>
+                        );
+                      })}
                     </div>
-                  )}
-                  
+                  </div>
                 </div>
               )}
               
@@ -572,10 +596,10 @@ export default function Conversations() {
                         <span>Active</span>
                       </div>
                     </SelectItem>
-                    <SelectItem value="in progress">
+                    <SelectItem value="owned">
                       <div className="flex items-center gap-2">
                         <div className="w-2 h-2 rounded-full bg-yellow-500" />
-                        <span>In Progress</span>
+                        <span>Owned</span>
                       </div>
                     </SelectItem>
                     <SelectItem value="resolved">
@@ -648,7 +672,7 @@ export default function Conversations() {
               Select a conversation to view options
             </div>
           )}
-        </Card>
+          </Card>
         </div>
       </div>
     </div>
