@@ -353,7 +353,7 @@ export default function Conversations() {
   });
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] p-6">
+    <div className="flex flex-col h-full">
       <div className="flex-shrink-0 mb-6">
         <div className="flex items-center justify-between">
           <div className="flex-1">

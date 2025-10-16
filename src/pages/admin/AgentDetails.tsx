@@ -129,55 +129,53 @@ export default function AgentDetails() {
   };
 
   const content = (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto p-8 space-y-6">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => navigate("/admin/agents")}
-            className="border-border/50"
-          >
-            <ArrowLeft className="w-4 h-4" />
-          </Button>
-          <div>
-            <h1 className="text-4xl font-bold text-foreground">{agent.name}</h1>
-            <p className="text-muted-foreground">Agent Management Dashboard</p>
-          </div>
+    <div className="space-y-8">
+      <div className="flex items-center gap-4">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => navigate("/admin/agents")}
+          className="border-border/50"
+        >
+          <ArrowLeft className="w-4 h-4" />
+        </Button>
+        <div>
+          <h1 className="text-4xl font-bold text-foreground">{agent.name}</h1>
+          <p className="text-muted-foreground">Agent Management Dashboard</p>
         </div>
-
-        <AgentDetailHeader agent={agent} assignedClients={assignedClients} onUpdate={loadAgentDetails} />
-
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="widget">Widget</TabsTrigger>
-            <TabsTrigger value="knowledge-base">Knowledge Base</TabsTrigger>
-            <TabsTrigger value="channels">Channels</TabsTrigger>
-            <TabsTrigger value="specs">Specs</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="widget" className="space-y-6">
-            {renderProviderContent("widget")}
-          </TabsContent>
-
-          <TabsContent value="knowledge-base" className="space-y-6">
-            {renderProviderContent("knowledge-base")}
-          </TabsContent>
-
-          <TabsContent value="channels" className="space-y-6">
-            {renderProviderContent("channels")}
-          </TabsContent>
-
-          <TabsContent value="specs" className="space-y-6">
-            <SpecsSettings agent={agent} />
-          </TabsContent>
-
-          <TabsContent value="settings" className="space-y-6">
-            {renderProviderContent("settings")}
-          </TabsContent>
-        </Tabs>
       </div>
+
+      <AgentDetailHeader agent={agent} assignedClients={assignedClients} onUpdate={loadAgentDetails} />
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="widget">Widget</TabsTrigger>
+          <TabsTrigger value="knowledge-base">Knowledge Base</TabsTrigger>
+          <TabsTrigger value="channels">Channels</TabsTrigger>
+          <TabsTrigger value="specs">Specs</TabsTrigger>
+          <TabsTrigger value="settings">Settings</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="widget" className="space-y-6">
+          {renderProviderContent("widget")}
+        </TabsContent>
+
+        <TabsContent value="knowledge-base" className="space-y-6">
+          {renderProviderContent("knowledge-base")}
+        </TabsContent>
+
+        <TabsContent value="channels" className="space-y-6">
+          {renderProviderContent("channels")}
+        </TabsContent>
+
+        <TabsContent value="specs" className="space-y-6">
+          <SpecsSettings agent={agent} />
+        </TabsContent>
+
+        <TabsContent value="settings" className="space-y-6">
+          {renderProviderContent("settings")}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 
