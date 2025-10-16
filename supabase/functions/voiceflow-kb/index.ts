@@ -99,11 +99,38 @@ serve(async (req) => {
       });
     }
 
+    if (action === 'upload-url') {
+      // Upload a URL to knowledge base
+      const { url, urlName } = await req.json();
+      
+      const response = await fetch('https://api.voiceflow.com/v1/knowledge-base/docs/upload', {
+        method: 'POST',
+        headers: {
+          'Authorization': voiceflowApiKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          data: {
+            type: 'url',
+            url: url,
+            name: urlName || url,
+          }
+        }),
+      });
+
+      const data = await response.json();
+      
+      return new Response(JSON.stringify(data), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     throw new Error('Invalid action');
 
   } catch (error) {
     console.error('Error:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

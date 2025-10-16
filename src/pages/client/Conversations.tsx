@@ -4,10 +4,10 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useClientAgentContext } from "@/hooks/useClientAgentContext";
 import { NoAgentsAssigned } from "@/components/NoAgentsAssigned";
@@ -56,6 +56,9 @@ export default function Conversations() {
   const [agentConfig, setAgentConfig] = useState<any>(null);
   const [note, setNote] = useState("");
   const [assignedTags, setAssignedTags] = useState<string[]>([]);
+  const [savingNote, setSavingNote] = useState(false);
+  const [updatingTags, setUpdatingTags] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
   const { selectedAgentId, agents } = useClientAgentContext();
   const { toast } = useToast();
 
@@ -106,17 +109,19 @@ export default function Conversations() {
         (payload) => {
           console.log('Conversation change:', payload);
           
-          if (payload.eventType === 'INSERT') {
+          // Only reload if it's not an update to the currently selected conversation
+          // This prevents overwriting local state while user is editing
+          if (payload.eventType === 'INSERT' || payload.eventType === 'DELETE') {
             loadConversations();
           } else if (payload.eventType === 'UPDATE') {
-            setConversations(prev => 
-              prev.map(c => 
-                c.id === payload.new.id ? payload.new as Conversation : c
-              )
-            );
-            
-            if (selectedConversation?.id === payload.new.id) {
-              setSelectedConversation(payload.new as Conversation);
+            // For updates, only reload if it's not the selected conversation
+            if (!selectedConversation || payload.new.id !== selectedConversation.id) {
+              loadConversations();
+            } else {
+              // Update only the specific conversation in the list without reloading all
+              setConversations(prev => 
+                prev.map(c => c.id === payload.new.id ? payload.new as Conversation : c)
+              );
             }
           }
         }
@@ -197,6 +202,7 @@ export default function Conversations() {
   const saveNote = async () => {
     if (!selectedConversation) return;
 
+    setSavingNote(true);
     try {
       const { error } = await supabase
         .from('conversations')
@@ -215,6 +221,13 @@ export default function Conversations() {
         description: "Note saved successfully"
       });
 
+      // Update selected conversation state
+      setSelectedConversation(prev => prev ? {
+        ...prev,
+        metadata: { ...prev.metadata, note }
+      } : null);
+
+      // Update local conversations list
       setConversations(prev => 
         prev.map(c => c.id === selectedConversation.id 
           ? { ...c, metadata: { ...c.metadata, note } }
@@ -228,16 +241,19 @@ export default function Conversations() {
         description: "Failed to save note",
         variant: "destructive"
       });
+    } finally {
+      setSavingNote(false);
     }
   };
 
   const toggleTag = async (tagLabel: string) => {
-    if (!selectedConversation) return;
+    if (!selectedConversation || updatingTags) return;
 
     const newTags = assignedTags.includes(tagLabel)
       ? assignedTags.filter(t => t !== tagLabel)
       : [...assignedTags, tagLabel];
 
+    setUpdatingTags(true);
     try {
       const { error } = await supabase
         .from('conversations')
@@ -253,6 +269,13 @@ export default function Conversations() {
 
       setAssignedTags(newTags);
 
+      // Update selected conversation state
+      setSelectedConversation(prev => prev ? {
+        ...prev,
+        metadata: { ...prev.metadata, tags: newTags }
+      } : null);
+
+      // Update local conversations list
       setConversations(prev => 
         prev.map(c => c.id === selectedConversation.id 
           ? { ...c, metadata: { ...c.metadata, tags: newTags } }
@@ -266,6 +289,44 @@ export default function Conversations() {
         description: "Failed to update tags",
         variant: "destructive"
       });
+    } finally {
+      setUpdatingTags(false);
+    }
+  };
+
+  const updateStatus = async (newStatus: string) => {
+    if (!selectedConversation || updatingStatus) return;
+
+    setUpdatingStatus(true);
+    try {
+      const { error } = await supabase
+        .from('conversations')
+        .update({ status: newStatus })
+        .eq('id', selectedConversation.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: `Status updated to ${newStatus}`
+      });
+
+      // Update selected conversation state
+      setSelectedConversation(prev => prev ? { ...prev, status: newStatus } : null);
+
+      // Update local conversations list
+      setConversations(prev => 
+        prev.map(c => c.id === selectedConversation.id ? { ...c, status: newStatus } : c)
+      );
+    } catch (error) {
+      console.error('Error updating status:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update status",
+        variant: "destructive"
+      });
+    } finally {
+      setUpdatingStatus(false);
     }
   };
 
@@ -298,9 +359,10 @@ export default function Conversations() {
       </div>
 
 
-      <div className="flex h-[600px] gap-4 border border-border rounded-lg overflow-hidden bg-card">
+      <div className="flex flex-1 min-h-0">
+        <div className="grid grid-cols-12 gap-6 flex-1">
         {/* Left Panel: Conversation List */}
-        <div className="w-80 border-r border-border flex flex-col">
+        <Card className="col-span-3 p-0 flex flex-col">
           <div className="p-4 border-b border-border">
             <Input 
               placeholder="Search conversations..." 
@@ -370,10 +432,10 @@ export default function Conversations() {
               )}
             </div>
           </ScrollArea>
-        </div>
+        </Card>
 
         {/* Middle Panel: Transcript */}
-        <div className="flex-1 flex flex-col">
+        <Card className="col-span-6 flex flex-col">
           {selectedConversation ? (
             <>
               <div className="p-4 border-b border-border">
@@ -433,10 +495,10 @@ export default function Conversations() {
               Select a conversation to view details
             </div>
           )}
-        </div>
+        </Card>
 
         {/* Right Panel: Details */}
-        <div className="w-80 border-l border-border p-4 space-y-4 overflow-y-auto">
+        <Card className="col-span-3 p-6 flex flex-col overflow-y-auto">
           {selectedConversation ? (
             <>
               {selectedConversation?.metadata?.variables && 
@@ -492,6 +554,40 @@ export default function Conversations() {
                 </div>
               )}
               
+              {/* Status Dropdown */}
+              <div>
+                <Label className="mb-2 block">Status</Label>
+                <Select
+                  value={selectedConversation?.status || 'active'}
+                  onValueChange={updateStatus}
+                  disabled={updatingStatus}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-green-500" />
+                        <span>Active</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="in progress">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-yellow-500" />
+                        <span>In Progress</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="resolved">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-blue-500" />
+                        <span>Resolved</span>
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               {/* Tags Section */}
               <div>
                 <Label className="mb-2 block">Tags</Label>
@@ -506,6 +602,7 @@ export default function Conversations() {
                           size="sm"
                           variant={isAssigned ? "default" : "outline"}
                           onClick={() => toggleTag(tag.label)}
+                          disabled={updatingTags}
                           style={isAssigned ? {
                             backgroundColor: tag.color,
                             borderColor: tag.color,
@@ -525,19 +622,6 @@ export default function Conversations() {
                   )}
                 </div>
               </div>
-
-              {/* Settings toggles */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="intent-confidence">Intent Confidence</Label>
-                  <Switch id="intent-confidence" />
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="debug-messages">Debug Messages</Label>
-                  <Switch id="debug-messages" />
-                </div>
-              </div>
               
               {/* Notes Section */}
               <div>
@@ -549,8 +633,13 @@ export default function Conversations() {
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                 />
-                <Button size="sm" className="mt-2 w-full" onClick={saveNote}>
-                  Save Note
+                <Button 
+                  size="sm" 
+                  className="mt-2 w-full" 
+                  onClick={saveNote}
+                  disabled={savingNote}
+                >
+                  {savingNote ? "Saving..." : "Save Note"}
                 </Button>
               </div>
             </>
@@ -559,6 +648,7 @@ export default function Conversations() {
               Select a conversation to view options
             </div>
           )}
+        </Card>
         </div>
       </div>
     </div>

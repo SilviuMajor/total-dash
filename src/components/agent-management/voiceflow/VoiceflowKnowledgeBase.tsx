@@ -3,10 +3,13 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, Trash2, FileText, Loader2 } from "lucide-react";
+import { Upload, Trash2, FileText, Loader2, Link } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
 interface VoiceflowKnowledgeBaseProps {
   agent: {
@@ -21,6 +24,10 @@ export function VoiceflowKnowledgeBase({ agent }: VoiceflowKnowledgeBaseProps) {
   const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [showUrlDialog, setShowUrlDialog] = useState(false);
+  const [urlInput, setUrlInput] = useState("");
+  const [urlName, setUrlName] = useState("");
+  const [uploadingUrl, setUploadingUrl] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -106,6 +113,50 @@ export function VoiceflowKnowledgeBase({ agent }: VoiceflowKnowledgeBaseProps) {
     }
   };
 
+  const handleUrlUpload = async () => {
+    if (!urlInput.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid URL",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setUploadingUrl(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('voiceflow-kb', {
+        body: {
+          action: 'upload-url',
+          agentId: agent.id,
+          url: urlInput,
+          urlName: urlName || urlInput,
+        },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "URL uploaded successfully",
+      });
+
+      setShowUrlDialog(false);
+      setUrlInput("");
+      setUrlName("");
+      loadDocuments();
+    } catch (error) {
+      console.error('URL upload error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to upload URL",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingUrl(false);
+    }
+  };
+
   const handleDelete = async (documentId: string, documentName: string) => {
     if (!confirm(`Are you sure you want to delete "${documentName}"?`)) return;
 
@@ -155,27 +206,38 @@ export function VoiceflowKnowledgeBase({ agent }: VoiceflowKnowledgeBaseProps) {
               className="hidden"
               id="kb-file-upload"
             />
-            <Button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
-            >
-              {uploading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Uploading...
-                </>
-              ) : (
-                <>
-                  <Upload className="h-4 w-4 mr-2" />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button disabled={uploading || uploadingUrl}>
+                  {uploading || uploadingUrl ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-4 w-4 mr-2" />
+                      Add to Knowledge Base
+                    </>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
+                  <FileText className="h-4 w-4 mr-2" />
                   Upload Document
-                </>
-              )}
-            </Button>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setShowUrlDialog(true)}>
+                  <Link className="h-4 w-4 mr-2" />
+                  Add URL
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
         <div className="text-xs text-muted-foreground bg-muted p-3 rounded-lg">
-          <strong>Supported formats:</strong> PDF, TXT, DOCX
+          <strong>Supported formats:</strong> PDF, TXT, DOCX, URLs
         </div>
 
         {loading ? (
@@ -223,6 +285,52 @@ export function VoiceflowKnowledgeBase({ agent }: VoiceflowKnowledgeBaseProps) {
           </div>
         )}
       </div>
+
+      <Dialog open={showUrlDialog} onOpenChange={setShowUrlDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add URL to Knowledge Base</DialogTitle>
+            <DialogDescription>
+              Enter a URL to add to your agent's knowledge base
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="url">URL</Label>
+              <Input
+                id="url"
+                placeholder="https://example.com/page"
+                value={urlInput}
+                onChange={(e) => setUrlInput(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="url-name">Name (optional)</Label>
+              <Input
+                id="url-name"
+                placeholder="Custom name for this URL"
+                value={urlName}
+                onChange={(e) => setUrlName(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowUrlDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleUrlUpload} disabled={uploadingUrl}>
+              {uploadingUrl ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Adding...
+                </>
+              ) : (
+                "Add URL"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
