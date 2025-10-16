@@ -35,7 +35,15 @@ serve(async (req) => {
     if (agentError || !agent) throw new Error('Agent not found');
 
     const voiceflowApiKey = agent.config?.voiceflow_api_key;
-    if (!voiceflowApiKey) throw new Error('Voiceflow API key not configured');
+    if (!voiceflowApiKey) {
+      return new Response(JSON.stringify({ 
+        error: 'API_KEY_NOT_CONFIGURED',
+        message: 'Voiceflow API key not configured' 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     const voiceflowHeaders = {
       'Authorization': voiceflowApiKey,

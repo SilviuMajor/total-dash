@@ -30,9 +30,15 @@ export function VoiceflowKnowledgeBase({ agent }: VoiceflowKnowledgeBaseProps) {
   const [uploadingUrl, setUploadingUrl] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const hasApiKey = agent.config?.voiceflow_api_key;
+
   useEffect(() => {
-    loadDocuments();
-  }, [agent.id]);
+    if (hasApiKey) {
+      loadDocuments();
+    } else {
+      setLoading(false);
+    }
+  }, [agent.id, hasApiKey]);
 
   const loadDocuments = async () => {
     setLoading(true);
@@ -44,7 +50,13 @@ export function VoiceflowKnowledgeBase({ agent }: VoiceflowKnowledgeBaseProps) {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        // Don't show error if API key is just not configured
+        if (data?.error === 'API_KEY_NOT_CONFIGURED') {
+          return;
+        }
+        throw error;
+      }
       setDocuments(data.documents.data || []);
     } catch (error) {
       console.error('Error loading documents:', error);
@@ -208,7 +220,7 @@ export function VoiceflowKnowledgeBase({ agent }: VoiceflowKnowledgeBaseProps) {
             />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button disabled={uploading || uploadingUrl}>
+                <Button disabled={!hasApiKey || uploading || uploadingUrl}>
                   {uploading || uploadingUrl ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -240,7 +252,15 @@ export function VoiceflowKnowledgeBase({ agent }: VoiceflowKnowledgeBaseProps) {
           <strong>Supported formats:</strong> PDF, TXT, DOCX, URLs
         </div>
 
-        {loading ? (
+        {!hasApiKey ? (
+          <div className="text-center py-12 border border-dashed rounded-lg bg-muted/30">
+            <FileText className="h-12 w-12 mx-auto mb-3 opacity-50 text-muted-foreground" />
+            <p className="font-medium text-foreground mb-1">Connect API Key to Access</p>
+            <p className="text-sm text-muted-foreground">
+              Configure your Voiceflow API key in the Settings tab to manage knowledge base documents
+            </p>
+          </div>
+        ) : loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>

@@ -188,16 +188,18 @@ export default function AdminAgents() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="api_key">API Key</Label>
+                <Label htmlFor="api_key">API Key (Optional)</Label>
                 <Input
                   id="api_key"
                   type="password"
                   value={formData.api_key}
                   onChange={(e) => setFormData({ ...formData, api_key: e.target.value })}
-                  placeholder="Enter API key"
-                  required
+                  placeholder="Enter API key (optional - can be added later)"
                   className="bg-muted/50 border-border"
                 />
+                <p className="text-xs text-muted-foreground">
+                  You can add or update the API key later in the agent settings
+                </p>
               </div>
 
               <Button type="submit" className="w-full bg-foreground text-background hover:bg-foreground/90">
