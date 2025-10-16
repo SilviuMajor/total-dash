@@ -370,7 +370,7 @@ export default function Conversations() {
         <Card className="h-full overflow-hidden">
           <div className="grid grid-cols-12 h-full">
             {/* Left Panel: Conversation List */}
-            <div className="col-span-3 flex flex-col border-r border-border h-full">
+            <div className="col-span-3 flex flex-col border-r border-border h-full overflow-hidden">
           <div className="p-4 border-b border-border">
             <Input 
               placeholder="Search conversations..." 

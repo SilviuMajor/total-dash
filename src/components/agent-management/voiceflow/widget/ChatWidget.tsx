@@ -94,6 +94,7 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
   const [conversationHistory, setConversationHistory] = useState<any[]>([]);
   const [isInActiveChat, setIsInActiveChat] = useState(false);
   const [clickedButtonMessageIds, setClickedButtonMessageIds] = useState<Set<string>>(new Set());
+  const isStartingChatRef = useRef(false);
 
   const widgetSettings = agent.config?.widget_settings || {};
   const appearance = widgetSettings.appearance || {};
@@ -329,28 +330,37 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
   };
 
   const startNewChat = async () => {
-    // Check for credentials first
-    if (!agent.config?.api_key || !agent.config?.project_id) {
-      toast({
-        title: "Configuration Error",
-        description: "Voiceflow API credentials are missing. Please configure them in Settings.",
-        variant: "destructive"
-      });
+    // Prevent concurrent executions
+    if (isStartingChatRef.current) {
+      console.log('Chat start already in progress, skipping...');
       return;
     }
-
-    // Clear ALL state FIRST to prevent duplication
-    setMessages([]);
-    setConversationId(null);
-    setClickedButtonMessageIds(new Set());
-    widgetSessionManager.startNewConversation(agent.id);
-
-    // Navigate directly to active chat
-    setIsInActiveChat(true);
     
-    // Launch Voiceflow conversation to get opening message
-    setIsTyping(true);
+    isStartingChatRef.current = true;
+    
     try {
+      // Check for credentials first
+      if (!agent.config?.api_key || !agent.config?.project_id) {
+        toast({
+          title: "Configuration Error",
+          description: "Voiceflow API credentials are missing. Please configure them in Settings.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Clear ALL state FIRST to prevent duplication
+      setMessages([]);
+      setConversationId(null);
+      setClickedButtonMessageIds(new Set());
+      widgetSessionManager.startNewConversation(agent.id);
+
+      // Navigate directly to active chat
+      setIsInActiveChat(true);
+      
+      // Launch Voiceflow conversation to get opening message
+      setIsTyping(true);
+      
       console.log('Launching new Voiceflow conversation for agent:', agent.id);
       
       const { data, error } = await supabase.functions.invoke('voiceflow-interact', {
@@ -408,6 +418,9 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
         variant: "destructive"
       });
       setIsTyping(false);
+    } finally {
+      // Always reset the guard
+      isStartingChatRef.current = false;
     }
   };
 
