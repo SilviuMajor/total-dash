@@ -1,13 +1,10 @@
-import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Link, useNavigate } from "react-router-dom";
-import { Building2, Activity, Trash2 } from "lucide-react";
+import { Activity, ArrowLeft } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
-import { AgentDeletionDialog } from "./AgentDeletionDialog";
 
 interface Agent {
   id: string;
@@ -25,6 +22,8 @@ interface AgentDetailHeaderProps {
   agent: Agent;
   assignedClients: AssignedClient[];
   onUpdate: () => void;
+  onBack: () => void;
+  description?: string;
 }
 
 const getStatusColor = (status: string) => {
@@ -53,11 +52,9 @@ const getStatusLabel = (status: string) => {
   }
 };
 
-export function AgentDetailHeader({ agent, assignedClients, onUpdate }: AgentDetailHeaderProps) {
+export function AgentDetailHeader({ agent, assignedClients, onUpdate, onBack, description = "Agent Management Dashboard" }: AgentDetailHeaderProps) {
   const { toast } = useToast();
-  const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   useEffect(() => {
     const checkAdmin = async () => {
@@ -99,67 +96,52 @@ export function AgentDetailHeader({ agent, assignedClients, onUpdate }: AgentDet
     }
   };
 
-  const handleDeleteSuccess = () => {
-    toast({
-      title: "Success",
-      description: "Agent deleted successfully",
-    });
-    navigate("/admin/agents");
-  };
-
   return (
     <div className="space-y-4">
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <div className="flex items-center gap-3 mb-2">
-            <Badge variant="outline" className="capitalize">
-              {agent.provider}
-            </Badge>
-            <Badge className={getStatusColor(agent.status)}>
-              <Activity className="w-3 h-3 mr-1" />
-              {getStatusLabel(agent.status)}
-            </Badge>
-          </div>
+      {/* Row 1: Back Button + Agent Name + Status Dropdown */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={onBack}
+            className="border-border/50"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+          <h1 className="text-4xl font-bold text-foreground">{agent.name}</h1>
+        </div>
+
+        {isAdmin && (
+          <Select value={agent.status} onValueChange={handleStatusChange}>
+            <SelectTrigger className={`${getStatusColor(agent.status)} border-none w-auto px-4 py-2 h-auto gap-2`}>
+              <Activity className="w-3 h-3" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="testing">Testing</SelectItem>
+              <SelectItem value="in_development">In Development</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
+      </div>
+
+      {/* Row 2: Subtitle + Provider Badge + Assigned Clients */}
+      <div className="flex items-center justify-between">
+        <p className="text-muted-foreground">{description}</p>
+        
+        <div className="flex items-center gap-3">
+          <Badge variant="outline" className="capitalize">
+            {agent.provider}
+          </Badge>
           {assignedClients.length > 0 && (
             <p className="text-sm text-muted-foreground">
               Assigned to: {assignedClients.map(c => c.name).join(', ')}
             </p>
           )}
         </div>
-
-        {isAdmin && (
-          <div className="flex items-center gap-2">
-            <Select value={agent.status} onValueChange={handleStatusChange}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="testing">Testing</SelectItem>
-                <SelectItem value="in_development">In Development</SelectItem>
-              </SelectContent>
-            </Select>
-            
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setDeleteDialogOpen(true)}
-              className="gap-2 border-destructive/50 text-destructive hover:bg-destructive hover:text-destructive-foreground"
-            >
-              <Trash2 className="h-4 w-4" />
-              Delete Agent
-            </Button>
-          </div>
-        )}
       </div>
-
-      <AgentDeletionDialog
-        agentId={agent.id}
-        agentName={agent.name}
-        open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-        onSuccess={handleDeleteSuccess}
-      />
     </div>
   );
 }

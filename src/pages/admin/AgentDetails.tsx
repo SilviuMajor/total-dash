@@ -130,22 +130,13 @@ export default function AgentDetails() {
 
   const content = (
     <div className="space-y-8">
-      <div className="flex items-center gap-4">
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => navigate("/admin/agents")}
-          className="border-border/50"
-        >
-          <ArrowLeft className="w-4 h-4" />
-        </Button>
-        <div>
-          <h1 className="text-4xl font-bold text-foreground">{agent.name}</h1>
-          <p className="text-muted-foreground">Agent Management Dashboard</p>
-        </div>
-      </div>
-
-      <AgentDetailHeader agent={agent} assignedClients={assignedClients} onUpdate={loadAgentDetails} />
+      <AgentDetailHeader 
+        agent={agent} 
+        assignedClients={assignedClients} 
+        onUpdate={loadAgentDetails}
+        onBack={() => navigate("/admin/agents")}
+        description="Agent Management Dashboard"
+      />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList>
