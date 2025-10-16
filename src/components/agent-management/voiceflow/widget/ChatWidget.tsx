@@ -391,7 +391,10 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
           const response = data.botResponses[i];
           
           setIsTyping(true);
-          await new Promise(resolve => setTimeout(resolve, typingDelay));
+          
+          // Add 1 second extra delay for the FIRST message only
+          const delay = i === 0 ? typingDelay + 1000 : typingDelay;
+          await new Promise(resolve => setTimeout(resolve, delay));
           
           const botMsg: Message = {
             id: crypto.randomUUID(),

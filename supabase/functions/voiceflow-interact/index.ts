@@ -156,7 +156,8 @@ serve(async (req) => {
     // Create or get conversation
     let currentConversationId = conversationId;
     
-    if (!currentConversationId) {
+    // Only create conversation for user interactions (text or button), NOT for launch
+    if (!currentConversationId && (action === 'text' || action === 'button')) {
       // Create new conversation
       const { data: newConversation, error: convError } = await supabaseClient
         .from('conversations')
@@ -199,8 +200,8 @@ serve(async (req) => {
       }
     }
 
-    // Store user message in transcripts
-    if (action === 'text' || action === 'button') {
+    // Store user message in transcripts (only if conversation exists)
+    if ((action === 'text' || action === 'button') && currentConversationId) {
       const userMessageText = action === 'button' 
         ? JSON.parse(message).payload?.label || 'Button clicked'
         : message;
@@ -223,24 +224,26 @@ serve(async (req) => {
       }
     }
 
-    // Store bot responses in transcripts with buttons and full trace
-    for (const response of botResponses) {
-      const { error: botTranscriptError } = await supabaseClient
-        .from('transcripts')
-        .insert({
-          conversation_id: currentConversationId,
-          speaker: 'assistant',
-          text: response.text || null,
-          buttons: response.buttons || null,
-          metadata: {
-            response_type: response.type,
-            timestamp: new Date().toISOString(),
-            full_trace: voiceflowData
-          }
-        });
+    // Store bot responses in transcripts (only if conversation exists)
+    if (currentConversationId) {
+      for (const response of botResponses) {
+        const { error: botTranscriptError } = await supabaseClient
+          .from('transcripts')
+          .insert({
+            conversation_id: currentConversationId,
+            speaker: 'assistant',
+            text: response.text || null,
+            buttons: response.buttons || null,
+            metadata: {
+              response_type: response.type,
+              timestamp: new Date().toISOString(),
+              full_trace: voiceflowData
+            }
+          });
 
-      if (botTranscriptError) {
-        console.error('Error inserting bot transcript:', botTranscriptError);
+        if (botTranscriptError) {
+          console.error('Error inserting bot transcript:', botTranscriptError);
+        }
       }
     }
 
