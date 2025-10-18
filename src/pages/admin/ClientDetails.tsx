@@ -11,6 +11,7 @@ import { ClientUsersManagement } from "@/components/client-management/ClientUser
 import { ClientAgentAssignments } from "@/components/client-management/ClientAgentAssignments";
 import { ClientSettings } from "@/components/client-management/ClientSettings";
 import { DepartmentManagement } from "@/components/client-management/DepartmentManagement";
+import { ClientGuidesEditor } from "@/components/client-management/ClientGuidesEditor";
 
 interface ClientData {
   id: string;
@@ -99,6 +100,7 @@ export default function ClientDetails() {
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="agents">Agents</TabsTrigger>
+          <TabsTrigger value="guides">GUIDES</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
 
@@ -112,6 +114,10 @@ export default function ClientDetails() {
 
         <TabsContent value="agents">
           <ClientAgentAssignments clientId={client.id} />
+        </TabsContent>
+
+        <TabsContent value="guides">
+          <ClientGuidesEditor clientId={client.id} />
         </TabsContent>
 
         <TabsContent value="settings">

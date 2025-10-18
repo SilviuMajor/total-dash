@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.voiceflow-kb]
 verify_jwt = true
+
+[functions.send-support-email]
+verify_jwt = true

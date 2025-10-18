@@ -21,7 +21,6 @@ export type Database = {
           agency_name: string | null
           created_at: string | null
           elevenlabs_api_key: string | null
-          feature_request_email: string | null
           id: string
           openai_api_key: string | null
           support_email: string | null
@@ -33,7 +32,6 @@ export type Database = {
           agency_name?: string | null
           created_at?: string | null
           elevenlabs_api_key?: string | null
-          feature_request_email?: string | null
           id?: string
           openai_api_key?: string | null
           support_email?: string | null
@@ -45,7 +43,6 @@ export type Database = {
           agency_name?: string | null
           created_at?: string | null
           elevenlabs_api_key?: string | null
-          feature_request_email?: string | null
           id?: string
           openai_api_key?: string | null
           support_email?: string | null
@@ -349,6 +346,7 @@ export type Database = {
           company_name: string | null
           created_at: string | null
           custom_css: string | null
+          custom_guide_sections: Json | null
           default_user_permissions: Json | null
           id: string
           logo_url: string | null
@@ -361,6 +359,7 @@ export type Database = {
           company_name?: string | null
           created_at?: string | null
           custom_css?: string | null
+          custom_guide_sections?: Json | null
           default_user_permissions?: Json | null
           id?: string
           logo_url?: string | null
@@ -373,6 +372,7 @@ export type Database = {
           company_name?: string | null
           created_at?: string | null
           custom_css?: string | null
+          custom_guide_sections?: Json | null
           default_user_permissions?: Json | null
           id?: string
           logo_url?: string | null
@@ -830,6 +830,10 @@ export type Database = {
       }
       is_admin: {
         Args: { user_id: string }
+        Returns: boolean
+      }
+      is_last_admin: {
+        Args: { _client_id: string; _user_id: string }
         Returns: boolean
       }
     }

@@ -1,13 +1,23 @@
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SupportRequestForm } from "@/components/agent-management/SupportRequestForm";
+
 export default function AgentSettings() {
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-4xl font-bold text-foreground">Agent Settings</h1>
-        <p className="text-muted-foreground">Coming soon</p>
+        <p className="text-muted-foreground">Configure and manage your agent</p>
       </div>
-      <div className="h-96 rounded-lg border border-dashed border-border flex items-center justify-center bg-card">
-        <p className="text-muted-foreground">Agent configuration settings will be available here</p>
-      </div>
+      
+      <Tabs defaultValue="support">
+        <TabsList>
+          <TabsTrigger value="support">Support</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="support">
+          <SupportRequestForm />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
