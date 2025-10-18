@@ -10,7 +10,8 @@ import { supabase } from "@/integrations/supabase/client";
 import fiveleafLogo from "@/assets/fiveleaf-logo.png";
 
 const clientNavigation = [
-  { name: "Conversations", href: "/", icon: MessageSquare, permissionKey: "conversations" },
+  { name: "Conversations", href: "/", icon: MessageSquare, permissionKey: "conversations", provider: "voiceflow" },
+  { name: "Transcripts", href: "/transcripts", icon: MessageSquare, permissionKey: "transcripts", provider: "retell" },
   { name: "Analytics", href: "/analytics", icon: BarChart3, permissionKey: "analytics" },
   { name: "Specifications", href: "/specs", icon: FileText, permissionKey: "specs" },
   { name: "Knowledge Base", href: "/knowledge-base", icon: BookOpen, permissionKey: "knowledge_base" },
@@ -26,7 +27,7 @@ const adminNavigation = [
 
 export function Sidebar() {
   const { profile, signOut } = useAuth();
-  const { selectedAgentPermissions } = useClientAgentContext();
+  const { selectedAgentPermissions, agents, selectedAgentId } = useClientAgentContext();
   const location = useLocation();
   const isAdmin = profile?.role === 'admin';
   const [agencyName, setAgencyName] = useState("Fiveleaf");
@@ -80,6 +81,15 @@ export function Sidebar() {
         if (item.permissionKey === null) {
           return true;
         }
+        
+        // Filter by provider if specified
+        if ((item as any).provider && agents.length > 0) {
+          const selectedAgent = agents.find(a => a.id === selectedAgentId);
+          if (selectedAgent && selectedAgent.provider !== (item as any).provider) {
+            return false;
+          }
+        }
+        
         // In preview mode, use client's default permissions
         if (isPreviewMode && clientPermissions) {
           return clientPermissions[item.permissionKey] !== false;

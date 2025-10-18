@@ -16,6 +16,7 @@ import AgentDetails from "./pages/admin/AgentDetails";
 import AdminSettings from "./pages/admin/Settings";
 import ClientDetails from "./pages/admin/ClientDetails";
 import Conversations from "./pages/client/Conversations";
+import Transcripts from "./pages/client/Transcripts";
 import Analytics from "./pages/client/Analytics";
 import KnowledgeBase from "./pages/client/KnowledgeBase";
 import AgentSettings from "./pages/client/AgentSettings";
@@ -57,7 +58,15 @@ const App = () => (
                             } 
                           />
                           <Route 
-                            path="/analytics" 
+                            path="/transcripts" 
+                            element={
+                              <ProtectedRoute requireClient requiredPage="transcripts">
+                                <Transcripts />
+                              </ProtectedRoute>
+                            } 
+                          />
+                          <Route 
+                            path="/analytics"
                             element={
                               <ProtectedRoute requireClient requiredPage="analytics">
                                 <Analytics />

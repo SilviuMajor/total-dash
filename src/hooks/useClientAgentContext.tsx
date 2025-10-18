@@ -14,6 +14,7 @@ interface Agent {
 interface AgentPermissions {
   analytics: boolean;
   conversations: boolean;
+  transcripts: boolean;
   knowledge_base: boolean;
   agent_settings: boolean;
   specs: boolean;
@@ -101,6 +102,7 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
         setSelectedAgentPermissions({
           analytics: true,
           conversations: true,
+          transcripts: true,
           knowledge_base: true,
           agent_settings: true,
           specs: true,

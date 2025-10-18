@@ -47,6 +47,7 @@ interface AgentPermission {
   agent_id: string;
   analytics: boolean;
   conversations: boolean;
+  transcripts: boolean;
   knowledge_base: boolean;
   agent_settings: boolean;
   specs: boolean;
@@ -173,6 +174,7 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
           agent_id: agent.id,
           analytics: true,
           conversations: true,
+          transcripts: true,
           knowledge_base: false,
           agent_settings: false,
           specs: true,
@@ -261,6 +263,7 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
             agent_id: agent.id,
             analytics: true,
             conversations: true,
+            transcripts: true,
             knowledge_base: false,
             agent_settings: false,
             specs: true,
@@ -354,6 +357,7 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
         permissions: {
           analytics: p.analytics,
           conversations: p.conversations,
+          transcripts: p.transcripts,
           knowledge_base: p.knowledge_base,
           agent_settings: p.agent_settings,
           specs: p.specs,
@@ -632,6 +636,13 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
                         </label>
                         <label className="flex items-center gap-2">
                           <Checkbox
+                            checked={perms.transcripts}
+                            onCheckedChange={(checked) => toggleAgentPermission(agent.id, 'transcripts', checked as boolean)}
+                          />
+                          Transcripts
+                        </label>
+                        <label className="flex items-center gap-2">
+                          <Checkbox
                             checked={perms.knowledge_base}
                             onCheckedChange={(checked) => toggleAgentPermission(agent.id, 'knowledge_base', checked as boolean)}
                           />
@@ -762,6 +773,7 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
                       agent_id: agent.id,
                       analytics: false,
                       conversations: false,
+                      transcripts: false,
                       knowledge_base: false,
                       agent_settings: false,
                       specs: false,
@@ -784,6 +796,13 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
                               onCheckedChange={(checked) => toggleAgentPermission(agent.id, 'conversations', checked as boolean, false)}
                             />
                             Conversations
+                          </label>
+                          <label className="flex items-center gap-2">
+                            <Checkbox
+                              checked={perms.transcripts}
+                              onCheckedChange={(checked) => toggleAgentPermission(agent.id, 'transcripts', checked as boolean, false)}
+                            />
+                            Transcripts
                           </label>
                           <label className="flex items-center gap-2">
                             <Checkbox
