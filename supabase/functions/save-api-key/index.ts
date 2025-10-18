@@ -58,7 +58,7 @@ serve(async (req) => {
       );
     }
 
-    if (keyName !== 'OPENAI_API_KEY' && keyName !== 'ELEVENLABS_API_KEY') {
+    if (keyName !== 'OPENAI_API_KEY' && keyName !== 'RESEND_API_KEY') {
       return new Response(
         JSON.stringify({ error: 'Invalid keyName' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -72,7 +72,9 @@ serve(async (req) => {
       .limit(1)
       .maybeSingle();
 
-    const columnName = keyName === 'OPENAI_API_KEY' ? 'openai_api_key' : 'elevenlabs_api_key';
+    const columnName = keyName === 'OPENAI_API_KEY' ? 'openai_api_key' : 'resend_api_key';
+
+    console.log('Saving API key:', { keyName, columnName, hasExistingSettings: !!existingSettings });
 
     if (existingSettings) {
       const { error } = await supabaseClient
@@ -80,7 +82,10 @@ serve(async (req) => {
         .update({ [columnName]: keyValue })
         .eq('id', existingSettings.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Database update error:', error);
+        throw error;
+      }
     } else {
       const { error } = await supabaseClient
         .from('agency_settings')

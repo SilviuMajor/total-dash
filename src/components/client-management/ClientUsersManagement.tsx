@@ -21,6 +21,7 @@ interface ClientUser {
   full_name: string | null;
   avatar_url: string | null;
   department_id: string | null;
+  role: string | null;
   profiles: {
     email: string;
   };
@@ -66,6 +67,7 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserFullName, setNewUserFullName] = useState("");
   const [newUserDepartment, setNewUserDepartment] = useState<string>("none");
+  const [newUserRole, setNewUserRole] = useState<string>("user");
   const [newUserAvatar, setNewUserAvatar] = useState("");
   const [newUserPassword, setNewUserPassword] = useState("");
   const [newUserAgentPermissions, setNewUserAgentPermissions] = useState<Record<string, AgentPermission>>({});
@@ -199,6 +201,7 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
           clientId,
           email: newUserEmail,
           fullName: newUserFullName,
+          role: newUserRole,
           departmentId: newUserDepartment === "none" ? null : newUserDepartment || null,
           avatarUrl: newUserAvatar || null,
           agentPermissions: activePermissions,
@@ -217,6 +220,7 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
         loadUsers();
         setNewUserEmail("");
         setNewUserFullName("");
+        setNewUserRole("user");
         setNewUserDepartment("none");
         setNewUserAvatar("");
         setNewUserPassword("");
@@ -256,6 +260,7 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
         .update({
           full_name: selectedUser.full_name,
           department_id: selectedUser.department_id,
+          role: selectedUser.role,
         })
         .eq('id', selectedUser.id);
 
@@ -418,6 +423,9 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <p className="font-medium text-foreground truncate">{user.full_name || "Unnamed User"}</p>
+                    {user.role === 'admin' && (
+                      <Badge variant="default">Admin</Badge>
+                    )}
                     {user.departments && (
                       <Badge variant="secondary">{user.departments.name}</Badge>
                     )}
@@ -462,15 +470,27 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
             <DialogTitle>Add New User</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={newUserEmail}
-                onChange={(e) => setNewUserEmail(e.target.value)}
-                placeholder="user@example.com"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={newUserEmail}
+                  onChange={(e) => setNewUserEmail(e.target.value)}
+                  placeholder="user@example.com"
+                />
+              </div>
+              <div>
+                <Label htmlFor="password">Password (optional)</Label>
+                <Input
+                  id="password"
+                  type="text"
+                  value={newUserPassword}
+                  onChange={(e) => setNewUserPassword(e.target.value)}
+                  placeholder="Leave empty to auto-generate"
+                />
+              </div>
             </div>
             <div>
               <Label htmlFor="fullName">Full Name</Label>
@@ -498,25 +518,27 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
               </Select>
             </div>
             <div>
+              <Label htmlFor="role">User Role</Label>
+              <Select value={newUserRole} onValueChange={setNewUserRole}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="user">User</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
               <Label htmlFor="avatar">Avatar</Label>
               <AvatarUpload
                 currentUrl={newUserAvatar}
                 onUploadComplete={(url) => setNewUserAvatar(url)}
               />
             </div>
-            <div>
-              <Label htmlFor="password">Password (optional)</Label>
-              <Input
-                id="password"
-                type="text"
-                value={newUserPassword}
-                onChange={(e) => setNewUserPassword(e.target.value)}
-                placeholder="Leave empty to auto-generate"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                If left empty, a secure password will be generated automatically. Minimum 6 characters (Supabase requirement).
-              </p>
-            </div>
+            <p className="text-xs text-muted-foreground">
+              If password is left empty, a secure password will be generated automatically. Minimum 6 characters (Supabase requirement).
+            </p>
             
             {/* Agent Permissions */}
             <div className="space-y-3">
@@ -672,6 +694,24 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
                         {dept.name}
                       </SelectItem>
                     ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="editRole">User Role</Label>
+                <Select
+                  value={selectedUser.role || "user"}
+                  onValueChange={(value) =>
+                    setSelectedUser({ ...selectedUser, role: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="user">User</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

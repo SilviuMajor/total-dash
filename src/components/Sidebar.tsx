@@ -76,6 +76,10 @@ export function Sidebar() {
   const navigation = effectiveRole === 'admin' 
     ? adminNavigation 
     : clientNavigation.filter(item => {
+        // Items with null permissionKey are always visible
+        if (item.permissionKey === null) {
+          return true;
+        }
         // In preview mode, use client's default permissions
         if (isPreviewMode && clientPermissions) {
           return clientPermissions[item.permissionKey] !== false;

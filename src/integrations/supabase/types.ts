@@ -20,9 +20,9 @@ export type Database = {
           agency_logo_url: string | null
           agency_name: string | null
           created_at: string | null
-          elevenlabs_api_key: string | null
           id: string
           openai_api_key: string | null
+          resend_api_key: string | null
           support_email: string | null
           updated_at: string | null
         }
@@ -31,9 +31,9 @@ export type Database = {
           agency_logo_url?: string | null
           agency_name?: string | null
           created_at?: string | null
-          elevenlabs_api_key?: string | null
           id?: string
           openai_api_key?: string | null
+          resend_api_key?: string | null
           support_email?: string | null
           updated_at?: string | null
         }
@@ -42,9 +42,9 @@ export type Database = {
           agency_logo_url?: string | null
           agency_name?: string | null
           created_at?: string | null
-          elevenlabs_api_key?: string | null
           id?: string
           openai_api_key?: string | null
+          resend_api_key?: string | null
           support_email?: string | null
           updated_at?: string | null
         }

@@ -100,7 +100,7 @@ export default function ClientDetails() {
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="agents">Agents</TabsTrigger>
-          <TabsTrigger value="guides">GUIDES</TabsTrigger>
+          <TabsTrigger value="guides">Guides</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
 

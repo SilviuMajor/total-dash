@@ -108,7 +108,11 @@ export function ClientGuidesEditor({ clientId }: ClientGuidesEditorProps) {
         toast({
           title: "Guides saved",
           description: "Your guide sections have been updated successfully.",
+          duration: 3000,
         });
+        
+        setEditingSection(null);
+        await loadSections();
       } catch (error) {
         console.error('Error saving guides:', error);
         toast({

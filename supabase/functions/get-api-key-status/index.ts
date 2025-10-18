@@ -58,7 +58,7 @@ serve(async (req) => {
       );
     }
 
-    if (keyName !== 'OPENAI_API_KEY' && keyName !== 'ELEVENLABS_API_KEY') {
+    if (keyName !== 'OPENAI_API_KEY' && keyName !== 'RESEND_API_KEY') {
       return new Response(
         JSON.stringify({ error: 'Invalid keyName' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -66,7 +66,7 @@ serve(async (req) => {
     }
 
     // Get the API key from agency_settings
-    const columnName = keyName === 'OPENAI_API_KEY' ? 'openai_api_key' : 'elevenlabs_api_key';
+    const columnName = keyName === 'OPENAI_API_KEY' ? 'openai_api_key' : 'resend_api_key';
     
     const { data: settings } = await supabaseClient
       .from('agency_settings')

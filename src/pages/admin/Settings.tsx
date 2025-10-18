@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Plus, UserCog, Trash2, Brain, Mic } from "lucide-react";
+import { Plus, UserCog, Trash2, Brain, Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { AgencyLogoUpload } from "@/components/agency-management/AgencyLogoUpload";
@@ -29,18 +29,19 @@ export default function AdminSettings() {
   const [agencyDomain, setAgencyDomain] = useState("");
   const [agencyName, setAgencyName] = useState("");
   const [agencyLogoUrl, setAgencyLogoUrl] = useState("");
+  const [supportEmail, setSupportEmail] = useState("");
   const [savingSettings, setSavingSettings] = useState(false);
   
   // API Keys state
   const [apiKeys, setApiKeys] = useState({
     openai: { connected: false, maskedValue: '' },
-    elevenLabs: { connected: false, maskedValue: '' },
+    resend: { connected: false, maskedValue: '' },
   });
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
-  const [disconnectingKey, setDisconnectingKey] = useState<'openai' | 'elevenLabs' | null>(null);
+  const [disconnectingKey, setDisconnectingKey] = useState<'openai' | 'resend' | null>(null);
   const [adminPassword, setAdminPassword] = useState('');
   const [newKeyValue, setNewKeyValue] = useState('');
-  const [connectingKey, setConnectingKey] = useState<'openai' | 'elevenLabs' | null>(null);
+  const [connectingKey, setConnectingKey] = useState<'openai' | 'resend' | null>(null);
   const [loadingKeys, setLoadingKeys] = useState(false);
   
   const { toast } = useToast();
@@ -55,13 +56,14 @@ export default function AdminSettings() {
     try {
       const { data, error } = await supabase
         .from('agency_settings')
-        .select('agency_domain, agency_name, agency_logo_url')
+        .select('agency_domain, agency_name, agency_logo_url, support_email')
         .maybeSingle();
 
       if (error) throw error;
       setAgencyDomain(data?.agency_domain || "");
       setAgencyName(data?.agency_name || "");
       setAgencyLogoUrl(data?.agency_logo_url || "");
+      setSupportEmail(data?.support_email || "");
     } catch (error) {
       console.error('Error loading agency settings:', error);
     }
@@ -102,7 +104,8 @@ export default function AdminSettings() {
         .update({ 
           agency_domain: agencyDomain,
           agency_name: agencyName,
-          agency_logo_url: agencyLogoUrl
+          agency_logo_url: agencyLogoUrl,
+          support_email: supportEmail
         })
         .eq('id', settingsData?.id);
 
@@ -127,12 +130,12 @@ export default function AdminSettings() {
   const loadApiKeyStatuses = async () => {
     try {
       setLoadingKeys(true);
-      const [openaiResult, elevenLabsResult] = await Promise.all([
+      const [openaiResult, resendResult] = await Promise.all([
         supabase.functions.invoke('get-api-key-status', {
           body: { keyName: 'OPENAI_API_KEY' }
         }),
         supabase.functions.invoke('get-api-key-status', {
-          body: { keyName: 'ELEVENLABS_API_KEY' }
+          body: { keyName: 'RESEND_API_KEY' }
         })
       ]);
 
@@ -141,9 +144,9 @@ export default function AdminSettings() {
           connected: openaiResult.data?.exists || false,
           maskedValue: openaiResult.data?.maskedValue || ''
         },
-        elevenLabs: {
-          connected: elevenLabsResult.data?.exists || false,
-          maskedValue: elevenLabsResult.data?.maskedValue || ''
+        resend: {
+          connected: resendResult.data?.exists || false,
+          maskedValue: resendResult.data?.maskedValue || ''
         }
       });
     } catch (error) {
@@ -153,7 +156,7 @@ export default function AdminSettings() {
     }
   };
 
-  const handleConnectKey = async (keyType: 'openai' | 'elevenLabs') => {
+  const handleConnectKey = async (keyType: 'openai' | 'resend') => {
     if (!newKeyValue.trim()) {
       toast({
         title: "Error",
@@ -163,7 +166,7 @@ export default function AdminSettings() {
       return;
     }
 
-    const keyName = keyType === 'openai' ? 'OPENAI_API_KEY' : 'ELEVENLABS_API_KEY';
+    const keyName = keyType === 'openai' ? 'OPENAI_API_KEY' : 'RESEND_API_KEY';
     
     try {
       setLoadingKeys(true);
@@ -175,7 +178,7 @@ export default function AdminSettings() {
 
       toast({
         title: "Success",
-        description: `${keyType === 'openai' ? 'OpenAI' : 'Eleven Labs'} API key connected successfully`,
+        description: `${keyType === 'openai' ? 'OpenAI' : 'Resend'} API key connected successfully`,
       });
 
       setNewKeyValue('');
@@ -195,7 +198,7 @@ export default function AdminSettings() {
   const handleDisconnect = async () => {
     if (!disconnectingKey || !adminPassword) return;
 
-    const keyName = disconnectingKey === 'openai' ? 'OPENAI_API_KEY' : 'ELEVENLABS_API_KEY';
+    const keyName = disconnectingKey === 'openai' ? 'OPENAI_API_KEY' : 'RESEND_API_KEY';
     
     try {
       setLoadingKeys(true);
@@ -207,7 +210,7 @@ export default function AdminSettings() {
 
       toast({
         title: "Success",
-        description: `${disconnectingKey === 'openai' ? 'OpenAI' : 'Eleven Labs'} API key disconnected`,
+        description: `${disconnectingKey === 'openai' ? 'OpenAI' : 'Resend'} API key disconnected`,
       });
 
       setShowPasswordDialog(false);
@@ -364,6 +367,21 @@ export default function AdminSettings() {
                   </p>
                 </div>
 
+                <div className="space-y-2">
+                  <Label htmlFor="support_email">Support Email</Label>
+                  <Input
+                    id="support_email"
+                    type="email"
+                    value={supportEmail}
+                    onChange={(e) => setSupportEmail(e.target.value)}
+                    placeholder="support@youragency.com"
+                    className="bg-muted/50 border-border"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Email address where support requests will be sent
+                  </p>
+                </div>
+
                 <Button
                   type="submit"
                   disabled={savingSettings}
@@ -468,31 +486,31 @@ export default function AdminSettings() {
                   )}
                 </div>
 
-                {/* Eleven Labs Integration */}
+                {/* Resend Integration */}
                 <div className="border border-border/50 rounded-lg p-4">
                   <div className="flex items-center gap-3 mb-3">
                     <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <Mic className="w-5 h-5 text-primary" />
+                      <Mail className="w-5 h-5 text-primary" />
                     </div>
                     <div className="flex-1">
-                      <h4 className="font-semibold text-foreground">Eleven Labs API Key</h4>
-                      <p className="text-xs text-muted-foreground">Connect your Eleven Labs account</p>
+                      <h4 className="font-semibold text-foreground">Resend API Key</h4>
+                      <p className="text-xs text-muted-foreground">Used for sending support emails and notifications</p>
                     </div>
-                    <Badge variant={apiKeys.elevenLabs.connected ? "default" : "secondary"} className="ml-auto">
-                      {apiKeys.elevenLabs.connected ? "Connected" : "Not Connected"}
+                    <Badge variant={apiKeys.resend.connected ? "default" : "secondary"} className="ml-auto">
+                      {apiKeys.resend.connected ? "Connected" : "Not Connected"}
                     </Badge>
                   </div>
 
-                  {apiKeys.elevenLabs.connected ? (
+                  {apiKeys.resend.connected ? (
                     <div className="space-y-3">
                       <div className="flex items-center gap-2 p-2 bg-muted/30 rounded">
-                        <code className="text-xs font-mono flex-1">{apiKeys.elevenLabs.maskedValue}</code>
+                        <code className="text-xs font-mono flex-1">{apiKeys.resend.maskedValue}</code>
                       </div>
                       <Button
                         variant="destructive"
                         size="sm"
                         onClick={() => {
-                          setDisconnectingKey('elevenLabs');
+                          setDisconnectingKey('resend');
                           setShowPasswordDialog(true);
                         }}
                         disabled={loadingKeys}
@@ -500,19 +518,19 @@ export default function AdminSettings() {
                         Disconnect
                       </Button>
                     </div>
-                  ) : connectingKey === 'elevenLabs' ? (
+                  ) : connectingKey === 'resend' ? (
                     <div className="space-y-3">
                       <Input
                         type="password"
                         value={newKeyValue}
                         onChange={(e) => setNewKeyValue(e.target.value)}
-                        placeholder="Enter API key..."
+                        placeholder="re_..."
                         className="bg-muted/50 border-border font-mono text-xs"
                       />
                       <div className="flex gap-2">
                         <Button
                           size="sm"
-                          onClick={() => handleConnectKey('elevenLabs')}
+                          onClick={() => handleConnectKey('resend')}
                           disabled={loadingKeys}
                           className="bg-foreground text-background hover:bg-foreground/90"
                         >
@@ -535,7 +553,7 @@ export default function AdminSettings() {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => setConnectingKey('elevenLabs')}
+                      onClick={() => setConnectingKey('resend')}
                       disabled={loadingKeys}
                     >
                       Connect
