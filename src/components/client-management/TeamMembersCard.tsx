@@ -43,7 +43,7 @@ interface ClientUser {
   user_id: string;
   full_name: string | null;
   avatar_url: string | null;
-  role: string;
+  roles: string[];
   department_id: string | null;
   page_permissions: {
     dashboard: boolean;
@@ -121,18 +121,29 @@ export function TeamMembersCard({ clientId }: { clientId: string }) {
 
       if (userError) throw userError;
       
-      // Map the data with proper type casting for page_permissions
-      const mappedUsers = (userData || []).map(user => ({
-        ...user,
-        page_permissions: user.page_permissions as {
-          dashboard: boolean;
-          analytics: boolean;
-          transcripts: boolean;
-          settings: boolean;
-        }
-      }));
+      // Fetch roles for each user
+      const usersWithRoles = await Promise.all(
+        (userData || []).map(async (user) => {
+          const { data: roleData } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', user.user_id)
+            .eq('client_id', clientId);
+          
+          return {
+            ...user,
+            roles: roleData?.map(r => r.role) || [],
+            page_permissions: user.page_permissions as {
+              dashboard: boolean;
+              analytics: boolean;
+              transcripts: boolean;
+              settings: boolean;
+            }
+          };
+        })
+      );
       
-      setUsers(mappedUsers);
+      setUsers(usersWithRoles);
 
       // Load default permissions
       const { data: settingsData } = await supabase
@@ -249,13 +260,33 @@ export function TeamMembersCard({ clientId }: { clientId: string }) {
         .from('client_users')
         .update({
           full_name: selectedUser.full_name,
-          role: selectedUser.role,
           department_id: selectedUser.department_id,
           page_permissions: selectedUser.page_permissions,
         })
         .eq('id', selectedUser.id);
 
       if (error) throw error;
+
+      // Update roles
+      await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', selectedUser.user_id)
+        .eq('client_id', clientId);
+
+      if (selectedUser.roles.length > 0) {
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .insert(
+            selectedUser.roles.map(role => ({
+              user_id: selectedUser.user_id,
+              client_id: clientId,
+              role: role as 'admin' | 'user'
+            }))
+          );
+
+        if (roleError) throw roleError;
+      }
 
       toast({
         title: "Success",
@@ -483,9 +514,12 @@ export function TeamMembersCard({ clientId }: { clientId: string }) {
                 {user.departments && (
                   <Badge variant="outline">{user.departments.name}</Badge>
                 )}
-                <Badge variant="secondary" className="capitalize">
-                  {user.role}
-                </Badge>
+                {user.roles.includes('admin') && (
+                  <Badge variant="default">Admin</Badge>
+                )}
+                {user.roles.includes('user') && !user.roles.includes('admin') && (
+                  <Badge variant="secondary">User</Badge>
+                )}
                 <PasswordDisplay userId={user.user_id} />
               </div>
               <div className="flex items-center gap-2">
@@ -638,9 +672,9 @@ export function TeamMembersCard({ clientId }: { clientId: string }) {
               <div className="space-y-2">
                 <Label>Role</Label>
                 <Select
-                  value={selectedUser.role}
+                  value={selectedUser.roles.includes('admin') ? 'admin' : 'user'}
                   onValueChange={(value) =>
-                    setSelectedUser({ ...selectedUser, role: value })
+                    setSelectedUser({ ...selectedUser, roles: value === 'admin' ? ['admin'] : ['user'] })
                   }
                 >
                   <SelectTrigger>
@@ -649,7 +683,6 @@ export function TeamMembersCard({ clientId }: { clientId: string }) {
                   <SelectContent>
                     <SelectItem value="admin">Admin</SelectItem>
                     <SelectItem value="user">User</SelectItem>
-                    <SelectItem value="viewer">Viewer</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

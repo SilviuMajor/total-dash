@@ -497,7 +497,6 @@ export type Database = {
           full_name: string | null
           id: string
           page_permissions: Json | null
-          role: string | null
           updated_at: string | null
           user_id: string
         }
@@ -509,7 +508,6 @@ export type Database = {
           full_name?: string | null
           id?: string
           page_permissions?: Json | null
-          role?: string | null
           updated_at?: string | null
           user_id: string
         }
@@ -521,7 +519,6 @@ export type Database = {
           full_name?: string | null
           id?: string
           page_permissions?: Json | null
-          role?: string | null
           updated_at?: string | null
           user_id?: string
         }
@@ -801,6 +798,38 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -824,6 +853,14 @@ export type Database = {
           name: string
         }[]
       }
+      has_role: {
+        Args: {
+          _client_id: string
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       has_settings_permission: {
         Args: { _client_id: string; _user_id: string }
         Returns: boolean
@@ -839,6 +876,7 @@ export type Database = {
     }
     Enums: {
       agent_status: "active" | "testing" | "in_development"
+      app_role: "admin" | "user"
       user_role: "admin" | "client"
     }
     CompositeTypes: {
@@ -968,6 +1006,7 @@ export const Constants = {
   public: {
     Enums: {
       agent_status: ["active", "testing", "in_development"],
+      app_role: ["admin", "user"],
       user_role: ["admin", "client"],
     },
   },
