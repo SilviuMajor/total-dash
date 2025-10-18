@@ -21,8 +21,10 @@ export type Database = {
           agency_name: string | null
           created_at: string | null
           elevenlabs_api_key: string | null
+          feature_request_email: string | null
           id: string
           openai_api_key: string | null
+          support_email: string | null
           updated_at: string | null
         }
         Insert: {
@@ -31,8 +33,10 @@ export type Database = {
           agency_name?: string | null
           created_at?: string | null
           elevenlabs_api_key?: string | null
+          feature_request_email?: string | null
           id?: string
           openai_api_key?: string | null
+          support_email?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -41,8 +45,10 @@ export type Database = {
           agency_name?: string | null
           created_at?: string | null
           elevenlabs_api_key?: string | null
+          feature_request_email?: string | null
           id?: string
           openai_api_key?: string | null
+          support_email?: string | null
           updated_at?: string | null
         }
         Relationships: []
