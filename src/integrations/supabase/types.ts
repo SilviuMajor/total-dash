@@ -340,6 +340,94 @@ export type Database = {
         }
         Relationships: []
       }
+      analytics_cards: {
+        Row: {
+          card_type: string
+          config: Json | null
+          created_at: string | null
+          grid_position: Json | null
+          id: string
+          is_expanded: boolean | null
+          metric_type: string
+          tab_id: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          card_type: string
+          config?: Json | null
+          created_at?: string | null
+          grid_position?: Json | null
+          id?: string
+          is_expanded?: boolean | null
+          metric_type: string
+          tab_id: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          card_type?: string
+          config?: Json | null
+          created_at?: string | null
+          grid_position?: Json | null
+          id?: string
+          is_expanded?: boolean | null
+          metric_type?: string
+          tab_id?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analytics_cards_tab_id_fkey"
+            columns: ["tab_id"]
+            isOneToOne: false
+            referencedRelation: "analytics_tabs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      analytics_tabs: {
+        Row: {
+          agent_id: string
+          created_at: string | null
+          default_date_range: string | null
+          id: string
+          is_default: boolean | null
+          name: string
+          sort_order: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          agent_id: string
+          created_at?: string | null
+          default_date_range?: string | null
+          id?: string
+          is_default?: boolean | null
+          name: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          agent_id?: string
+          created_at?: string | null
+          default_date_range?: string | null
+          id?: string
+          is_default?: boolean | null
+          name?: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analytics_tabs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_settings: {
         Row: {
           client_id: string
