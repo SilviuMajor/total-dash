@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { Maximize2, Minimize2, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { Maximize2, Minimize2, TrendingUp, TrendingDown, Minus, GripVertical, Copy, X } from "lucide-react";
 import { formatDuration } from "@/hooks/useAnalyticsMetrics";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +20,8 @@ interface MetricCardProps {
   metrics: any;
   onToggleExpand: (cardId: string) => void;
   onDelete?: (cardId: string) => void;
+  onDuplicate?: (cardId: string) => void;
+  isEditMode: boolean;
 }
 
 const COLORS = [
@@ -30,7 +32,7 @@ const COLORS = [
   "hsl(var(--info))"
 ];
 
-export function MetricCard({ card, metrics, onToggleExpand, onDelete }: MetricCardProps) {
+export function MetricCard({ card, metrics, onToggleExpand, onDelete, onDuplicate, isEditMode }: MetricCardProps) {
   const [isHovered, setIsHovered] = useState(false);
 
   const renderMetricValue = () => {
@@ -43,31 +45,22 @@ export function MetricCard({ card, metrics, onToggleExpand, onDelete }: MetricCa
         return metrics.completedConversations || 0;
       case "avg_duration":
         return formatDuration(metrics.avgDuration || 0);
+      case "completion_rate":
+        return `${metrics.completionRate || 0}%`;
+      case "peak_usage":
+        return metrics.peakUsageTime || "N/A";
       default:
         return "N/A";
     }
   };
 
   const renderTrend = () => {
-    // TODO: Calculate trend based on previous period
-    const trend = Math.random() > 0.5 ? "up" : "down";
-    const percentage = Math.floor(Math.random() * 20) + 1;
-
-    if (trend === "up") {
-      return (
-        <div className="flex items-center gap-1 text-success text-sm">
-          <TrendingUp className="h-4 w-4" />
-          <span>+{percentage}%</span>
-        </div>
-      );
-    } else {
-      return (
-        <div className="flex items-center gap-1 text-destructive text-sm">
-          <TrendingDown className="h-4 w-4" />
-          <span>-{percentage}%</span>
-        </div>
-      );
-    }
+    return (
+      <div className="flex items-center gap-1 text-muted-foreground text-sm">
+        <Minus className="h-4 w-4" />
+        <span>0% change</span>
+      </div>
+    );
   };
 
   const renderChart = () => {
@@ -167,6 +160,43 @@ export function MetricCard({ card, metrics, onToggleExpand, onDelete }: MetricCa
           </ResponsiveContainer>
         );
 
+      case "conversations_by_sentiment":
+        const sentimentData = Object.entries(metrics.conversationsBySentiment || {}).map(([name, value]) => ({ name, value }));
+        return (
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie data={sentimentData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
+                {sentimentData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "0.5rem" }} />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
+        );
+
+      case "conversations_by_department":
+      case "top_tags":
+      case "duration_distribution":
+        const data = card.metric_type === "conversations_by_department" 
+          ? Object.entries(metrics.conversationsByDepartment || {}).map(([name, value]) => ({ name, value }))
+          : card.metric_type === "top_tags"
+          ? Object.entries(metrics.topTags || {}).map(([name, value]) => ({ name, value }))
+          : Object.entries(metrics.durationDistribution || {}).map(([name, value]) => ({ name, value }));
+
+        return (
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={data} layout="vertical">
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <XAxis type="number" stroke="hsl(var(--muted-foreground))" />
+              <YAxis type="category" dataKey="name" stroke="hsl(var(--muted-foreground))" width={100} />
+              <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "0.5rem" }} />
+              <Bar dataKey="value" fill="hsl(var(--success))" radius={[0, 8, 8, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        );
+
       default:
         return <div className="flex items-center justify-center h-full text-muted-foreground">No chart available</div>;
     }
@@ -196,13 +226,21 @@ export function MetricCard({ card, metrics, onToggleExpand, onDelete }: MetricCa
     <Card
       className={cn(
         "bg-gradient-card border-border/50 hover:border-primary/50 transition-all relative overflow-hidden h-full",
-        isHovered && "shadow-lg"
+        isHovered && "shadow-lg",
+        isEditMode && "ring-2 ring-primary/50 ring-offset-2"
       )}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       <div className="flex items-center justify-between p-4 border-b border-border/50">
-        <h3 className="text-lg font-semibold text-foreground">{card.title}</h3>
+        <div className="flex items-center gap-2">
+          {isEditMode && (
+            <div className="card-drag-handle cursor-move">
+              <GripVertical className="h-5 w-5 text-muted-foreground" />
+            </div>
+          )}
+          <h3 className="text-lg font-semibold text-foreground">{card.title}</h3>
+        </div>
         <div className="flex items-center gap-1">
           {card.card_type === "metric" && (
             <Button
@@ -212,6 +250,26 @@ export function MetricCard({ card, metrics, onToggleExpand, onDelete }: MetricCa
               onClick={() => onToggleExpand(card.id)}
             >
               {card.is_expanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            </Button>
+          )}
+          {isEditMode && onDuplicate && (
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7"
+              onClick={() => onDuplicate(card.id)}
+            >
+              <Copy className="h-4 w-4" />
+            </Button>
+          )}
+          {isEditMode && onDelete && (
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7 text-destructive"
+              onClick={() => onDelete(card.id)}
+            >
+              <X className="h-4 w-4" />
             </Button>
           )}
         </div>

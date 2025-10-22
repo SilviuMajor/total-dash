@@ -1,15 +1,27 @@
 import { useState, useEffect } from "react";
 import { useClientAgentContext } from "@/hooks/useClientAgentContext";
 import { NoAgentsAssigned } from "@/components/NoAgentsAssigned";
-import { ClientAgentSelector } from "@/components/ClientAgentSelector";
 import { AnalyticsTabBar } from "@/components/analytics/AnalyticsTabBar";
 import { DateRangeSelector } from "@/components/analytics/DateRangeSelector";
 import { AnalyticsDashboard } from "@/components/analytics/AnalyticsDashboard";
 import { useAnalyticsTabs } from "@/hooks/useAnalyticsTabs";
 import { useAnalyticsMetrics, DateRange, getDateRangeFromPreset, DateRangePreset } from "@/hooks/useAnalyticsMetrics";
+import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
+import { Edit, Download } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { exportAnalyticsData } from "@/lib/analyticsExport";
+import { toast } from "sonner";
 
 export default function Analytics() {
   const { agents, selectedAgentId } = useClientAgentContext();
+  const { profile } = useAuth();
   const selectedAgent = agents.find(a => a.id === selectedAgentId);
   const {
     tabs,
@@ -24,10 +36,12 @@ export default function Analytics() {
 
   const [dateRange, setDateRange] = useState<DateRange>(getDateRangeFromPreset("week"));
   const [currentPreset, setCurrentPreset] = useState<DateRangePreset>("week");
+  const [isEditMode, setIsEditMode] = useState(false);
   
   const { metrics, loading: metricsLoading } = useAnalyticsMetrics(selectedAgent?.id || null, dateRange);
 
   const activeTab = tabs.find(t => t.id === activeTabId);
+  const isAdmin = profile?.role === 'admin';
 
   useEffect(() => {
     if (activeTab?.default_date_range) {
@@ -41,6 +55,38 @@ export default function Analytics() {
     setCurrentPreset(preset);
     if (activeTabId) {
       updateTab(activeTabId, { default_date_range: preset });
+    }
+  };
+
+  const handleExport = (scope: 'current-tab' | 'all-tabs', format: 'csv' | 'json') => {
+    try {
+      if (scope === 'current-tab') {
+        exportAnalyticsData({
+          format,
+          scope,
+          tabName: activeTab?.name || 'Analytics',
+          metrics,
+          dateRange,
+          agentName: selectedAgent?.name || 'Agent',
+        });
+      } else {
+        const allTabsData = tabs.map(tab => ({
+          name: tab.name,
+          metrics,
+        }));
+        exportAnalyticsData({
+          format,
+          scope,
+          allTabsData,
+          metrics,
+          dateRange,
+          agentName: selectedAgent?.name || 'Agent',
+        });
+      }
+      toast.success(`Analytics data exported successfully as ${format.toUpperCase()}`);
+    } catch (error) {
+      toast.error('Failed to export analytics data');
+      console.error('Export error:', error);
     }
   };
 
@@ -64,14 +110,48 @@ export default function Analytics() {
             <h1 className="text-4xl font-bold text-foreground">Analytics</h1>
             <p className="text-muted-foreground">Deep dive into your AI agent performance metrics.</p>
           </div>
-          <div className="flex items-center gap-4">
-            <ClientAgentSelector />
+          <div className="flex items-center gap-3">
             <DateRangeSelector
               value={dateRange}
               onChange={setDateRange}
               defaultPreset={currentPreset}
               onPresetChange={handlePresetChange}
             />
+            {isAdmin && (
+              <>
+                <Button
+                  variant={isEditMode ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setIsEditMode(!isEditMode)}
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  {isEditMode ? "Done" : "Edit"}
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <Download className="h-4 w-4 mr-2" />
+                      Export
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleExport('current-tab', 'csv')}>
+                      Current Tab (CSV)
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleExport('current-tab', 'json')}>
+                      Current Tab (JSON)
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => handleExport('all-tabs', 'csv')}>
+                      All Tabs (CSV)
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleExport('all-tabs', 'json')}>
+                      All Tabs (JSON)
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -91,6 +171,7 @@ export default function Analytics() {
           <AnalyticsDashboard
             tabId={activeTabId}
             metrics={metrics}
+            isEditMode={isEditMode}
           />
         </div>
       )}

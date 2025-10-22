@@ -11,6 +11,7 @@ export interface DateRange {
 
 export function useAnalyticsMetrics(agentId: string | null, dateRange: DateRange) {
   const [metrics, setMetrics] = useState<any>({});
+  const [previousMetrics, setPreviousMetrics] = useState<any>({});
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -23,7 +24,12 @@ export function useAnalyticsMetrics(agentId: string | null, dateRange: DateRange
 
     setLoading(true);
     try {
-      // Fetch conversations within date range
+      // Calculate previous period date range
+      const daysDiff = differenceInDays(dateRange.to, dateRange.from);
+      const previousFrom = subDays(dateRange.from, daysDiff + 1);
+      const previousTo = subDays(dateRange.to, daysDiff + 1);
+
+      // Fetch current period conversations
       const { data: conversations, error } = await supabase
         .from("conversations")
         .select("*")
@@ -33,65 +39,20 @@ export function useAnalyticsMetrics(agentId: string | null, dateRange: DateRange
 
       if (error) throw error;
 
-      // Calculate metrics
-      const totalConversations = conversations?.length || 0;
-      const activeConversations = conversations?.filter(c => c.status === "active").length || 0;
-      const completedConversations = conversations?.filter(c => c.status === "completed").length || 0;
-      
-      const durationsInSeconds = conversations
-        ?.filter(c => c.duration)
-        .map(c => c.duration) || [];
-      
-      const avgDuration = durationsInSeconds.length > 0
-        ? Math.round(durationsInSeconds.reduce((a, b) => a + b, 0) / durationsInSeconds.length)
-        : 0;
+      // Fetch previous period conversations for comparison
+      const { data: previousConversations } = await supabase
+        .from("conversations")
+        .select("*")
+        .eq("agent_id", agentId)
+        .gte("started_at", previousFrom.toISOString())
+        .lte("started_at", previousTo.toISOString());
 
-      // Group by status
-      const conversationsByStatus = conversations?.reduce((acc: any, conv) => {
-        const status = conv.status || "unknown";
-        acc[status] = (acc[status] || 0) + 1;
-        return acc;
-      }, {}) || {};
+      // Calculate current period metrics
+      const currentMetrics = calculateMetrics(conversations || [], dateRange);
+      const prevMetrics = calculateMetrics(previousConversations || [], { from: previousFrom, to: previousTo });
 
-      // Group by tags
-      const conversationsByTag = conversations?.reduce((acc: any, conv) => {
-        const metadata = conv.metadata as any;
-        const tags = metadata?.tags || [];
-        tags.forEach((tag: string) => {
-          acc[tag] = (acc[tag] || 0) + 1;
-        });
-        return acc;
-      }, {}) || {};
-
-      // Group by sentiment
-      const conversationsBySentiment = conversations?.reduce((acc: any, conv) => {
-        const sentiment = conv.sentiment || "neutral";
-        acc[sentiment] = (acc[sentiment] || 0) + 1;
-        return acc;
-      }, {}) || {};
-
-      // Time series data
-      const conversationsOverTime = generateTimeSeriesData(conversations || [], dateRange);
-
-      // Distribution by hour
-      const conversationsByHour = conversations?.reduce((acc: any, conv) => {
-        const hour = new Date(conv.started_at).getHours();
-        acc[hour] = (acc[hour] || 0) + 1;
-        return acc;
-      }, {}) || {};
-
-      setMetrics({
-        totalConversations,
-        activeConversations,
-        completedConversations,
-        avgDuration,
-        conversationsByStatus,
-        conversationsByTag,
-        conversationsBySentiment,
-        conversationsOverTime,
-        conversationsByHour,
-        rawData: conversations
-      });
+      setMetrics(currentMetrics);
+      setPreviousMetrics(prevMetrics);
     } catch (error) {
       console.error("Error fetching metrics:", error);
     } finally {
@@ -99,8 +60,110 @@ export function useAnalyticsMetrics(agentId: string | null, dateRange: DateRange
     }
   };
 
-  return { metrics, loading, refetch: fetchMetrics };
+  return { metrics, previousMetrics, loading, refetch: fetchMetrics };
 }
+
+function calculateMetrics(conversations: any[], dateRange: DateRange) {
+  const totalConversations = conversations.length;
+  const activeConversations = conversations.filter(c => c.status === "active").length;
+  const completedConversations = conversations.filter(c => c.status === "completed").length;
+  
+  const durationsInSeconds = conversations
+    .filter(c => c.duration)
+    .map(c => c.duration);
+  
+  const avgDuration = durationsInSeconds.length > 0
+    ? Math.round(durationsInSeconds.reduce((a, b) => a + b, 0) / durationsInSeconds.length)
+    : 0;
+
+  // Group by status
+  const conversationsByStatus = conversations.reduce((acc: any, conv) => {
+    const status = conv.status || "unknown";
+    acc[status] = (acc[status] || 0) + 1;
+    return acc;
+  }, {});
+
+  // Group by tags
+  const conversationsByTag = conversations.reduce((acc: any, conv) => {
+    const metadata = conv.metadata as any;
+    const tags = metadata?.tags || [];
+    tags.forEach((tag: string) => {
+      acc[tag] = (acc[tag] || 0) + 1;
+    });
+    return acc;
+  }, {});
+
+  // Group by sentiment
+  const conversationsBySentiment = conversations.reduce((acc: any, conv) => {
+    const sentiment = conv.sentiment || "neutral";
+    acc[sentiment] = (acc[sentiment] || 0) + 1;
+    return acc;
+  }, {});
+
+  // Group by department
+  const conversationsByDepartment = conversations.reduce((acc: any, conv) => {
+    const metadata = conv.metadata as any;
+    const dept = metadata?.department || "Unassigned";
+    acc[dept] = (acc[dept] || 0) + 1;
+    return acc;
+  }, {});
+
+  // Top tags (top 10)
+  const topTags = Object.entries(conversationsByTag)
+    .sort(([, a]: any, [, b]: any) => b - a)
+    .slice(0, 10)
+    .reduce((acc, [tag, count]) => ({ ...acc, [tag]: count }), {});
+
+  // Completion rate
+  const completionRate = totalConversations > 0 
+    ? Number(((completedConversations / totalConversations) * 100).toFixed(1))
+    : 0;
+
+  // Time series data
+  const conversationsOverTime = generateTimeSeriesData(conversations, dateRange);
+
+  // Distribution by hour
+  const conversationsByHour = conversations.reduce((acc: any, conv) => {
+    const hour = new Date(conv.started_at).getHours();
+    acc[hour] = (acc[hour] || 0) + 1;
+    return acc;
+  }, {});
+
+  // Peak usage time
+  const peakHourEntry = Object.entries(conversationsByHour)
+    .sort(([, a]: any, [, b]: any) => b - a)[0];
+  const peakUsageTime = peakHourEntry ? `${peakHourEntry[0]}:00` : 'N/A';
+
+  // Duration distribution
+  const durationDistribution = conversations.reduce((acc: any, conv) => {
+    const mins = (conv.duration || 0) / 60;
+    if (mins < 1) acc['0-1 min'] = (acc['0-1 min'] || 0) + 1;
+    else if (mins < 3) acc['1-3 min'] = (acc['1-3 min'] || 0) + 1;
+    else if (mins < 5) acc['3-5 min'] = (acc['3-5 min'] || 0) + 1;
+    else if (mins < 10) acc['5-10 min'] = (acc['5-10 min'] || 0) + 1;
+    else acc['10+ min'] = (acc['10+ min'] || 0) + 1;
+    return acc;
+  }, {});
+
+  return {
+    totalConversations,
+    activeConversations,
+    completedConversations,
+    avgDuration,
+    completionRate,
+    conversationsByStatus,
+    conversationsByTag,
+    conversationsBySentiment,
+    conversationsByDepartment,
+    topTags,
+    conversationsOverTime,
+    conversationsByHour,
+    peakUsageTime,
+    durationDistribution,
+    rawData: conversations
+  };
+}
+
 
 function generateTimeSeriesData(conversations: any[], dateRange: DateRange) {
   const days = differenceInDays(dateRange.to, dateRange.from) + 1;
