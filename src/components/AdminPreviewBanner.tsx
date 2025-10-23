@@ -1,5 +1,6 @@
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Eye, X } from "lucide-react";
@@ -7,18 +8,25 @@ import { Button } from "@/components/ui/button";
 
 export function AdminPreviewBanner() {
   const { profile } = useAuth();
+  const { userType } = useMultiTenantAuth();
   const location = useLocation();
-  const [clientName, setClientName] = useState<string>("");
+  const [previewName, setPreviewName] = useState<string>("");
+  const [previewType, setPreviewType] = useState<'agency' | 'client' | null>(null);
   
   const searchParams = new URLSearchParams(location.search);
   const isPreviewMode = searchParams.get('preview') === 'true';
   const clientId = searchParams.get('clientId');
+  const agencyId = searchParams.get('agencyId');
 
   useEffect(() => {
     if (isPreviewMode && clientId) {
       loadClientName(clientId);
+      setPreviewType('client');
+    } else if (isPreviewMode && agencyId) {
+      loadAgencyName(agencyId);
+      setPreviewType('agency');
     }
-  }, [isPreviewMode, clientId]);
+  }, [isPreviewMode, clientId, agencyId]);
 
   const loadClientName = async (id: string) => {
     const { data } = await supabase
@@ -28,7 +36,19 @@ export function AdminPreviewBanner() {
       .single();
     
     if (data) {
-      setClientName(data.name);
+      setPreviewName(data.name);
+    }
+  };
+
+  const loadAgencyName = async (id: string) => {
+    const { data } = await supabase
+      .from('agencies')
+      .select('name')
+      .eq('id', id)
+      .single();
+    
+    if (data) {
+      setPreviewName(data.name);
     }
   };
 
@@ -36,7 +56,12 @@ export function AdminPreviewBanner() {
     window.close();
   };
 
-  if (profile?.role !== 'admin' || !isPreviewMode || !clientId) {
+  // Show for admin previewing client OR super admin previewing agency
+  const shouldShow = 
+    (profile?.role === 'admin' && isPreviewMode && clientId && previewType === 'client') ||
+    (userType === 'super_admin' && isPreviewMode && agencyId && previewType === 'agency');
+
+  if (!shouldShow) {
     return null;
   }
 
@@ -45,9 +70,11 @@ export function AdminPreviewBanner() {
       <div className="flex items-center gap-3">
         <Eye className="w-5 h-5" />
         <div>
-          <p className="font-semibold">Admin Preview Mode</p>
+          <p className="font-semibold">
+            {previewType === 'agency' ? 'Super Admin' : 'Admin'} Preview Mode
+          </p>
           <p className="text-sm text-blue-100">
-            Viewing as: {clientName || 'Loading...'}
+            Viewing as: {previewName || 'Loading...'}
           </p>
         </div>
       </div>

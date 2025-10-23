@@ -42,7 +42,7 @@ const superAdminNavigation = [
 
 export function Sidebar() {
   const { profile, signOut } = useAuth();
-  const { profile: mtProfile, userType, signOut: mtSignOut } = useMultiTenantAuth();
+  const { profile: mtProfile, userType, signOut: mtSignOut, isPreviewMode: mtIsPreviewMode, previewAgency } = useMultiTenantAuth();
   const { selectedAgentPermissions, agents, selectedAgentId } = useClientAgentContext();
   const location = useLocation();
   const isAdmin = profile?.role === 'admin';
@@ -58,9 +58,17 @@ export function Sidebar() {
   const searchParams = new URLSearchParams(location.search);
   const isPreviewMode = searchParams.get('preview') === 'true';
   const previewClientId = searchParams.get('clientId');
+  const previewAgencyId = searchParams.get('agencyId');
   
   useEffect(() => {
     const loadAgencyBranding = async () => {
+      // If super admin previewing agency, use preview agency branding
+      if (mtIsPreviewMode && previewAgency) {
+        if (previewAgency.name) setAgencyName(previewAgency.name);
+        if (previewAgency.logo_url) setAgencyLogo(previewAgency.logo_url);
+        return;
+      }
+      
       // For agency users, use their agency branding
       if (mtProfile?.agency) {
         if (mtProfile.agency.name) setAgencyName(mtProfile.agency.name);
@@ -78,7 +86,7 @@ export function Sidebar() {
       if (data?.agency_logo_url) setAgencyLogo(data.agency_logo_url);
     };
     loadAgencyBranding();
-  }, [mtProfile]);
+  }, [mtProfile, mtIsPreviewMode, previewAgency]);
 
   useEffect(() => {
     if (isPreviewMode && previewClientId) {
@@ -100,7 +108,10 @@ export function Sidebar() {
   // Determine which navigation to show
   let navigation;
   
-  if (userType === 'super_admin') {
+  if (userType === 'super_admin' && mtIsPreviewMode && previewAgencyId) {
+    // Super admin previewing agency - show agency navigation
+    navigation = agencyNavigation;
+  } else if (userType === 'super_admin') {
     navigation = superAdminNavigation;
   } else if (userType === 'agency') {
     navigation = agencyNavigation;
@@ -136,6 +147,9 @@ export function Sidebar() {
     if (isPreviewMode && previewClientId) {
       return `${basePath}?preview=true&clientId=${previewClientId}`;
     }
+    if (mtIsPreviewMode && previewAgencyId) {
+      return `${basePath}?preview=true&agencyId=${previewAgencyId}`;
+    }
     return basePath;
   };
 
@@ -145,7 +159,7 @@ export function Sidebar() {
         <img src={agencyLogo} alt={agencyName} className="w-12 h-12 object-contain" />
       </div>
       
-      {isPreviewMode && (
+      {(isPreviewMode || mtIsPreviewMode) && (
         <div className="px-4 py-2 bg-blue-600/10 border-b border-blue-600/20">
           <div className="flex items-center gap-2 text-blue-600 text-sm">
             <Eye className="w-4 h-4" />

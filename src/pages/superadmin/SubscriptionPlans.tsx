@@ -46,16 +46,29 @@ export default function SubscriptionPlans() {
     const formData = new FormData(e.currentTarget);
     
     try {
+      const stripePriceId = formData.get('stripe_price_id') as string;
+      
+      // Validate Stripe Price ID format if provided
+      if (stripePriceId && !stripePriceId.startsWith('price_')) {
+        toast({
+          title: "Invalid Format",
+          description: "Stripe Price ID must start with 'price_'",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       const planData = {
         name: formData.get('name') as string,
         description: formData.get('description') as string,
-        tier: formData.get('tier') as any, // Will be validated by DB enum
+        tier: formData.get('tier') as any,
         price_monthly_cents: parseInt(formData.get('price_monthly_cents') as string),
         max_clients: parseInt(formData.get('max_clients') as string),
         max_agents: parseInt(formData.get('max_agents') as string),
         max_team_members: parseInt(formData.get('max_team_members') as string),
         has_whitelabel_access: formData.get('has_whitelabel_access') === 'on',
         has_support_access: formData.get('has_support_access') === 'on',
+        stripe_price_id: stripePriceId || null,
         is_active: true,
       };
 
@@ -162,15 +175,27 @@ export default function SubscriptionPlans() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="price_monthly_cents">Monthly Price (cents)</Label>
-                <Input
-                  id="price_monthly_cents"
-                  name="price_monthly_cents"
-                  type="number"
-                  defaultValue={editingPlan?.price_monthly_cents || 0}
-                  required
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="price_monthly_cents">Monthly Price (cents)</Label>
+                  <Input
+                    id="price_monthly_cents"
+                    name="price_monthly_cents"
+                    type="number"
+                    defaultValue={editingPlan?.price_monthly_cents || 0}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="stripe_price_id">Stripe Price ID</Label>
+                  <Input
+                    id="stripe_price_id"
+                    name="stripe_price_id"
+                    placeholder="price_xxxxxxxxxxxxx"
+                    defaultValue={editingPlan?.stripe_price_id || ''}
+                  />
+                  <p className="text-xs text-muted-foreground">Must start with 'price_'</p>
+                </div>
               </div>
 
               <div className="grid grid-cols-3 gap-4">
@@ -276,6 +301,15 @@ export default function SubscriptionPlans() {
               </div>
               {plan.description && (
                 <p className="text-sm text-muted-foreground">{plan.description}</p>
+              )}
+              {plan.stripe_price_id ? (
+                <div className="text-xs font-mono bg-muted/50 px-2 py-1 rounded">
+                  {plan.stripe_price_id}
+                </div>
+              ) : (
+                <div className="text-xs text-yellow-600 dark:text-yellow-500 flex items-center gap-1">
+                  ⚠️ Stripe Price ID not configured
+                </div>
               )}
               <div className="space-y-1 text-sm">
                 <div>• {plan.max_clients === -1 ? 'Unlimited' : plan.max_clients} clients</div>

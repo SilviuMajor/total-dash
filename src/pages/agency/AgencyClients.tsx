@@ -220,8 +220,15 @@ export default function AgencyClients() {
                   variant="outline"
                   onClick={() => navigate(`/agency/clients/${client.id}`)}
                 >
+                  View Details
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => window.open(`/analytics?preview=true&clientId=${client.id}`, '_blank')}
+                >
                   <Eye className="mr-2 h-4 w-4" />
-                  View
+                  Preview
                 </Button>
                 <Button
                   size="sm"

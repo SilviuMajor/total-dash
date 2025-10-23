@@ -29,6 +29,8 @@ interface MultiTenantAuthContextType {
   userType: UserType;
   loading: boolean;
   signOut: () => Promise<void>;
+  isPreviewMode: boolean;
+  previewAgency: AgencyData | null;
 }
 
 const MultiTenantAuthContext = createContext<MultiTenantAuthContextType>({
@@ -38,6 +40,8 @@ const MultiTenantAuthContext = createContext<MultiTenantAuthContextType>({
   userType: null,
   loading: true,
   signOut: async () => {},
+  isPreviewMode: false,
+  previewAgency: null,
 });
 
 export const useMultiTenantAuth = () => useContext(MultiTenantAuthContext);
@@ -48,9 +52,22 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<MultiTenantProfile | null>(null);
   const [userType, setUserType] = useState<UserType>(null);
   const [loading, setLoading] = useState(true);
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const [previewAgency, setPreviewAgency] = useState<AgencyData | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Check for preview mode
+    const searchParams = new URLSearchParams(window.location.search);
+    const previewParam = searchParams.get('preview') === 'true';
+    const agencyId = searchParams.get('agencyId');
+    
+    setIsPreviewMode(previewParam && !!agencyId);
+    
+    if (previewParam && agencyId) {
+      loadPreviewAgency(agencyId);
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -77,6 +94,36 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const loadPreviewAgency = async (agencyId: string) => {
+    try {
+      const { data: agencyData } = await supabase
+        .from('agencies')
+        .select('id, name, slug, logo_url')
+        .eq('id', agencyId)
+        .single();
+
+      if (agencyData) {
+        // Get whitelabel access
+        const { data: subscriptionData } = await supabase
+          .from('agency_subscriptions')
+          .select(`
+            subscription_plans:plan_id (
+              has_whitelabel_access
+            )
+          `)
+          .eq('agency_id', agencyId)
+          .single();
+
+        setPreviewAgency({
+          ...agencyData,
+          has_whitelabel_access: subscriptionData?.subscription_plans?.has_whitelabel_access || false,
+        });
+      }
+    } catch (error) {
+      console.error('Error loading preview agency:', error);
+    }
+  };
 
   const loadProfile = async (userId: string) => {
     try {
@@ -194,6 +241,8 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
         userType,
         loading,
         signOut: handleSignOut,
+        isPreviewMode,
+        previewAgency,
       }}
     >
       {children}
