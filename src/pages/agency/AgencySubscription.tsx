@@ -17,6 +17,26 @@ export default function AgencySubscription() {
   useEffect(() => {
     loadSubscription();
     loadPlans();
+
+    // Check for success/canceled query params
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('success') === 'true') {
+      toast({
+        title: "Success!",
+        description: "Your subscription has been activated.",
+      });
+      // Clear the query params
+      window.history.replaceState({}, '', window.location.pathname);
+      // Reload subscription data
+      setTimeout(() => loadSubscription(), 2000);
+    } else if (params.get('canceled') === 'true') {
+      toast({
+        title: "Checkout Canceled",
+        description: "You can subscribe anytime.",
+        variant: "destructive",
+      });
+      window.history.replaceState({}, '', window.location.pathname);
+    }
   }, [profile]);
 
   const loadSubscription = async () => {
@@ -52,10 +72,28 @@ export default function AgencySubscription() {
   };
 
   const handleSelectPlan = async (planId: string) => {
-    toast({
-      title: "Coming Soon",
-      description: "Stripe checkout will be integrated here",
-    });
+    try {
+      setLoading(true);
+      
+      const { data, error } = await supabase.functions.invoke('create-agency-checkout', {
+        body: { planId }
+      });
+
+      if (error) throw error;
+
+      if (data?.url) {
+        window.location.href = data.url;
+      }
+    } catch (error: any) {
+      console.error('Error creating checkout:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create checkout session",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (loading) {
