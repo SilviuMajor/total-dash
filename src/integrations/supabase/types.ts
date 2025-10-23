@@ -14,9 +14,70 @@ export type Database = {
   }
   public: {
     Tables: {
+      agencies: {
+        Row: {
+          created_at: string | null
+          custom_css: string | null
+          custom_domain: string | null
+          deleted_at: string | null
+          domain: string | null
+          id: string
+          is_active: boolean | null
+          logo_url: string | null
+          name: string
+          owner_id: string
+          primary_color: string | null
+          scheduled_deletion_date: string | null
+          secondary_color: string | null
+          slug: string
+          support_email: string | null
+          trial_ends_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          custom_css?: string | null
+          custom_domain?: string | null
+          deleted_at?: string | null
+          domain?: string | null
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          name: string
+          owner_id: string
+          primary_color?: string | null
+          scheduled_deletion_date?: string | null
+          secondary_color?: string | null
+          slug: string
+          support_email?: string | null
+          trial_ends_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          custom_css?: string | null
+          custom_domain?: string | null
+          deleted_at?: string | null
+          domain?: string | null
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          name?: string
+          owner_id?: string
+          primary_color?: string | null
+          scheduled_deletion_date?: string | null
+          secondary_color?: string | null
+          slug?: string
+          support_email?: string | null
+          trial_ends_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       agency_settings: {
         Row: {
           agency_domain: string | null
+          agency_id: string | null
           agency_logo_url: string | null
           agency_name: string | null
           created_at: string | null
@@ -28,6 +89,7 @@ export type Database = {
         }
         Insert: {
           agency_domain?: string | null
+          agency_id?: string | null
           agency_logo_url?: string | null
           agency_name?: string | null
           created_at?: string | null
@@ -39,6 +101,7 @@ export type Database = {
         }
         Update: {
           agency_domain?: string | null
+          agency_id?: string | null
           agency_logo_url?: string | null
           agency_name?: string | null
           created_at?: string | null
@@ -48,7 +111,122 @@ export type Database = {
           support_email?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "agency_settings_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: true
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agency_subscriptions: {
+        Row: {
+          agency_id: string
+          canceled_at: string | null
+          created_at: string | null
+          current_agents: number | null
+          current_clients: number | null
+          current_period_end: string | null
+          current_period_start: string | null
+          current_team_members: number | null
+          id: string
+          plan_id: string
+          status: Database["public"]["Enums"]["subscription_status"] | null
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          trial_ends_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          agency_id: string
+          canceled_at?: string | null
+          created_at?: string | null
+          current_agents?: number | null
+          current_clients?: number | null
+          current_period_end?: string | null
+          current_period_start?: string | null
+          current_team_members?: number | null
+          id?: string
+          plan_id: string
+          status?: Database["public"]["Enums"]["subscription_status"] | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          trial_ends_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          agency_id?: string
+          canceled_at?: string | null
+          created_at?: string | null
+          current_agents?: number | null
+          current_clients?: number | null
+          current_period_end?: string | null
+          current_period_start?: string | null
+          current_team_members?: number | null
+          id?: string
+          plan_id?: string
+          status?: Database["public"]["Enums"]["subscription_status"] | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          trial_ends_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agency_subscriptions_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: true
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agency_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agency_users: {
+        Row: {
+          agency_id: string
+          created_at: string | null
+          id: string
+          page_permissions: Json | null
+          role: Database["public"]["Enums"]["agency_role"]
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          agency_id: string
+          created_at?: string | null
+          id?: string
+          page_permissions?: Json | null
+          role?: Database["public"]["Enums"]["agency_role"]
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          agency_id?: string
+          created_at?: string | null
+          id?: string
+          page_permissions?: Json | null
+          role?: Database["public"]["Enums"]["agency_role"]
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agency_users_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       agent_assignments: {
         Row: {
@@ -309,6 +487,7 @@ export type Database = {
       }
       agents: {
         Row: {
+          agency_id: string | null
           api_key: string
           config: Json | null
           created_at: string | null
@@ -319,6 +498,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          agency_id?: string | null
           api_key: string
           config?: Json | null
           created_at?: string | null
@@ -329,6 +509,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          agency_id?: string | null
           api_key?: string
           config?: Json | null
           created_at?: string | null
@@ -338,7 +519,15 @@ export type Database = {
           status?: Database["public"]["Enums"]["agent_status"]
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "agents_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       analytics_cards: {
         Row: {
@@ -636,6 +825,7 @@ export type Database = {
       }
       clients: {
         Row: {
+          agency_id: string | null
           company_address: string | null
           contact_email: string | null
           contact_phone: string | null
@@ -652,6 +842,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          agency_id?: string | null
           company_address?: string | null
           contact_email?: string | null
           contact_phone?: string | null
@@ -668,6 +859,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          agency_id?: string | null
           company_address?: string | null
           contact_email?: string | null
           contact_phone?: string | null
@@ -683,7 +875,15 @@ export type Database = {
           subscription_status?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "clients_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       conversations: {
         Row: {
@@ -821,6 +1021,89 @@ export type Database = {
         }
         Relationships: []
       }
+      subscription_plans: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          features: Json | null
+          has_support_access: boolean | null
+          has_whitelabel_access: boolean | null
+          id: string
+          is_active: boolean | null
+          max_agents: number
+          max_clients: number
+          max_team_members: number
+          name: string
+          price_monthly_cents: number
+          tier: Database["public"]["Enums"]["subscription_tier"]
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          features?: Json | null
+          has_support_access?: boolean | null
+          has_whitelabel_access?: boolean | null
+          id?: string
+          is_active?: boolean | null
+          max_agents?: number
+          max_clients?: number
+          max_team_members?: number
+          name: string
+          price_monthly_cents?: number
+          tier: Database["public"]["Enums"]["subscription_tier"]
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          features?: Json | null
+          has_support_access?: boolean | null
+          has_whitelabel_access?: boolean | null
+          id?: string
+          is_active?: boolean | null
+          max_agents?: number
+          max_clients?: number
+          max_team_members?: number
+          name?: string
+          price_monthly_cents?: number
+          tier?: Database["public"]["Enums"]["subscription_tier"]
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      super_admin_users: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string
+          page_permissions: Json | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          page_permissions?: Json | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          page_permissions?: Json | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "super_admin_users_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "super_admin_users"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       transcripts: {
         Row: {
           buttons: Json | null
@@ -923,10 +1206,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_agency_limit: {
+        Args: { _agency_id: string; _limit_type: string }
+        Returns: boolean
+      }
       check_page_permission: {
         Args: { _client_id: string; _page_name: string; _user_id: string }
         Returns: boolean
       }
+      get_user_agency_id: { Args: { _user_id: string }; Returns: string }
       get_user_client_ids: {
         Args: { user_id: string }
         Returns: {
@@ -941,6 +1229,14 @@ export type Database = {
           name: string
         }[]
       }
+      has_agency_role: {
+        Args: {
+          _agency_id: string
+          _role: Database["public"]["Enums"]["agency_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _client_id: string
@@ -953,18 +1249,33 @@ export type Database = {
         Args: { _client_id: string; _user_id: string }
         Returns: boolean
       }
-      is_admin: {
-        Args: { user_id: string }
+      has_whitelabel_access: { Args: { _agency_id: string }; Returns: boolean }
+      is_admin: { Args: { user_id: string }; Returns: boolean }
+      is_agency_owner: {
+        Args: { _agency_id: string; _user_id: string }
         Returns: boolean
       }
       is_last_admin: {
         Args: { _client_id: string; _user_id: string }
         Returns: boolean
       }
+      is_super_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
+      agency_role: "owner" | "admin" | "user"
       agent_status: "active" | "testing" | "in_development"
       app_role: "admin" | "user"
+      subscription_status:
+        | "trialing"
+        | "active"
+        | "past_due"
+        | "canceled"
+        | "incomplete"
+      subscription_tier:
+        | "free_trial"
+        | "starter"
+        | "professional"
+        | "enterprise"
       user_role: "admin" | "client"
     }
     CompositeTypes: {
@@ -1093,8 +1404,22 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      agency_role: ["owner", "admin", "user"],
       agent_status: ["active", "testing", "in_development"],
       app_role: ["admin", "user"],
+      subscription_status: [
+        "trialing",
+        "active",
+        "past_due",
+        "canceled",
+        "incomplete",
+      ],
+      subscription_tier: [
+        "free_trial",
+        "starter",
+        "professional",
+        "enterprise",
+      ],
       user_role: ["admin", "client"],
     },
   },

@@ -4,11 +4,17 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./hooks/useAuth";
+import { MultiTenantAuthProvider } from "./hooks/useMultiTenantAuth";
 import { ClientAgentProvider } from "./hooks/useClientAgentContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { SuperAdminProtectedRoute } from "./components/SuperAdminProtectedRoute";
+import { AgencyProtectedRoute } from "./components/AgencyProtectedRoute";
 import { Sidebar } from "./components/Sidebar";
 import { AdminPreviewBanner } from "./components/AdminPreviewBanner";
 import Auth from "./pages/Auth";
+import SuperAdminLogin from "./pages/superadmin/SuperAdminLogin";
+import AgencyLogin from "./pages/agency/AgencyLogin";
+import Agencies from "./pages/superadmin/Agencies";
 import Settings from "./pages/Settings";
 import AdminClients from "./pages/admin/Clients";
 import AdminAgents from "./pages/admin/Agents";
@@ -32,11 +38,33 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <AuthProvider>
-          <ClientAgentProvider>
-            <Routes>
-              {/* Auth Route */}
-              <Route path="/auth" element={<Auth />} />
+        <MultiTenantAuthProvider>
+          <AuthProvider>
+            <ClientAgentProvider>
+              <Routes>
+                {/* Super Admin Routes */}
+                <Route path="/super-admin/login" element={<SuperAdminLogin />} />
+                <Route path="/super-admin/*" element={
+                  <SuperAdminProtectedRoute>
+                    <div className="flex h-screen w-full bg-background overflow-hidden">
+                      <Sidebar />
+                      <div className="flex-1 flex flex-col overflow-hidden">
+                        <main className="flex-1 p-8 overflow-y-auto">
+                          <Routes>
+                            <Route path="/" element={<Agencies />} />
+                            <Route path="/agencies" element={<Agencies />} />
+                          </Routes>
+                        </main>
+                      </div>
+                    </div>
+                  </SuperAdminProtectedRoute>
+                } />
+
+                {/* Agency Routes */}
+                <Route path="/agency/login" element={<AgencyLogin />} />
+                
+                {/* Client Auth Route */}
+                <Route path="/auth" element={<Auth />} />
               
               <Route
                 path="/*"
@@ -157,9 +185,10 @@ const App = () => (
                   </ProtectedRoute>
                 }
               />
-            </Routes>
-          </ClientAgentProvider>
-        </AuthProvider>
+              </Routes>
+            </ClientAgentProvider>
+          </AuthProvider>
+        </MultiTenantAuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
