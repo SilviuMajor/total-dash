@@ -1035,6 +1035,7 @@ export type Database = {
           max_team_members: number
           name: string
           price_monthly_cents: number
+          stripe_price_id: string | null
           tier: Database["public"]["Enums"]["subscription_tier"]
           updated_at: string | null
         }
@@ -1051,6 +1052,7 @@ export type Database = {
           max_team_members?: number
           name: string
           price_monthly_cents?: number
+          stripe_price_id?: string | null
           tier: Database["public"]["Enums"]["subscription_tier"]
           updated_at?: string | null
         }
@@ -1067,6 +1069,7 @@ export type Database = {
           max_team_members?: number
           name?: string
           price_monthly_cents?: number
+          stripe_price_id?: string | null
           tier?: Database["public"]["Enums"]["subscription_tier"]
           updated_at?: string | null
         }

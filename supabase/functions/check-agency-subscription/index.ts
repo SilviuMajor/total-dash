@@ -119,7 +119,8 @@ serve(async (req) => {
           subscription.current_period_end = new Date(stripeSubscription.current_period_end * 1000).toISOString();
         }
       } catch (stripeError) {
-        logStep("Error retrieving Stripe subscription", { error: stripeError.message });
+        const errorMsg = stripeError instanceof Error ? stripeError.message : String(stripeError);
+        logStep("Error retrieving Stripe subscription", { error: errorMsg });
         // Continue with database data
       }
     }

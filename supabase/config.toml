@@ -11,3 +11,12 @@ verify_jwt = true
 
 [functions.send-support-email]
 verify_jwt = true
+
+[functions.stripe-webhook]
+verify_jwt = false
+
+[functions.create-agency-checkout]
+verify_jwt = true
+
+[functions.check-agency-subscription]
+verify_jwt = true
