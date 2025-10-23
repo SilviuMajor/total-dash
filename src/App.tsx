@@ -15,6 +15,13 @@ import Auth from "./pages/Auth";
 import SuperAdminLogin from "./pages/superadmin/SuperAdminLogin";
 import AgencyLogin from "./pages/agency/AgencyLogin";
 import Agencies from "./pages/superadmin/Agencies";
+import AgencyDetails from "./pages/superadmin/AgencyDetails";
+import SubscriptionPlans from "./pages/superadmin/SubscriptionPlans";
+import AgencyDashboard from "./pages/agency/AgencyDashboard";
+import AgencyClients from "./pages/agency/AgencyClients";
+import AgencyAgents from "./pages/agency/AgencyAgents";
+import AgencySubscription from "./pages/agency/AgencySubscription";
+import AgencySettings from "./pages/agency/AgencySettings";
 import Settings from "./pages/Settings";
 import AdminClients from "./pages/admin/Clients";
 import AdminAgents from "./pages/admin/Agents";
@@ -53,6 +60,8 @@ const App = () => (
                           <Routes>
                             <Route path="/" element={<Agencies />} />
                             <Route path="/agencies" element={<Agencies />} />
+                            <Route path="/agencies/:id" element={<AgencyDetails />} />
+                            <Route path="/plans" element={<SubscriptionPlans />} />
                           </Routes>
                         </main>
                       </div>
@@ -62,6 +71,24 @@ const App = () => (
 
                 {/* Agency Routes */}
                 <Route path="/agency/login" element={<AgencyLogin />} />
+                <Route path="/agency/*" element={
+                  <AgencyProtectedRoute>
+                    <div className="flex h-screen w-full bg-background overflow-hidden">
+                      <Sidebar />
+                      <div className="flex-1 flex flex-col overflow-hidden">
+                        <main className="flex-1 p-8 overflow-y-auto">
+                          <Routes>
+                            <Route path="/" element={<AgencyDashboard />} />
+                            <Route path="/clients" element={<AgencyClients />} />
+                            <Route path="/agents" element={<AgencyAgents />} />
+                            <Route path="/subscription" element={<AgencySubscription />} />
+                            <Route path="/settings" element={<AgencySettings />} />
+                          </Routes>
+                        </main>
+                      </div>
+                    </div>
+                  </AgencyProtectedRoute>
+                } />
                 
                 {/* Client Auth Route */}
                 <Route path="/auth" element={<Auth />} />

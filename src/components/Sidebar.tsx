@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { MessageSquare, BarChart3, BookOpen, Settings, Users, Bot, LogOut, Eye, FileText } from "lucide-react";
+import { MessageSquare, BarChart3, BookOpen, Settings, Users, Bot, LogOut, Eye, FileText, Home, CreditCard, Building2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
 import { useClientAgentContext } from "@/hooks/useClientAgentContext";
 import { ClientAgentSelector } from "./ClientAgentSelector";
 import { Button } from "./ui/button";
@@ -25,14 +26,33 @@ const adminNavigation = [
   { name: "Settings", href: "/admin/settings", icon: Settings },
 ];
 
+const agencyNavigation = [
+  { name: "Dashboard", href: "/agency", icon: Home },
+  { name: "Clients", href: "/agency/clients", icon: Users },
+  { name: "Agents", href: "/agency/agents", icon: Bot },
+  { name: "Subscription", href: "/agency/subscription", icon: CreditCard },
+  { name: "Settings", href: "/agency/settings", icon: Settings },
+];
+
+const superAdminNavigation = [
+  { name: "Agencies", href: "/super-admin/agencies", icon: Building2 },
+  { name: "Plans", href: "/super-admin/plans", icon: CreditCard },
+  { name: "Settings", href: "/super-admin/settings", icon: Settings },
+];
+
 export function Sidebar() {
   const { profile, signOut } = useAuth();
+  const { profile: mtProfile, userType, signOut: mtSignOut } = useMultiTenantAuth();
   const { selectedAgentPermissions, agents, selectedAgentId } = useClientAgentContext();
   const location = useLocation();
   const isAdmin = profile?.role === 'admin';
   const [agencyName, setAgencyName] = useState("Fiveleaf");
   const [agencyLogo, setAgencyLogo] = useState(fiveleafLogo);
   const [clientPermissions, setClientPermissions] = useState<any>(null);
+  
+  // Use multi-tenant auth if available
+  const effectiveProfile = mtProfile || profile;
+  const effectiveSignOut = mtProfile ? mtSignOut : signOut;
   
   // Check for preview mode
   const searchParams = new URLSearchParams(location.search);
@@ -41,6 +61,14 @@ export function Sidebar() {
   
   useEffect(() => {
     const loadAgencyBranding = async () => {
+      // For agency users, use their agency branding
+      if (mtProfile?.agency) {
+        if (mtProfile.agency.name) setAgencyName(mtProfile.agency.name);
+        if (mtProfile.agency.logo_url) setAgencyLogo(mtProfile.agency.logo_url);
+        return;
+      }
+      
+      // Fallback to agency_settings for backward compatibility
       const { data } = await supabase
         .from('agency_settings')
         .select('agency_name, agency_logo_url')
@@ -50,7 +78,7 @@ export function Sidebar() {
       if (data?.agency_logo_url) setAgencyLogo(data.agency_logo_url);
     };
     loadAgencyBranding();
-  }, []);
+  }, [mtProfile]);
 
   useEffect(() => {
     if (isPreviewMode && previewClientId) {
@@ -70,13 +98,17 @@ export function Sidebar() {
   }, [isPreviewMode, previewClientId]);
   
   // Determine which navigation to show
-  // When admin is in preview mode, show client navigation
-  const effectiveRole = (isAdmin && isPreviewMode) ? 'client' : profile?.role;
+  let navigation;
   
-  // Filter navigation based on role and permissions
-  const navigation = effectiveRole === 'admin' 
-    ? adminNavigation 
-    : clientNavigation.filter(item => {
+  if (userType === 'super_admin') {
+    navigation = superAdminNavigation;
+  } else if (userType === 'agency') {
+    navigation = agencyNavigation;
+  } else if (effectiveProfile?.role === 'admin' && !isPreviewMode) {
+    navigation = adminNavigation;
+  } else {
+    // Client navigation with filtering
+    navigation = clientNavigation.filter(item => {
         // Items with null permissionKey are always visible
         if (item.permissionKey === null) {
           return true;
@@ -97,6 +129,7 @@ export function Sidebar() {
         // Otherwise use selectedAgentPermissions for regular client users
         return selectedAgentPermissions?.[item.permissionKey] === true;
       });
+  }
 
   // Helper to preserve preview params in navigation URLs
   const getNavHref = (basePath: string) => {
@@ -121,7 +154,7 @@ export function Sidebar() {
         </div>
       )}
 
-      {effectiveRole === 'client' && (
+      {(effectiveProfile?.role === 'client' || (isAdmin && isPreviewMode)) && (
         <div className="p-4 border-b border-border">
           <ClientAgentSelector />
         </div>
@@ -152,15 +185,17 @@ export function Sidebar() {
         <div className="px-4 py-3 rounded-lg bg-muted/50">
           <p className="text-xs font-medium text-foreground">Logged in as</p>
           <p className="text-sm text-muted-foreground mt-1 truncate">
-            {profile?.email}
+            {effectiveProfile?.email}
           </p>
-          <p className="text-xs text-muted-foreground capitalize">{profile?.role}</p>
+          <p className="text-xs text-muted-foreground capitalize">
+            {userType || effectiveProfile?.role}
+          </p>
         </div>
         
         <Button 
           variant="ghost" 
           className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground"
-          onClick={signOut}
+          onClick={effectiveSignOut}
         >
           <LogOut className="w-4 h-4" />
           Sign Out
