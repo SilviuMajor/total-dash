@@ -20,6 +20,7 @@ import SubscriptionPlans from "./pages/superadmin/SubscriptionPlans";
 import AgencyDashboard from "./pages/agency/AgencyDashboard";
 import AgencyClients from "./pages/agency/AgencyClients";
 import AgencyAgents from "./pages/agency/AgencyAgents";
+import AgencyUsers from "./pages/agency/AgencyUsers";
 import AgencySubscription from "./pages/agency/AgencySubscription";
 import AgencySettings from "./pages/agency/AgencySettings";
 import Settings from "./pages/Settings";
@@ -83,6 +84,7 @@ const App = () => (
                             <Route path="/" element={<AgencyDashboard />} />
                             <Route path="/clients" element={<AgencyClients />} />
                             <Route path="/agents" element={<AgencyAgents />} />
+                            <Route path="/team" element={<AgencyUsers />} />
                             <Route path="/subscription" element={<AgencySubscription />} />
                             <Route path="/settings" element={<AgencySettings />} />
                           </Routes>

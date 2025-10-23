@@ -30,6 +30,7 @@ const agencyNavigation = [
   { name: "Dashboard", href: "/agency", icon: Home },
   { name: "Clients", href: "/agency/clients", icon: Users },
   { name: "Agents", href: "/agency/agents", icon: Bot },
+  { name: "Team Members", href: "/agency/team", icon: Users },
   { name: "Subscription", href: "/agency/subscription", icon: CreditCard },
   { name: "Settings", href: "/agency/settings", icon: Settings },
 ];
