@@ -12,7 +12,8 @@ import { Lock, Save } from "lucide-react";
 import { AgencyLogoUpload } from "@/components/agency-management/AgencyLogoUpload";
 
 export default function AgencySettings() {
-  const { profile } = useMultiTenantAuth();
+  const { profile, isPreviewMode, previewAgency } = useMultiTenantAuth();
+  const agencyId = isPreviewMode ? previewAgency?.id : profile?.agency?.id;
   const { toast } = useToast();
   const [agency, setAgency] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -24,13 +25,13 @@ export default function AgencySettings() {
   }, [profile]);
 
   const loadAgency = async () => {
-    if (!profile?.agency?.id) return;
+    if (!agencyId) return;
 
     try {
       const { data, error } = await supabase
         .from('agencies')
         .select('*')
-        .eq('id', profile.agency.id)
+        .eq('id', agencyId)
         .single();
 
       if (error) throw error;
@@ -60,7 +61,7 @@ export default function AgencySettings() {
           primary_color: agency.primary_color,
           secondary_color: agency.secondary_color,
         })
-        .eq('id', profile?.agency?.id);
+        .eq('id', agencyId);
 
       if (error) throw error;
 

@@ -5,7 +5,8 @@ import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
 import { Users, Bot, CreditCard, TrendingUp } from "lucide-react";
 
 export default function AgencyDashboard() {
-  const { profile } = useMultiTenantAuth();
+  const { profile, isPreviewMode, previewAgency } = useMultiTenantAuth();
+  const agencyId = isPreviewMode ? previewAgency?.id : profile?.agency?.id;
   const [stats, setStats] = useState({
     clients: 0,
     agents: 0,
@@ -18,19 +19,19 @@ export default function AgencyDashboard() {
   }, [profile]);
 
   const loadStats = async () => {
-    if (!profile?.agency?.id) return;
+    if (!agencyId) return;
 
     try {
       const [clientsData, agentsData] = await Promise.all([
         supabase
           .from('clients')
           .select('id', { count: 'exact', head: true })
-          .eq('agency_id', profile.agency.id)
+          .eq('agency_id', agencyId)
           .is('deleted_at', null),
         supabase
           .from('agents')
           .select('id', { count: 'exact', head: true })
-          .eq('agency_id', profile.agency.id),
+          .eq('agency_id', agencyId),
       ]);
 
       setStats({

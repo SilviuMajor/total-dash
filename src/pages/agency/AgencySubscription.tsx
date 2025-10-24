@@ -8,7 +8,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Check, Crown } from "lucide-react";
 
 export default function AgencySubscription() {
-  const { profile } = useMultiTenantAuth();
+  const { profile, isPreviewMode, previewAgency } = useMultiTenantAuth();
+  const agencyId = isPreviewMode ? previewAgency?.id : profile?.agency?.id;
   const { toast } = useToast();
   const [subscription, setSubscription] = useState<any>(null);
   const [plans, setPlans] = useState<any[]>([]);
@@ -40,7 +41,7 @@ export default function AgencySubscription() {
   }, [profile]);
 
   const loadSubscription = async () => {
-    if (!profile?.agency?.id) return;
+    if (!agencyId) return;
 
     try {
       const { data, error } = await supabase
@@ -49,7 +50,7 @@ export default function AgencySubscription() {
           *,
           subscription_plans:plan_id (*)
         `)
-        .eq('agency_id', profile.agency.id)
+        .eq('agency_id', agencyId)
         .single();
 
       if (error) throw error;

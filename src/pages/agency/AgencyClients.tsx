@@ -12,7 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export default function AgencyClients() {
-  const { profile } = useMultiTenantAuth();
+  const { profile, isPreviewMode, previewAgency } = useMultiTenantAuth();
+  const agencyId = isPreviewMode ? previewAgency?.id : profile?.agency?.id;
   const navigate = useNavigate();
   const { toast } = useToast();
   const [clients, setClients] = useState<any[]>([]);
@@ -27,10 +28,10 @@ export default function AgencyClients() {
   }, [profile]);
 
   const checkLimits = async () => {
-    if (!profile?.agency?.id) return;
+    if (!agencyId) return;
 
     const { data, error } = await supabase.rpc('check_agency_limit', {
-      _agency_id: profile.agency.id,
+      _agency_id: agencyId,
       _limit_type: 'clients'
     });
 
@@ -43,20 +44,20 @@ export default function AgencyClients() {
         current_clients,
         subscription_plans:plan_id (max_clients)
       `)
-      .eq('agency_id', profile.agency.id)
+      .eq('agency_id', agencyId)
       .single();
 
     setLimits(subData);
   };
 
   const loadClients = async () => {
-    if (!profile?.agency?.id) return;
+    if (!agencyId) return;
 
     try {
       const { data, error } = await supabase
         .from('clients')
         .select('*')
-        .eq('agency_id', profile.agency.id)
+        .eq('agency_id', agencyId)
         .is('deleted_at', null)
         .order('name');
 
@@ -90,7 +91,7 @@ export default function AgencyClients() {
         .from('clients')
         .insert([{
           name: formData.get('name') as string,
-          agency_id: profile?.agency?.id,
+          agency_id: agencyId,
           contact_email: formData.get('email') as string,
         }]);
 

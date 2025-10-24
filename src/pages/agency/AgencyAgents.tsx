@@ -9,7 +9,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit, AlertCircle } from "lucide-react";
 
 export default function AgencyAgents() {
-  const { profile } = useMultiTenantAuth();
+  const { profile, isPreviewMode, previewAgency } = useMultiTenantAuth();
+  const agencyId = isPreviewMode ? previewAgency?.id : profile?.agency?.id;
   const navigate = useNavigate();
   const { toast } = useToast();
   const [agents, setAgents] = useState<any[]>([]);
@@ -23,10 +24,10 @@ export default function AgencyAgents() {
   }, [profile]);
 
   const checkLimits = async () => {
-    if (!profile?.agency?.id) return;
+    if (!agencyId) return;
 
     const { data, error } = await supabase.rpc('check_agency_limit', {
-      _agency_id: profile.agency.id,
+      _agency_id: agencyId,
       _limit_type: 'agents'
     });
 
@@ -38,20 +39,20 @@ export default function AgencyAgents() {
         current_agents,
         subscription_plans:plan_id (max_agents)
       `)
-      .eq('agency_id', profile.agency.id)
+      .eq('agency_id', agencyId)
       .single();
 
     setLimits(subData);
   };
 
   const loadAgents = async () => {
-    if (!profile?.agency?.id) return;
+    if (!agencyId) return;
 
     try {
       const { data, error } = await supabase
         .from('agents')
         .select('*')
-        .eq('agency_id', profile.agency.id)
+        .eq('agency_id', agencyId)
         .order('name');
 
       if (error) throw error;

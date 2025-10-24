@@ -24,7 +24,8 @@ interface AgencyUser {
 }
 
 export default function AgencyUsers() {
-  const { profile } = useMultiTenantAuth();
+  const { profile, isPreviewMode, previewAgency } = useMultiTenantAuth();
+  const agencyId = isPreviewMode ? previewAgency?.id : profile?.agency?.id;
   const [users, setUsers] = useState<AgencyUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -35,31 +36,11 @@ export default function AgencyUsers() {
     role: "user" as 'owner' | 'admin' | 'user',
   });
 
-  const [agencyId, setAgencyId] = useState<string | null>(null);
-
-  useEffect(() => {
-    loadAgencyId();
-  }, [profile]);
-
   useEffect(() => {
     if (agencyId) {
       loadUsers();
     }
   }, [agencyId]);
-
-  const loadAgencyId = async () => {
-    if (!profile?.id) return;
-    
-    try {
-      const { data, error } = await supabase
-        .rpc('get_user_agency_id', { _user_id: profile.id });
-      
-      if (error) throw error;
-      setAgencyId(data);
-    } catch (error: any) {
-      console.error('Error loading agency ID:', error);
-    }
-  };
 
   const loadUsers = async () => {
     if (!agencyId) return;
