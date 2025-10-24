@@ -31,6 +31,9 @@ interface MultiTenantAuthContextType {
   signOut: () => Promise<void>;
   isPreviewMode: boolean;
   previewAgency: AgencyData | null;
+  isClientPreviewMode: boolean;
+  previewClient: { id: string; name: string; logo_url: string | null } | null;
+  previewClientAgencyId: string | null;
 }
 
 const MultiTenantAuthContext = createContext<MultiTenantAuthContextType>({
@@ -42,6 +45,9 @@ const MultiTenantAuthContext = createContext<MultiTenantAuthContextType>({
   signOut: async () => {},
   isPreviewMode: false,
   previewAgency: null,
+  isClientPreviewMode: false,
+  previewClient: null,
+  previewClientAgencyId: null,
 });
 
 export const useMultiTenantAuth = () => useContext(MultiTenantAuthContext);
@@ -54,6 +60,9 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [previewAgency, setPreviewAgency] = useState<AgencyData | null>(null);
+  const [isClientPreviewMode, setIsClientPreviewMode] = useState(false);
+  const [previewClient, setPreviewClient] = useState<{ id: string; name: string; logo_url: string | null } | null>(null);
+  const [previewClientAgencyId, setPreviewClientAgencyId] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -61,11 +70,20 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
     const searchParams = new URLSearchParams(window.location.search);
     const previewParam = searchParams.get('preview') === 'true';
     const agencyId = searchParams.get('agencyId');
+    const clientId = searchParams.get('clientId');
     
-    setIsPreviewMode(previewParam && !!agencyId);
+    // Agency preview mode (super admin -> agency)
+    setIsPreviewMode(previewParam && !!agencyId && !clientId);
     
-    if (previewParam && agencyId) {
+    if (previewParam && agencyId && !clientId) {
       loadPreviewAgency(agencyId);
+    }
+    
+    // Client preview mode (agency -> client analytics)
+    setIsClientPreviewMode(previewParam && !!clientId && !!agencyId);
+    
+    if (previewParam && clientId && agencyId) {
+      loadPreviewClient(clientId, agencyId);
     }
 
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -122,6 +140,28 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.error('Error loading preview agency:', error);
+    }
+  };
+
+  const loadPreviewClient = async (clientId: string, agencyId: string) => {
+    try {
+      const { data: clientData } = await supabase
+        .from('clients')
+        .select('id, name, logo_url, agency_id')
+        .eq('id', clientId)
+        .eq('agency_id', agencyId)
+        .single();
+
+      if (clientData) {
+        setPreviewClient({
+          id: clientData.id,
+          name: clientData.name,
+          logo_url: clientData.logo_url,
+        });
+        setPreviewClientAgencyId(agencyId);
+      }
+    } catch (error) {
+      console.error('Error loading preview client:', error);
     }
   };
 
@@ -252,6 +292,9 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
         signOut: handleSignOut,
         isPreviewMode,
         previewAgency,
+        isClientPreviewMode,
+        previewClient,
+        previewClientAgencyId,
       }}
     >
       {children}

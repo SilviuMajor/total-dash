@@ -218,7 +218,7 @@ export default function AgencyClients() {
               <div className="flex gap-2">
                 <Button
                   size="sm"
-                  variant="outline"
+                  variant="default"
                   onClick={() => navigate(`/agency/clients/${client.id}`)}
                 >
                   View Details
@@ -226,10 +226,10 @@ export default function AgencyClients() {
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => window.open(`/analytics?preview=true&clientId=${client.id}`, '_blank')}
+                  onClick={() => window.open(`/analytics?preview=true&clientId=${client.id}&agencyId=${agencyId}`, '_blank')}
                 >
                   <Eye className="mr-2 h-4 w-4" />
-                  Preview
+                  Preview Analytics
                 </Button>
                 <Button
                   size="sm"

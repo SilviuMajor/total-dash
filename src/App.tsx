@@ -11,6 +11,7 @@ import { SuperAdminProtectedRoute } from "./components/SuperAdminProtectedRoute"
 import { AgencyProtectedRoute } from "./components/AgencyProtectedRoute";
 import { Sidebar } from "./components/Sidebar";
 import { AdminPreviewBanner } from "./components/AdminPreviewBanner";
+import { ClientPreviewBanner } from "./components/ClientPreviewBanner";
 import Auth from "./pages/Auth";
 import SuperAdminLogin from "./pages/superadmin/SuperAdminLogin";
 import AgencyLogin from "./pages/agency/AgencyLogin";
@@ -24,6 +25,7 @@ import AgencyAgents from "./pages/agency/AgencyAgents";
 import AgencyUsers from "./pages/agency/AgencyUsers";
 import AgencySubscription from "./pages/agency/AgencySubscription";
 import AgencySettings from "./pages/agency/AgencySettings";
+import AgencyClientDetails from "./pages/agency/AgencyClientDetails";
 import SubscriptionRequired from "./pages/agency/SubscriptionRequired";
 import Settings from "./pages/Settings";
 import AdminClients from "./pages/admin/Clients";
@@ -83,10 +85,13 @@ const App = () => (
                       <Sidebar />
                       <div className="flex-1 flex flex-col overflow-hidden">
                         <AdminPreviewBanner />
+                        <ClientPreviewBanner />
                         <main className="flex-1 p-8 overflow-y-auto">
                           <Routes>
                             <Route path="/" element={<AgencyDashboard />} />
                             <Route path="/clients" element={<AgencyClients />} />
+                            <Route path="/clients/:clientId/:tab" element={<AgencyClientDetails />} />
+                            <Route path="/clients/:clientId" element={<AgencyClientDetails />} />
                             <Route path="/agents" element={<AgencyAgents />} />
                             <Route path="/team" element={<AgencyUsers />} />
                             <Route path="/subscription" element={<AgencySubscription />} />
@@ -109,6 +114,7 @@ const App = () => (
                       <Sidebar />
                       <div className="flex-1 flex flex-col overflow-hidden">
                         <AdminPreviewBanner />
+                        <ClientPreviewBanner />
                         <main className="flex-1 p-8 overflow-y-auto">
                           <Routes>
                           {/* Client Routes - Agent-specific pages */}

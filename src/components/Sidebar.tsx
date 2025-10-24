@@ -44,7 +44,7 @@ const superAdminNavigation = [
 
 export function Sidebar() {
   const { profile, signOut } = useAuth();
-  const { profile: mtProfile, userType, signOut: mtSignOut, isPreviewMode: mtIsPreviewMode, previewAgency } = useMultiTenantAuth();
+  const { profile: mtProfile, userType, signOut: mtSignOut, isPreviewMode: mtIsPreviewMode, previewAgency, isClientPreviewMode, previewClient, previewClientAgencyId } = useMultiTenantAuth();
   const { selectedAgentPermissions, agents, selectedAgentId } = useClientAgentContext();
   const location = useLocation();
   const isAdmin = profile?.role === 'admin';
@@ -116,7 +116,23 @@ export function Sidebar() {
   } else if (userType === 'super_admin') {
     navigation = superAdminNavigation;
   } else if (userType === 'agency') {
-    navigation = agencyNavigation;
+    if (isClientPreviewMode && previewClient && previewClientAgencyId) {
+      // Agency previewing client analytics - show client navigation
+      const selectedAgent = agents.find(a => a.id === selectedAgentId);
+      navigation = clientNavigation.filter(item => {
+        if (item.permissionKey && selectedAgent) {
+          return selectedAgentPermissions?.[item.permissionKey] === true;
+        }
+        return item.permissionKey === null;
+      }).filter(item => {
+        if ((item as any).provider && selectedAgent) {
+          return selectedAgent.provider === (item as any).provider;
+        }
+        return true;
+      });
+    } else {
+      navigation = agencyNavigation;
+    }
   } else if (effectiveProfile?.role === 'admin' && !isPreviewMode) {
     navigation = adminNavigation;
   } else {
@@ -151,6 +167,9 @@ export function Sidebar() {
     }
     if (mtIsPreviewMode && previewAgencyId) {
       return `${basePath}?preview=true&agencyId=${previewAgencyId}`;
+    }
+    if (isClientPreviewMode && previewClient && previewClientAgencyId) {
+      return `${basePath}?preview=true&clientId=${previewClient.id}&agencyId=${previewClientAgencyId}`;
     }
     return basePath;
   };

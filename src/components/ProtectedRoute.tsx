@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
 import { useClientAgentContext } from "@/hooks/useClientAgentContext";
 
 interface ProtectedRouteProps {
@@ -18,6 +19,7 @@ export function ProtectedRoute({
 }: ProtectedRouteProps) {
   const { user, profile, loading } = useAuth();
   const { selectedAgentPermissions } = useClientAgentContext();
+  const { userType, isPreviewMode: agencyPreviewMode, previewAgency } = useMultiTenantAuth();
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -25,9 +27,18 @@ export function ProtectedRoute({
   const searchParams = new URLSearchParams(location.search);
   const isPreviewMode = searchParams.get('preview') === 'true';
   const previewClientId = searchParams.get('clientId');
+  const previewAgencyId = searchParams.get('agencyId');
   
   // Admin in preview mode can access client routes
   const isAdminPreview = profile?.role === 'admin' && isPreviewMode && previewClientId;
+  
+  // Agency in client preview mode can access client routes
+  const isAgencyClientPreview = 
+    userType === 'agency' && 
+    isPreviewMode && 
+    previewClientId && 
+    previewAgencyId &&
+    previewAgency?.id === previewAgencyId;
 
   useEffect(() => {
     if (!loading) {
@@ -36,10 +47,10 @@ export function ProtectedRoute({
         navigate('/auth');
       } else if (requireAdmin && profile?.role !== 'admin') {
         navigate('/');
-      } else if (requireClient && profile?.role === 'admin' && !isAdminPreview) {
+      } else if (requireClient && profile?.role === 'admin' && !isAdminPreview && !isAgencyClientPreview) {
         // Only redirect if NOT in preview mode
         navigate('/admin/clients');
-      } else if (requiredPage && !isAdminPreview) {
+      } else if (requiredPage && !isAdminPreview && !isAgencyClientPreview) {
         // Check agent-based permissions for client users
         if (profile?.role === 'client' && selectedAgentPermissions) {
           const hasAccess = selectedAgentPermissions[requiredPage as keyof typeof selectedAgentPermissions];
@@ -68,7 +79,7 @@ export function ProtectedRoute({
         }
       }
     }
-  }, [user, profile, loading, navigate, requireAdmin, requireClient, requiredPage, selectedAgentPermissions, location.pathname, isAdminPreview]);
+  }, [user, profile, loading, navigate, requireAdmin, requireClient, requiredPage, selectedAgentPermissions, location.pathname, isAdminPreview, isAgencyClientPreview]);
 
   if (loading) {
     return (
@@ -78,12 +89,12 @@ export function ProtectedRoute({
     );
   }
 
-  if (!user || (requireAdmin && profile?.role !== 'admin') || (requireClient && profile?.role === 'admin' && !isAdminPreview)) {
+  if (!user || (requireAdmin && profile?.role !== 'admin') || (requireClient && profile?.role === 'admin' && !isAdminPreview && !isAgencyClientPreview)) {
     return null;
   }
 
-  // Check page permissions for client users (skip for admin preview)
-  if (requiredPage && profile?.role === 'client' && selectedAgentPermissions && !isAdminPreview) {
+  // Check page permissions for client users (skip for admin/agency preview)
+  if (requiredPage && profile?.role === 'client' && selectedAgentPermissions && !isAdminPreview && !isAgencyClientPreview) {
     const hasAccess = selectedAgentPermissions[requiredPage as keyof typeof selectedAgentPermissions];
     if (!hasAccess) {
       return null;
