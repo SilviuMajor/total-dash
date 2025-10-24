@@ -16,6 +16,7 @@ import SuperAdminLogin from "./pages/superadmin/SuperAdminLogin";
 import AgencyLogin from "./pages/agency/AgencyLogin";
 import Agencies from "./pages/superadmin/Agencies";
 import AgencyDetails from "./pages/superadmin/AgencyDetails";
+import AgencyBilling from "./pages/superadmin/AgencyBilling";
 import SubscriptionPlans from "./pages/superadmin/SubscriptionPlans";
 import AgencyDashboard from "./pages/agency/AgencyDashboard";
 import AgencyClients from "./pages/agency/AgencyClients";
@@ -64,6 +65,7 @@ const App = () => (
                             <Route path="/" element={<Agencies />} />
                             <Route path="/agencies" element={<Agencies />} />
                             <Route path="/agencies/:id" element={<AgencyDetails />} />
+                            <Route path="/billing" element={<AgencyBilling />} />
                             <Route path="/plans" element={<SubscriptionPlans />} />
                           </Routes>
                         </main>

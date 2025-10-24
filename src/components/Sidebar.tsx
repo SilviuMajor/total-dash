@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { MessageSquare, BarChart3, BookOpen, Settings, Users, Bot, LogOut, Eye, FileText, Home, CreditCard, Building2 } from "lucide-react";
+import { MessageSquare, BarChart3, BookOpen, Settings, Users, Bot, LogOut, Eye, FileText, Home, CreditCard, Building2, DollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
@@ -37,6 +37,7 @@ const agencyNavigation = [
 
 const superAdminNavigation = [
   { name: "Agencies", href: "/super-admin/agencies", icon: Building2 },
+  { name: "Billing", href: "/super-admin/billing", icon: DollarSign },
   { name: "Plans", href: "/super-admin/plans", icon: CreditCard },
   { name: "Settings", href: "/super-admin/settings", icon: Settings },
 ];
