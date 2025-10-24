@@ -23,6 +23,7 @@ import AgencyAgents from "./pages/agency/AgencyAgents";
 import AgencyUsers from "./pages/agency/AgencyUsers";
 import AgencySubscription from "./pages/agency/AgencySubscription";
 import AgencySettings from "./pages/agency/AgencySettings";
+import SubscriptionRequired from "./pages/agency/SubscriptionRequired";
 import Settings from "./pages/Settings";
 import AdminClients from "./pages/admin/Clients";
 import AdminAgents from "./pages/admin/Agents";
@@ -73,6 +74,7 @@ const App = () => (
 
                 {/* Agency Routes */}
                 <Route path="/agency/login" element={<AgencyLogin />} />
+                <Route path="/agency/subscription-required" element={<SubscriptionRequired />} />
                 <Route path="/agency/*" element={
                   <AgencyProtectedRoute>
                     <div className="flex h-screen w-full bg-background overflow-hidden">

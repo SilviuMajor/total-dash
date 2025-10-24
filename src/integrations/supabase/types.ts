@@ -132,6 +132,9 @@ export type Database = {
           current_period_start: string | null
           current_team_members: number | null
           id: string
+          manual_override: boolean | null
+          override_by: string | null
+          override_reason: string | null
           plan_id: string
           status: Database["public"]["Enums"]["subscription_status"] | null
           stripe_customer_id: string | null
@@ -149,6 +152,9 @@ export type Database = {
           current_period_start?: string | null
           current_team_members?: number | null
           id?: string
+          manual_override?: boolean | null
+          override_by?: string | null
+          override_reason?: string | null
           plan_id: string
           status?: Database["public"]["Enums"]["subscription_status"] | null
           stripe_customer_id?: string | null
@@ -166,6 +172,9 @@ export type Database = {
           current_period_start?: string | null
           current_team_members?: number | null
           id?: string
+          manual_override?: boolean | null
+          override_by?: string | null
+          override_reason?: string | null
           plan_id?: string
           status?: Database["public"]["Enums"]["subscription_status"] | null
           stripe_customer_id?: string | null

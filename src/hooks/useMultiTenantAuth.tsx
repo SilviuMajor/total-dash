@@ -141,10 +141,19 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
           .eq('id', userId)
           .single();
 
-        setProfile({
-          ...profileData,
-          user_type: 'super_admin',
-        });
+        // If in preview mode, load preview agency as their agency context
+        if (isPreviewMode && previewAgency) {
+          setProfile({
+            ...profileData,
+            user_type: 'super_admin',
+            agency: previewAgency,
+          });
+        } else {
+          setProfile({
+            ...profileData,
+            user_type: 'super_admin',
+          });
+        }
         setUserType('super_admin');
         setLoading(false);
         return;

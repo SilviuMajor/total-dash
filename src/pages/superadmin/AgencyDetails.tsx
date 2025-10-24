@@ -126,6 +126,57 @@ export default function AgencyDetails() {
     window.open(`/agency?preview=true&agencyId=${id}`, '_blank');
   };
 
+  const handleToggleManualOverride = async (enabled: boolean) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      const { error } = await supabase
+        .from('agency_subscriptions')
+        .update({ 
+          manual_override: enabled,
+          override_by: enabled ? user?.id : null,
+          override_reason: enabled ? subscription?.override_reason : null
+        })
+        .eq('agency_id', id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: `Manual override ${enabled ? 'enabled' : 'disabled'}`,
+      });
+      loadAgencyDetails();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSaveOverrideReason = async () => {
+    try {
+      const { error } = await supabase
+        .from('agency_subscriptions')
+        .update({ override_reason: subscription?.override_reason })
+        .eq('agency_id', id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Override reason saved",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return <div className="p-8">Loading...</div>;
   }
@@ -152,7 +203,7 @@ export default function AgencyDetails() {
         </Button>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader>
             <CardTitle>Agency Information</CardTitle>
@@ -211,6 +262,11 @@ export default function AgencyDetails() {
                 }>
                   {subscription?.status || 'None'}
                 </Badge>
+                {subscription?.manual_override && (
+                  <Badge variant="outline" className="border-warning text-warning">
+                    Manual Override
+                  </Badge>
+                )}
               </div>
             </div>
             <div className="space-y-2">
@@ -242,6 +298,51 @@ export default function AgencyDetails() {
             {subscription?.trial_ends_at && (
               <div className="text-sm text-muted-foreground">
                 Trial ends: {new Date(subscription.trial_ends_at).toLocaleDateString()}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Manual Access Control</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label>Manual Override</Label>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="manual-override"
+                  checked={subscription?.manual_override || false}
+                  onChange={(e) => handleToggleManualOverride(e.target.checked)}
+                  className="h-4 w-4"
+                />
+                <Label htmlFor="manual-override" className="font-normal cursor-pointer">
+                  Allow access regardless of subscription status
+                </Label>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Enable this to grant access even if payment has failed or subscription is canceled.
+              </p>
+            </div>
+            {subscription?.manual_override && (
+              <div className="space-y-2">
+                <Label>Override Reason</Label>
+                <textarea
+                  value={subscription?.override_reason || ''}
+                  onChange={(e) => setSubscription({ ...subscription, override_reason: e.target.value })}
+                  className="w-full min-h-[80px] px-3 py-2 text-sm rounded-md border border-input bg-background"
+                  placeholder="Document why this override was granted (e.g., special arrangement, testing, etc.)"
+                />
+                <Button 
+                  onClick={handleSaveOverrideReason}
+                  variant="outline"
+                  size="sm"
+                  className="mt-2"
+                >
+                  Save Reason
+                </Button>
               </div>
             )}
           </CardContent>
