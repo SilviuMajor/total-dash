@@ -9,8 +9,9 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Loader2, Mail, UserPlus, Shield, User, Crown } from "lucide-react";
+import { Loader2, Mail, UserPlus, Shield, User, Crown, CheckCircle, Copy, Trash2, Edit2, X, Check } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface AgencyUser {
   id: string;
@@ -35,6 +36,18 @@ export default function AgencyUsers() {
     fullName: "",
     role: "user" as 'owner' | 'admin' | 'user',
   });
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [invitedUserData, setInvitedUserData] = useState<{
+    email: string;
+    fullName: string;
+    tempPassword: string;
+  } | null>(null);
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [selectedRole, setSelectedRole] = useState<'owner' | 'admin' | 'user'>('user');
+  const [updatingRole, setUpdatingRole] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<AgencyUser | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (agencyId) {
@@ -99,7 +112,13 @@ export default function AgencyUsers() {
 
       if (error) throw error;
 
-      toast.success("User invitation sent successfully");
+      // Show password dialog with temp password
+      setInvitedUserData({
+        email: inviteData.email,
+        fullName: inviteData.fullName,
+        tempPassword: data.tempPassword,
+      });
+      setPasswordDialogOpen(true);
       setInviteOpen(false);
       setInviteData({ email: "", fullName: "", role: "user" });
       loadUsers();
@@ -109,6 +128,73 @@ export default function AgencyUsers() {
     } finally {
       setInviting(false);
     }
+  };
+
+  const handleUpdateRole = async (userId: string, newRole: 'owner' | 'admin' | 'user') => {
+    if (!agencyId) return;
+    
+    // Check if trying to demote last owner
+    const ownerCount = users.filter(u => u.role === 'owner').length;
+    const currentUser = users.find(u => u.id === userId);
+    
+    if (currentUser?.role === 'owner' && ownerCount === 1 && newRole !== 'owner') {
+      toast.error("Cannot demote the last owner");
+      return;
+    }
+    
+    setUpdatingRole(true);
+    try {
+      const { error } = await supabase
+        .from('agency_users')
+        .update({ role: newRole })
+        .eq('id', userId);
+        
+      if (error) throw error;
+      
+      toast.success("Role updated successfully");
+      setEditingUserId(null);
+      loadUsers();
+    } catch (error: any) {
+      toast.error("Failed to update role");
+    } finally {
+      setUpdatingRole(false);
+    }
+  };
+
+  const handleRemoveUser = async () => {
+    if (!userToDelete || !agencyId) return;
+    
+    // Check if trying to remove last owner
+    const ownerCount = users.filter(u => u.role === 'owner').length;
+    if (userToDelete.role === 'owner' && ownerCount === 1) {
+      toast.error("Cannot remove the last owner");
+      setDeleteDialogOpen(false);
+      return;
+    }
+    
+    setDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('agency_users')
+        .delete()
+        .eq('id', userToDelete.id);
+        
+      if (error) throw error;
+      
+      toast.success(`${userToDelete.profiles.full_name} has been removed`);
+      setDeleteDialogOpen(false);
+      setUserToDelete(null);
+      loadUsers();
+    } catch (error: any) {
+      toast.error("Failed to remove user");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success("Copied to clipboard");
   };
 
   const getRoleIcon = (role: string) => {
@@ -263,20 +349,180 @@ export default function AgencyUsers() {
                       </CardDescription>
                     </div>
                   </div>
-                  <Badge variant={getRoleBadgeVariant(user.role)} className="capitalize">
-                    {user.role}
-                  </Badge>
+                  {editingUserId === user.id ? (
+                    <div className="flex items-center gap-2">
+                      <Select
+                        value={selectedRole}
+                        onValueChange={(value: 'owner' | 'admin' | 'user') => setSelectedRole(value)}
+                        disabled={updatingRole}
+                      >
+                        <SelectTrigger className="w-32">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="user">User</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
+                          <SelectItem value="owner">Owner</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button 
+                        size="sm" 
+                        onClick={() => handleUpdateRole(user.id, selectedRole)}
+                        disabled={updatingRole}
+                      >
+                        {updatingRole ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => setEditingUserId(null)}
+                        disabled={updatingRole}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Badge variant={getRoleBadgeVariant(user.role)} className="capitalize">
+                        {user.role}
+                      </Badge>
+                      {(users.find(u => u.user_id === profile?.id)?.role === 'owner' || isPreviewMode) && (
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          onClick={() => {
+                            setEditingUserId(user.id);
+                            setSelectedRole(user.role);
+                          }}
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </div>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  Joined {new Date(user.created_at).toLocaleDateString()}
-                </p>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-muted-foreground">
+                    Joined {new Date(user.created_at).toLocaleDateString()}
+                  </p>
+                  {(users.find(u => u.user_id === profile?.id)?.role === 'owner' || isPreviewMode) && user.user_id !== profile?.id && (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => {
+                        setUserToDelete(user);
+                        setDeleteDialogOpen(true);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Remove
+                    </Button>
+                  )}
+                </div>
               </CardContent>
             </Card>
           ))}
         </div>
       )}
+
+      {/* Password Display Dialog */}
+      <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-6 w-6 text-green-500" />
+              <DialogTitle>User Invited Successfully</DialogTitle>
+            </div>
+            <DialogDescription>
+              {invitedUserData?.fullName} has been invited to join your agency
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <div className="flex items-center gap-2">
+                <Input value={invitedUserData?.email || ''} readOnly />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => copyToClipboard(invitedUserData?.email || '')}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Temporary Password</Label>
+              <div className="flex items-center gap-2">
+                <Input value={invitedUserData?.tempPassword || ''} readOnly type="text" className="font-mono" />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => copyToClipboard(invitedUserData?.tempPassword || '')}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Save this password - it won't be shown again
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label>Login URL</Label>
+              <div className="flex items-center gap-2">
+                <Input value={`${window.location.origin}/agency/login`} readOnly />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => copyToClipboard(`${window.location.origin}/agency/login`)}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setPasswordDialogOpen(false);
+                setInviteOpen(true);
+              }}
+            >
+              Invite Another
+            </Button>
+            <Button onClick={() => setPasswordDialogOpen(false)}>
+              Done
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Remove User Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Team Member</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove {userToDelete?.profiles.full_name}? 
+              They will lose access to the agency immediately.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleRemoveUser}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Remove User
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
