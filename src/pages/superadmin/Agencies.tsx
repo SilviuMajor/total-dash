@@ -75,11 +75,19 @@ export default function Agencies() {
       return <Badge variant="secondary">No Subscription</Badge>;
     }
 
+    // Special styling for enterprise/bespoke plans
+    const tier = subscription.plan?.tier;
+    if (tier === 'enterprise' || tier === 'bespoke') {
+      return <Badge className="bg-purple-600 hover:bg-purple-700">
+        {tier === 'enterprise' ? 'Enterprise' : 'Bespoke'}
+      </Badge>;
+    }
+
     switch (subscription.status) {
       case 'trialing':
         return <Badge variant="secondary">Trial</Badge>;
       case 'active':
-        return <Badge variant="default">Active</Badge>;
+        return <Badge className="bg-green-600 hover:bg-green-700">Active</Badge>;
       case 'past_due':
         return <Badge variant="destructive">Past Due</Badge>;
       case 'canceled':
@@ -112,7 +120,7 @@ export default function Agencies() {
         </div>
       </div>
 
-      <div className="grid gap-8 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
+      <div className="space-y-6">
         {agencies.map((agency) => {
           const subscription = agency.subscription?.[0];
           
@@ -141,27 +149,39 @@ export default function Agencies() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                {subscription && (
+                {subscription ? (
                   <>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Plan</span>
-                      <span className="font-medium">{subscription.plan.name}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{subscription.plan?.name || 'Unknown'}</span>
+                        {(subscription.plan?.tier === 'enterprise' || subscription.plan?.tier === 'bespoke') && (
+                          <Badge variant="outline" className="border-purple-500 text-purple-600 text-xs">
+                            Custom
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground flex items-center gap-1">
                         <Users className="w-4 h-4" />
                         Clients
                       </span>
-                      <span className="font-medium">{subscription.current_clients}</span>
+                      <span className="font-medium">{subscription.current_clients || 0}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground flex items-center gap-1">
                         <Building2 className="w-4 h-4" />
                         Agents
                       </span>
-                      <span className="font-medium">{subscription.current_agents}</span>
+                      <span className="font-medium">{subscription.current_agents || 0}</span>
                     </div>
                   </>
+                ) : (
+                  <div className="text-center py-4">
+                    <p className="text-sm text-muted-foreground mb-2">No active subscription</p>
+                    <Badge variant="secondary">Inactive</Badge>
+                  </div>
                 )}
                 
                 <div className="flex items-center justify-between text-sm">

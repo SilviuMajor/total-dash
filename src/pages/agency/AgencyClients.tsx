@@ -209,7 +209,21 @@ export default function AgencyClients() {
               <div className="flex justify-between items-start">
                 <div>
                   <CardTitle>{client.name}</CardTitle>
-                  <Badge className="mt-2">{client.status}</Badge>
+                  {(() => {
+                    const status = client.status?.toLowerCase() || 'active';
+                    switch (status) {
+                      case 'active':
+                        return <Badge className="mt-2 bg-green-600 hover:bg-green-700">Active</Badge>;
+                      case 'inactive':
+                        return <Badge className="mt-2 bg-gray-500 hover:bg-gray-600">Inactive</Badge>;
+                      case 'pending':
+                        return <Badge className="mt-2 border-yellow-500 text-yellow-600" variant="outline">Pending</Badge>;
+                      case 'suspended':
+                        return <Badge className="mt-2" variant="destructive">Suspended</Badge>;
+                      default:
+                        return <Badge className="mt-2" variant="outline">{client.status}</Badge>;
+                    }
+                  })()}
                 </div>
               </div>
             </CardHeader>

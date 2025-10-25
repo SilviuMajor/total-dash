@@ -172,7 +172,7 @@ export function Sidebar() {
         </div>
       )}
 
-      {(effectiveProfile?.role === 'client' || (isAdmin && (mtIsPreviewMode || isClientPreviewMode))) && (
+      {(effectiveProfile?.role === 'client' || previewDepth === 'client' || previewDepth === 'agency_to_client') && (
         <div className="p-4 border-b border-border">
           <ClientAgentSelector />
         </div>

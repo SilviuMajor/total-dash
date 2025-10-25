@@ -75,8 +75,6 @@ export default function AgencyDetails() {
         .update({
           name: agency.name,
           slug: agency.slug,
-          domain: agency.domain,
-          custom_domain: agency.custom_domain,
           primary_color: agency.primary_color,
           secondary_color: agency.secondary_color,
         })
@@ -203,7 +201,7 @@ export default function AgencyDetails() {
         </Button>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="space-y-6">
         <Card>
           <CardHeader>
             <CardTitle>Agency Information</CardTitle>
@@ -223,22 +221,6 @@ export default function AgencyDetails() {
                 onChange={(e) => setAgency({ ...agency, slug: e.target.value })}
               />
             </div>
-            <div className="space-y-2">
-              <Label>Domain</Label>
-              <Input
-                value={agency?.domain || ''}
-                onChange={(e) => setAgency({ ...agency, domain: e.target.value })}
-                placeholder="agency-slug.yourplatform.com"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Custom Domain</Label>
-              <Input
-                value={agency?.custom_domain || ''}
-                onChange={(e) => setAgency({ ...agency, custom_domain: e.target.value })}
-                placeholder="dashboard.theirdomain.com"
-              />
-            </div>
             <Button onClick={handleSave} disabled={saving} className="w-full">
               <Save className="mr-2 h-4 w-4" />
               {saving ? 'Saving...' : 'Save Changes'}
@@ -253,8 +235,25 @@ export default function AgencyDetails() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label>Current Plan</Label>
-              <div className="flex items-center gap-2">
-                <Badge>{subscription?.subscription_plans?.name || 'None'}</Badge>
+              <div className="flex items-center gap-2 flex-wrap">
+                {subscription?.subscription_plans ? (
+                  <>
+                    <Badge className={
+                      subscription.subscription_plans.tier === 'enterprise' || subscription.subscription_plans.tier === 'bespoke'
+                        ? 'bg-purple-600 hover:bg-purple-700'
+                        : ''
+                    }>
+                      {subscription.subscription_plans.name}
+                    </Badge>
+                    {(subscription.subscription_plans.tier === 'enterprise' || subscription.subscription_plans.tier === 'bespoke') && (
+                      <Badge variant="outline" className="border-purple-500 text-purple-600">
+                        Custom Terms
+                      </Badge>
+                    )}
+                  </>
+                ) : (
+                  <Badge variant="secondary">None</Badge>
+                )}
                 <Badge variant={
                   subscription?.status === 'active' ? 'default' :
                   subscription?.status === 'trialing' ? 'secondary' :
@@ -263,8 +262,8 @@ export default function AgencyDetails() {
                   {subscription?.status || 'None'}
                 </Badge>
                 {subscription?.manual_override && (
-                  <Badge variant="outline" className="border-warning text-warning">
-                    Manual Override
+                  <Badge variant="outline" className="border-yellow-500 text-yellow-600">
+                    Manual Override Active
                   </Badge>
                 )}
               </div>
@@ -289,7 +288,11 @@ export default function AgencyDetails() {
                 <SelectContent>
                   {plans.map((plan) => (
                     <SelectItem key={plan.id} value={plan.id}>
-                      {plan.name} - ${plan.price_monthly_cents / 100}/mo
+                      {plan.name} - {
+                        plan.tier === 'enterprise' || plan.tier === 'bespoke'
+                          ? 'Custom Pricing'
+                          : `$${plan.price_monthly_cents / 100}/mo`
+                      }
                     </SelectItem>
                   ))}
                 </SelectContent>
