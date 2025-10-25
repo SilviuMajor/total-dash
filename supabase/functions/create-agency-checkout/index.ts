@@ -56,21 +56,76 @@ serve(async (req) => {
     }
     logStep("Agency found", { agencyId: agencyUser.agency_id });
 
-    // Get plan details
-    const { data: plan, error: planError } = await supabaseClient
+    // Validate current usage against plan limits
+    logStep("Checking current usage");
+    const { count: clientsCount } = await supabaseClient
+      .from("clients")
+      .select("*", { count: "exact", head: true })
+      .eq("agency_id", agencyUser.agency_id)
+      .is("deleted_at", null);
+
+    const { count: agentsCount } = await supabaseClient
+      .from("agents")
+      .select("*", { count: "exact", head: true })
+      .eq("agency_id", agencyUser.agency_id);
+
+    const { count: teamCount } = await supabaseClient
+      .from("agency_users")
+      .select("*", { count: "exact", head: true })
+      .eq("agency_id", agencyUser.agency_id);
+
+    logStep("Current usage", { 
+      clients: clientsCount, 
+      agents: agentsCount, 
+      team: teamCount 
+    });
+
+    // Get full plan details for validation
+    const { data: fullPlan, error: fullPlanError } = await supabaseClient
       .from("subscription_plans")
-      .select("id, stripe_price_id")
+      .select("*")
       .eq("id", planId)
       .single();
 
-    if (planError || !plan) {
+    if (fullPlanError || !fullPlan) {
       throw new Error("Invalid plan");
     }
 
-    if (!plan.stripe_price_id) {
+    // Validate plan can accommodate current usage
+    if (fullPlan.max_clients !== -1 && (clientsCount || 0) > fullPlan.max_clients) {
+      throw new Error(`Selected plan cannot accommodate your current ${clientsCount} clients. Please contact support.`);
+    }
+    if (fullPlan.max_agents !== -1 && (agentsCount || 0) > fullPlan.max_agents) {
+      throw new Error(`Selected plan cannot accommodate your current ${agentsCount} agents. Please contact support.`);
+    }
+    if (fullPlan.max_team_members !== -1 && (teamCount || 0) > fullPlan.max_team_members) {
+      throw new Error(`Selected plan cannot accommodate your current ${teamCount} team members. Please contact support.`);
+    }
+
+    // Check for previous subscription (re-subscription scenario)
+    const { data: previousSub } = await supabaseClient
+      .from("agency_subscriptions")
+      .select("snapshot_price_monthly_cents, custom_price_monthly_cents, is_custom_pricing")
+      .eq("agency_id", agencyUser.agency_id)
+      .single();
+
+    if (previousSub) {
+      // Get effective previous price
+      const previousPrice = previousSub.is_custom_pricing && previousSub.custom_price_monthly_cents
+        ? previousSub.custom_price_monthly_cents
+        : previousSub.snapshot_price_monthly_cents;
+
+      if (previousPrice && fullPlan.price_monthly_cents <= previousPrice) {
+        throw new Error(`Selected plan must have a higher price than your previous plan ($${(previousPrice / 100).toFixed(2)}/mo).`);
+      }
+      
+      logStep("Previous subscription check passed", { previousPrice, newPrice: fullPlan.price_monthly_cents });
+    }
+
+    if (!fullPlan.stripe_price_id) {
       throw new Error("Plan does not have a Stripe price ID configured");
     }
-    logStep("Plan found", { planId, stripePriceId: plan.stripe_price_id });
+    logStep("Plan validated", { planId, stripePriceId: fullPlan.stripe_price_id });
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
@@ -92,7 +147,7 @@ serve(async (req) => {
       customer_email: customerId ? undefined : user.email,
       line_items: [
         {
-          price: plan.stripe_price_id,
+          price: fullPlan.stripe_price_id,
           quantity: 1,
         },
       ],

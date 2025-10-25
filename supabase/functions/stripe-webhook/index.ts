@@ -72,18 +72,56 @@ serve(async (req) => {
           break;
         }
 
+        // Fetch plan details from subscription_plans
+        const { data: plan, error: planError } = await supabaseClient
+          .from("subscription_plans")
+          .select("*")
+          .eq("id", planId)
+          .single();
+
+        if (planError || !plan) {
+          logStep("Error fetching plan", { error: planError });
+          throw new Error("Plan not found");
+        }
+
+        // Fetch Stripe subscription details for accurate period dates
+        const stripeSubscription = await stripe.subscriptions.retrieve(session.subscription as string);
+
+        // Check for previous subscription (re-subscription scenario)
+        const { data: existingSub } = await supabaseClient
+          .from("agency_subscriptions")
+          .select("id")
+          .eq("agency_id", agencyId)
+          .single();
+
+        // Create snapshot from current plan values
+        const subscriptionData: any = {
+          agency_id: agencyId,
+          plan_id: planId,
+          status: "active",
+          stripe_customer_id: session.customer as string,
+          stripe_subscription_id: session.subscription as string,
+          current_period_start: new Date(stripeSubscription.current_period_start * 1000).toISOString(),
+          current_period_end: new Date(stripeSubscription.current_period_end * 1000).toISOString(),
+          snapshot_plan_name: plan.name,
+          snapshot_price_monthly_cents: plan.price_monthly_cents,
+          snapshot_max_clients: plan.max_clients,
+          snapshot_max_agents: plan.max_agents,
+          snapshot_max_team_members: plan.max_team_members,
+          snapshot_extras: plan.extras || [],
+          snapshot_created_at: new Date().toISOString(),
+        };
+
+        // If re-subscription, link to previous subscription
+        if (existingSub) {
+          subscriptionData.previous_subscription_id = existingSub.id;
+          subscriptionData.resubscribed_at = new Date().toISOString();
+        }
+
         // Update or create agency subscription
         const { error: upsertError } = await supabaseClient
           .from("agency_subscriptions")
-          .upsert({
-            agency_id: agencyId,
-            plan_id: planId,
-            status: "active",
-            stripe_customer_id: session.customer as string,
-            stripe_subscription_id: session.subscription as string,
-            current_period_start: new Date().toISOString(),
-            current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-          }, {
+          .upsert(subscriptionData, {
             onConflict: "agency_id"
           });
 
@@ -92,7 +130,7 @@ serve(async (req) => {
           throw upsertError;
         }
 
-        logStep("Subscription activated successfully");
+        logStep("Subscription activated with snapshot", { snapshot: subscriptionData });
         break;
       }
 
@@ -103,13 +141,20 @@ serve(async (req) => {
           status: subscription.status 
         });
 
+        const updateData: any = {
+          status: subscription.status,
+          current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
+          current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+        };
+
+        // If payment succeeds after past_due, clear grace period
+        if (subscription.status === 'active') {
+          updateData.grace_period_ends_at = null;
+        }
+
         const { error: updateError } = await supabaseClient
           .from("agency_subscriptions")
-          .update({
-            status: subscription.status,
-            current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-            current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
-          })
+          .update(updateData)
           .eq("stripe_subscription_id", subscription.id);
 
         if (updateError) {
@@ -147,9 +192,15 @@ serve(async (req) => {
         });
 
         if (invoice.subscription) {
+          // Set 3-day grace period
+          const gracePeriodEnd = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
+          
           const { error: failError } = await supabaseClient
             .from("agency_subscriptions")
-            .update({ status: "past_due" })
+            .update({ 
+              status: "past_due",
+              grace_period_ends_at: gracePeriodEnd
+            })
             .eq("stripe_subscription_id", invoice.subscription as string);
 
           if (failError) {
@@ -157,7 +208,7 @@ serve(async (req) => {
             throw failError;
           }
 
-          logStep("Subscription marked as past_due");
+          logStep("Subscription marked as past_due with grace period", { gracePeriodEnd });
         }
         break;
       }

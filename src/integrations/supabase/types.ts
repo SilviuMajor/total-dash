@@ -131,11 +131,28 @@ export type Database = {
           current_period_end: string | null
           current_period_start: string | null
           current_team_members: number | null
+          custom_extras: Json | null
+          custom_max_agents: number | null
+          custom_max_clients: number | null
+          custom_max_team_members: number | null
+          custom_price_monthly_cents: number | null
+          grace_period_ends_at: string | null
           id: string
+          is_custom_limits: boolean | null
+          is_custom_pricing: boolean | null
           manual_override: boolean | null
           override_by: string | null
           override_reason: string | null
           plan_id: string
+          previous_subscription_id: string | null
+          resubscribed_at: string | null
+          snapshot_created_at: string | null
+          snapshot_extras: Json | null
+          snapshot_max_agents: number | null
+          snapshot_max_clients: number | null
+          snapshot_max_team_members: number | null
+          snapshot_plan_name: string | null
+          snapshot_price_monthly_cents: number | null
           status: Database["public"]["Enums"]["subscription_status"] | null
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
@@ -151,11 +168,28 @@ export type Database = {
           current_period_end?: string | null
           current_period_start?: string | null
           current_team_members?: number | null
+          custom_extras?: Json | null
+          custom_max_agents?: number | null
+          custom_max_clients?: number | null
+          custom_max_team_members?: number | null
+          custom_price_monthly_cents?: number | null
+          grace_period_ends_at?: string | null
           id?: string
+          is_custom_limits?: boolean | null
+          is_custom_pricing?: boolean | null
           manual_override?: boolean | null
           override_by?: string | null
           override_reason?: string | null
           plan_id: string
+          previous_subscription_id?: string | null
+          resubscribed_at?: string | null
+          snapshot_created_at?: string | null
+          snapshot_extras?: Json | null
+          snapshot_max_agents?: number | null
+          snapshot_max_clients?: number | null
+          snapshot_max_team_members?: number | null
+          snapshot_plan_name?: string | null
+          snapshot_price_monthly_cents?: number | null
           status?: Database["public"]["Enums"]["subscription_status"] | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
@@ -171,11 +205,28 @@ export type Database = {
           current_period_end?: string | null
           current_period_start?: string | null
           current_team_members?: number | null
+          custom_extras?: Json | null
+          custom_max_agents?: number | null
+          custom_max_clients?: number | null
+          custom_max_team_members?: number | null
+          custom_price_monthly_cents?: number | null
+          grace_period_ends_at?: string | null
           id?: string
+          is_custom_limits?: boolean | null
+          is_custom_pricing?: boolean | null
           manual_override?: boolean | null
           override_by?: string | null
           override_reason?: string | null
           plan_id?: string
+          previous_subscription_id?: string | null
+          resubscribed_at?: string | null
+          snapshot_created_at?: string | null
+          snapshot_extras?: Json | null
+          snapshot_max_agents?: number | null
+          snapshot_max_clients?: number | null
+          snapshot_max_team_members?: number | null
+          snapshot_plan_name?: string | null
+          snapshot_price_monthly_cents?: number | null
           status?: Database["public"]["Enums"]["subscription_status"] | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
@@ -195,6 +246,13 @@ export type Database = {
             columns: ["plan_id"]
             isOneToOne: false
             referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agency_subscriptions_previous_subscription_id_fkey"
+            columns: ["previous_subscription_id"]
+            isOneToOne: false
+            referencedRelation: "agency_subscriptions"
             referencedColumns: ["id"]
           },
         ]
@@ -1034,6 +1092,7 @@ export type Database = {
         Row: {
           created_at: string | null
           description: string | null
+          extras: Json | null
           features: Json | null
           has_support_access: boolean | null
           has_whitelabel_access: boolean | null
@@ -1045,12 +1104,12 @@ export type Database = {
           name: string
           price_monthly_cents: number
           stripe_price_id: string | null
-          tier: Database["public"]["Enums"]["subscription_tier"]
           updated_at: string | null
         }
         Insert: {
           created_at?: string | null
           description?: string | null
+          extras?: Json | null
           features?: Json | null
           has_support_access?: boolean | null
           has_whitelabel_access?: boolean | null
@@ -1062,12 +1121,12 @@ export type Database = {
           name: string
           price_monthly_cents?: number
           stripe_price_id?: string | null
-          tier: Database["public"]["Enums"]["subscription_tier"]
           updated_at?: string | null
         }
         Update: {
           created_at?: string | null
           description?: string | null
+          extras?: Json | null
           features?: Json | null
           has_support_access?: boolean | null
           has_whitelabel_access?: boolean | null
@@ -1079,7 +1138,6 @@ export type Database = {
           name?: string
           price_monthly_cents?: number
           stripe_price_id?: string | null
-          tier?: Database["public"]["Enums"]["subscription_tier"]
           updated_at?: string | null
         }
         Relationships: []

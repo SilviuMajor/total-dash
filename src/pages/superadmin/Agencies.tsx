@@ -21,7 +21,6 @@ interface Agency {
     status: string;
     plan: {
       name: string;
-      tier: string;
     };
     current_clients: number;
     current_agents: number;
@@ -48,8 +47,7 @@ export default function Agencies() {
             current_clients,
             current_agents,
             plan:subscription_plans (
-              name,
-              tier
+              name
             )
           )
         `)
@@ -73,14 +71,6 @@ export default function Agencies() {
     const subscription = agency.subscription?.[0];
     if (!subscription) {
       return <Badge variant="secondary">No Subscription</Badge>;
-    }
-
-    // Special styling for enterprise/bespoke plans
-    const tier = subscription.plan?.tier;
-    if (tier === 'enterprise' || tier === 'bespoke') {
-      return <Badge className="bg-purple-600 hover:bg-purple-700">
-        {tier === 'enterprise' ? 'Enterprise' : 'Bespoke'}
-      </Badge>;
     }
 
     switch (subscription.status) {
@@ -153,14 +143,7 @@ export default function Agencies() {
                   <>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Plan</span>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{subscription.plan?.name || 'Unknown'}</span>
-                        {(subscription.plan?.tier === 'enterprise' || subscription.plan?.tier === 'bespoke') && (
-                          <Badge variant="outline" className="border-purple-500 text-purple-600 text-xs">
-                            Custom
-                          </Badge>
-                        )}
-                      </div>
+                      <span className="font-medium">{subscription.plan?.name || 'Unknown'}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground flex items-center gap-1">
