@@ -12,6 +12,7 @@ import { AgencyProtectedRoute } from "./components/AgencyProtectedRoute";
 import { Sidebar } from "./components/Sidebar";
 import { AdminPreviewBanner } from "./components/AdminPreviewBanner";
 import { ClientPreviewBanner } from "./components/ClientPreviewBanner";
+import { AgencyClientPreviewBanner } from "./components/AgencyClientPreviewBanner";
 import Auth from "./pages/Auth";
 import SuperAdminLogin from "./pages/superadmin/SuperAdminLogin";
 import AgencyLogin from "./pages/agency/AgencyLogin";
@@ -136,6 +137,7 @@ const App = () => (
                     <Sidebar />
                     <div className="flex-1 flex flex-col overflow-hidden">
                       <ClientPreviewBanner />
+                      <AgencyClientPreviewBanner />
                       <main className="flex-1 p-8 overflow-y-auto">
                         <Routes>
                           <Route path="/" element={

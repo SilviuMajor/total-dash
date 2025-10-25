@@ -151,9 +151,14 @@ export function Sidebar() {
     });
   }
 
-  // Internal navigation relies on sessionStorage to maintain preview context
-  // No query parameters needed - useMultiTenantAuth handles context persistence
+  // Preserve preview query params when in client preview mode
   const getNavHref = (basePath: string) => {
+    if (previewDepth === 'agency_to_client' || previewDepth === 'client') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.has('preview')) {
+        return `${basePath}?${params.toString()}`;
+      }
+    }
     return basePath;
   };
 
