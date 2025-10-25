@@ -8,58 +8,34 @@ import { Button } from "@/components/ui/button";
 
 export function AdminPreviewBanner() {
   const { profile } = useAuth();
-  const { userType } = useMultiTenantAuth();
-  const location = useLocation();
-  const [previewName, setPreviewName] = useState<string>("");
-  const [previewType, setPreviewType] = useState<'agency' | 'client' | null>(null);
+  const { 
+    userType, 
+    isPreviewMode: mtIsPreviewMode, 
+    previewAgency, 
+    isClientPreviewMode, 
+    previewClient 
+  } = useMultiTenantAuth();
   
-  const searchParams = new URLSearchParams(location.search);
-  const isPreviewMode = searchParams.get('preview') === 'true';
-  const clientId = searchParams.get('clientId');
-  const agencyId = searchParams.get('agencyId');
-
-  useEffect(() => {
-    if (isPreviewMode && clientId) {
-      loadClientName(clientId);
-      setPreviewType('client');
-    } else if (isPreviewMode && agencyId) {
-      loadAgencyName(agencyId);
-      setPreviewType('agency');
-    }
-  }, [isPreviewMode, clientId, agencyId]);
-
-  const loadClientName = async (id: string) => {
-    const { data } = await supabase
-      .from('clients')
-      .select('name')
-      .eq('id', id)
-      .single();
-    
-    if (data) {
-      setPreviewName(data.name);
-    }
-  };
-
-  const loadAgencyName = async (id: string) => {
-    const { data } = await supabase
-      .from('agencies')
-      .select('name')
-      .eq('id', id)
-      .single();
-    
-    if (data) {
-      setPreviewName(data.name);
-    }
-  };
+  const previewName = mtIsPreviewMode && previewAgency 
+    ? previewAgency.name 
+    : isClientPreviewMode && previewClient 
+    ? previewClient.name 
+    : "";
+  
+  const previewType = mtIsPreviewMode && previewAgency 
+    ? 'agency' 
+    : isClientPreviewMode && previewClient 
+    ? 'client' 
+    : null;
 
   const handleExitPreview = () => {
     window.close();
   };
 
-  // Show for admin previewing client OR super admin previewing agency
+  // Show for admin/super admin in preview mode
   const shouldShow = 
-    (profile?.role === 'admin' && isPreviewMode && clientId && previewType === 'client') ||
-    (userType === 'super_admin' && isPreviewMode && agencyId && previewType === 'agency');
+    (profile?.role === 'admin' && isClientPreviewMode && previewClient) ||
+    (userType === 'super_admin' && mtIsPreviewMode && previewAgency);
 
   if (!shouldShow) {
     return null;

@@ -56,12 +56,6 @@ export function Sidebar() {
   const effectiveProfile = mtProfile || profile;
   const effectiveSignOut = mtProfile ? mtSignOut : signOut;
   
-  // Check for preview mode
-  const searchParams = new URLSearchParams(location.search);
-  const isPreviewMode = searchParams.get('preview') === 'true';
-  const previewClientId = searchParams.get('clientId');
-  const previewAgencyId = searchParams.get('agencyId');
-  
   useEffect(() => {
     const loadAgencyBranding = async () => {
       // If super admin previewing agency, use preview agency branding
@@ -91,12 +85,12 @@ export function Sidebar() {
   }, [mtProfile, mtIsPreviewMode, previewAgency]);
 
   useEffect(() => {
-    if (isPreviewMode && previewClientId) {
+    if (isClientPreviewMode && previewClient) {
       const loadClientPermissions = async () => {
         const { data } = await supabase
           .from('client_settings')
           .select('default_user_permissions')
-          .eq('client_id', previewClientId)
+          .eq('client_id', previewClient.id)
           .single();
         
         if (data?.default_user_permissions) {
@@ -105,19 +99,22 @@ export function Sidebar() {
       };
       loadClientPermissions();
     }
-  }, [isPreviewMode, previewClientId]);
+  }, [isClientPreviewMode, previewClient]);
   
-  // Determine which navigation to show
+  // Determine which navigation to show based on context
   let navigation;
   
-  if (userType === 'super_admin' && mtIsPreviewMode && previewAgencyId) {
-    // Super admin previewing agency - show agency navigation
-    navigation = agencyNavigation;
-  } else if (userType === 'super_admin') {
-    navigation = superAdminNavigation;
+  if (userType === 'super_admin') {
+    if (mtIsPreviewMode && previewAgency) {
+      // Super admin previewing agency → show agency navigation
+      navigation = agencyNavigation;
+    } else {
+      // Regular super admin → show super admin navigation
+      navigation = superAdminNavigation;
+    }
   } else if (userType === 'agency') {
-    if (isClientPreviewMode && previewClient && previewClientAgencyId) {
-      // Agency previewing client analytics - show client navigation
+    if (isClientPreviewMode && previewClient) {
+      // Agency previewing client → show filtered client navigation
       const selectedAgent = agents.find(a => a.id === selectedAgentId);
       navigation = clientNavigation.filter(item => {
         if (item.permissionKey && selectedAgent) {
@@ -131,42 +128,42 @@ export function Sidebar() {
         return true;
       });
     } else {
+      // Regular agency → show agency navigation
       navigation = agencyNavigation;
     }
-  } else if (effectiveProfile?.role === 'admin' && !isPreviewMode) {
+  } else if (effectiveProfile?.role === 'admin') {
+    // Admin users → show admin navigation (preview is handled by context)
     navigation = adminNavigation;
   } else {
     // Client navigation with filtering
     navigation = clientNavigation.filter(item => {
-        // Items with null permissionKey are always visible
-        if (item.permissionKey === null) {
-          return true;
+      // Items with null permissionKey are always visible
+      if (item.permissionKey === null) {
+        return true;
+      }
+      
+      // Filter by provider if specified
+      if ((item as any).provider && agents.length > 0) {
+        const selectedAgent = agents.find(a => a.id === selectedAgentId);
+        if (selectedAgent && selectedAgent.provider !== (item as any).provider) {
+          return false;
         }
-        
-        // Filter by provider if specified
-        if ((item as any).provider && agents.length > 0) {
-          const selectedAgent = agents.find(a => a.id === selectedAgentId);
-          if (selectedAgent && selectedAgent.provider !== (item as any).provider) {
-            return false;
-          }
-        }
-        
-        // In preview mode, use client's default permissions
-        if (isPreviewMode && clientPermissions) {
-          return clientPermissions[item.permissionKey] !== false;
-        }
-        // Otherwise use selectedAgentPermissions for regular client users
-        return selectedAgentPermissions?.[item.permissionKey] === true;
-      });
+      }
+      
+      // Use client permissions or agent permissions
+      if (clientPermissions) {
+        return clientPermissions[item.permissionKey] !== false;
+      }
+      return selectedAgentPermissions?.[item.permissionKey] === true;
+    });
   }
 
-  // Helper to preserve preview params in navigation URLs
+  // Helper to preserve preview params in navigation URLs (only for external links)
   const getNavHref = (basePath: string) => {
-    if (isPreviewMode && previewClientId) {
-      return `${basePath}?preview=true&clientId=${previewClientId}`;
-    }
-    if (mtIsPreviewMode && previewAgencyId) {
-      return `${basePath}?preview=true&agencyId=${previewAgencyId}`;
+    // Only add query params for external preview links (like analytics)
+    // Internal navigation relies on sessionStorage
+    if (mtIsPreviewMode && previewAgency) {
+      return `${basePath}?preview=true&agencyId=${previewAgency.id}`;
     }
     if (isClientPreviewMode && previewClient && previewClientAgencyId) {
       return `${basePath}?preview=true&clientId=${previewClient.id}&agencyId=${previewClientAgencyId}`;
@@ -180,7 +177,7 @@ export function Sidebar() {
         <img src={agencyLogo} alt={agencyName} className="w-12 h-12 object-contain" />
       </div>
       
-      {(isPreviewMode || mtIsPreviewMode) && (
+      {(mtIsPreviewMode || isClientPreviewMode) && (
         <div className="px-4 py-2 bg-blue-600/10 border-b border-blue-600/20">
           <div className="flex items-center gap-2 text-blue-600 text-sm">
             <Eye className="w-4 h-4" />
@@ -189,7 +186,7 @@ export function Sidebar() {
         </div>
       )}
 
-      {(effectiveProfile?.role === 'client' || (isAdmin && isPreviewMode)) && (
+      {(effectiveProfile?.role === 'client' || (isAdmin && (mtIsPreviewMode || isClientPreviewMode))) && (
         <div className="p-4 border-b border-border">
           <ClientAgentSelector />
         </div>

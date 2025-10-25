@@ -1,7 +1,13 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+
+// Session storage keys for preview mode persistence
+const PREVIEW_MODE_KEY = 'preview_mode';
+const PREVIEW_AGENCY_KEY = 'preview_agency';
+const PREVIEW_CLIENT_KEY = 'preview_client';
+const PREVIEW_CLIENT_AGENCY_KEY = 'preview_client_agency';
 
 type UserType = 'super_admin' | 'agency' | 'client' | null;
 
@@ -64,26 +70,42 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
   const [previewClient, setPreviewClient] = useState<{ id: string; name: string; logo_url: string | null } | null>(null);
   const [previewClientAgencyId, setPreviewClientAgencyId] = useState<string | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
-    // Check for preview mode
+    // Check sessionStorage first for preview mode persistence
+    const storedPreviewMode = sessionStorage.getItem(PREVIEW_MODE_KEY);
+    const storedPreviewAgency = sessionStorage.getItem(PREVIEW_AGENCY_KEY);
+    const storedPreviewClient = sessionStorage.getItem(PREVIEW_CLIENT_KEY);
+    const storedPreviewClientAgency = sessionStorage.getItem(PREVIEW_CLIENT_AGENCY_KEY);
+    
+    // Then check URL params (priority: URL > sessionStorage)
     const searchParams = new URLSearchParams(window.location.search);
     const previewParam = searchParams.get('preview') === 'true';
     const agencyId = searchParams.get('agencyId');
     const clientId = searchParams.get('clientId');
     
-    // Agency preview mode (super admin -> agency)
-    setIsPreviewMode(previewParam && !!agencyId && !clientId);
-    
     if (previewParam && agencyId && !clientId) {
+      // Agency preview mode (super admin -> agency)
+      setIsPreviewMode(true);
+      sessionStorage.setItem(PREVIEW_MODE_KEY, 'agency');
+      sessionStorage.setItem(PREVIEW_AGENCY_KEY, agencyId);
       loadPreviewAgency(agencyId);
-    }
-    
-    // Client preview mode (agency -> client analytics)
-    setIsClientPreviewMode(previewParam && !!clientId && !!agencyId);
-    
-    if (previewParam && clientId && agencyId) {
+    } else if (previewParam && clientId && agencyId) {
+      // Client preview mode (agency -> client analytics)
+      setIsClientPreviewMode(true);
+      sessionStorage.setItem(PREVIEW_MODE_KEY, 'client');
+      sessionStorage.setItem(PREVIEW_CLIENT_KEY, clientId);
+      sessionStorage.setItem(PREVIEW_CLIENT_AGENCY_KEY, agencyId);
       loadPreviewClient(clientId, agencyId);
+    } else if (storedPreviewMode === 'agency' && storedPreviewAgency) {
+      // Restore agency preview from session
+      setIsPreviewMode(true);
+      loadPreviewAgency(storedPreviewAgency);
+    } else if (storedPreviewMode === 'client' && storedPreviewClient && storedPreviewClientAgency) {
+      // Restore client preview from session
+      setIsClientPreviewMode(true);
+      loadPreviewClient(storedPreviewClient, storedPreviewClientAgency);
     }
 
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -111,7 +133,7 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [location.pathname, location.search]);
 
   const loadPreviewAgency = async (agencyId: string) => {
     try {
@@ -269,6 +291,12 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
+    
+    // Clear preview mode from session storage
+    sessionStorage.removeItem(PREVIEW_MODE_KEY);
+    sessionStorage.removeItem(PREVIEW_AGENCY_KEY);
+    sessionStorage.removeItem(PREVIEW_CLIENT_KEY);
+    sessionStorage.removeItem(PREVIEW_CLIENT_AGENCY_KEY);
     
     // Redirect based on current path
     const currentPath = window.location.pathname;

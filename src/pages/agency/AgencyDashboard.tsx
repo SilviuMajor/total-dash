@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
@@ -6,6 +7,7 @@ import { Users, Bot, CreditCard, TrendingUp } from "lucide-react";
 
 export default function AgencyDashboard() {
   const { profile, isPreviewMode, previewAgency } = useMultiTenantAuth();
+  const navigate = useNavigate();
   const agencyId = isPreviewMode ? previewAgency?.id : profile?.agency?.id;
   const [stats, setStats] = useState({
     clients: 0,
@@ -15,8 +17,13 @@ export default function AgencyDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Redirect to clients page when in preview mode
+    if (isPreviewMode) {
+      navigate('/agency/clients', { replace: true });
+      return;
+    }
     loadStats();
-  }, [profile]);
+  }, [profile, isPreviewMode]);
 
   const loadStats = async () => {
     if (!agencyId) return;

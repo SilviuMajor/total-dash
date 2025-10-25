@@ -4,12 +4,13 @@ import { Eye, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function ClientPreviewBanner() {
-  const { userType, isPreviewMode, previewAgency } = useMultiTenantAuth();
-  const location = useLocation();
-  
-  const searchParams = new URLSearchParams(location.search);
-  const clientId = searchParams.get('clientId');
-  const agencyId = searchParams.get('agencyId');
+  const { 
+    userType, 
+    isClientPreviewMode, 
+    previewClient, 
+    previewClientAgencyId,
+    profile 
+  } = useMultiTenantAuth();
 
   const handleExitPreview = () => {
     window.close();
@@ -18,10 +19,10 @@ export function ClientPreviewBanner() {
   // Show for agency users previewing client analytics
   const shouldShow = 
     userType === 'agency' && 
-    isPreviewMode && 
-    clientId && 
-    agencyId &&
-    previewAgency?.id === agencyId;
+    isClientPreviewMode && 
+    previewClient &&
+    previewClientAgencyId &&
+    profile?.agency?.id === previewClientAgencyId;
 
   if (!shouldShow) {
     return null;

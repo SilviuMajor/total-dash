@@ -140,9 +140,13 @@ export default function AgencyClientDetails() {
                 </p>
               </div>
               <Button
-                onClick={() => window.open(`/analytics?preview=true&clientId=${client.id}&agencyId=${agencyId}`, '_blank')}
+                onClick={() => {
+                  const targetAgencyId = agencyId || profile?.agency?.id;
+                  window.open(`/analytics?preview=true&clientId=${client.id}&agencyId=${targetAgencyId}`, '_blank');
+                }}
                 className="bg-foreground text-background hover:bg-foreground/90"
               >
+                <Eye className="mr-2 h-4 w-4" />
                 Open Analytics Dashboard
               </Button>
             </div>
