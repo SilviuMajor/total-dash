@@ -10,32 +10,20 @@ export function AdminPreviewBanner() {
   const { profile } = useAuth();
   const { 
     userType, 
-    isPreviewMode: mtIsPreviewMode, 
+    previewDepth,
     previewAgency, 
-    isClientPreviewMode, 
     previewClient 
   } = useMultiTenantAuth();
   
-  const previewName = mtIsPreviewMode && previewAgency 
-    ? previewAgency.name 
-    : isClientPreviewMode && previewClient 
-    ? previewClient.name 
-    : "";
-  
-  const previewType = mtIsPreviewMode && previewAgency 
-    ? 'agency' 
-    : isClientPreviewMode && previewClient 
-    ? 'client' 
-    : null;
-
   const handleExitPreview = () => {
     window.close();
   };
 
-  // Show for admin/super admin in preview mode
+  // Show for super admin previewing agency (not client)
   const shouldShow = 
-    (profile?.role === 'admin' && isClientPreviewMode && previewClient) ||
-    (userType === 'super_admin' && mtIsPreviewMode && previewAgency);
+    userType === 'super_admin' && 
+    (previewDepth === 'agency' || previewDepth === 'agency_to_client') &&
+    previewAgency;
 
   if (!shouldShow) {
     return null;
@@ -47,10 +35,10 @@ export function AdminPreviewBanner() {
         <Eye className="w-5 h-5" />
         <div>
           <p className="font-semibold">
-            {previewType === 'agency' ? 'Super Admin' : 'Admin'} Preview Mode
+            Super Admin Preview Mode
           </p>
           <p className="text-sm text-blue-100">
-            Viewing as: {previewName || 'Loading...'}
+            Previewing Agency: {previewAgency?.name || 'Loading...'}
           </p>
         </div>
       </div>

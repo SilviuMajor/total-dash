@@ -27,12 +27,11 @@ const adminNavigation = [
 ];
 
 const agencyNavigation = [
-  { name: "Dashboard", href: "/agency", icon: Home },
-  { name: "Clients", href: "/agency/clients", icon: Users },
-  { name: "Agents", href: "/agency/agents", icon: Bot },
-  { name: "Team Members", href: "/agency/team", icon: Users },
-  { name: "Subscription", href: "/agency/subscription", icon: CreditCard },
-  { name: "Settings", href: "/agency/settings", icon: Settings },
+  { name: "Clients", href: "/agency/clients", icon: Users, permissionKey: "clients" },
+  { name: "Agents", href: "/agency/agents", icon: Bot, permissionKey: "agents" },
+  { name: "Team", href: "/agency/team", icon: Users, permissionKey: null },
+  { name: "Subscription", href: "/agency/subscription", icon: CreditCard, permissionKey: "subscription" },
+  { name: "Settings", href: "/agency/settings", icon: Settings as any, permissionKey: "settings" },
 ];
 
 const superAdminNavigation = [
@@ -101,38 +100,36 @@ export function Sidebar() {
     }
   }, [isClientPreviewMode, previewClient]);
   
-  // Determine which navigation to show based on context
+  // Determine which navigation to show based on preview depth
+  const { previewDepth } = useMultiTenantAuth();
   let navigation;
   
-  if (userType === 'super_admin') {
-    if (mtIsPreviewMode && previewAgency) {
-      // Super admin previewing agency → show agency navigation
-      navigation = agencyNavigation;
-    } else {
-      // Regular super admin → show super admin navigation
-      navigation = superAdminNavigation;
-    }
+  // Check preview depth first (highest priority)
+  if (previewDepth === 'agency_to_client' || previewDepth === 'client') {
+    // Client preview mode → show filtered client navigation
+    const selectedAgent = agents.find(a => a.id === selectedAgentId);
+    navigation = clientNavigation.filter(item => {
+      if (item.permissionKey && selectedAgent) {
+        return selectedAgentPermissions?.[item.permissionKey] === true;
+      }
+      return item.permissionKey === null;
+    }).filter(item => {
+      if ((item as any).provider && selectedAgent) {
+        return selectedAgent.provider === (item as any).provider;
+      }
+      return true;
+    });
+  } else if (previewDepth === 'agency') {
+    // Agency preview mode → show agency navigation
+    navigation = agencyNavigation;
+  } else if (userType === 'super_admin') {
+    // Regular super admin → show super admin navigation
+    navigation = superAdminNavigation;
   } else if (userType === 'agency') {
-    if (isClientPreviewMode && previewClient) {
-      // Agency previewing client → show filtered client navigation
-      const selectedAgent = agents.find(a => a.id === selectedAgentId);
-      navigation = clientNavigation.filter(item => {
-        if (item.permissionKey && selectedAgent) {
-          return selectedAgentPermissions?.[item.permissionKey] === true;
-        }
-        return item.permissionKey === null;
-      }).filter(item => {
-        if ((item as any).provider && selectedAgent) {
-          return selectedAgent.provider === (item as any).provider;
-        }
-        return true;
-      });
-    } else {
-      // Regular agency → show agency navigation
-      navigation = agencyNavigation;
-    }
+    // Regular agency → show agency navigation
+    navigation = agencyNavigation;
   } else if (effectiveProfile?.role === 'admin') {
-    // Admin users → show admin navigation (preview is handled by context)
+    // Admin users → show admin navigation
     navigation = adminNavigation;
   } else {
     // Client navigation with filtering
@@ -150,10 +147,7 @@ export function Sidebar() {
         }
       }
       
-      // Use client permissions or agent permissions
-      if (clientPermissions) {
-        return clientPermissions[item.permissionKey] !== false;
-      }
+      // Filter by permission
       return selectedAgentPermissions?.[item.permissionKey] === true;
     });
   }

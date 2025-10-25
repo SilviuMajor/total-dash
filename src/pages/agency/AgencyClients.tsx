@@ -228,11 +228,11 @@ export default function AgencyClients() {
                   variant="outline"
                   onClick={() => {
                     const targetAgencyId = agencyId || profile?.agency?.id;
-                    window.open(`/analytics?preview=true&clientId=${client.id}&agencyId=${targetAgencyId}`, '_blank');
+                    window.open(`/agency/clients/${client.id}?preview=true&clientId=${client.id}&agencyId=${targetAgencyId}`, '_blank');
                   }}
                 >
                   <Eye className="mr-2 h-4 w-4" />
-                  Preview Analytics
+                  Preview Dashboard
                 </Button>
                 <Button
                   size="sm"

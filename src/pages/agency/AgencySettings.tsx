@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,7 @@ import { AgencyLogoUpload } from "@/components/agency-management/AgencyLogoUploa
 export default function AgencySettings() {
   const { profile, isPreviewMode, previewAgency } = useMultiTenantAuth();
   const agencyId = isPreviewMode ? previewAgency?.id : profile?.agency?.id;
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [agency, setAgency] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -94,11 +96,10 @@ export default function AgencySettings() {
       <Tabs defaultValue="general">
         <TabsList>
           <TabsTrigger value="general">General</TabsTrigger>
-          <TabsTrigger value="whitelabel">
-            Whitelabel
-            {!hasWhitelabel && <Lock className="ml-2 h-3 w-3" />}
-          </TabsTrigger>
-          <TabsTrigger value="team">Team</TabsTrigger>
+          {hasWhitelabel && (
+            <TabsTrigger value="whitelabel">Whitelabel</TabsTrigger>
+          )}
+          <TabsTrigger value="users">Users</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general" className="space-y-6">
@@ -212,13 +213,18 @@ export default function AgencySettings() {
           )}
         </TabsContent>
 
-        <TabsContent value="team">
+        <TabsContent value="users">
           <Card>
             <CardHeader>
-              <CardTitle>Team Management</CardTitle>
+              <CardTitle>User Management</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">Team management features coming soon</p>
+              <p className="text-muted-foreground mb-4">
+                Manage your agency team members, roles, and permissions.
+              </p>
+              <Button onClick={() => navigate('/agency/team')}>
+                Manage Users
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>

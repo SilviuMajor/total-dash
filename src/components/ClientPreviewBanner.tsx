@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 export function ClientPreviewBanner() {
   const { 
     userType, 
-    isClientPreviewMode, 
+    previewDepth,
     previewClient, 
     previewClientAgencyId,
     profile 
@@ -16,13 +16,18 @@ export function ClientPreviewBanner() {
     window.close();
   };
 
-  // Show for agency users previewing client analytics
-  const shouldShow = 
-    userType === 'agency' && 
-    isClientPreviewMode && 
-    previewClient &&
-    previewClientAgencyId &&
-    profile?.agency?.id === previewClientAgencyId;
+  // Show for agency users previewing client OR super admin in agency_to_client chain
+  const shouldShow = (
+    (userType === 'agency' && 
+     previewDepth === 'client' &&
+     previewClient &&
+     previewClientAgencyId &&
+     profile?.agency?.id === previewClientAgencyId)
+    ||
+    (userType === 'super_admin' &&
+     previewDepth === 'agency_to_client' &&
+     previewClient)
+  );
 
   if (!shouldShow) {
     return null;
@@ -34,10 +39,10 @@ export function ClientPreviewBanner() {
         <Eye className="w-5 h-5" />
         <div>
           <p className="font-semibold">
-            Agency Preview Mode
+            {userType === 'super_admin' ? 'Super Admin' : 'Agency'} Preview Mode
           </p>
           <p className="text-sm text-purple-100">
-            Viewing client analytics
+            Previewing Client: {previewClient?.name || 'Loading...'}
           </p>
         </div>
       </div>

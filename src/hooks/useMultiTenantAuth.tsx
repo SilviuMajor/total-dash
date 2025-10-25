@@ -10,6 +10,7 @@ const PREVIEW_CLIENT_KEY = 'preview_client';
 const PREVIEW_CLIENT_AGENCY_KEY = 'preview_client_agency';
 
 type UserType = 'super_admin' | 'agency' | 'client' | null;
+type PreviewDepth = 'none' | 'agency' | 'client' | 'agency_to_client';
 
 interface AgencyData {
   id: string;
@@ -40,6 +41,7 @@ interface MultiTenantAuthContextType {
   isClientPreviewMode: boolean;
   previewClient: { id: string; name: string; logo_url: string | null } | null;
   previewClientAgencyId: string | null;
+  previewDepth: PreviewDepth;
 }
 
 const MultiTenantAuthContext = createContext<MultiTenantAuthContextType>({
@@ -54,6 +56,7 @@ const MultiTenantAuthContext = createContext<MultiTenantAuthContextType>({
   isClientPreviewMode: false,
   previewClient: null,
   previewClientAgencyId: null,
+  previewDepth: 'none',
 });
 
 export const useMultiTenantAuth = () => useContext(MultiTenantAuthContext);
@@ -69,6 +72,7 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
   const [isClientPreviewMode, setIsClientPreviewMode] = useState(false);
   const [previewClient, setPreviewClient] = useState<{ id: string; name: string; logo_url: string | null } | null>(null);
   const [previewClientAgencyId, setPreviewClientAgencyId] = useState<string | null>(null);
+  const [previewDepth, setPreviewDepth] = useState<PreviewDepth>('none');
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -88,24 +92,47 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
     if (previewParam && agencyId && !clientId) {
       // Agency preview mode (super admin -> agency)
       setIsPreviewMode(true);
+      setPreviewDepth('agency');
       sessionStorage.setItem(PREVIEW_MODE_KEY, 'agency');
       sessionStorage.setItem(PREVIEW_AGENCY_KEY, agencyId);
       loadPreviewAgency(agencyId);
     } else if (previewParam && clientId && agencyId) {
-      // Client preview mode (agency -> client analytics)
+      // Client preview mode - check if agency preview is active
+      const hasAgencyPreview = sessionStorage.getItem(PREVIEW_AGENCY_KEY) !== null;
       setIsClientPreviewMode(true);
+      setPreviewDepth(hasAgencyPreview ? 'agency_to_client' : 'client');
       sessionStorage.setItem(PREVIEW_MODE_KEY, 'client');
       sessionStorage.setItem(PREVIEW_CLIENT_KEY, clientId);
       sessionStorage.setItem(PREVIEW_CLIENT_AGENCY_KEY, agencyId);
       loadPreviewClient(clientId, agencyId);
+      
+      // If agency preview exists, load it too
+      if (hasAgencyPreview) {
+        const storedAgencyId = sessionStorage.getItem(PREVIEW_AGENCY_KEY);
+        if (storedAgencyId) {
+          setIsPreviewMode(true);
+          loadPreviewAgency(storedAgencyId);
+        }
+      }
     } else if (storedPreviewMode === 'agency' && storedPreviewAgency) {
       // Restore agency preview from session
       setIsPreviewMode(true);
+      setPreviewDepth('agency');
       loadPreviewAgency(storedPreviewAgency);
     } else if (storedPreviewMode === 'client' && storedPreviewClient && storedPreviewClientAgency) {
       // Restore client preview from session
       setIsClientPreviewMode(true);
+      const hasAgencyPreview = storedPreviewAgency !== null;
+      setPreviewDepth(hasAgencyPreview ? 'agency_to_client' : 'client');
       loadPreviewClient(storedPreviewClient, storedPreviewClientAgency);
+      
+      // If agency preview exists, restore it too
+      if (hasAgencyPreview) {
+        setIsPreviewMode(true);
+        loadPreviewAgency(storedPreviewAgency);
+      }
+    } else {
+      setPreviewDepth('none');
     }
 
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -318,12 +345,13 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
         userType,
         loading,
         signOut: handleSignOut,
-        isPreviewMode,
-        previewAgency,
-        isClientPreviewMode,
-        previewClient,
-        previewClientAgencyId,
-      }}
+      isPreviewMode,
+      previewAgency,
+      isClientPreviewMode,
+      previewClient,
+      previewClientAgencyId,
+      previewDepth,
+    }}
     >
       {children}
     </MultiTenantAuthContext.Provider>

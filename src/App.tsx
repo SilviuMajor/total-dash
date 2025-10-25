@@ -19,7 +19,8 @@ import Agencies from "./pages/superadmin/Agencies";
 import AgencyDetails from "./pages/superadmin/AgencyDetails";
 import AgencyBilling from "./pages/superadmin/AgencyBilling";
 import SubscriptionPlans from "./pages/superadmin/SubscriptionPlans";
-import AgencyDashboard from "./pages/agency/AgencyDashboard";
+import SuperAdminSettings from "./pages/superadmin/SuperAdminSettings";
+
 import AgencyClients from "./pages/agency/AgencyClients";
 import AgencyAgents from "./pages/agency/AgencyAgents";
 import AgencyUsers from "./pages/agency/AgencyUsers";
@@ -70,6 +71,7 @@ const App = () => (
                             <Route path="/agencies/:id" element={<AgencyDetails />} />
                             <Route path="/billing" element={<AgencyBilling />} />
                             <Route path="/plans" element={<SubscriptionPlans />} />
+                            <Route path="/settings" element={<SuperAdminSettings />} />
                           </Routes>
                         </main>
                       </div>
@@ -89,7 +91,7 @@ const App = () => (
                         <ClientPreviewBanner />
                         <main className="flex-1 p-8 overflow-y-auto">
                           <Routes>
-                            <Route path="/" element={<AgencyDashboard />} />
+                            <Route path="/" element={<Navigate to="/agency/clients" replace />} />
                             <Route path="/clients" element={<AgencyClients />} />
                             <Route path="/clients/:clientId/:tab" element={<AgencyClientDetails />} />
                             <Route path="/clients/:clientId" element={<AgencyClientDetails />} />
