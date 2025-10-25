@@ -14,9 +14,11 @@ export default function SuperAdminSettings() {
   const [saving, setSaving] = useState(false);
   const [showOpenAI, setShowOpenAI] = useState(false);
   const [showResend, setShowResend] = useState(false);
+  const [showStripe, setShowStripe] = useState(false);
   const [apiKeys, setApiKeys] = useState({
     openai: '',
-    resend: ''
+    resend: '',
+    stripe: ''
   });
 
   const handleSaveOpenAI = async () => {
@@ -147,6 +149,70 @@ export default function SuperAdminSettings() {
     }
   };
 
+  const handleSaveStripe = async () => {
+    if (!apiKeys.stripe.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter an API key",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const { error } = await supabase.functions.invoke('save-api-key', {
+        body: { 
+          keyType: 'stripe',
+          apiKey: apiKeys.stripe.trim()
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Stripe API key saved successfully",
+      });
+      setApiKeys(prev => ({ ...prev, stripe: '' }));
+      setShowStripe(false);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteStripe = async () => {
+    if (!confirm('Are you sure you want to delete the Stripe API key?')) return;
+
+    setSaving(true);
+    try {
+      const { error } = await supabase.functions.invoke('delete-api-key', {
+        body: { keyType: 'stripe' }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Stripe API key deleted",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -248,6 +314,46 @@ export default function SuperAdminSettings() {
                     Save
                   </Button>
                   <Button variant="destructive" onClick={handleDeleteResend} disabled={saving}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Stripe Integration</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="stripe-key">Secret Key</Label>
+                <p className="text-sm text-muted-foreground">
+                  This key is used for subscription management, webhooks, and syncing plans.
+                </p>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Input
+                      id="stripe-key"
+                      type={showStripe ? "text" : "password"}
+                      value={apiKeys.stripe}
+                      onChange={(e) => setApiKeys(prev => ({ ...prev, stripe: e.target.value }))}
+                      placeholder="sk_live_..."
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3"
+                      onClick={() => setShowStripe(!showStripe)}
+                    >
+                      {showStripe ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                  <Button onClick={handleSaveStripe} disabled={saving}>
+                    Save
+                  </Button>
+                  <Button variant="destructive" onClick={handleDeleteStripe} disabled={saving}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>

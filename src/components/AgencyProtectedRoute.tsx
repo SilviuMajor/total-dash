@@ -3,6 +3,7 @@ import { Navigate } from "react-router-dom";
 import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
+import { GracePeriodBanner } from "./GracePeriodBanner";
 
 interface AgencyProtectedRouteProps {
   children: ReactNode;
@@ -12,7 +13,7 @@ export function AgencyProtectedRoute({ children }: AgencyProtectedRouteProps) {
   const { userType, loading, profile, isPreviewMode } = useMultiTenantAuth();
   const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
   const [checkingSubscription, setCheckingSubscription] = useState(true);
-  const [manualOverride, setManualOverride] = useState(false);
+  const [gracePeriodEndsAt, setGracePeriodEndsAt] = useState<string | null>(null);
 
   useEffect(() => {
     const checkSubscription = async () => {
@@ -24,14 +25,14 @@ export function AgencyProtectedRoute({ children }: AgencyProtectedRouteProps) {
       try {
         const { data, error } = await supabase
           .from('agency_subscriptions')
-          .select('status, manual_override')
+          .select('status, grace_period_ends_at')
           .eq('agency_id', profile.agency.id)
           .single();
 
         if (error) throw error;
 
         setSubscriptionStatus(data.status);
-        setManualOverride(data.manual_override || false);
+        setGracePeriodEndsAt(data.grace_period_ends_at);
       } catch (error) {
         console.error('Error checking subscription:', error);
       } finally {
@@ -63,11 +64,26 @@ export function AgencyProtectedRoute({ children }: AgencyProtectedRouteProps) {
     return <Navigate to="/agency/login" replace />;
   }
 
-  // Check subscription status (allow if manual override is enabled)
-  const blockedStatuses = ['past_due', 'canceled', 'incomplete', 'incomplete_expired'];
-  if (!manualOverride && subscriptionStatus && blockedStatuses.includes(subscriptionStatus)) {
+  // Check grace period logic
+  const isInGracePeriod = gracePeriodEndsAt && new Date(gracePeriodEndsAt) > new Date();
+  const gracePeriodExpired = gracePeriodEndsAt && new Date(gracePeriodEndsAt) <= new Date();
+
+  // Block access if grace period has expired (unless super admin preview)
+  if (subscriptionStatus === 'past_due' && gracePeriodExpired) {
     return <Navigate to="/agency/subscription-required" replace />;
   }
 
-  return <>{children}</>;
+  // Block access for canceled/incomplete subscriptions
+  const blockedStatuses = ['canceled', 'incomplete', 'incomplete_expired'];
+  if (subscriptionStatus && blockedStatuses.includes(subscriptionStatus)) {
+    return <Navigate to="/agency/subscription-required" replace />;
+  }
+
+  // Show grace period banner if in grace period
+  return (
+    <>
+      {isInGracePeriod && <GracePeriodBanner gracePeriodEndsAt={gracePeriodEndsAt} />}
+      {children}
+    </>
+  );
 }

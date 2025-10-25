@@ -113,7 +113,7 @@ export default function AgencyLogin() {
         const { data: planData } = await supabase
           .from('subscription_plans')
           .select('*')
-          .eq('tier', 'free_trial')
+          .ilike('name', '%trial%')
           .single();
 
         if (planData) {
