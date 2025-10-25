@@ -6,7 +6,7 @@ import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Eye } from "lucide-react";
 import { ClientOverview } from "@/components/client-management/ClientOverview";
 import { ClientUsersManagement } from "@/components/client-management/ClientUsersManagement";
 import { ClientAgentAssignments } from "@/components/client-management/ClientAgentAssignments";
@@ -113,6 +113,7 @@ export default function AgencyClientDetails() {
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="agents">Agents</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
           <TabsTrigger value="guides">Guides</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
@@ -127,6 +128,25 @@ export default function AgencyClientDetails() {
 
         <TabsContent value="agents">
           <ClientAgentAssignments clientId={client.id} />
+        </TabsContent>
+
+        <TabsContent value="analytics">
+          <Card className="p-6 bg-gradient-card border-border/50">
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-lg font-semibold text-foreground mb-2">Client Analytics</h3>
+                <p className="text-muted-foreground">
+                  View detailed analytics for this client's agents
+                </p>
+              </div>
+              <Button
+                onClick={() => window.open(`/analytics?preview=true&clientId=${client.id}&agencyId=${agencyId}`, '_blank')}
+                className="bg-foreground text-background hover:bg-foreground/90"
+              >
+                Open Analytics Dashboard
+              </Button>
+            </div>
+          </Card>
         </TabsContent>
 
         <TabsContent value="guides">

@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ClientLogoUpload } from "./ClientLogoUpload";
-import { useAuth } from "@/hooks/useAuth";
+import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
 
 interface ClientSettingsProps {
   client: {
@@ -24,7 +24,7 @@ interface ClientSettingsProps {
 }
 
 export function ClientSettings({ client, onUpdate }: ClientSettingsProps) {
-  const { user, profile } = useAuth();
+  const { user, profile, userType } = useMultiTenantAuth();
   const [formData, setFormData] = useState({
     name: client.name,
     logo_url: client.logo_url || "",
@@ -37,7 +37,8 @@ export function ClientSettings({ client, onUpdate }: ClientSettingsProps) {
   const [deleting, setDeleting] = useState(false);
   const { toast } = useToast();
   
-  const isAdmin = profile?.role === 'admin';
+  const isAdmin = profile?.role === 'admin' || userType === 'super_admin';
+  const canDelete = isAdmin || userType === 'agency';
   const isDeleting = client.status === 'deleting';
 
   const handleSave = async (e: React.FormEvent) => {
@@ -277,7 +278,7 @@ export function ClientSettings({ client, onUpdate }: ClientSettingsProps) {
               {saving ? "Saving..." : "Save Changes"}
             </Button>
 
-            {isAdmin && !isDeleting && (
+            {canDelete && !isDeleting && (
               <Button
                 type="button"
                 variant="destructive"

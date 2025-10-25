@@ -26,6 +26,7 @@ import AgencyUsers from "./pages/agency/AgencyUsers";
 import AgencySubscription from "./pages/agency/AgencySubscription";
 import AgencySettings from "./pages/agency/AgencySettings";
 import AgencyClientDetails from "./pages/agency/AgencyClientDetails";
+import AgencyAgentDetails from "./pages/agency/AgencyAgentDetails";
 import SubscriptionRequired from "./pages/agency/SubscriptionRequired";
 import Settings from "./pages/Settings";
 import AdminClients from "./pages/admin/Clients";
@@ -93,6 +94,7 @@ const App = () => (
                             <Route path="/clients/:clientId/:tab" element={<AgencyClientDetails />} />
                             <Route path="/clients/:clientId" element={<AgencyClientDetails />} />
                             <Route path="/agents" element={<AgencyAgents />} />
+                            <Route path="/agents/:agentId" element={<AgencyAgentDetails />} />
                             <Route path="/team" element={<AgencyUsers />} />
                             <Route path="/subscription" element={<AgencySubscription />} />
                             <Route path="/settings" element={<AgencySettings />} />

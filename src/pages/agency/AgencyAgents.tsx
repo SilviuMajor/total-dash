@@ -84,7 +84,7 @@ export default function AgencyAgents() {
         </div>
         <Button
           disabled={!canAddMore}
-          onClick={() => navigate('/admin/agents/new')}
+          onClick={() => navigate('/agency/agents/new')}
         >
           <Plus className="mr-2 h-4 w-4" />
           Add Agent
@@ -127,7 +127,7 @@ export default function AgencyAgents() {
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => navigate(`/admin/agents/${agent.id}`)}
+                onClick={() => navigate(`/agency/agents/${agent.id}`)}
               >
                 <Edit className="mr-2 h-4 w-4" />
                 Manage

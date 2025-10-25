@@ -7,6 +7,7 @@ import { Bot, GripVertical, Trash2, Plus, Settings } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import {
   DndContext,
@@ -38,7 +39,15 @@ interface AssignedAgent extends Agent {
   assignment_id: string;
 }
 
-function SortableAgentCard({ agent, onRemove }: { agent: AssignedAgent; onRemove: (id: string) => void }) {
+function SortableAgentCard({ 
+  agent, 
+  onRemove, 
+  isAgencyContext 
+}: { 
+  agent: AssignedAgent; 
+  onRemove: (id: string) => void;
+  isAgencyContext: boolean;
+}) {
   const navigate = useNavigate();
   const {
     attributes,
@@ -74,7 +83,12 @@ function SortableAgentCard({ agent, onRemove }: { agent: AssignedAgent; onRemove
       <Button
         variant="outline"
         size="sm"
-        onClick={() => navigate(`/admin/agents/${agent.id}`)}
+        onClick={() => {
+          const route = isAgencyContext 
+            ? `/agency/agents/${agent.id}`
+            : `/admin/agents/${agent.id}`;
+          navigate(route);
+        }}
         className="gap-2"
       >
         <Settings className="w-4 h-4" />
@@ -92,6 +106,8 @@ function SortableAgentCard({ agent, onRemove }: { agent: AssignedAgent; onRemove
 }
 
 export function ClientAgentAssignments({ clientId }: { clientId: string }) {
+  const { userType } = useMultiTenantAuth();
+  const navigate = useNavigate();
   const [assignedAgents, setAssignedAgents] = useState<AssignedAgent[]>([]);
   const [availableAgents, setAvailableAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -99,6 +115,9 @@ export function ClientAgentAssignments({ clientId }: { clientId: string }) {
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
   const [agentToRemove, setAgentToRemove] = useState<string | null>(null);
   const { toast } = useToast();
+
+  // Determine context for routing
+  const isAgencyContext = userType === 'agency' || userType === 'super_admin';
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -308,6 +327,7 @@ export function ClientAgentAssignments({ clientId }: { clientId: string }) {
                   <SortableAgentCard
                     key={agent.id}
                     agent={agent}
+                    isAgencyContext={isAgencyContext}
                     onRemove={(id) => {
                       setAgentToRemove(id);
                       setRemoveDialogOpen(true);
