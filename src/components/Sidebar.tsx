@@ -151,16 +151,9 @@ export function Sidebar() {
     });
   }
 
-  // Helper to preserve preview params in navigation URLs (only for external links)
+  // Internal navigation relies on sessionStorage to maintain preview context
+  // No query parameters needed - useMultiTenantAuth handles context persistence
   const getNavHref = (basePath: string) => {
-    // Only add query params for external preview links (like analytics)
-    // Internal navigation relies on sessionStorage
-    if (mtIsPreviewMode && previewAgency) {
-      return `${basePath}?preview=true&agencyId=${previewAgency.id}`;
-    }
-    if (isClientPreviewMode && previewClient && previewClientAgencyId) {
-      return `${basePath}?preview=true&clientId=${previewClient.id}&agencyId=${previewClientAgencyId}`;
-    }
     return basePath;
   };
 
