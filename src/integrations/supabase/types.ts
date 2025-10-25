@@ -84,6 +84,9 @@ export type Database = {
           id: string
           openai_api_key: string | null
           resend_api_key: string | null
+          stripe_publishable_key: string | null
+          stripe_secret_key: string | null
+          stripe_webhook_secret: string | null
           support_email: string | null
           updated_at: string | null
         }
@@ -96,6 +99,9 @@ export type Database = {
           id?: string
           openai_api_key?: string | null
           resend_api_key?: string | null
+          stripe_publishable_key?: string | null
+          stripe_secret_key?: string | null
+          stripe_webhook_secret?: string | null
           support_email?: string | null
           updated_at?: string | null
         }
@@ -108,6 +114,9 @@ export type Database = {
           id?: string
           openai_api_key?: string | null
           resend_api_key?: string | null
+          stripe_publishable_key?: string | null
+          stripe_secret_key?: string | null
+          stripe_webhook_secret?: string | null
           support_email?: string | null
           updated_at?: string | null
         }
