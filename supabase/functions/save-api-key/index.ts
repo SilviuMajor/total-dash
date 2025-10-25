@@ -13,7 +13,8 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseClient = createClient(
+    // Auth client for user authentication
+    const authClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       {
@@ -23,10 +24,16 @@ serve(async (req) => {
       }
     );
 
-    // Verify user is authenticated and is admin
+    // Admin client for privileged database operations (bypasses RLS)
+    const adminClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+    );
+
+    // Verify user is authenticated
     const {
       data: { user },
-    } = await supabaseClient.auth.getUser();
+    } = await authClient.auth.getUser();
 
     if (!user) {
       return new Response(
@@ -35,8 +42,8 @@ serve(async (req) => {
       );
     }
 
-    // Check if user is super admin
-    const { data: superAdmin } = await supabaseClient
+    // Check if user is super admin using admin client
+    const { data: superAdmin } = await adminClient
       .from('super_admin_users')
       .select('id')
       .eq('user_id', user.id)
@@ -69,8 +76,25 @@ serve(async (req) => {
       );
     }
 
-    // Store the API key in agency_settings table
-    const { data: existingSettings } = await supabaseClient
+    // Optional: Validate key format
+    const keyValidation: Record<string, string> = {
+      'openai': 'sk-',
+      'resend': 're_',
+      'stripe': 'sk_',
+      'stripe_webhook': 'whsec_',
+      'stripe_publishable': 'pk_'
+    };
+    
+    const expectedPrefix = keyValidation[keyType];
+    if (expectedPrefix && !apiKey.startsWith(expectedPrefix)) {
+      return new Response(
+        JSON.stringify({ error: `Invalid ${keyType} API key format. Expected key starting with "${expectedPrefix}"` }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Store the API key in agency_settings table using admin client
+    const { data: existingSettings } = await adminClient
       .from('agency_settings')
       .select('id')
       .limit(1)
@@ -88,7 +112,7 @@ serve(async (req) => {
     console.log('Saving API key:', { keyType, columnName, hasExistingSettings: !!existingSettings });
 
     if (existingSettings) {
-      const { error } = await supabaseClient
+      const { error } = await adminClient
         .from('agency_settings')
         .update({ [columnName]: apiKey })
         .eq('id', existingSettings.id);
@@ -98,11 +122,14 @@ serve(async (req) => {
         throw error;
       }
     } else {
-      const { error } = await supabaseClient
+      const { error } = await adminClient
         .from('agency_settings')
         .insert({ [columnName]: apiKey });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Database insert error:', error);
+        throw error;
+      }
     }
 
     console.log(`API key ${keyType} saved successfully`);

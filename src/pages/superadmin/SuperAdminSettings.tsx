@@ -1,13 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AgentTypesSection } from "@/components/agency-management/AgentTypesSection";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Eye, EyeOff, Trash2, ExternalLink } from "lucide-react";
+import { Eye, EyeOff, Trash2, ExternalLink, CheckCircle, XCircle } from "lucide-react";
+
+interface KeyStatus {
+  exists: boolean;
+  maskedValue: string | null;
+}
 
 export default function SuperAdminSettings() {
   const { toast } = useToast();
@@ -24,6 +30,43 @@ export default function SuperAdminSettings() {
     stripeWebhook: '',
     stripePublishable: ''
   });
+  const [keyStatuses, setKeyStatuses] = useState<Record<string, KeyStatus>>({
+    openai: { exists: false, maskedValue: null },
+    resend: { exists: false, maskedValue: null },
+    stripe: { exists: false, maskedValue: null },
+    stripe_webhook: { exists: false, maskedValue: null },
+    stripe_publishable: { exists: false, maskedValue: null }
+  });
+
+  const fetchKeyStatus = async (keyName: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('get-api-key-status', {
+        body: { keyName }
+      });
+      
+      if (error) throw error;
+      return data as KeyStatus;
+    } catch (error) {
+      console.error(`Error fetching ${keyName} status:`, error);
+      return { exists: false, maskedValue: null };
+    }
+  };
+
+  const loadAllKeyStatuses = async () => {
+    const keys = ['openai', 'resend', 'stripe', 'stripe_webhook', 'stripe_publishable'];
+    const statuses = await Promise.all(keys.map(key => fetchKeyStatus(key)));
+    
+    const statusMap: Record<string, KeyStatus> = {};
+    keys.forEach((key, index) => {
+      statusMap[key] = statuses[index];
+    });
+    
+    setKeyStatuses(statusMap);
+  };
+
+  useEffect(() => {
+    loadAllKeyStatuses();
+  }, []);
 
   const handleSaveOpenAI = async () => {
     if (!apiKeys.openai.trim()) {
@@ -52,6 +95,7 @@ export default function SuperAdminSettings() {
       });
       setApiKeys(prev => ({ ...prev, openai: '' }));
       setShowOpenAI(false);
+      await loadAllKeyStatuses();
     } catch (error: any) {
       toast({
         title: "Error",
@@ -78,6 +122,7 @@ export default function SuperAdminSettings() {
         title: "Success",
         description: "OpenAI API key deleted",
       });
+      await loadAllKeyStatuses();
     } catch (error: any) {
       toast({
         title: "Error",
@@ -116,6 +161,7 @@ export default function SuperAdminSettings() {
       });
       setApiKeys(prev => ({ ...prev, resend: '' }));
       setShowResend(false);
+      await loadAllKeyStatuses();
     } catch (error: any) {
       toast({
         title: "Error",
@@ -142,6 +188,7 @@ export default function SuperAdminSettings() {
         title: "Success",
         description: "Resend API key deleted",
       });
+      await loadAllKeyStatuses();
     } catch (error: any) {
       toast({
         title: "Error",
@@ -180,6 +227,7 @@ export default function SuperAdminSettings() {
       });
       setApiKeys(prev => ({ ...prev, stripe: '' }));
       setShowStripe(false);
+      await loadAllKeyStatuses();
     } catch (error: any) {
       toast({
         title: "Error",
@@ -206,6 +254,7 @@ export default function SuperAdminSettings() {
         title: "Success",
         description: "Stripe Secret Key deleted",
       });
+      await loadAllKeyStatuses();
     } catch (error: any) {
       toast({
         title: "Error",
@@ -244,6 +293,7 @@ export default function SuperAdminSettings() {
       });
       setApiKeys(prev => ({ ...prev, stripeWebhook: '' }));
       setShowStripeWebhook(false);
+      await loadAllKeyStatuses();
     } catch (error: any) {
       toast({
         title: "Error",
@@ -270,6 +320,7 @@ export default function SuperAdminSettings() {
         title: "Success",
         description: "Stripe Webhook Secret deleted",
       });
+      await loadAllKeyStatuses();
     } catch (error: any) {
       toast({
         title: "Error",
@@ -308,6 +359,7 @@ export default function SuperAdminSettings() {
       });
       setApiKeys(prev => ({ ...prev, stripePublishable: '' }));
       setShowStripePublishable(false);
+      await loadAllKeyStatuses();
     } catch (error: any) {
       toast({
         title: "Error",
@@ -334,6 +386,7 @@ export default function SuperAdminSettings() {
         title: "Success",
         description: "Stripe Publishable Key deleted",
       });
+      await loadAllKeyStatuses();
     } catch (error: any) {
       toast({
         title: "Error",
@@ -385,7 +438,20 @@ export default function SuperAdminSettings() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="openai-key">API Key</Label>
+                <div className="flex items-center justify-between mb-2">
+                  <Label htmlFor="openai-key">API Key</Label>
+                  {keyStatuses.openai.exists ? (
+                    <Badge variant="default" className="gap-1">
+                      <CheckCircle className="h-3 w-3" />
+                      Configured ({keyStatuses.openai.maskedValue})
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary" className="gap-1">
+                      <XCircle className="h-3 w-3" />
+                      Not configured
+                    </Badge>
+                  )}
+                </div>
                 <div className="flex gap-2">
                   <div className="relative flex-1">
                     <Input
@@ -422,7 +488,20 @@ export default function SuperAdminSettings() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="resend-key">API Key</Label>
+                <div className="flex items-center justify-between mb-2">
+                  <Label htmlFor="resend-key">API Key</Label>
+                  {keyStatuses.resend.exists ? (
+                    <Badge variant="default" className="gap-1">
+                      <CheckCircle className="h-3 w-3" />
+                      Configured ({keyStatuses.resend.maskedValue})
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary" className="gap-1">
+                      <XCircle className="h-3 w-3" />
+                      Not configured
+                    </Badge>
+                  )}
+                </div>
                 <div className="flex gap-2">
                   <div className="relative flex-1">
                     <Input
@@ -470,10 +549,25 @@ export default function SuperAdminSettings() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="stripe-key">Secret Key (sk_live_... or sk_test_...)</Label>
-                <p className="text-xs text-muted-foreground">
-                  Used for creating checkout sessions, syncing plans, and managing subscriptions
-                </p>
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <Label htmlFor="stripe-key">Secret Key (sk_live_... or sk_test_...)</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Used for creating checkout sessions, syncing plans, and managing subscriptions
+                    </p>
+                  </div>
+                  {keyStatuses.stripe.exists ? (
+                    <Badge variant="default" className="gap-1">
+                      <CheckCircle className="h-3 w-3" />
+                      Configured ({keyStatuses.stripe.maskedValue})
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary" className="gap-1">
+                      <XCircle className="h-3 w-3" />
+                      Not configured
+                    </Badge>
+                  )}
+                </div>
                 <div className="flex gap-2">
                   <div className="relative flex-1">
                     <Input
@@ -503,18 +597,33 @@ export default function SuperAdminSettings() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="stripe-webhook">Webhook Signing Secret (whsec_...)</Label>
-                <p className="text-xs text-muted-foreground">
-                  Used to verify webhook events from Stripe. Get this from{' '}
-                  <a 
-                    href="https://dashboard.stripe.com/webhooks" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-primary hover:underline"
-                  >
-                    Stripe Dashboard → Webhooks
-                  </a>
-                </p>
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <Label htmlFor="stripe-webhook">Webhook Signing Secret (whsec_...)</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Used to verify webhook events from Stripe. Get this from{' '}
+                      <a 
+                        href="https://dashboard.stripe.com/webhooks" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline"
+                      >
+                        Stripe Dashboard → Webhooks
+                      </a>
+                    </p>
+                  </div>
+                  {keyStatuses.stripe_webhook.exists ? (
+                    <Badge variant="default" className="gap-1">
+                      <CheckCircle className="h-3 w-3" />
+                      Configured ({keyStatuses.stripe_webhook.maskedValue})
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary" className="gap-1">
+                      <XCircle className="h-3 w-3" />
+                      Not configured
+                    </Badge>
+                  )}
+                </div>
                 <div className="flex gap-2">
                   <div className="relative flex-1">
                     <Input
@@ -544,10 +653,25 @@ export default function SuperAdminSettings() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="stripe-publishable">Publishable Key (pk_live_... or pk_test_...) - Optional</Label>
-                <p className="text-xs text-muted-foreground">
-                  Only needed if you want to use Stripe.js on the frontend for custom payment flows
-                </p>
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <Label htmlFor="stripe-publishable">Publishable Key (pk_live_... or pk_test_...) - Optional</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Only needed if you want to use Stripe.js on the frontend for custom payment flows
+                    </p>
+                  </div>
+                  {keyStatuses.stripe_publishable.exists ? (
+                    <Badge variant="default" className="gap-1">
+                      <CheckCircle className="h-3 w-3" />
+                      Configured ({keyStatuses.stripe_publishable.maskedValue})
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary" className="gap-1">
+                      <XCircle className="h-3 w-3" />
+                      Not configured
+                    </Badge>
+                  )}
+                </div>
                 <div className="flex gap-2">
                   <div className="relative flex-1">
                     <Input

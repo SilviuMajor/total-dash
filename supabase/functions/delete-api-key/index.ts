@@ -13,7 +13,8 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseClient = createClient(
+    // Auth client for user authentication
+    const authClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       {
@@ -23,10 +24,16 @@ serve(async (req) => {
       }
     );
 
-    // Verify user is authenticated and is admin
+    // Admin client for privileged database operations (bypasses RLS)
+    const adminClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+    );
+
+    // Verify user is authenticated
     const {
       data: { user },
-    } = await supabaseClient.auth.getUser();
+    } = await authClient.auth.getUser();
 
     if (!user) {
       return new Response(
@@ -35,8 +42,8 @@ serve(async (req) => {
       );
     }
 
-    // Check if user is super admin
-    const { data: superAdmin } = await supabaseClient
+    // Check if user is super admin using admin client
+    const { data: superAdmin } = await adminClient
       .from('super_admin_users')
       .select('id')
       .eq('user_id', user.id)
@@ -69,7 +76,7 @@ serve(async (req) => {
       );
     }
 
-    // Delete the API key from agency_settings
+    // Delete the API key from agency_settings using admin client
     const columnMap: Record<string, string> = {
       'openai': 'openai_api_key',
       'resend': 'resend_api_key',
@@ -79,19 +86,22 @@ serve(async (req) => {
     };
     const columnName = columnMap[keyType];
 
-    const { data: existingSettings } = await supabaseClient
+    const { data: existingSettings } = await adminClient
       .from('agency_settings')
       .select('id')
       .limit(1)
       .maybeSingle();
 
     if (existingSettings) {
-      const { error } = await supabaseClient
+      const { error } = await adminClient
         .from('agency_settings')
         .update({ [columnName]: null })
         .eq('id', existingSettings.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Database delete error:', error);
+        throw error;
+      }
     }
 
     console.log(`API key ${keyType} deleted successfully`);

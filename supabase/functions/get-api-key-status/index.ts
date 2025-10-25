@@ -13,7 +13,8 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseClient = createClient(
+    // Auth client for user authentication
+    const authClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       {
@@ -23,10 +24,16 @@ serve(async (req) => {
       }
     );
 
-    // Verify user is authenticated and is admin
+    // Admin client for privileged database operations (bypasses RLS)
+    const adminClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+    );
+
+    // Verify user is authenticated
     const {
       data: { user },
-    } = await supabaseClient.auth.getUser();
+    } = await authClient.auth.getUser();
 
     if (!user) {
       return new Response(
@@ -35,16 +42,16 @@ serve(async (req) => {
       );
     }
 
-    // Check if user is admin
-    const { data: profile } = await supabaseClient
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single();
+    // Check if user is super admin using admin client
+    const { data: superAdmin } = await adminClient
+      .from('super_admin_users')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle();
 
-    if (profile?.role !== 'admin') {
+    if (!superAdmin) {
       return new Response(
-        JSON.stringify({ error: 'Forbidden: Admin access required' }),
+        JSON.stringify({ error: 'Forbidden: Super admin access required' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -58,17 +65,25 @@ serve(async (req) => {
       );
     }
 
-    if (keyName !== 'OPENAI_API_KEY' && keyName !== 'RESEND_API_KEY') {
+    const validKeyNames = ['openai', 'resend', 'stripe', 'stripe_webhook', 'stripe_publishable'];
+    if (!validKeyNames.includes(keyName)) {
       return new Response(
         JSON.stringify({ error: 'Invalid keyName' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Get the API key from agency_settings
-    const columnName = keyName === 'OPENAI_API_KEY' ? 'openai_api_key' : 'resend_api_key';
+    // Get the API key from agency_settings using admin client
+    const columnMap: Record<string, string> = {
+      'openai': 'openai_api_key',
+      'resend': 'resend_api_key',
+      'stripe': 'stripe_secret_key',
+      'stripe_webhook': 'stripe_webhook_secret',
+      'stripe_publishable': 'stripe_publishable_key'
+    };
+    const columnName = columnMap[keyName];
     
-    const { data: settings } = await supabaseClient
+    const { data: settings } = await adminClient
       .from('agency_settings')
       .select(columnName)
       .limit(1)
