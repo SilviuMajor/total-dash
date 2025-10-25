@@ -49,18 +49,19 @@ serve(async (req) => {
       );
     }
 
-    const { keyName, keyValue } = await req.json();
+    const { keyType, apiKey } = await req.json();
 
-    if (!keyName || !keyValue) {
+    if (!keyType || !apiKey) {
       return new Response(
-        JSON.stringify({ error: 'keyName and keyValue are required' }),
+        JSON.stringify({ error: 'keyType and apiKey are required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    if (keyName !== 'OPENAI_API_KEY' && keyName !== 'RESEND_API_KEY') {
+    const allowedKeys = ['openai', 'resend', 'stripe', 'stripe_webhook', 'stripe_publishable'];
+    if (!allowedKeys.includes(keyType)) {
       return new Response(
-        JSON.stringify({ error: 'Invalid keyName' }),
+        JSON.stringify({ error: 'Invalid keyType' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -72,14 +73,21 @@ serve(async (req) => {
       .limit(1)
       .maybeSingle();
 
-    const columnName = keyName === 'OPENAI_API_KEY' ? 'openai_api_key' : 'resend_api_key';
+    const columnMap: Record<string, string> = {
+      'openai': 'openai_api_key',
+      'resend': 'resend_api_key',
+      'stripe': 'stripe_secret_key',
+      'stripe_webhook': 'stripe_webhook_secret',
+      'stripe_publishable': 'stripe_publishable_key'
+    };
+    const columnName = columnMap[keyType];
 
-    console.log('Saving API key:', { keyName, columnName, hasExistingSettings: !!existingSettings });
+    console.log('Saving API key:', { keyType, columnName, hasExistingSettings: !!existingSettings });
 
     if (existingSettings) {
       const { error } = await supabaseClient
         .from('agency_settings')
-        .update({ [columnName]: keyValue })
+        .update({ [columnName]: apiKey })
         .eq('id', existingSettings.id);
 
       if (error) {
@@ -89,12 +97,12 @@ serve(async (req) => {
     } else {
       const { error } = await supabaseClient
         .from('agency_settings')
-        .insert({ [columnName]: keyValue });
+        .insert({ [columnName]: apiKey });
 
       if (error) throw error;
     }
 
-    console.log(`API key ${keyName} saved successfully`);
+    console.log(`API key ${keyType} saved successfully`);
 
     return new Response(
       JSON.stringify({ success: true }),

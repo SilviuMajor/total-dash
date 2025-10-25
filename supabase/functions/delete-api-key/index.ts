@@ -49,38 +49,32 @@ serve(async (req) => {
       );
     }
 
-    const { keyName, adminPassword } = await req.json();
+    const { keyType } = await req.json();
 
-    if (!keyName || !adminPassword) {
+    if (!keyType) {
       return new Response(
-        JSON.stringify({ error: 'keyName and adminPassword are required' }),
+        JSON.stringify({ error: 'keyType is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    if (keyName !== 'OPENAI_API_KEY' && keyName !== 'RESEND_API_KEY') {
+    const allowedKeys = ['openai', 'resend', 'stripe', 'stripe_webhook', 'stripe_publishable'];
+    if (!allowedKeys.includes(keyType)) {
       return new Response(
-        JSON.stringify({ error: 'Invalid keyName' }),
+        JSON.stringify({ error: 'Invalid keyType' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Verify admin password
-    const { error: authError } = await supabaseClient.auth.signInWithPassword({
-      email: user.email!,
-      password: adminPassword,
-    });
-
-    if (authError) {
-      console.error('Password verification failed:', authError);
-      return new Response(
-        JSON.stringify({ error: 'Invalid password' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     // Delete the API key from agency_settings
-    const columnName = keyName === 'OPENAI_API_KEY' ? 'openai_api_key' : 'resend_api_key';
+    const columnMap: Record<string, string> = {
+      'openai': 'openai_api_key',
+      'resend': 'resend_api_key',
+      'stripe': 'stripe_secret_key',
+      'stripe_webhook': 'stripe_webhook_secret',
+      'stripe_publishable': 'stripe_publishable_key'
+    };
+    const columnName = columnMap[keyType];
 
     const { data: existingSettings } = await supabaseClient
       .from('agency_settings')
@@ -97,7 +91,7 @@ serve(async (req) => {
       if (error) throw error;
     }
 
-    console.log(`API key ${keyName} deleted successfully`);
+    console.log(`API key ${keyType} deleted successfully`);
 
     return new Response(
       JSON.stringify({ success: true }),

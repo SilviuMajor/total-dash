@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Eye, Save } from "lucide-react";
+import { ArrowLeft, Eye, Save, Link2 } from "lucide-react";
 
 export default function AgencyDetails() {
   const { id } = useParams();
@@ -19,6 +19,8 @@ export default function AgencyDetails() {
   const [agency, setAgency] = useState<any>(null);
   const [subscription, setSubscription] = useState<any>(null);
   const [plans, setPlans] = useState<any[]>([]);
+  const [stripeSubId, setStripeSubId] = useState("");
+  const [linkingStripe, setLinkingStripe] = useState(false);
 
   useEffect(() => {
     loadAgencyDetails();
@@ -175,6 +177,45 @@ export default function AgencyDetails() {
     }
   };
 
+  const handleLinkStripeSubscription = async () => {
+    if (!stripeSubId.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a Stripe subscription ID",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLinkingStripe(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('link-stripe-subscription', {
+        body: { 
+          agency_id: id,
+          stripe_subscription_id: stripeSubId.trim()
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Stripe subscription linked successfully",
+      });
+      
+      setStripeSubId("");
+      loadAgencyDetails();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to link Stripe subscription",
+        variant: "destructive",
+      });
+    } finally {
+      setLinkingStripe(false);
+    }
+  };
+
   if (loading) {
     return <div className="p-8">Loading...</div>;
   }
@@ -238,16 +279,12 @@ export default function AgencyDetails() {
               <div className="flex items-center gap-2 flex-wrap">
                 {subscription?.subscription_plans ? (
                   <>
-                    <Badge className={
-                      subscription.subscription_plans.tier === 'enterprise' || subscription.subscription_plans.tier === 'bespoke'
-                        ? 'bg-purple-600 hover:bg-purple-700'
-                        : ''
-                    }>
+                    <Badge>
                       {subscription.subscription_plans.name}
                     </Badge>
-                    {(subscription.subscription_plans.tier === 'enterprise' || subscription.subscription_plans.tier === 'bespoke') && (
+                    {subscription.is_custom_pricing && (
                       <Badge variant="outline" className="border-purple-500 text-purple-600">
-                        Custom Terms
+                        Custom Pricing
                       </Badge>
                     )}
                   </>
@@ -288,11 +325,7 @@ export default function AgencyDetails() {
                 <SelectContent>
                   {plans.map((plan) => (
                     <SelectItem key={plan.id} value={plan.id}>
-                      {plan.name} - {
-                        plan.tier === 'enterprise' || plan.tier === 'bespoke'
-                          ? 'Custom Pricing'
-                          : `$${plan.price_monthly_cents / 100}/mo`
-                      }
+                      {plan.name} - ${plan.price_monthly_cents / 100}/mo
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -301,6 +334,50 @@ export default function AgencyDetails() {
             {subscription?.trial_ends_at && (
               <div className="text-sm text-muted-foreground">
                 Trial ends: {new Date(subscription.trial_ends_at).toLocaleDateString()}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Stripe Integration</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {subscription?.stripe_subscription_id ? (
+              <div className="space-y-2">
+                <Label>Stripe Subscription ID</Label>
+                <div className="flex items-center gap-2 p-3 rounded-md border border-border bg-muted/50">
+                  <Link2 className="w-4 h-4 text-success" />
+                  <code className="text-sm">{subscription.stripe_subscription_id}</code>
+                  <Badge variant="outline" className="ml-auto border-success text-success">
+                    Linked
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  This subscription is linked to Stripe and will sync automatically.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label>Link Stripe Subscription</Label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="sub_xxxxxxxxxxxxx"
+                    value={stripeSubId}
+                    onChange={(e) => setStripeSubId(e.target.value)}
+                  />
+                  <Button 
+                    onClick={handleLinkStripeSubscription}
+                    disabled={linkingStripe || !stripeSubId.trim()}
+                  >
+                    <Link2 className="mr-2 h-4 w-4" />
+                    {linkingStripe ? 'Linking...' : 'Link'}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Enter a Stripe subscription ID to link it to this agency. This will import subscription details from Stripe.
+                </p>
               </div>
             )}
           </CardContent>

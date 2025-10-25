@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AgentTypesSection } from "@/components/agency-management/AgentTypesSection";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Eye, EyeOff, Trash2 } from "lucide-react";
+import { Eye, EyeOff, Trash2, ExternalLink } from "lucide-react";
 
 export default function SuperAdminSettings() {
   const { toast } = useToast();
@@ -15,10 +15,14 @@ export default function SuperAdminSettings() {
   const [showOpenAI, setShowOpenAI] = useState(false);
   const [showResend, setShowResend] = useState(false);
   const [showStripe, setShowStripe] = useState(false);
+  const [showStripeWebhook, setShowStripeWebhook] = useState(false);
+  const [showStripePublishable, setShowStripePublishable] = useState(false);
   const [apiKeys, setApiKeys] = useState({
     openai: '',
     resend: '',
-    stripe: ''
+    stripe: '',
+    stripeWebhook: '',
+    stripePublishable: ''
   });
 
   const handleSaveOpenAI = async () => {
@@ -172,7 +176,7 @@ export default function SuperAdminSettings() {
 
       toast({
         title: "Success",
-        description: "Stripe API key saved successfully",
+        description: "Stripe Secret Key saved successfully",
       });
       setApiKeys(prev => ({ ...prev, stripe: '' }));
       setShowStripe(false);
@@ -188,7 +192,7 @@ export default function SuperAdminSettings() {
   };
 
   const handleDeleteStripe = async () => {
-    if (!confirm('Are you sure you want to delete the Stripe API key?')) return;
+    if (!confirm('Are you sure you want to delete the Stripe Secret Key?')) return;
 
     setSaving(true);
     try {
@@ -200,7 +204,135 @@ export default function SuperAdminSettings() {
 
       toast({
         title: "Success",
-        description: "Stripe API key deleted",
+        description: "Stripe Secret Key deleted",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveStripeWebhook = async () => {
+    if (!apiKeys.stripeWebhook.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a webhook secret",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const { error } = await supabase.functions.invoke('save-api-key', {
+        body: { 
+          keyType: 'stripe_webhook',
+          apiKey: apiKeys.stripeWebhook.trim()
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Stripe Webhook Secret saved successfully",
+      });
+      setApiKeys(prev => ({ ...prev, stripeWebhook: '' }));
+      setShowStripeWebhook(false);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteStripeWebhook = async () => {
+    if (!confirm('Are you sure you want to delete the Stripe Webhook Secret?')) return;
+
+    setSaving(true);
+    try {
+      const { error } = await supabase.functions.invoke('delete-api-key', {
+        body: { keyType: 'stripe_webhook' }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Stripe Webhook Secret deleted",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveStripePublishable = async () => {
+    if (!apiKeys.stripePublishable.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a publishable key",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const { error } = await supabase.functions.invoke('save-api-key', {
+        body: { 
+          keyType: 'stripe_publishable',
+          apiKey: apiKeys.stripePublishable.trim()
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Stripe Publishable Key saved successfully",
+      });
+      setApiKeys(prev => ({ ...prev, stripePublishable: '' }));
+      setShowStripePublishable(false);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteStripePublishable = async () => {
+    if (!confirm('Are you sure you want to delete the Stripe Publishable Key?')) return;
+
+    setSaving(true);
+    try {
+      const { error } = await supabase.functions.invoke('delete-api-key', {
+        body: { keyType: 'stripe_publishable' }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Stripe Publishable Key deleted",
       });
     } catch (error: any) {
       toast({
@@ -324,12 +456,23 @@ export default function SuperAdminSettings() {
           <Card>
             <CardHeader>
               <CardTitle>Stripe Integration</CardTitle>
+              <CardDescription>
+                Manage Stripe API keys for subscription and payment management.{' '}
+                <a 
+                  href="https://dashboard.stripe.com/apikeys" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline inline-flex items-center gap-1"
+                >
+                  View Stripe Dashboard <ExternalLink className="w-3 h-3" />
+                </a>
+              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="stripe-key">Secret Key</Label>
-                <p className="text-sm text-muted-foreground">
-                  This key is used for subscription management, webhooks, and syncing plans.
+                <Label htmlFor="stripe-key">Secret Key (sk_live_... or sk_test_...)</Label>
+                <p className="text-xs text-muted-foreground">
+                  Used for creating checkout sessions, syncing plans, and managing subscriptions
                 </p>
                 <div className="flex gap-2">
                   <div className="relative flex-1">
@@ -338,7 +481,7 @@ export default function SuperAdminSettings() {
                       type={showStripe ? "text" : "password"}
                       value={apiKeys.stripe}
                       onChange={(e) => setApiKeys(prev => ({ ...prev, stripe: e.target.value }))}
-                      placeholder="sk_live_..."
+                      placeholder="sk_live_... or sk_test_..."
                     />
                     <Button
                       type="button"
@@ -354,6 +497,80 @@ export default function SuperAdminSettings() {
                     Save
                   </Button>
                   <Button variant="destructive" onClick={handleDeleteStripe} disabled={saving}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="stripe-webhook">Webhook Signing Secret (whsec_...)</Label>
+                <p className="text-xs text-muted-foreground">
+                  Used to verify webhook events from Stripe. Get this from{' '}
+                  <a 
+                    href="https://dashboard.stripe.com/webhooks" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline"
+                  >
+                    Stripe Dashboard → Webhooks
+                  </a>
+                </p>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Input
+                      id="stripe-webhook"
+                      type={showStripeWebhook ? "text" : "password"}
+                      value={apiKeys.stripeWebhook}
+                      onChange={(e) => setApiKeys(prev => ({ ...prev, stripeWebhook: e.target.value }))}
+                      placeholder="whsec_..."
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3"
+                      onClick={() => setShowStripeWebhook(!showStripeWebhook)}
+                    >
+                      {showStripeWebhook ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                  <Button onClick={handleSaveStripeWebhook} disabled={saving}>
+                    Save
+                  </Button>
+                  <Button variant="destructive" onClick={handleDeleteStripeWebhook} disabled={saving}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="stripe-publishable">Publishable Key (pk_live_... or pk_test_...) - Optional</Label>
+                <p className="text-xs text-muted-foreground">
+                  Only needed if you want to use Stripe.js on the frontend for custom payment flows
+                </p>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Input
+                      id="stripe-publishable"
+                      type={showStripePublishable ? "text" : "password"}
+                      value={apiKeys.stripePublishable}
+                      onChange={(e) => setApiKeys(prev => ({ ...prev, stripePublishable: e.target.value }))}
+                      placeholder="pk_live_... or pk_test_..."
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3"
+                      onClick={() => setShowStripePublishable(!showStripePublishable)}
+                    >
+                      {showStripePublishable ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                  <Button onClick={handleSaveStripePublishable} disabled={saving}>
+                    Save
+                  </Button>
+                  <Button variant="destructive" onClick={handleDeleteStripePublishable} disabled={saving}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>

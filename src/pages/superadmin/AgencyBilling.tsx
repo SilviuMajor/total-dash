@@ -6,9 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Loader2, DollarSign, Users, Clock, TrendingDown, Download, Search } from "lucide-react";
+import { Loader2, DollarSign, Users, TrendingUp, TrendingDown, Download, Search, Calendar } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { formatDistanceToNow } from "date-fns";
+import { format } from "date-fns";
 
 interface BillingData {
   id: string;
@@ -16,14 +16,12 @@ interface BillingData {
   logo_url: string | null;
   created_at: string;
   status: string;
-  current_period_start: string | null;
   current_period_end: string | null;
   trial_ends_at: string | null;
-  manual_override: boolean;
-  subscription_start: string;
+  subscription_created_at: string;
   plan_name: string;
-  tier: string;
   price_monthly_cents: number;
+  stripe_subscription_id: string | null;
 }
 
 export default function AgencyBilling() {
@@ -33,6 +31,7 @@ export default function AgencyBilling() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [planFilter, setPlanFilter] = useState<string>("all");
+  const [dateRange, setDateRange] = useState<string>("all");
   const [sortField, setSortField] = useState<string>("name");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const navigate = useNavigate();
@@ -56,37 +55,43 @@ export default function AgencyBilling() {
           created_at,
           agency_subscriptions (
             status,
-            current_period_start,
             current_period_end,
             trial_ends_at,
-            manual_override,
             created_at,
+            stripe_subscription_id,
+            snapshot_plan_name,
+            snapshot_price_monthly_cents,
+            custom_price_monthly_cents,
+            is_custom_pricing,
             plan:subscription_plans (
               name,
-              tier,
               price_monthly_cents
             )
           )
-        `)
-        .eq('is_active', true);
+        `);
 
       if (error) throw error;
 
-      const formatted = data?.map((agency: any) => ({
-        id: agency.id,
-        name: agency.name,
-        logo_url: agency.logo_url,
-        created_at: agency.created_at,
-        status: agency.agency_subscriptions?.[0]?.status || 'none',
-        current_period_start: agency.agency_subscriptions?.[0]?.current_period_start,
-        current_period_end: agency.agency_subscriptions?.[0]?.current_period_end,
-        trial_ends_at: agency.agency_subscriptions?.[0]?.trial_ends_at,
-        manual_override: agency.agency_subscriptions?.[0]?.manual_override || false,
-        subscription_start: agency.agency_subscriptions?.[0]?.created_at,
-        plan_name: agency.agency_subscriptions?.[0]?.plan?.name || 'No Plan',
-        tier: agency.agency_subscriptions?.[0]?.plan?.tier || 'none',
-        price_monthly_cents: agency.agency_subscriptions?.[0]?.plan?.price_monthly_cents || 0,
-      })) || [];
+      const formatted = data?.map((agency: any) => {
+        const sub = agency.agency_subscriptions?.[0];
+        const price = sub?.is_custom_pricing 
+          ? sub.custom_price_monthly_cents 
+          : (sub?.snapshot_price_monthly_cents || sub?.plan?.price_monthly_cents || 0);
+        
+        return {
+          id: agency.id,
+          name: agency.name,
+          logo_url: agency.logo_url,
+          created_at: agency.created_at,
+          status: sub?.status || 'none',
+          current_period_end: sub?.current_period_end,
+          trial_ends_at: sub?.trial_ends_at,
+          subscription_created_at: sub?.created_at,
+          plan_name: sub?.snapshot_plan_name || sub?.plan?.name || 'No Plan',
+          price_monthly_cents: price,
+          stripe_subscription_id: sub?.stripe_subscription_id,
+        };
+      }) || [];
 
       setBillingData(formatted);
     } catch (error) {
@@ -99,24 +104,20 @@ export default function AgencyBilling() {
   const filterAndSortData = () => {
     let filtered = [...billingData];
 
-    // Search filter
     if (searchTerm) {
       filtered = filtered.filter(item =>
         item.name.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
-    // Status filter
     if (statusFilter !== "all") {
       filtered = filtered.filter(item => item.status === statusFilter);
     }
 
-    // Plan filter
     if (planFilter !== "all") {
-      filtered = filtered.filter(item => item.tier === planFilter);
+      filtered = filtered.filter(item => item.plan_name === planFilter);
     }
 
-    // Sorting
     filtered.sort((a, b) => {
       let aVal: any = a[sortField as keyof BillingData];
       let bVal: any = b[sortField as keyof BillingData];
@@ -143,34 +144,83 @@ export default function AgencyBilling() {
     }
   };
 
-  const calculateMRR = () => {
-    return billingData
-      .filter(item => item.status === 'active' || item.status === 'trialing')
+  const getDateFilteredData = () => {
+    if (dateRange === "all") return billingData;
+    
+    const now = new Date();
+    const cutoffDate = new Date();
+    
+    switch (dateRange) {
+      case "30days":
+        cutoffDate.setDate(now.getDate() - 30);
+        break;
+      case "3months":
+        cutoffDate.setMonth(now.getMonth() - 3);
+        break;
+      case "12months":
+        cutoffDate.setMonth(now.getMonth() - 12);
+        break;
+    }
+    
+    return billingData.filter(item => 
+      item.subscription_created_at && new Date(item.subscription_created_at) >= cutoffDate
+    );
+  };
+
+  const calculateRevenue = (days: number | null = null) => {
+    const data = days ? getDateFilteredData() : billingData;
+    return data
+      .filter(item => item.status === 'active')
       .reduce((sum, item) => sum + item.price_monthly_cents, 0) / 100;
   };
 
   const getActiveCount = () => {
-    return billingData.filter(item => item.status === 'active' || item.status === 'trialing').length;
+    return billingData.filter(item => item.status === 'active').length;
   };
 
-  const getTrialCount = () => {
-    return billingData.filter(item => item.status === 'trialing').length;
+  const getNewTrials = () => {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    return billingData.filter(item => 
+      item.status === 'trialing' && 
+      item.subscription_created_at &&
+      new Date(item.subscription_created_at) >= thirtyDaysAgo
+    ).length;
+  };
+
+  const getNewSignups = () => {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    return billingData.filter(item => 
+      item.status === 'active' &&
+      item.subscription_created_at &&
+      new Date(item.subscription_created_at) >= thirtyDaysAgo
+    ).length;
   };
 
   const getChurnedCount = () => {
-    return billingData.filter(item => item.status === 'canceled').length;
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    return billingData.filter(item => 
+      item.status === 'canceled' &&
+      item.subscription_created_at &&
+      new Date(item.subscription_created_at) >= thirtyDaysAgo
+    ).length;
   };
 
-  const getStatusBadge = (status: string, manualOverride: boolean) => {
-    if (manualOverride) {
-      return <Badge className="bg-purple-500/10 text-purple-500 border-purple-500/20">Manual Override</Badge>;
+  const getStatusBadge = (status: string, trialEndsAt: string | null) => {
+    if (status === 'trialing' && trialEndsAt) {
+      const daysLeft = Math.floor((new Date(trialEndsAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+      return (
+        <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20">
+          Trial ({daysLeft > 0 ? `${daysLeft}d left` : 'Expired'})
+        </Badge>
+      );
     }
 
     switch (status) {
       case 'active':
         return <Badge className="bg-success/10 text-success border-success/20">Active</Badge>;
-      case 'trialing':
-        return <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20">Trial</Badge>;
       case 'past_due':
         return <Badge className="bg-warning/10 text-warning border-warning/20">Past Due</Badge>;
       case 'canceled':
@@ -178,35 +228,8 @@ export default function AgencyBilling() {
       case 'incomplete':
         return <Badge variant="outline">Incomplete</Badge>;
       default:
-        return <Badge variant="outline">None</Badge>;
+        return <Badge variant="outline">No Subscription</Badge>;
     }
-  };
-
-  const getTierBadge = (tier: string) => {
-    const colors: Record<string, string> = {
-      free_trial: "bg-muted text-muted-foreground",
-      starter: "bg-blue-500/10 text-blue-500",
-      professional: "bg-purple-500/10 text-purple-500",
-      enterprise: "bg-primary/10 text-primary",
-    };
-
-    return (
-      <Badge className={colors[tier] || "bg-muted text-muted-foreground"}>
-        {tier.replace('_', ' ').toUpperCase()}
-      </Badge>
-    );
-  };
-
-  const getContractLength = (startDate: string) => {
-    if (!startDate) return 'N/A';
-    const days = Math.floor((Date.now() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24));
-    return `${days} days`;
-  };
-
-  const getTrialDaysRemaining = (trialEndsAt: string | null) => {
-    if (!trialEndsAt) return 'N/A';
-    const days = Math.floor((new Date(trialEndsAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-    return days > 0 ? `${days} days left` : 'Expired';
   };
 
   const formatCurrency = (cents: number) => {
@@ -217,15 +240,14 @@ export default function AgencyBilling() {
   };
 
   const exportToCSV = () => {
-    const headers = ['Agency', 'Plan', 'Status', 'MRR', 'Contract Length', 'Trial Status', 'Manual Override'];
+    const headers = ['Agency', 'Plan', 'Status', 'MRR', 'Next Billing', 'Stripe ID'];
     const rows = filteredData.map(item => [
       item.name,
       item.plan_name,
       item.status,
       formatCurrency(item.price_monthly_cents),
-      getContractLength(item.subscription_start),
-      item.status === 'trialing' ? getTrialDaysRemaining(item.trial_ends_at) : 'N/A',
-      item.manual_override ? 'Yes' : 'No',
+      item.current_period_end ? format(new Date(item.current_period_end), 'MMM dd, yyyy') : 'N/A',
+      item.stripe_subscription_id || 'Not Linked',
     ]);
 
     const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
@@ -237,7 +259,7 @@ export default function AgencyBilling() {
     a.click();
   };
 
-  const uniquePlans = Array.from(new Set(billingData.map(item => item.tier))).filter(Boolean);
+  const uniquePlans = Array.from(new Set(billingData.map(item => item.plan_name))).filter(plan => plan !== 'No Plan');
 
   if (loading) {
     return (
@@ -256,17 +278,45 @@ export default function AgencyBilling() {
         </p>
       </div>
 
+      {/* Date Range Selector */}
+      <div className="flex items-center gap-4">
+        <Select value={dateRange} onValueChange={setDateRange}>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="Select time period" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Time</SelectItem>
+            <SelectItem value="30days">Last 30 Days</SelectItem>
+            <SelectItem value="3months">Last 3 Months</SelectItem>
+            <SelectItem value="12months">Last 12 Months</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       {/* Summary Cards */}
-      <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-6">
+      <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
         <Card>
           <CardHeader className="pb-3">
-            <CardDescription>Total MRR</CardDescription>
-            <CardTitle className="text-3xl">{formatCurrency(calculateMRR() * 100)}/mo</CardTitle>
+            <CardDescription>Revenue (Last 30 Days)</CardDescription>
+            <CardTitle className="text-3xl">{formatCurrency(calculateRevenue(30) * 100)}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <DollarSign className="w-4 h-4" />
-              <span>Monthly Recurring Revenue</span>
+              <span>Active subscriptions only</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardDescription>Revenue (Last 12 Months)</CardDescription>
+            <CardTitle className="text-3xl">{formatCurrency(calculateRevenue() * 100)}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Calendar className="w-4 h-4" />
+              <span>Total MRR</span>
             </div>
           </CardContent>
         </Card>
@@ -279,27 +329,40 @@ export default function AgencyBilling() {
           <CardContent>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Users className="w-4 h-4" />
-              <span>Active + Trial users</span>
+              <span>Paying customers (excl. trials)</span>
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-3">
-            <CardDescription>Trial Users</CardDescription>
-            <CardTitle className="text-3xl">{getTrialCount()}</CardTitle>
+            <CardDescription>New Trials (Last 30 Days)</CardDescription>
+            <CardTitle className="text-3xl">{getNewTrials()}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Clock className="w-4 h-4" />
-              <span>Currently in trial</span>
+              <TrendingUp className="w-4 h-4" />
+              <span>Trial signups</span>
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-3">
-            <CardDescription>Churned</CardDescription>
+            <CardDescription>New Signups (Last 30 Days)</CardDescription>
+            <CardTitle className="text-3xl">{getNewSignups()}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <TrendingUp className="w-4 h-4" />
+              <span>New paid subscriptions</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardDescription>Churned (Last 30 Days)</CardDescription>
             <CardTitle className="text-3xl">{getChurnedCount()}</CardTitle>
           </CardHeader>
           <CardContent>
@@ -352,7 +415,7 @@ export default function AgencyBilling() {
               <SelectContent>
                 <SelectItem value="all">All Plans</SelectItem>
                 {uniquePlans.map(plan => (
-                  <SelectItem key={plan} value={plan}>{plan.replace('_', ' ').toUpperCase()}</SelectItem>
+                  <SelectItem key={plan} value={plan}>{plan}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -371,22 +434,23 @@ export default function AgencyBilling() {
                   <TableHead className="cursor-pointer" onClick={() => toggleSort('price_monthly_cents')}>
                     MRR {sortField === 'price_monthly_cents' && (sortDirection === 'asc' ? '↑' : '↓')}
                   </TableHead>
-                  <TableHead>Contract Length</TableHead>
-                  <TableHead>Trial Status</TableHead>
                   <TableHead>Next Billing</TableHead>
-                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredData.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                       No agencies found matching your filters
                     </TableCell>
                   </TableRow>
                 ) : (
                   filteredData.map((agency) => (
-                    <TableRow key={agency.id}>
+                    <TableRow 
+                      key={agency.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => navigate(`/super-admin/agencies/${agency.id}`)}
+                    >
                       <TableCell>
                         <div className="flex items-center gap-3">
                           {agency.logo_url && (
@@ -395,32 +459,15 @@ export default function AgencyBilling() {
                           <span className="font-medium">{agency.name}</span>
                         </div>
                       </TableCell>
-                      <TableCell>{getTierBadge(agency.tier)}</TableCell>
-                      <TableCell>{getStatusBadge(agency.status, agency.manual_override)}</TableCell>
-                      <TableCell className="font-medium">{formatCurrency(agency.price_monthly_cents)}</TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {getContractLength(agency.subscription_start)}
-                      </TableCell>
                       <TableCell>
-                        {agency.status === 'trialing' ? (
-                          <span className="text-sm text-blue-500">{getTrialDaysRemaining(agency.trial_ends_at)}</span>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">N/A</span>
-                        )}
+                        <Badge variant="outline">{agency.plan_name}</Badge>
                       </TableCell>
+                      <TableCell>{getStatusBadge(agency.status, agency.trial_ends_at)}</TableCell>
+                      <TableCell className="font-medium">{formatCurrency(agency.price_monthly_cents)}</TableCell>
                       <TableCell className="text-muted-foreground text-sm">
                         {agency.current_period_end
-                          ? formatDistanceToNow(new Date(agency.current_period_end), { addSuffix: true })
+                          ? format(new Date(agency.current_period_end), 'MMM dd, yyyy')
                           : 'N/A'}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => navigate(`/super-admin/agencies/${agency.id}`)}
-                        >
-                          View Details
-                        </Button>
                       </TableCell>
                     </TableRow>
                   ))

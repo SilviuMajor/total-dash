@@ -110,76 +110,56 @@ export default function Agencies() {
         </div>
       </div>
 
-      <div className="space-y-6">
+      <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
         {agencies.map((agency) => {
           const subscription = agency.subscription?.[0];
           
           return (
             <Card key={agency.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    {agency.logo_url ? (
-                      <img
-                        src={agency.logo_url}
-                        alt={agency.name}
-                        className="w-12 h-12 rounded-lg object-cover"
-                      />
-                    ) : (
-                      <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <Building2 className="w-6 h-6 text-primary" />
-                      </div>
-                    )}
-                    <div>
-                      <CardTitle className="text-xl">{agency.name}</CardTitle>
-                      <CardDescription className="text-xs">@{agency.slug}</CardDescription>
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between mb-3">
+                  {agency.logo_url ? (
+                    <img
+                      src={agency.logo_url}
+                      alt={agency.name}
+                      className="w-10 h-10 rounded-lg object-cover"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Building2 className="w-5 h-5 text-primary" />
                     </div>
-                  </div>
+                  )}
                   {getStatusBadge(agency)}
                 </div>
+                <CardTitle className="text-lg">{agency.name}</CardTitle>
+                <CardDescription className="text-xs">@{agency.slug}</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                {subscription ? (
-                  <>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Plan</span>
-                      <span className="font-medium">{subscription.plan?.name || 'Unknown'}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground flex items-center gap-1">
-                        <Users className="w-4 h-4" />
-                        Clients
-                      </span>
-                      <span className="font-medium">{subscription.current_clients || 0}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground flex items-center gap-1">
-                        <Building2 className="w-4 h-4" />
-                        Agents
-                      </span>
-                      <span className="font-medium">{subscription.current_agents || 0}</span>
-                    </div>
-                  </>
-                ) : (
-                  <div className="text-center py-4">
-                    <p className="text-sm text-muted-foreground mb-2">No active subscription</p>
-                    <Badge variant="secondary">Inactive</Badge>
+              <CardContent className="space-y-3">
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Plan</span>
+                    <span className="font-medium">{subscription?.plan?.name || 'No Plan'}</span>
                   </div>
-                )}
-                
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground flex items-center gap-1">
-                    <Calendar className="w-4 h-4" />
-                    Created
-                  </span>
-                  <span className="font-medium">
-                    {new Date(agency.created_at).toLocaleDateString()}
-                  </span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Clients</span>
+                    <span className="font-medium">{subscription?.current_clients || 0}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Agents</span>
+                    <span className="font-medium">{subscription?.current_agents || 0}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Created</span>
+                    <span className="font-medium text-xs">
+                      {new Date(agency.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
                 </div>
 
                 <Button
-                  className="w-full mt-4"
+                  className="w-full"
                   variant="outline"
+                  size="sm"
                   onClick={() => navigate(`/super-admin/agencies/${agency.id}`)}
                 >
                   Manage Agency
