@@ -35,16 +35,19 @@ serve(async (req) => {
       );
     }
 
-    // Check if user is admin
-    const { data: profile } = await supabaseClient
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single();
+    // Check if user is super admin
+    const { data: superAdmin } = await supabaseClient
+      .from('super_admin_users')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle();
 
-    if (profile?.role !== 'admin') {
+    console.log('User authenticated:', user.id, user.email);
+    console.log('Super admin check:', { hasSuperAdmin: !!superAdmin });
+
+    if (!superAdmin) {
       return new Response(
-        JSON.stringify({ error: 'Forbidden: Admin access required' }),
+        JSON.stringify({ error: 'Forbidden: Super admin access required' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
