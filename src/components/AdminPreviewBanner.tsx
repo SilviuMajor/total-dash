@@ -19,10 +19,10 @@ export function AdminPreviewBanner() {
     window.close();
   };
 
-  // Show for super admin previewing agency (not client)
+  // Show for super admin previewing agency (not client preview chain)
   const shouldShow = 
     userType === 'super_admin' && 
-    (previewDepth === 'agency' || previewDepth === 'agency_to_client') &&
+    previewDepth === 'agency' &&
     previewAgency;
 
   if (!shouldShow) {

@@ -1,21 +1,19 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
 import { useToast } from "@/hooks/use-toast";
-import { Lock, Save } from "lucide-react";
+import { Save } from "lucide-react";
 import { AgencyLogoUpload } from "@/components/agency-management/AgencyLogoUpload";
+import { AgencyUsersContent } from "@/components/agency-management/AgencyUsersContent";
 
 export default function AgencySettings() {
   const { profile, isPreviewMode, previewAgency } = useMultiTenantAuth();
   const agencyId = isPreviewMode ? previewAgency?.id : profile?.agency?.id;
-  const navigate = useNavigate();
   const { toast } = useToast();
   const [agency, setAgency] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -213,20 +211,8 @@ export default function AgencySettings() {
           )}
         </TabsContent>
 
-        <TabsContent value="users">
-          <Card>
-            <CardHeader>
-              <CardTitle>User Management</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground mb-4">
-                Manage your agency team members, roles, and permissions.
-              </p>
-              <Button onClick={() => navigate('/agency/team')}>
-                Manage Users
-              </Button>
-            </CardContent>
-          </Card>
+        <TabsContent value="users" className="space-y-6">
+          <AgencyUsersContent agencyId={agencyId} />
         </TabsContent>
       </Tabs>
     </div>

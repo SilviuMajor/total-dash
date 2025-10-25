@@ -16,7 +16,9 @@ export function ClientPreviewBanner() {
     window.close();
   };
 
-  // Show for agency users previewing client OR super admin in agency_to_client chain
+  // Show for:
+  // 1. Agency users previewing client
+  // 2. Super admin in chained preview (agency → client)
   const shouldShow = (
     (userType === 'agency' && 
      previewDepth === 'client' &&

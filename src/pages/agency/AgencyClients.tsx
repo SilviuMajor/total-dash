@@ -228,7 +228,7 @@ export default function AgencyClients() {
                   variant="outline"
                   onClick={() => {
                     const targetAgencyId = agencyId || profile?.agency?.id;
-                    window.open(`/agency/clients/${client.id}?preview=true&clientId=${client.id}&agencyId=${targetAgencyId}`, '_blank');
+                    navigate(`/analytics?preview=true&clientId=${client.id}&agencyId=${targetAgencyId}`);
                   }}
                 >
                   <Eye className="mr-2 h-4 w-4" />

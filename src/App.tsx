@@ -23,7 +23,6 @@ import SuperAdminSettings from "./pages/superadmin/SuperAdminSettings";
 
 import AgencyClients from "./pages/agency/AgencyClients";
 import AgencyAgents from "./pages/agency/AgencyAgents";
-import AgencyUsers from "./pages/agency/AgencyUsers";
 import AgencySubscription from "./pages/agency/AgencySubscription";
 import AgencySettings from "./pages/agency/AgencySettings";
 import AgencyClientDetails from "./pages/agency/AgencyClientDetails";
@@ -97,7 +96,7 @@ const App = () => (
                             <Route path="/clients/:clientId" element={<AgencyClientDetails />} />
                             <Route path="/agents" element={<AgencyAgents />} />
                             <Route path="/agents/:agentId" element={<AgencyAgentDetails />} />
-                            <Route path="/team" element={<AgencyUsers />} />
+                            
                             <Route path="/subscription" element={<AgencySubscription />} />
                             <Route path="/settings" element={<AgencySettings />} />
                           </Routes>
@@ -110,126 +109,77 @@ const App = () => (
                 {/* Client Auth Route */}
                 <Route path="/auth" element={<Auth />} />
               
-              <Route
-                path="/*"
-                element={
-                  <ProtectedRoute>
-                    <div className="flex h-screen w-full bg-background overflow-hidden">
-                      <Sidebar />
-                      <div className="flex-1 flex flex-col overflow-hidden">
-                        <AdminPreviewBanner />
-                        <ClientPreviewBanner />
-                        <main className="flex-1 p-8 overflow-y-auto">
-                          <Routes>
-                          {/* Client Routes - Agent-specific pages */}
-                          <Route 
-                            path="/" 
-                            element={
-                              <ProtectedRoute requireClient requiredPage="conversations">
-                                <Conversations />
-                              </ProtectedRoute>
-                            } 
-                          />
-                          <Route 
-                            path="/transcripts" 
-                            element={
-                              <ProtectedRoute requireClient requiredPage="transcripts">
-                                <Transcripts />
-                              </ProtectedRoute>
-                            } 
-                          />
-                          <Route 
-                            path="/analytics"
-                            element={
-                              <ProtectedRoute requireClient requiredPage="analytics">
-                                <Analytics />
-                              </ProtectedRoute>
-                            } 
-                          />
-                          <Route 
-                            path="/knowledge-base" 
-                            element={
-                              <ProtectedRoute requireClient requiredPage="knowledge_base">
-                                <KnowledgeBase />
-                              </ProtectedRoute>
-                            } 
-                          />
-                          <Route 
-                            path="/agent-settings" 
-                            element={
-                              <ProtectedRoute requireClient requiredPage="agent_settings">
-                                <AgentSettings />
-                              </ProtectedRoute>
-                            } 
-                          />
-                          <Route 
-                            path="/specs" 
-                            element={
-                              <ProtectedRoute requireClient requiredPage="specs">
-                                <AgentSpecs />
-                              </ProtectedRoute>
-                            } 
-                          />
-                          <Route 
-                            path="/guides" 
-                            element={
-                              <ProtectedRoute requireClient>
-                                <Guides />
-                              </ProtectedRoute>
-                            } 
-                          />
-
-                          {/* Admin Routes */}
-                          <Route
-                            path="/admin/clients"
-                            element={
-                              <ProtectedRoute requireAdmin>
-                                <AdminClients />
-                              </ProtectedRoute>
-                            }
-                          />
-                          <Route
-                            path="/admin/clients/:clientId/:tab"
-                            element={
-                              <ProtectedRoute requireAdmin>
-                                <ClientDetails />
-                              </ProtectedRoute>
-                            }
-                          />
-                <Route
-                  path="/admin/agents"
-                  element={
-                    <ProtectedRoute requireAdmin>
-                      <AdminAgents />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/admin/agents/:agentId"
-                  element={
-                    <ProtectedRoute requireAdmin>
-                      <AgentDetails />
-                    </ProtectedRoute>
-                  }
-                />
-                          <Route
-                            path="/admin/settings"
-                            element={
-                              <ProtectedRoute requireAdmin>
-                                <AdminSettings />
-                              </ProtectedRoute>
-                            }
-                          />
-
-                          {/* 404 */}
-                          <Route path="*" element={<NotFound />} />
-                          </Routes>
-                        </main>
-                      </div>
+              {/* Admin Routes - Isolated */}
+              <Route path="/admin/*" element={
+                <ProtectedRoute requireAdmin>
+                  <div className="flex h-screen w-full bg-background overflow-hidden">
+                    <Sidebar />
+                    <div className="flex-1 flex flex-col overflow-hidden">
+                      <main className="flex-1 p-8 overflow-y-auto">
+                        <Routes>
+                          <Route path="/clients" element={<AdminClients />} />
+                          <Route path="/clients/:clientId/:tab" element={<ClientDetails />} />
+                          <Route path="/agents" element={<AdminAgents />} />
+                          <Route path="/agents/:agentId" element={<AgentDetails />} />
+                          <Route path="/settings" element={<AdminSettings />} />
+                        </Routes>
+                      </main>
                     </div>
-                  </ProtectedRoute>
-                }
-              />
+                  </div>
+                </ProtectedRoute>
+              } />
+
+              {/* Client Routes - Isolated */}
+              <Route path="/*" element={
+                <ProtectedRoute requireClient>
+                  <div className="flex h-screen w-full bg-background overflow-hidden">
+                    <Sidebar />
+                    <div className="flex-1 flex flex-col overflow-hidden">
+                      <ClientPreviewBanner />
+                      <main className="flex-1 p-8 overflow-y-auto">
+                        <Routes>
+                          <Route path="/" element={
+                            <ProtectedRoute requireClient requiredPage="conversations">
+                              <Conversations />
+                            </ProtectedRoute>
+                          } />
+                          <Route path="/transcripts" element={
+                            <ProtectedRoute requireClient requiredPage="transcripts">
+                              <Transcripts />
+                            </ProtectedRoute>
+                          } />
+                          <Route path="/analytics" element={
+                            <ProtectedRoute requireClient requiredPage="analytics">
+                              <Analytics />
+                            </ProtectedRoute>
+                          } />
+                          <Route path="/knowledge-base" element={
+                            <ProtectedRoute requireClient requiredPage="knowledge_base">
+                              <KnowledgeBase />
+                            </ProtectedRoute>
+                          } />
+                          <Route path="/agent-settings" element={
+                            <ProtectedRoute requireClient requiredPage="agent_settings">
+                              <AgentSettings />
+                            </ProtectedRoute>
+                          } />
+                          <Route path="/specs" element={
+                            <ProtectedRoute requireClient requiredPage="specs">
+                              <AgentSpecs />
+                            </ProtectedRoute>
+                          } />
+                          <Route path="/guides" element={
+                            <ProtectedRoute requireClient>
+                              <Guides />
+                            </ProtectedRoute>
+                          } />
+                          <Route path="*" element={<NotFound />} />
+                        </Routes>
+                      </main>
+                    </div>
+                  </div>
+                </ProtectedRoute>
+              } />
               </Routes>
             </ClientAgentProvider>
           </AuthProvider>

@@ -29,7 +29,6 @@ const adminNavigation = [
 const agencyNavigation = [
   { name: "Clients", href: "/agency/clients", icon: Users, permissionKey: "clients" },
   { name: "Agents", href: "/agency/agents", icon: Bot, permissionKey: "agents" },
-  { name: "Team", href: "/agency/team", icon: Users, permissionKey: null },
   { name: "Subscription", href: "/agency/subscription", icon: CreditCard, permissionKey: "subscription" },
   { name: "Settings", href: "/agency/settings", icon: Settings as any, permissionKey: "settings" },
 ];

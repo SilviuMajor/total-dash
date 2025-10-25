@@ -24,9 +24,12 @@ interface AgencyUser {
   };
 }
 
-export default function AgencyUsers() {
-  const { profile, isPreviewMode, previewAgency } = useMultiTenantAuth();
-  const agencyId = isPreviewMode ? previewAgency?.id : profile?.agency?.id;
+interface AgencyUsersContentProps {
+  agencyId: string | undefined;
+}
+
+export function AgencyUsersContent({ agencyId }: AgencyUsersContentProps) {
+  const { profile, isPreviewMode } = useMultiTenantAuth();
   const [users, setUsers] = useState<AgencyUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -68,7 +71,6 @@ export default function AgencyUsers() {
 
       if (error) throw error;
 
-      // Fetch profiles separately
       if (agencyUsers && agencyUsers.length > 0) {
         const userIds = agencyUsers.map(u => u.user_id);
         const { data: profiles, error: profilesError } = await supabase
@@ -78,7 +80,6 @@ export default function AgencyUsers() {
 
         if (profilesError) throw profilesError;
 
-        // Combine data
         const combinedData = agencyUsers.map(user => ({
           ...user,
           profiles: profiles?.find(p => p.id === user.user_id) || { email: '', full_name: null }
@@ -112,7 +113,6 @@ export default function AgencyUsers() {
 
       if (error) throw error;
 
-      // Show password dialog with temp password
       setInvitedUserData({
         email: inviteData.email,
         fullName: inviteData.fullName,
@@ -133,7 +133,6 @@ export default function AgencyUsers() {
   const handleUpdateRole = async (userId: string, newRole: 'owner' | 'admin' | 'user') => {
     if (!agencyId) return;
     
-    // Check if trying to demote last owner
     const ownerCount = users.filter(u => u.role === 'owner').length;
     const currentUser = users.find(u => u.id === userId);
     
@@ -164,7 +163,6 @@ export default function AgencyUsers() {
   const handleRemoveUser = async () => {
     if (!userToDelete || !agencyId) return;
     
-    // Check if trying to remove last owner
     const ownerCount = users.filter(u => u.role === 'owner').length;
     if (userToDelete.role === 'owner' && ownerCount === 1) {
       toast.error("Cannot remove the last owner");
@@ -221,26 +219,20 @@ export default function AgencyUsers() {
 
   if (loading) {
     return (
-      <div className="container mx-auto py-8 space-y-6">
-        <div className="flex items-center justify-between">
-          <Skeleton className="h-10 w-64" />
-          <Skeleton className="h-10 w-32" />
-        </div>
-        <div className="grid gap-4">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-24 w-full" />
-          ))}
-        </div>
+      <div className="space-y-4">
+        {[1, 2, 3].map((i) => (
+          <Skeleton key={i} className="h-24 w-full" />
+        ))}
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Team Members</h1>
-          <p className="text-muted-foreground">Manage your agency team members</p>
+          <h3 className="text-lg font-semibold">Team Members</h3>
+          <p className="text-sm text-muted-foreground">Manage your agency team members</p>
         </div>
         <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
           <DialogTrigger asChild>
@@ -427,7 +419,6 @@ export default function AgencyUsers() {
         </div>
       )}
 
-      {/* Password Display Dialog */}
       <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -483,16 +474,7 @@ export default function AgencyUsers() {
               </div>
             </div>
           </div>
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setPasswordDialogOpen(false);
-                setInviteOpen(true);
-              }}
-            >
-              Invite Another
-            </Button>
+          <DialogFooter>
             <Button onClick={() => setPasswordDialogOpen(false)}>
               Done
             </Button>
@@ -500,14 +482,12 @@ export default function AgencyUsers() {
         </DialogContent>
       </Dialog>
 
-      {/* Remove User Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Remove Team Member</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to remove {userToDelete?.profiles.full_name}? 
-              They will lose access to the agency immediately.
+              Are you sure you want to remove {userToDelete?.profiles?.full_name}? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -518,7 +498,7 @@ export default function AgencyUsers() {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Remove User
+              Remove
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
