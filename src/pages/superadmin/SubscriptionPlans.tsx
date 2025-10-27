@@ -8,13 +8,17 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { Plus, Edit, Trash2, X } from "lucide-react";
 
 export default function SubscriptionPlans() {
   const [plans, setPlans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState<any>(null);
+  const [features, setFeatures] = useState<string[]>([]);
+  const [extras, setExtras] = useState<string[]>([]);
+  const [newFeature, setNewFeature] = useState("");
+  const [newExtra, setNewExtra] = useState("");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -47,6 +51,8 @@ export default function SubscriptionPlans() {
     
     try {
       const stripePriceId = formData.get('stripe_price_id') as string;
+      const planName = formData.get('name') as string;
+      const isFreeTrialPlan = planName.toLowerCase().includes('trial');
       
       // Validate Stripe Price ID format if provided
       if (stripePriceId && !stripePriceId.startsWith('price_')) {
@@ -58,10 +64,19 @@ export default function SubscriptionPlans() {
         return;
       }
       
+      // Require Stripe Price ID for non-trial plans
+      if (!isFreeTrialPlan && !stripePriceId) {
+        toast({
+          title: "Missing Stripe Price ID",
+          description: "Stripe Price ID is required for paid plans",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       const planData = {
-        name: formData.get('name') as string,
+        name: planName,
         description: formData.get('description') as string,
-        tier: formData.get('tier') as any,
         price_monthly_cents: parseInt(formData.get('price_monthly_cents') as string),
         max_clients: parseInt(formData.get('max_clients') as string),
         max_agents: parseInt(formData.get('max_agents') as string),
@@ -69,6 +84,8 @@ export default function SubscriptionPlans() {
         has_whitelabel_access: formData.get('has_whitelabel_access') === 'on',
         has_support_access: formData.get('has_support_access') === 'on',
         stripe_price_id: stripePriceId || null,
+        features: features,
+        extras: extras,
         is_active: true,
       };
 
@@ -91,6 +108,8 @@ export default function SubscriptionPlans() {
       });
       setOpen(false);
       setEditingPlan(null);
+      setFeatures([]);
+      setExtras([]);
       loadPlans();
     } catch (error: any) {
       toast({
@@ -132,38 +151,40 @@ export default function SubscriptionPlans() {
           <h1 className="text-4xl font-bold">Subscription Plans</h1>
           <p className="text-muted-foreground">Manage subscription tiers and pricing</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={(isOpen) => {
+          setOpen(isOpen);
+          if (isOpen && editingPlan) {
+            setFeatures(editingPlan.features || []);
+            setExtras(editingPlan.extras || []);
+          } else if (!isOpen) {
+            setEditingPlan(null);
+            setFeatures([]);
+            setExtras([]);
+          }
+        }}>
           <DialogTrigger asChild>
-            <Button onClick={() => setEditingPlan(null)}>
+            <Button onClick={() => {
+              setEditingPlan(null);
+              setFeatures([]);
+              setExtras([]);
+            }}>
               <Plus className="mr-2 h-4 w-4" />
               Create Plan
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingPlan ? 'Edit Plan' : 'Create New Plan'}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSave} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Plan Name</Label>
-                  <Input
-                    id="name"
-                    name="name"
-                    defaultValue={editingPlan?.name}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="tier">Tier</Label>
-                  <Input
-                    id="tier"
-                    name="tier"
-                    defaultValue={editingPlan?.tier}
-                    placeholder="free_trial, starter, pro..."
-                    required
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="name">Plan Name</Label>
+                <Input
+                  id="name"
+                  name="name"
+                  defaultValue={editingPlan?.name}
+                  required
+                />
               </div>
               
               <div className="space-y-2">
@@ -194,7 +215,9 @@ export default function SubscriptionPlans() {
                     placeholder="price_xxxxxxxxxxxxx"
                     defaultValue={editingPlan?.stripe_price_id || ''}
                   />
-                  <p className="text-xs text-muted-foreground">Must start with 'price_'</p>
+                  <p className="text-xs text-muted-foreground">
+                    Optional for Free Trial plans. Must start with 'price_'
+                  </p>
                 </div>
               </div>
 
@@ -251,6 +274,92 @@ export default function SubscriptionPlans() {
                 </div>
               </div>
 
+              <div className="space-y-2">
+                <Label>Features (shown on plan cards)</Label>
+                <div className="flex flex-wrap gap-2 p-3 border rounded-md min-h-[60px] bg-muted/20">
+                  {features.map((feature, idx) => (
+                    <Badge key={idx} variant="secondary" className="gap-1">
+                      {feature}
+                      <X 
+                        className="h-3 w-3 cursor-pointer hover:text-destructive" 
+                        onClick={() => setFeatures(features.filter((_, i) => i !== idx))}
+                      />
+                    </Badge>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Add a feature..."
+                    value={newFeature}
+                    onChange={(e) => setNewFeature(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (newFeature.trim()) {
+                          setFeatures([...features, newFeature.trim()]);
+                          setNewFeature("");
+                        }
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      if (newFeature.trim()) {
+                        setFeatures([...features, newFeature.trim()]);
+                        setNewFeature("");
+                      }
+                    }}
+                  >
+                    Add
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Extras / Add-ons</Label>
+                <div className="flex flex-wrap gap-2 p-3 border rounded-md min-h-[60px] bg-muted/20">
+                  {extras.map((extra, idx) => (
+                    <Badge key={idx} variant="outline" className="gap-1">
+                      {extra}
+                      <X 
+                        className="h-3 w-3 cursor-pointer hover:text-destructive" 
+                        onClick={() => setExtras(extras.filter((_, i) => i !== idx))}
+                      />
+                    </Badge>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Add an extra..."
+                    value={newExtra}
+                    onChange={(e) => setNewExtra(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (newExtra.trim()) {
+                          setExtras([...extras, newExtra.trim()]);
+                          setNewExtra("");
+                        }
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      if (newExtra.trim()) {
+                        setExtras([...extras, newExtra.trim()]);
+                        setNewExtra("");
+                      }
+                    }}
+                  >
+                    Add
+                  </Button>
+                </div>
+              </div>
+
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                   Cancel
@@ -269,16 +378,15 @@ export default function SubscriptionPlans() {
           <Card key={plan.id} className={!plan.is_active ? 'opacity-50' : ''}>
             <CardHeader>
               <div className="flex justify-between items-start">
-                <div>
-                  <CardTitle>{plan.name}</CardTitle>
-                  <Badge className="mt-2">{plan.tier}</Badge>
-                </div>
+                <CardTitle>{plan.name}</CardTitle>
                 <div className="flex gap-2">
                   <Button
                     size="icon"
                     variant="ghost"
                     onClick={() => {
                       setEditingPlan(plan);
+                      setFeatures(plan.features || []);
+                      setExtras(plan.extras || []);
                       setOpen(true);
                     }}
                   >
@@ -317,7 +425,24 @@ export default function SubscriptionPlans() {
                 <div>• {plan.max_team_members === -1 ? 'Unlimited' : plan.max_team_members} team members</div>
                 {plan.has_whitelabel_access && <div>• Whitelabel access</div>}
                 {plan.has_support_access && <div>• Priority support</div>}
+                {plan.features && plan.features.length > 0 && (
+                  <>
+                    {plan.features.map((feature: string, idx: number) => (
+                      <div key={idx}>• {feature}</div>
+                    ))}
+                  </>
+                )}
               </div>
+              {plan.extras && plan.extras.length > 0 && (
+                <div className="pt-2 border-t">
+                  <p className="text-xs font-semibold text-muted-foreground mb-1">Extras:</p>
+                  <div className="space-y-1 text-sm">
+                    {plan.extras.map((extra: string, idx: number) => (
+                      <div key={idx}>+ {extra}</div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         ))}

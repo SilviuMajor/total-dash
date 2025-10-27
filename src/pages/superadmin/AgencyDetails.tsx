@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Eye, Save, Link2 } from "lucide-react";
+import { ArrowLeft, Eye, Save, Link2, Plus, Minus } from "lucide-react";
 
 export default function AgencyDetails() {
   const { id } = useParams();
@@ -21,6 +21,11 @@ export default function AgencyDetails() {
   const [plans, setPlans] = useState<any[]>([]);
   const [stripeSubId, setStripeSubId] = useState("");
   const [linkingStripe, setLinkingStripe] = useState(false);
+  const [customPrice, setCustomPrice] = useState<number>(0);
+  const [customMaxClients, setCustomMaxClients] = useState<number>(1);
+  const [customMaxAgents, setCustomMaxAgents] = useState<number>(1);
+  const [customMaxTeam, setCustomMaxTeam] = useState<number>(1);
+  const [savingSubscription, setSavingSubscription] = useState(false);
 
   useEffect(() => {
     loadAgencyDetails();
@@ -48,6 +53,14 @@ export default function AgencyDetails() {
         .single();
 
       setSubscription(subData);
+      
+      // Initialize custom values
+      if (subData) {
+        setCustomPrice((subData.custom_price_monthly_cents || subData.subscription_plans?.price_monthly_cents || 0) / 100);
+        setCustomMaxClients(subData.custom_max_clients || subData.subscription_plans?.max_clients || 1);
+        setCustomMaxAgents(subData.custom_max_agents || subData.subscription_plans?.max_agents || 1);
+        setCustomMaxTeam(subData.custom_max_team_members || subData.subscription_plans?.max_team_members || 1);
+      }
     } catch (error: any) {
       toast({
         title: "Error",
@@ -99,11 +112,29 @@ export default function AgencyDetails() {
     }
   };
 
-  const handleUpdateSubscription = async (planId: string) => {
+  const handleSaveSubscription = async () => {
+    setSavingSubscription(true);
     try {
+      const basePlan = subscription?.subscription_plans;
+      const priceInCents = Math.round(customPrice * 100);
+      
+      const isCustomPricing = priceInCents !== basePlan?.price_monthly_cents;
+      const isCustomLimits = (
+        customMaxClients !== basePlan?.max_clients ||
+        customMaxAgents !== basePlan?.max_agents ||
+        customMaxTeam !== basePlan?.max_team_members
+      );
+
       const { error } = await supabase
         .from('agency_subscriptions')
-        .update({ plan_id: planId })
+        .update({
+          custom_price_monthly_cents: priceInCents,
+          custom_max_clients: customMaxClients,
+          custom_max_agents: customMaxAgents,
+          custom_max_team_members: customMaxTeam,
+          is_custom_pricing: isCustomPricing,
+          is_custom_limits: isCustomLimits,
+        })
         .eq('agency_id', id);
 
       if (error) throw error;
@@ -119,7 +150,22 @@ export default function AgencyDetails() {
         description: error.message,
         variant: "destructive",
       });
+    } finally {
+      setSavingSubscription(false);
     }
+  };
+
+  const isCustomPlan = () => {
+    const basePlan = subscription?.subscription_plans;
+    if (!basePlan) return false;
+    
+    const priceInCents = Math.round(customPrice * 100);
+    return (
+      priceInCents !== basePlan.price_monthly_cents ||
+      customMaxClients !== basePlan.max_clients ||
+      customMaxAgents !== basePlan.max_agents ||
+      customMaxTeam !== basePlan.max_team_members
+    );
   };
 
   const handlePreview = () => {
@@ -273,19 +319,19 @@ export default function AgencyDetails() {
           <CardHeader>
             <CardTitle>Subscription Details</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6">
             <div className="space-y-2">
               <Label>Current Plan</Label>
               <div className="flex items-center gap-2 flex-wrap">
                 {subscription?.subscription_plans ? (
                   <>
-                    <Badge>
-                      {subscription.subscription_plans.name}
+                    <Badge variant={isCustomPlan() ? "outline" : "default"} className={isCustomPlan() ? "border-purple-500 text-purple-600" : ""}>
+                      {isCustomPlan() ? "Custom Plan" : subscription.subscription_plans.name}
                     </Badge>
-                    {subscription.is_custom_pricing && (
-                      <Badge variant="outline" className="border-purple-500 text-purple-600">
-                        Custom Pricing
-                      </Badge>
+                    {!isCustomPlan() && (
+                      <span className="text-xs text-muted-foreground">
+                        (Base: {subscription.subscription_plans.name})
+                      </span>
                     )}
                   </>
                 ) : (
@@ -305,32 +351,149 @@ export default function AgencyDetails() {
                 )}
               </div>
             </div>
+
+            <div className="space-y-4 p-4 border rounded-lg bg-muted/20">
+              <div className="space-y-2">
+                <Label>Monthly Price</Label>
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl font-semibold">$</span>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={customPrice}
+                    onChange={(e) => setCustomPrice(parseFloat(e.target.value) || 0)}
+                    className="max-w-[150px] text-lg"
+                  />
+                  <span className="text-muted-foreground">/month</span>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <Label>Subscription Limits</Label>
+                
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Max Clients:</span>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => setCustomMaxClients(Math.max(1, customMaxClients - 1))}
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={customMaxClients}
+                      onChange={(e) => setCustomMaxClients(Math.max(1, parseInt(e.target.value) || 1))}
+                      className="w-20 text-center"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => setCustomMaxClients(customMaxClients + 1)}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Max Agents:</span>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => setCustomMaxAgents(Math.max(1, customMaxAgents - 1))}
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={customMaxAgents}
+                      onChange={(e) => setCustomMaxAgents(Math.max(1, parseInt(e.target.value) || 1))}
+                      className="w-20 text-center"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => setCustomMaxAgents(customMaxAgents + 1)}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Max Team:</span>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => setCustomMaxTeam(Math.max(1, customMaxTeam - 1))}
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={customMaxTeam}
+                      onChange={(e) => setCustomMaxTeam(Math.max(1, parseInt(e.target.value) || 1))}
+                      className="w-20 text-center"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => setCustomMaxTeam(customMaxTeam + 1)}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              <Button 
+                onClick={handleSaveSubscription} 
+                disabled={savingSubscription}
+                className="w-full"
+              >
+                <Save className="mr-2 h-4 w-4" />
+                {savingSubscription ? 'Saving...' : 'Save Subscription Changes'}
+              </Button>
+            </div>
+
             <div className="space-y-2">
-              <Label>Usage</Label>
-              <div className="text-sm space-y-1">
-                <div>Clients: {subscription?.current_clients} / {subscription?.subscription_plans?.max_clients === -1 ? '∞' : subscription?.subscription_plans?.max_clients}</div>
-                <div>Agents: {subscription?.current_agents} / {subscription?.subscription_plans?.max_agents === -1 ? '∞' : subscription?.subscription_plans?.max_agents}</div>
-                <div>Team: {subscription?.current_team_members} / {subscription?.subscription_plans?.max_team_members === -1 ? '∞' : subscription?.subscription_plans?.max_team_members}</div>
+              <Label>Current Usage</Label>
+              <div className="text-sm space-y-1 p-3 bg-muted/30 rounded-md">
+                <div className="flex justify-between">
+                  <span>Clients:</span>
+                  <span className="font-medium">{subscription?.current_clients} / {customMaxClients}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Agents:</span>
+                  <span className="font-medium">{subscription?.current_agents} / {customMaxAgents}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Team:</span>
+                  <span className="font-medium">{subscription?.current_team_members} / {customMaxTeam}</span>
+                </div>
               </div>
             </div>
-            <div className="space-y-2">
-              <Label>Change Plan</Label>
-              <Select
-                value={subscription?.plan_id}
-                onValueChange={handleUpdateSubscription}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select plan" />
-                </SelectTrigger>
-                <SelectContent>
-                  {plans.map((plan) => (
-                    <SelectItem key={plan.id} value={plan.id}>
-                      {plan.name} - ${plan.price_monthly_cents / 100}/mo
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+
             {subscription?.trial_ends_at && (
               <div className="text-sm text-muted-foreground">
                 Trial ends: {new Date(subscription.trial_ends_at).toLocaleDateString()}
