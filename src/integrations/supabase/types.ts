@@ -1043,6 +1043,48 @@ export type Database = {
           },
         ]
       }
+      email_templates: {
+        Row: {
+          category: string
+          created_at: string | null
+          description: string | null
+          html_content: string
+          id: string
+          is_active: boolean | null
+          name: string
+          subject: string
+          template_key: string
+          updated_at: string | null
+          variables: Json | null
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          description?: string | null
+          html_content: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          subject: string
+          template_key: string
+          updated_at?: string | null
+          variables?: Json | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          html_content?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          subject?: string
+          template_key?: string
+          updated_at?: string | null
+          variables?: Json | null
+        }
+        Relationships: []
+      }
       integration_options: {
         Row: {
           created_at: string
@@ -1113,6 +1155,7 @@ export type Database = {
           name: string
           price_monthly_cents: number
           stripe_price_id: string | null
+          trial_duration_days: number | null
           updated_at: string | null
         }
         Insert: {
@@ -1130,6 +1173,7 @@ export type Database = {
           name: string
           price_monthly_cents?: number
           stripe_price_id?: string | null
+          trial_duration_days?: number | null
           updated_at?: string | null
         }
         Update: {
@@ -1147,6 +1191,7 @@ export type Database = {
           name?: string
           price_monthly_cents?: number
           stripe_price_id?: string | null
+          trial_duration_days?: number | null
           updated_at?: string | null
         }
         Relationships: []

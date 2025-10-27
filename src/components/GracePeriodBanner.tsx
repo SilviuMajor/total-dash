@@ -1,14 +1,49 @@
 import { useEffect, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 
 interface GracePeriodBannerProps {
-  gracePeriodEndsAt: string;
+  gracePeriodEndsAt?: string;
+  subscription?: any;
 }
 
-export function GracePeriodBanner({ gracePeriodEndsAt }: GracePeriodBannerProps) {
+export function GracePeriodBanner({ gracePeriodEndsAt, subscription }: GracePeriodBannerProps) {
   const [timeRemaining, setTimeRemaining] = useState("");
+  const navigate = useNavigate();
+
+  // Check for trial ending soon first
+  if (subscription?.status === 'trialing' && subscription?.trial_ends_at) {
+    const trialEnd = new Date(subscription.trial_ends_at).getTime();
+    const now = new Date().getTime();
+    const daysRemaining = Math.ceil((trialEnd - now) / (1000 * 60 * 60 * 24));
+    
+    if (daysRemaining <= 3 && daysRemaining > 0) {
+      return (
+        <Alert variant="default" className="mb-4 border-blue-500">
+          <Clock className="h-5 w-5 text-blue-500" />
+          <AlertDescription className="flex items-center justify-between">
+            <div>
+              <strong>Trial Ending Soon</strong>
+              <p className="mt-1">
+                Your trial ends in <strong>{daysRemaining} day{daysRemaining > 1 ? 's' : ''}</strong>. 
+                You'll be charged ${(subscription.snapshot_price_monthly_cents || subscription.subscription_plans?.price_monthly_cents || 0) / 100}/month after.
+              </p>
+            </div>
+            <Button onClick={() => navigate('/agency/subscription')} variant="outline" size="sm">
+              Manage Trial
+            </Button>
+          </AlertDescription>
+        </Alert>
+      );
+    }
+  }
+
+  // If no grace period, don't show grace period banner
+  if (!gracePeriodEndsAt) {
+    return null;
+  }
 
   useEffect(() => {
     const calculateTimeRemaining = () => {

@@ -26,3 +26,15 @@ verify_jwt = true
 
 [functions.link-stripe-subscription]
 verify_jwt = true
+
+[functions.send-email]
+verify_jwt = false
+
+[functions.create-trial-subscription]
+verify_jwt = true
+
+[functions.cancel-trial-subscription]
+verify_jwt = true
+
+[functions.schedule-trial-reminder-emails]
+verify_jwt = false

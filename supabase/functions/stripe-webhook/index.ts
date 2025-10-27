@@ -136,9 +136,12 @@ serve(async (req) => {
 
       case "customer.subscription.updated": {
         const subscription = event.data.object as Stripe.Subscription;
+        const previousAttributes = (event.data as any).previous_attributes;
+        
         logStep("Subscription updated", { 
           subscriptionId: subscription.id,
-          status: subscription.status 
+          status: subscription.status,
+          previousStatus: previousAttributes?.status
         });
 
         const updateData: any = {
@@ -150,6 +153,51 @@ serve(async (req) => {
         // If payment succeeds after past_due, clear grace period
         if (subscription.status === 'active') {
           updateData.grace_period_ends_at = null;
+          
+          // If converting from trial to active, clear trial_ends_at and send email
+          if (previousAttributes?.status === 'trialing') {
+            updateData.trial_ends_at = null;
+            
+            // Get agency details for email
+            const { data: agencySub } = await supabaseClient
+              .from("agency_subscriptions")
+              .select("agencies(name, owner_id), subscription_plans(name, price_monthly_cents)")
+              .eq("stripe_subscription_id", subscription.id)
+              .single();
+              
+            if (agencySub) {
+              try {
+                const { data: owner } = await supabaseClient
+                  .from("profiles")
+                  .select("email")
+                  .eq("id", (agencySub.agencies as any).owner_id)
+                  .single();
+                  
+                if (owner?.email) {
+                  await supabaseClient.functions.invoke("send-email", {
+                    body: {
+                      templateKey: "trial_converted",
+                      recipientEmail: owner.email,
+                      variables: {
+                        userName: owner.email.split("@")[0],
+                        planName: (agencySub.subscription_plans as any).name,
+                        monthlyPrice: `$${((agencySub.subscription_plans as any).price_monthly_cents / 100).toFixed(2)}`,
+                        nextBillingDate: new Date(subscription.current_period_end * 1000).toLocaleDateString(),
+                        invoiceUrl: subscription.latest_invoice ? `https://dashboard.stripe.com/invoices/${subscription.latest_invoice}` : "#",
+                        maxClients: "unlimited",
+                        maxAgents: "unlimited",
+                        maxTeamMembers: "unlimited",
+                        dashboardUrl: `${Deno.env.get("SUPABASE_URL")}/agency`,
+                        manageSubscriptionUrl: `${Deno.env.get("SUPABASE_URL")}/agency/subscription`,
+                      },
+                    },
+                  });
+                }
+              } catch (emailError) {
+                console.error("Failed to send conversion email:", emailError);
+              }
+            }
+          }
         }
 
         const { error: updateError } = await supabaseClient
@@ -166,18 +214,104 @@ serve(async (req) => {
         break;
       }
 
+      case "customer.subscription.trial_will_end": {
+        const subscription = event.data.object as Stripe.Subscription;
+        logStep("Trial will end", { subscriptionId: subscription.id, trialEnd: subscription.trial_end });
+
+        // Get agency details for email
+        const { data: agencySub } = await supabaseClient
+          .from("agency_subscriptions")
+          .select("agencies(name, owner_id), subscription_plans(name, price_monthly_cents)")
+          .eq("stripe_subscription_id", subscription.id)
+          .single();
+
+        if (agencySub) {
+          try {
+            const { data: owner } = await supabaseClient
+              .from("profiles")
+              .select("email")
+              .eq("id", (agencySub.agencies as any).owner_id)
+              .single();
+              
+            if (owner?.email && subscription.trial_end) {
+              const daysRemaining = Math.ceil((subscription.trial_end * 1000 - Date.now()) / (1000 * 60 * 60 * 24));
+              
+              await supabaseClient.functions.invoke("send-email", {
+                body: {
+                  templateKey: daysRemaining <= 1 ? "trial_ending_1day" : "trial_ending_3days",
+                  recipientEmail: owner.email,
+                  variables: {
+                    userName: owner.email.split("@")[0],
+                    agencyName: (agencySub.agencies as any).name,
+                    daysRemaining: String(daysRemaining),
+                    trialEndDate: new Date(subscription.trial_end * 1000).toLocaleDateString(),
+                    planName: (agencySub.subscription_plans as any).name,
+                    monthlyPrice: `$${((agencySub.subscription_plans as any).price_monthly_cents / 100).toFixed(2)}`,
+                    manageSubscriptionUrl: `${Deno.env.get("SUPABASE_URL")}/agency/subscription`,
+                    cancelUrl: `${Deno.env.get("SUPABASE_URL")}/agency/subscription`,
+                    supportEmail: "support@yourplatform.com",
+                  },
+                },
+              });
+            }
+          } catch (emailError) {
+            console.error("Failed to send trial ending email:", emailError);
+          }
+        }
+        break;
+      }
+
       case "customer.subscription.deleted": {
         const subscription = event.data.object as Stripe.Subscription;
         logStep("Subscription deleted", { subscriptionId: subscription.id });
 
         const { error: deleteError } = await supabaseClient
           .from("agency_subscriptions")
-          .update({ status: "canceled" })
+          .update({ 
+            status: "canceled",
+            canceled_at: new Date().toISOString()
+          })
           .eq("stripe_subscription_id", subscription.id);
 
         if (deleteError) {
           logStep("Error canceling subscription", { error: deleteError });
           throw deleteError;
+        }
+
+        // Send cancellation email
+        const { data: agencySub } = await supabaseClient
+          .from("agency_subscriptions")
+          .select("agencies(name, owner_id), trial_ends_at, current_period_end")
+          .eq("stripe_subscription_id", subscription.id)
+          .single();
+
+        if (agencySub) {
+          try {
+            const { data: owner } = await supabaseClient
+              .from("profiles")
+              .select("email")
+              .eq("id", (agencySub.agencies as any).owner_id)
+              .single();
+              
+            if (owner?.email) {
+              await supabaseClient.functions.invoke("send-email", {
+                body: {
+                  templateKey: "subscription_canceled",
+                  recipientEmail: owner.email,
+                  variables: {
+                    userName: owner.email.split("@")[0],
+                    agencyName: (agencySub.agencies as any).name,
+                    accessEndsDate: agencySub.current_period_end 
+                      ? new Date(agencySub.current_period_end).toLocaleDateString()
+                      : "immediately",
+                    resubscribeUrl: `${Deno.env.get("SUPABASE_URL")}/agency/subscription`,
+                  },
+                },
+              });
+            }
+          } catch (emailError) {
+            console.error("Failed to send cancellation email:", emailError);
+          }
         }
 
         logStep("Subscription canceled successfully");
@@ -206,6 +340,40 @@ serve(async (req) => {
           if (failError) {
             logStep("Error updating subscription to past_due", { error: failError });
             throw failError;
+          }
+
+          // Send payment failed email
+          const { data: agencySub } = await supabaseClient
+            .from("agency_subscriptions")
+            .select("agencies(name, owner_id)")
+            .eq("stripe_subscription_id", invoice.subscription as string)
+            .single();
+
+          if (agencySub) {
+            try {
+              const { data: owner } = await supabaseClient
+                .from("profiles")
+                .select("email")
+                .eq("id", (agencySub.agencies as any).owner_id)
+                .single();
+                
+              if (owner?.email) {
+                await supabaseClient.functions.invoke("send-email", {
+                  body: {
+                    templateKey: "payment_failed",
+                    recipientEmail: owner.email,
+                    variables: {
+                      userName: owner.email.split("@")[0],
+                      agencyName: (agencySub.agencies as any).name,
+                      gracePeriodDays: "3",
+                      updatePaymentUrl: `${Deno.env.get("SUPABASE_URL")}/agency/subscription`,
+                    },
+                  },
+                });
+              }
+            } catch (emailError) {
+              console.error("Failed to send payment failed email:", emailError);
+            }
           }
 
           logStep("Subscription marked as past_due with grace period", { gracePeriodEnd });

@@ -109,23 +109,29 @@ export default function AgencyLogin() {
 
         if (agencyUserError) throw agencyUserError;
 
-        // Create free trial subscription
-        const { data: planData } = await supabase
-          .from('subscription_plans')
-          .select('*')
-          .ilike('name', '%trial%')
-          .single();
+        // Create trial subscription via edge function
+        try {
+          const { data: trialData, error: trialError } = await supabase.functions.invoke(
+            'create-trial-subscription',
+            {
+              body: {
+                agencyId: agencyData.id,
+                userEmail: email,
+              },
+            }
+          );
 
-        if (planData) {
-          await supabase.from('agency_subscriptions').insert({
-            agency_id: agencyData.id,
-            plan_id: planData.id,
-            status: 'trialing',
-            trial_ends_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-          });
+          if (trialError) {
+            console.error("Trial subscription setup failed:", trialError);
+            // Don't fail signup if trial setup fails
+          }
+
+          toast.success("Account created! Your 7-day trial has started. Check your email for details.");
+        } catch (trialError) {
+          console.error("Trial subscription error:", trialError);
+          toast.success("Account created! Please complete payment setup.");
         }
 
-        toast.success("Account created! Your 7-day trial has started.");
         navigate("/agency");
       }
     } catch (error: any) {

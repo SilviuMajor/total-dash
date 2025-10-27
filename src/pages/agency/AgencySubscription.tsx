@@ -97,6 +97,54 @@ export default function AgencySubscription() {
     }
   };
 
+  const handleCancelTrial = async () => {
+    if (!confirm('Cancel your trial? You will lose access immediately and will not be charged.')) {
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      const { error } = await supabase.functions.invoke('cancel-trial-subscription');
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Trial Canceled",
+        description: "Your trial has been canceled successfully.",
+      });
+      loadSubscription();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to cancel trial",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOpenCustomerPortal = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('customer-portal');
+      
+      if (error) throw error;
+      
+      if (data?.url) {
+        window.open(data.url, '_blank');
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to open customer portal",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) {
     return <div className="p-8">Loading...</div>;
   }
@@ -156,6 +204,65 @@ export default function AgencySubscription() {
                 Trial ends on {new Date(subscription.trial_ends_at).toLocaleDateString()}
               </div>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {subscription?.status === 'trialing' && subscription?.trial_ends_at && (
+        <Card className="border-blue-500/50 bg-blue-500/5">
+          <CardHeader>
+            <CardTitle>Your Trial</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="text-sm space-y-2">
+              <p>
+                Trial ends on <strong>{new Date(subscription.trial_ends_at).toLocaleDateString()}</strong>
+              </p>
+              <p>
+                After your trial, you'll be automatically subscribed to the{' '}
+                <strong>{subscription.snapshot_plan_name || subscription.subscription_plans?.name}</strong> plan at{' '}
+                <strong>${(subscription.snapshot_price_monthly_cents || subscription.subscription_plans?.price_monthly_cents) / 100}/month</strong>.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                You can cancel anytime during the trial to avoid charges.
+              </p>
+            </div>
+            
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                onClick={handleCancelTrial}
+                className="flex-1"
+              >
+                Cancel Trial
+              </Button>
+              
+              {subscription.stripe_customer_id && (
+                <Button 
+                  variant="ghost" 
+                  onClick={handleOpenCustomerPortal}
+                  className="flex-1"
+                >
+                  Manage Payment
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {subscription?.status === 'active' && subscription?.stripe_customer_id && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Subscription Management</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-4">
+              Manage your subscription, update payment methods, view invoices, and more through Stripe.
+            </p>
+            <Button onClick={handleOpenCustomerPortal} variant="outline">
+              Open Stripe Portal
+            </Button>
           </CardContent>
         </Card>
       )}
