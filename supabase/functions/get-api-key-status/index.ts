@@ -89,7 +89,7 @@ serve(async (req) => {
       .limit(1)
       .maybeSingle();
 
-    const keyValue = settings?.[columnName];
+    const keyValue = settings?.[columnName as keyof typeof settings];
     const exists = Boolean(keyValue);
 
     let maskedValue = '';

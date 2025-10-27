@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2, X } from "lucide-react";
+import { Edit, X } from "lucide-react";
 
 export default function SubscriptionPlans() {
   const [plans, setPlans] = useState<any[]>([]);
@@ -30,6 +30,7 @@ export default function SubscriptionPlans() {
       const { data, error } = await supabase
         .from('subscription_plans')
         .select('*')
+        .eq('is_active', true)
         .order('price_monthly_cents');
 
       if (error) throw error;
@@ -54,25 +55,17 @@ export default function SubscriptionPlans() {
       const planName = formData.get('name') as string;
       const isFreeTrialPlan = planName.toLowerCase().includes('trial');
       
-      // Validate Stripe Price ID format if provided
-      if (stripePriceId && !stripePriceId.startsWith('price_')) {
+      // Validate Stripe Price ID format ONLY if provided (not required)
+      if (stripePriceId && stripePriceId.trim() !== '' && !stripePriceId.startsWith('price_')) {
         toast({
           title: "Invalid Format",
-          description: "Stripe Price ID must start with 'price_'",
+          description: "Stripe Price ID must start with 'price_' when provided",
           variant: "destructive",
         });
         return;
       }
       
-      // Require Stripe Price ID for non-trial plans
-      if (!isFreeTrialPlan && !stripePriceId) {
-        toast({
-          title: "Missing Stripe Price ID",
-          description: "Stripe Price ID is required for paid plans",
-          variant: "destructive",
-        });
-        return;
-      }
+      // Stripe Price ID is now optional for all plans
       
       const planData = {
         name: planName,
@@ -96,17 +89,20 @@ export default function SubscriptionPlans() {
           .update(planData)
           .eq('id', editingPlan.id);
         if (error) throw error;
+        
+        toast({
+          title: "Success",
+          description: "Plan updated successfully",
+        });
       } else {
-        const { error } = await supabase
-          .from('subscription_plans')
-          .insert([planData]);
-        if (error) throw error;
+        // This should never happen - we only allow editing
+        toast({
+          title: "Error",
+          description: "Cannot create new plans. Please edit an existing plan.",
+          variant: "destructive",
+        });
+        return;
       }
-
-      toast({
-        title: "Success",
-        description: `Plan ${editingPlan ? 'updated' : 'created'} successfully`,
-      });
       setOpen(false);
       setEditingPlan(null);
       setFeatures([]);
@@ -121,29 +117,6 @@ export default function SubscriptionPlans() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this plan?')) return;
-
-    try {
-      const { error } = await supabase
-        .from('subscription_plans')
-        .update({ is_active: false })
-        .eq('id', id);
-
-      if (error) throw error;
-      toast({
-        title: "Success",
-        description: "Plan deleted successfully",
-      });
-      loadPlans();
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -152,31 +125,23 @@ export default function SubscriptionPlans() {
           <h1 className="text-4xl font-bold">Subscription Plans</h1>
           <p className="text-muted-foreground">Manage subscription tiers and pricing</p>
         </div>
-        <Dialog open={open} onOpenChange={(isOpen) => {
-          setOpen(isOpen);
-          if (isOpen && editingPlan) {
-            setFeatures(editingPlan.features || []);
-            setExtras(editingPlan.extras || []);
-          } else if (!isOpen) {
-            setEditingPlan(null);
-            setFeatures([]);
-            setExtras([]);
-          }
-        }}>
-          <DialogTrigger asChild>
-            <Button onClick={() => {
-              setEditingPlan(null);
-              setFeatures([]);
-              setExtras([]);
-            }}>
-              <Plus className="mr-2 h-4 w-4" />
-              Create Plan
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{editingPlan ? 'Edit Plan' : 'Create New Plan'}</DialogTitle>
-            </DialogHeader>
+      </div>
+
+      <Dialog open={open} onOpenChange={(isOpen) => {
+        setOpen(isOpen);
+        if (isOpen && editingPlan) {
+          setFeatures(editingPlan.features || []);
+          setExtras(editingPlan.extras || []);
+        } else if (!isOpen) {
+          setEditingPlan(null);
+          setFeatures([]);
+          setExtras([]);
+        }
+      }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Plan</DialogTitle>
+          </DialogHeader>
             <form onSubmit={handleSave} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Plan Name</Label>
@@ -379,13 +344,12 @@ export default function SubscriptionPlans() {
                   Cancel
                 </Button>
                 <Button type="submit">
-                  {editingPlan ? 'Update' : 'Create'}
+                  Update Plan
                 </Button>
               </div>
             </form>
           </DialogContent>
         </Dialog>
-      </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {plans.map((plan) => (
@@ -393,27 +357,18 @@ export default function SubscriptionPlans() {
             <CardHeader>
               <div className="flex justify-between items-start">
                 <CardTitle>{plan.name}</CardTitle>
-                <div className="flex gap-2">
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => {
-                      setEditingPlan(plan);
-                      setFeatures(plan.features || []);
-                      setExtras(plan.extras || []);
-                      setOpen(true);
-                    }}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => handleDelete(plan.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => {
+                    setEditingPlan(plan);
+                    setFeatures(plan.features || []);
+                    setExtras(plan.extras || []);
+                    setOpen(true);
+                  }}
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
