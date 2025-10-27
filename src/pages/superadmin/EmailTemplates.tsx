@@ -182,7 +182,7 @@ export default function EmailTemplates() {
           <TabsTrigger value="team">Team</TabsTrigger>
         </TabsList>
 
-        {Object.entries(templatesByCategory).map(([category, categoryTemplates]) => (
+        {Object.entries(templatesByCategory).map(([category, categoryTemplates]: [string, any[]]) => (
           <TabsContent key={category} value={category} className="space-y-4">
             {categoryTemplates.map((template) => (
               <Card key={template.id}>
@@ -258,14 +258,18 @@ export default function EmailTemplates() {
               <div>
                 <Label>Available Variables</Label>
                 <div className="text-xs text-muted-foreground space-y-1 mt-2 bg-muted p-3 rounded-lg">
-                  {Array.isArray(editingTemplate?.variables) && editingTemplate.variables.map((v: any, i: number) => (
-                    <div key={i}>
-                      <code className="bg-background px-1 py-0.5 rounded text-xs">
-                        {`{{${v.name}}}`}
-                      </code>
-                      <span className="ml-2">{v.description}</span>
-                    </div>
-                  ))}
+                  {Array.isArray(editingTemplate?.variables) && editingTemplate.variables.length > 0 ? (
+                    editingTemplate.variables.map((v: any, i: number) => (
+                      <div key={i}>
+                        <code className="bg-background px-1 py-0.5 rounded text-xs">
+                          {`{{${v.name}}}`}
+                        </code>
+                        <span className="ml-2">{v.description}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-xs text-muted-foreground">No variables defined for this template</p>
+                  )}
                 </div>
               </div>
 

@@ -84,6 +84,7 @@ export default function SubscriptionPlans() {
         has_whitelabel_access: formData.get('has_whitelabel_access') === 'on',
         has_support_access: formData.get('has_support_access') === 'on',
         stripe_price_id: stripePriceId || null,
+        trial_duration_days: parseInt(formData.get('trial_duration_days') as string) || 7,
         features: features,
         extras: extras,
         is_active: true,
@@ -207,19 +208,32 @@ export default function SubscriptionPlans() {
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="stripe_price_id">Stripe Price ID</Label>
-                  <Input
-                    id="stripe_price_id"
-                    name="stripe_price_id"
-                    placeholder="price_xxxxxxxxxxxxx"
-                    defaultValue={editingPlan?.stripe_price_id || ''}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Optional for Free Trial plans. Must start with 'price_'
-                  </p>
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="stripe_price_id">Stripe Price ID</Label>
+                <Input
+                  id="stripe_price_id"
+                  name="stripe_price_id"
+                  placeholder="price_xxxxxxxxxxxxx"
+                  defaultValue={editingPlan?.stripe_price_id || ''}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Optional for Free Trial plans. Must start with 'price_'
+                </p>
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="trial_duration_days">Trial Duration (Days)</Label>
+                <Input
+                  id="trial_duration_days"
+                  name="trial_duration_days"
+                  type="number"
+                  defaultValue={editingPlan?.trial_duration_days ?? 7}
+                  min="0"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Set to 0 for no trial. Default is 7 days.
+                </p>
+              </div>
+            </div>
 
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
@@ -418,6 +432,11 @@ export default function SubscriptionPlans() {
                 <div className="text-xs text-yellow-600 dark:text-yellow-500 flex items-center gap-1">
                   ⚠️ Stripe Price ID not configured
                 </div>
+              )}
+              {plan.trial_duration_days !== undefined && (
+                <Badge variant="outline" className="w-fit">
+                  {plan.trial_duration_days === 0 ? 'No Trial' : `${plan.trial_duration_days}-Day Trial`}
+                </Badge>
               )}
               <div className="space-y-1 text-sm">
                 <div>• {plan.max_clients === -1 ? 'Unlimited' : plan.max_clients} clients</div>
