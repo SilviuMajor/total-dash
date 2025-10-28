@@ -164,9 +164,14 @@ export default function AgencySubscription() {
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-2xl font-bold">{subscription.subscription_plans?.name}</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-2xl font-bold">{subscription.subscription_plans?.name}</h3>
+                  {(subscription.is_custom_pricing || subscription.is_custom_limits) && (
+                    <Badge variant="outline" className="text-xs">Custom Plan</Badge>
+                  )}
+                </div>
                 <p className="text-muted-foreground">
-                  ${subscription.subscription_plans?.price_monthly_cents / 100}/month
+                  ${(subscription.is_custom_pricing ? subscription.custom_price_monthly_cents : subscription.subscription_plans?.price_monthly_cents) / 100}/month
                 </p>
               </div>
               <Badge variant={
@@ -182,19 +187,40 @@ export default function AgencySubscription() {
               <div>
                 <p className="text-sm text-muted-foreground">Clients</p>
                 <p className="text-2xl font-bold">
-                  {subscription.current_clients} / {subscription.subscription_plans?.max_clients === -1 ? '∞' : subscription.subscription_plans?.max_clients}
+                  {subscription.current_clients} / {
+                    (() => {
+                      const limit = subscription.is_custom_limits 
+                        ? subscription.custom_max_clients 
+                        : subscription.subscription_plans?.max_clients;
+                      return limit === -1 ? '∞' : limit;
+                    })()
+                  }
                 </p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Agents</p>
                 <p className="text-2xl font-bold">
-                  {subscription.current_agents} / {subscription.subscription_plans?.max_agents === -1 ? '∞' : subscription.subscription_plans?.max_agents}
+                  {subscription.current_agents} / {
+                    (() => {
+                      const limit = subscription.is_custom_limits 
+                        ? subscription.custom_max_agents 
+                        : subscription.subscription_plans?.max_agents;
+                      return limit === -1 ? '∞' : limit;
+                    })()
+                  }
                 </p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Team</p>
                 <p className="text-2xl font-bold">
-                  {subscription.current_team_members} / {subscription.subscription_plans?.max_team_members === -1 ? '∞' : subscription.subscription_plans?.max_team_members}
+                  {subscription.current_team_members} / {
+                    (() => {
+                      const limit = subscription.is_custom_limits 
+                        ? subscription.custom_max_team_members 
+                        : subscription.subscription_plans?.max_team_members;
+                      return limit === -1 ? '∞' : limit;
+                    })()
+                  }
                 </p>
               </div>
             </div>
@@ -270,8 +296,19 @@ export default function AgencySubscription() {
       <div>
         <h2 className="text-2xl font-bold mb-4">Available Plans</h2>
         <div className="grid gap-6 md:grid-cols-3">
-          {plans.map((plan) => {
-            const isCurrent = subscription?.plan_id === plan.id;
+          {plans
+            .filter((plan) => {
+              const isCustomPlan = subscription?.is_custom_pricing || subscription?.is_custom_limits;
+              const currentPrice = subscription?.is_custom_pricing 
+                ? subscription.custom_price_monthly_cents 
+                : subscription?.subscription_plans?.price_monthly_cents || 0;
+              
+              // If on custom plan, show all plans. Otherwise only show upgrades
+              return isCustomPlan || plan.price_monthly_cents > currentPrice;
+            })
+            .map((plan) => {
+            const isCustomPlan = subscription?.is_custom_pricing || subscription?.is_custom_limits;
+            const isCurrent = subscription?.plan_id === plan.id && !isCustomPlan;
             return (
               <Card key={plan.id} className={isCurrent ? 'border-primary' : ''}>
                 <CardHeader>

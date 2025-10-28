@@ -245,14 +245,14 @@ export function UserProfileCard({ onSignOut }: UserProfileCardProps) {
       if (!isOpen) resetToMain();
     }}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" className="flex items-center gap-3 w-full justify-start hover:bg-accent/50 px-3 py-2 h-auto">
+        <Button variant="ghost" className="flex items-center gap-3 w-full justify-start hover:bg-accent/50 px-4 py-3 h-auto min-h-[72px]">
           <div className="flex flex-col items-start flex-1 min-w-0">
             <span className="text-sm font-medium text-foreground truncate max-w-full">
               {firstName && lastName ? `${firstName} ${lastName}` : profile?.email}
             </span>
             <div className="flex gap-1 flex-wrap">
               {userType === 'super_admin' && (
-                <Badge variant="secondary" className="text-xs px-1.5 py-0">Super Admin</Badge>
+                <Badge className="text-xs px-2 py-0.5 bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 border-yellow-500/30">Super Admin</Badge>
               )}
               {userType === 'agency' && roles.includes('owner') && (
                 <Badge variant="secondary" className="text-xs px-1.5 py-0">Agency Owner</Badge>
