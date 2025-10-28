@@ -14,6 +14,7 @@ interface Department {
   id: string;
   name: string;
   description: string | null;
+  color: string;
 }
 
 export function DepartmentManagement({ clientId }: { clientId: string }) {
@@ -26,6 +27,7 @@ export function DepartmentManagement({ clientId }: { clientId: string }) {
   
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [color, setColor] = useState("#3b82f6");
 
   const { toast } = useToast();
 
@@ -59,10 +61,12 @@ export function DepartmentManagement({ clientId }: { clientId: string }) {
       setEditingDepartment(department);
       setName(department.name);
       setDescription(department.description || "");
+      setColor(department.color || "#3b82f6");
     } else {
       setEditingDepartment(null);
       setName("");
       setDescription("");
+      setColor("#3b82f6");
     }
     setDialogOpen(true);
   };
@@ -72,7 +76,7 @@ export function DepartmentManagement({ clientId }: { clientId: string }) {
       if (editingDepartment) {
         const { error } = await supabase
           .from('departments')
-          .update({ name, description })
+          .update({ name, description, color })
           .eq('id', editingDepartment.id);
 
         if (error) throw error;
@@ -83,7 +87,7 @@ export function DepartmentManagement({ clientId }: { clientId: string }) {
       } else {
         const { error } = await supabase
           .from('departments')
-          .insert({ client_id: clientId, name, description });
+          .insert({ client_id: clientId, name, description, color });
 
         if (error) throw error;
         toast({
@@ -91,9 +95,9 @@ export function DepartmentManagement({ clientId }: { clientId: string }) {
           description: "Department created successfully",
         });
       }
-
-      loadDepartments();
+      
       setDialogOpen(false);
+      loadDepartments();
     } catch (error: any) {
       toast({
         title: "Error",
@@ -102,6 +106,7 @@ export function DepartmentManagement({ clientId }: { clientId: string }) {
       });
     }
   };
+
 
   const handleDelete = async () => {
     if (!departmentToDelete) return;
@@ -221,6 +226,16 @@ export function DepartmentManagement({ clientId }: { clientId: string }) {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Brief description of this department"
+              />
+            </div>
+            <div>
+              <Label htmlFor="color">Department Color</Label>
+              <Input
+                id="color"
+                type="color"
+                value={color}
+                onChange={(e) => setColor(e.target.value)}
+                className="h-10 cursor-pointer"
               />
             </div>
             <div className="flex gap-2">

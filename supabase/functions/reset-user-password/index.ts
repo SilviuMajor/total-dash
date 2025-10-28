@@ -30,13 +30,66 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    const { userId, newPassword } = await req.json();
+    const { userId, newPassword, oldPassword, isAdminReset } = await req.json();
 
     if (!userId || !newPassword) {
       throw new Error('Missing required fields: userId and newPassword');
     }
 
     console.log('Resetting password for user:', userId);
+
+    // Get the requesting user and target user details
+    const requestingUserId = user.id;
+    
+    // Check if this is a self-service password change (requires old password verification)
+    const isSelfService = !isAdminReset && requestingUserId === userId;
+    
+    if (isSelfService) {
+      if (!oldPassword) {
+        throw new Error('Current password is required for self-service password change');
+      }
+      
+      // Get user email for verification
+      const { data: targetUser, error: userError } = await supabaseAdmin.auth.admin.getUserById(userId);
+      if (userError || !targetUser) {
+        throw new Error('User not found');
+      }
+      
+      // Verify old password is correct by attempting sign in
+      const { error: signInError } = await supabaseAdmin.auth.signInWithPassword({
+        email: targetUser.user.email!,
+        password: oldPassword,
+      });
+      
+      if (signInError) {
+        throw new Error('Current password is incorrect');
+      }
+    } else {
+      // This is an admin reset - verify permissions
+      const isSuperAdmin = await supabaseAdmin
+        .from('super_admin_users')
+        .select('id')
+        .eq('user_id', requestingUserId)
+        .single();
+      
+      const isAgencyOwnerOrAdmin = await supabaseAdmin
+        .from('agency_users')
+        .select('role')
+        .eq('user_id', requestingUserId)
+        .in('role', ['owner', 'admin'])
+        .single();
+      
+      const isClientAdmin = await supabaseAdmin
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', requestingUserId)
+        .eq('role', 'admin')
+        .single();
+      
+      if (!isSuperAdmin.data && !isAgencyOwnerOrAdmin.data && !isClientAdmin.data) {
+        throw new Error('Unauthorized to reset this password');
+      }
+    }
 
     // Update password in Supabase Auth
     const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(

@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { MessageSquare, BarChart3, BookOpen, Settings, Users, Bot, LogOut, Eye, FileText, Home, CreditCard, Building2, DollarSign } from "lucide-react";
+import { MessageSquare, BarChart3, BookOpen, Settings, Users, Bot, Eye, FileText, Home, CreditCard, Building2, DollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
 import { useClientAgentContext } from "@/hooks/useClientAgentContext";
 import { ClientAgentSelector } from "./ClientAgentSelector";
+import { UserProfileCard } from "./UserProfileCard";
 import { Button } from "./ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import fiveleafLogo from "@/assets/fiveleaf-logo.png";
@@ -204,26 +205,8 @@ export function Sidebar() {
         ))}
       </nav>
 
-      <div className="p-4 border-t border-border space-y-3">
-        <div className="px-4 py-3 rounded-lg bg-muted/50">
-          <p className="text-xs font-medium text-foreground">Logged in as</p>
-          <p className="text-sm text-muted-foreground mt-1 truncate">
-            {effectiveProfile?.email}
-          </p>
-          <p className="text-xs text-muted-foreground capitalize">
-            {userType || effectiveProfile?.role}
-          </p>
-        </div>
-        
-        <Button 
-          variant="ghost" 
-          className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground"
-          onClick={effectiveSignOut}
-        >
-          <LogOut className="w-4 h-4" />
-          Sign Out
-        </Button>
-      </div>
+      {/* User Profile Card */}
+      <UserProfileCard onSignOut={effectiveSignOut} />
     </div>
   );
 }

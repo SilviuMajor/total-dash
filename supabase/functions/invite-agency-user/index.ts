@@ -16,13 +16,13 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { email, fullName, role, agencyId } = await req.json();
+    const { email, firstName, lastName, role, agencyId } = await req.json();
 
-    console.log('Inviting agency user:', { email, fullName, role, agencyId });
+    console.log('Inviting agency user:', { email, firstName, lastName, role, agencyId });
 
     // Validate required fields
-    if (!email || !fullName || !role || !agencyId) {
-      throw new Error('Missing required fields');
+    if (!email || !firstName || !lastName || !role || !agencyId) {
+      throw new Error('Missing required fields: email, firstName, lastName, role, agencyId');
     }
 
     // Generate temporary password
@@ -34,7 +34,8 @@ serve(async (req) => {
       password: tempPassword,
       email_confirm: true,
       user_metadata: {
-        full_name: fullName,
+        first_name: firstName,
+        last_name: lastName,
         role: 'agency',
       },
     });
@@ -52,7 +53,8 @@ serve(async (req) => {
       .insert({
         id: authData.user.id,
         email,
-        full_name: fullName,
+        first_name: firstName,
+        last_name: lastName,
         role: 'agency',
       });
 
@@ -113,7 +115,7 @@ serve(async (req) => {
             subject: `Invitation to join ${agencySettings?.agency_name || 'the team'}`,
             html: `
               <h2>You've been invited!</h2>
-              <p>Hi ${fullName},</p>
+              <p>Hi ${firstName} ${lastName},</p>
               <p>You've been invited to join ${agencySettings?.agency_name || 'the team'} as a ${role}.</p>
               <p>Your login credentials:</p>
               <ul>

@@ -36,13 +36,15 @@ export function AgencyUsersContent({ agencyId }: AgencyUsersContentProps) {
   const [inviting, setInviting] = useState(false);
   const [inviteData, setInviteData] = useState({
     email: "",
-    fullName: "",
+    firstName: "",
+    lastName: "",
     role: "user" as 'owner' | 'admin' | 'user',
   });
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [invitedUserData, setInvitedUserData] = useState<{
     email: string;
-    fullName: string;
+    firstName: string;
+    lastName: string;
     tempPassword: string;
   } | null>(null);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
@@ -105,7 +107,8 @@ export function AgencyUsersContent({ agencyId }: AgencyUsersContentProps) {
       const { data, error } = await supabase.functions.invoke('invite-agency-user', {
         body: {
           email: inviteData.email,
-          fullName: inviteData.fullName,
+          firstName: inviteData.firstName,
+          lastName: inviteData.lastName,
           role: inviteData.role,
           agencyId: agencyId,
         },
@@ -115,12 +118,13 @@ export function AgencyUsersContent({ agencyId }: AgencyUsersContentProps) {
 
       setInvitedUserData({
         email: inviteData.email,
-        fullName: inviteData.fullName,
+        firstName: inviteData.firstName,
+        lastName: inviteData.lastName,
         tempPassword: data.tempPassword,
       });
       setPasswordDialogOpen(true);
       setInviteOpen(false);
-      setInviteData({ email: "", fullName: "", role: "user" });
+      setInviteData({ email: "", firstName: "", lastName: "", role: "user" });
       loadUsers();
     } catch (error: any) {
       console.error('Error inviting user:', error);
@@ -260,12 +264,21 @@ export function AgencyUsersContent({ agencyId }: AgencyUsersContentProps) {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="fullName">Full Name</Label>
+                <Label htmlFor="firstName">First Name</Label>
                 <Input
-                  id="fullName"
-                  placeholder="John Doe"
-                  value={inviteData.fullName}
-                  onChange={(e) => setInviteData({ ...inviteData, fullName: e.target.value })}
+                  id="firstName"
+                  placeholder="John"
+                  value={inviteData.firstName}
+                  onChange={(e) => setInviteData({ ...inviteData, firstName: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName">Last Name</Label>
+                <Input
+                  id="lastName"
+                  placeholder="Doe"
+                  value={inviteData.lastName}
+                  onChange={(e) => setInviteData({ ...inviteData, lastName: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
@@ -297,7 +310,7 @@ export function AgencyUsersContent({ agencyId }: AgencyUsersContentProps) {
               </Button>
               <Button
                 onClick={handleInviteUser}
-                disabled={inviting || !inviteData.email || !inviteData.fullName}
+                disabled={inviting || !inviteData.email || !inviteData.firstName || !inviteData.lastName}
               >
                 {inviting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Send Invitation
@@ -427,7 +440,7 @@ export function AgencyUsersContent({ agencyId }: AgencyUsersContentProps) {
               <DialogTitle>User Invited Successfully</DialogTitle>
             </div>
             <DialogDescription>
-              {invitedUserData?.fullName} has been invited to join your agency
+              {invitedUserData?.firstName} {invitedUserData?.lastName} has been invited to join your agency
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">

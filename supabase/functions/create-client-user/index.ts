@@ -57,7 +57,8 @@ serve(async (req) => {
     const { 
       clientId, 
       email, 
-      fullName, 
+      firstName,
+      lastName,
       role, 
       departmentId, 
       avatarUrl, 
@@ -65,7 +66,11 @@ serve(async (req) => {
       customPassword 
     } = await req.json();
 
-    console.log('Creating user:', { email, fullName, role, clientId });
+    console.log('Creating user:', { email, firstName, lastName, role, clientId });
+
+    if (!firstName || !lastName) {
+      throw new Error('First name and last name are required');
+    }
 
     // Use custom password if provided, otherwise generate secure password
     const temporaryPassword = customPassword || generateSecurePassword();
@@ -76,7 +81,8 @@ serve(async (req) => {
       password: temporaryPassword,
       email_confirm: true, // Auto-confirm email
       user_metadata: {
-        full_name: fullName,
+        first_name: firstName,
+        last_name: lastName,
         role: 'client'
       }
     });
@@ -88,6 +94,23 @@ serve(async (req) => {
 
     console.log('Auth user created:', authData.user.id);
 
+    // Create profile
+    const { error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .insert({
+        id: authData.user.id,
+        email,
+        first_name: firstName,
+        last_name: lastName,
+        role: 'client'
+      });
+
+    if (profileError) {
+      console.error('Profile error:', profileError);
+      await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
+      throw profileError;
+    }
+
     // Create entry in client_users table
     const { error: clientUserError } = await supabaseAdmin
       .from('client_users')
@@ -95,7 +118,8 @@ serve(async (req) => {
         user_id: authData.user.id,
         client_id: clientId,
         role: role,
-        full_name: fullName,
+        first_name: firstName,
+        last_name: lastName,
         avatar_url: avatarUrl,
         department_id: departmentId,
         page_permissions: pagePermissions

@@ -24,6 +24,8 @@ interface MultiTenantProfile {
   id: string;
   email: string;
   full_name: string | null;
+  first_name: string | null;
+  last_name: string | null;
   role: 'admin' | 'client';
   user_type: UserType;
   agency?: AgencyData;

@@ -847,8 +847,10 @@ export type Database = {
           client_id: string
           created_at: string | null
           department_id: string | null
+          first_name: string | null
           full_name: string | null
           id: string
+          last_name: string | null
           page_permissions: Json | null
           updated_at: string | null
           user_id: string
@@ -858,8 +860,10 @@ export type Database = {
           client_id: string
           created_at?: string | null
           department_id?: string | null
+          first_name?: string | null
           full_name?: string | null
           id?: string
+          last_name?: string | null
           page_permissions?: Json | null
           updated_at?: string | null
           user_id: string
@@ -869,8 +873,10 @@ export type Database = {
           client_id?: string
           created_at?: string | null
           department_id?: string | null
+          first_name?: string | null
           full_name?: string | null
           id?: string
+          last_name?: string | null
           page_permissions?: Json | null
           updated_at?: string | null
           user_id?: string
@@ -1011,6 +1017,7 @@ export type Database = {
       departments: {
         Row: {
           client_id: string
+          color: string | null
           created_at: string
           description: string | null
           id: string
@@ -1019,6 +1026,7 @@ export type Database = {
         }
         Insert: {
           client_id: string
+          color?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -1027,6 +1035,7 @@ export type Database = {
         }
         Update: {
           client_id?: string
+          color?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -1116,24 +1125,30 @@ export type Database = {
         Row: {
           created_at: string | null
           email: string
+          first_name: string | null
           full_name: string | null
           id: string
+          last_name: string | null
           role: Database["public"]["Enums"]["user_role"]
           updated_at: string | null
         }
         Insert: {
           created_at?: string | null
           email: string
+          first_name?: string | null
           full_name?: string | null
           id: string
+          last_name?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string | null
         }
         Update: {
           created_at?: string | null
           email?: string
+          first_name?: string | null
           full_name?: string | null
           id?: string
+          last_name?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string | null
         }

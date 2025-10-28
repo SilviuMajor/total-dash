@@ -85,7 +85,8 @@ export function TeamMembersCard({ clientId }: { clientId: string }) {
 
   const [newUser, setNewUser] = useState({
     email: "",
-    full_name: "",
+    firstName: "",
+    lastName: "",
     role: "user",
     department_id: "none",
     avatar_url: "",
@@ -172,7 +173,8 @@ export function TeamMembersCard({ clientId }: { clientId: string }) {
         body: {
           clientId,
           email: newUser.email,
-          fullName: newUser.full_name,
+          firstName: newUser.firstName,
+          lastName: newUser.lastName,
           role: newUser.role,
           departmentId: newUser.department_id === "none" ? null : newUser.department_id || null,
           avatarUrl: newUser.avatar_url || null,
@@ -191,7 +193,8 @@ export function TeamMembersCard({ clientId }: { clientId: string }) {
 
       setNewUser({
         email: "",
-        full_name: "",
+        firstName: "",
+        lastName: "",
         role: "user",
         department_id: "none",
         avatar_url: "",
@@ -376,12 +379,21 @@ export function TeamMembersCard({ clientId }: { clientId: string }) {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="full_name">Full Name *</Label>
+                  <Label htmlFor="firstName">First Name *</Label>
                   <Input
-                    id="full_name"
-                    value={newUser.full_name}
-                    onChange={(e) => setNewUser({ ...newUser, full_name: e.target.value })}
-                    placeholder="John Doe"
+                    id="firstName"
+                    value={newUser.firstName}
+                    onChange={(e) => setNewUser({ ...newUser, firstName: e.target.value })}
+                    placeholder="John"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lastName">Last Name *</Label>
+                  <Input
+                    id="lastName"
+                    value={newUser.lastName}
+                    onChange={(e) => setNewUser({ ...newUser, lastName: e.target.value })}
+                    placeholder="Doe"
                   />
                 </div>
               </div>
@@ -479,7 +491,7 @@ export function TeamMembersCard({ clientId }: { clientId: string }) {
                 {!tempPassword && (
                   <Button
                     onClick={handleAddUser}
-                    disabled={!newUser.email || !newUser.full_name}
+                    disabled={!newUser.email || !newUser.firstName || !newUser.lastName}
                     className="bg-foreground text-background hover:bg-foreground/90"
                   >
                     Create User
