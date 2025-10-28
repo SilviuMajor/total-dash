@@ -42,6 +42,8 @@ export default function AgencyClients() {
       .from('agency_subscriptions')
       .select(`
         current_clients,
+        custom_max_clients,
+        is_custom_limits,
         subscription_plans:plan_id (max_clients)
       `)
       .eq('agency_id', agencyId)
@@ -141,6 +143,10 @@ export default function AgencyClients() {
     }
   };
 
+  const maxClients = limits?.is_custom_limits ? limits.custom_max_clients : limits?.subscription_plans?.max_clients;
+  const currentClients = limits?.current_clients || 0;
+  const isOverLimit = maxClients !== -1 && currentClients > maxClients;
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -149,15 +155,15 @@ export default function AgencyClients() {
           <p className="text-muted-foreground">
             Manage your client accounts
             {limits && (
-              <span className="ml-2">
-                ({limits.current_clients} / {limits.subscription_plans?.max_clients === -1 ? '∞' : limits.subscription_plans?.max_clients})
+              <span className={`ml-2 ${isOverLimit ? 'text-red-500 font-semibold' : ''}`}>
+                ({currentClients} / {maxClients === -1 ? '∞' : maxClients})
               </span>
             )}
           </p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button disabled={!canAddMore}>
+            <Button disabled={!canAddMore || currentClients >= maxClients}>
               <Plus className="mr-2 h-4 w-4" />
               Add Client
             </Button>
@@ -181,7 +187,29 @@ export default function AgencyClients() {
         </Dialog>
       </div>
 
-      {!canAddMore && (
+      {isOverLimit && (
+        <Card className="border-red-500 bg-red-500/10">
+          <CardContent className="flex items-center gap-3 p-4">
+            <AlertCircle className="h-5 w-5 text-red-500" />
+            <div>
+              <p className="font-semibold text-red-500">Over Subscription Limit</p>
+              <p className="text-sm text-muted-foreground">
+                You currently have {currentClients} clients but your plan allows {maxClients}. 
+                You cannot add new clients until you delete some or upgrade your plan.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              className="ml-auto"
+              onClick={() => navigate('/agency/subscription')}
+            >
+              Upgrade
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {!canAddMore && !isOverLimit && (
         <Card className="border-yellow-500 bg-yellow-500/10">
           <CardContent className="flex items-center gap-3 p-4">
             <AlertCircle className="h-5 w-5 text-yellow-500" />

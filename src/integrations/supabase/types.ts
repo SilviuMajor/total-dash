@@ -704,6 +704,7 @@ export type Database = {
           id: string
           logo_url: string | null
           primary_color: string | null
+          profile_access_control: Json | null
           secondary_color: string | null
           updated_at: string | null
         }
@@ -717,6 +718,7 @@ export type Database = {
           id?: string
           logo_url?: string | null
           primary_color?: string | null
+          profile_access_control?: Json | null
           secondary_color?: string | null
           updated_at?: string | null
         }
@@ -730,6 +732,7 @@ export type Database = {
           id?: string
           logo_url?: string | null
           primary_color?: string | null
+          profile_access_control?: Json | null
           secondary_color?: string | null
           updated_at?: string | null
         }

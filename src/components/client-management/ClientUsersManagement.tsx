@@ -465,8 +465,131 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
     );
   }
 
+  const [profileAccessControl, setProfileAccessControl] = useState({
+    edit_name: 'all',
+    change_email: 'admin_only',
+    change_password: 'all',
+  });
+
+  useEffect(() => {
+    loadProfileAccessSettings();
+  }, [clientId]);
+
+  const loadProfileAccessSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('client_settings')
+        .select('profile_access_control')
+        .eq('client_id', clientId)
+        .single();
+
+      if (error) throw error;
+      if (data?.profile_access_control) {
+        setProfileAccessControl(data.profile_access_control as any);
+      }
+    } catch (error: any) {
+      console.error('Error loading profile access settings:', error);
+    }
+  };
+
+  const updateAccessControl = async (field: string, value: string) => {
+    try {
+      const newAccessControl = {
+        ...profileAccessControl,
+        [field]: value,
+      };
+
+      const { error } = await supabase
+        .from('client_settings')
+        .update({ profile_access_control: newAccessControl })
+        .eq('client_id', clientId);
+
+      if (error) throw error;
+
+      setProfileAccessControl(newAccessControl);
+      toast({
+        title: "Success",
+        description: "Profile access settings updated",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <>
+      <Card className="p-6 bg-gradient-card border-border/50 mb-6">
+        <h3 className="text-lg font-semibold text-foreground mb-4">
+          Profile Access Settings
+        </h3>
+        <p className="text-sm text-muted-foreground mb-4">
+          Control which profile settings features are available to all users vs. admin-only
+        </p>
+        
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <Label>Edit Name</Label>
+              <p className="text-xs text-muted-foreground">Allow users to change their first/last name</p>
+            </div>
+            <Select
+              value={profileAccessControl.edit_name}
+              onValueChange={(value) => updateAccessControl('edit_name', value)}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Users</SelectItem>
+                <SelectItem value="admin_only">Admin Only</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="flex items-center justify-between">
+            <div>
+              <Label>Change Email</Label>
+              <p className="text-xs text-muted-foreground">Allow users to change their email address</p>
+            </div>
+            <Select
+              value={profileAccessControl.change_email}
+              onValueChange={(value) => updateAccessControl('change_email', value)}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Users</SelectItem>
+                <SelectItem value="admin_only">Admin Only</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="flex items-center justify-between">
+            <div>
+              <Label>Change Password</Label>
+              <p className="text-xs text-muted-foreground">Allow users to change their password</p>
+            </div>
+            <Select
+              value={profileAccessControl.change_password}
+              onValueChange={(value) => updateAccessControl('change_password', value)}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Users</SelectItem>
+                <SelectItem value="admin_only">Admin Only</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </Card>
+
       <Card className="p-6 bg-gradient-card border-border/50">
         <div className="flex items-center justify-between mb-6">
           <div>

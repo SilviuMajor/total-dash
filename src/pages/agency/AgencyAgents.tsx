@@ -37,6 +37,8 @@ export default function AgencyAgents() {
       .from('agency_subscriptions')
       .select(`
         current_agents,
+        custom_max_agents,
+        is_custom_limits,
         subscription_plans:plan_id (max_agents)
       `)
       .eq('agency_id', agencyId)
@@ -68,6 +70,10 @@ export default function AgencyAgents() {
     }
   };
 
+  const maxAgents = limits?.is_custom_limits ? limits.custom_max_agents : limits?.subscription_plans?.max_agents;
+  const currentAgents = limits?.current_agents || 0;
+  const isOverLimit = maxAgents !== -1 && currentAgents > maxAgents;
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -76,14 +82,14 @@ export default function AgencyAgents() {
           <p className="text-muted-foreground">
             Manage your AI agents
             {limits && (
-              <span className="ml-2">
-                ({limits.current_agents} / {limits.subscription_plans?.max_agents === -1 ? '∞' : limits.subscription_plans?.max_agents})
+              <span className={`ml-2 ${isOverLimit ? 'text-red-500 font-semibold' : ''}`}>
+                ({currentAgents} / {maxAgents === -1 ? '∞' : maxAgents})
               </span>
             )}
           </p>
         </div>
         <Button
-          disabled={!canAddMore}
+          disabled={!canAddMore || currentAgents >= maxAgents}
           onClick={() => navigate('/agency/agents/new')}
         >
           <Plus className="mr-2 h-4 w-4" />
@@ -91,7 +97,29 @@ export default function AgencyAgents() {
         </Button>
       </div>
 
-      {!canAddMore && (
+      {isOverLimit && (
+        <Card className="border-red-500 bg-red-500/10">
+          <CardContent className="flex items-center gap-3 p-4">
+            <AlertCircle className="h-5 w-5 text-red-500" />
+            <div>
+              <p className="font-semibold text-red-500">Over Subscription Limit</p>
+              <p className="text-sm text-muted-foreground">
+                You currently have {currentAgents} agents but your plan allows {maxAgents}. 
+                You cannot add new agents until you delete some or upgrade your plan.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              className="ml-auto"
+              onClick={() => navigate('/agency/subscription')}
+            >
+              Upgrade
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {!canAddMore && !isOverLimit && (
         <Card className="border-yellow-500 bg-yellow-500/10">
           <CardContent className="flex items-center gap-3 p-4">
             <AlertCircle className="h-5 w-5 text-yellow-500" />
