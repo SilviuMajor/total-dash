@@ -18,7 +18,6 @@ export type Database = {
         Row: {
           created_at: string | null
           custom_css: string | null
-          custom_domain: string | null
           deleted_at: string | null
           domain: string | null
           id: string
@@ -33,11 +32,14 @@ export type Database = {
           support_email: string | null
           trial_ends_at: string | null
           updated_at: string | null
+          whitelabel_domain: string | null
+          whitelabel_subdomain: string | null
+          whitelabel_verified: boolean | null
+          whitelabel_verified_at: string | null
         }
         Insert: {
           created_at?: string | null
           custom_css?: string | null
-          custom_domain?: string | null
           deleted_at?: string | null
           domain?: string | null
           id?: string
@@ -52,11 +54,14 @@ export type Database = {
           support_email?: string | null
           trial_ends_at?: string | null
           updated_at?: string | null
+          whitelabel_domain?: string | null
+          whitelabel_subdomain?: string | null
+          whitelabel_verified?: boolean | null
+          whitelabel_verified_at?: string | null
         }
         Update: {
           created_at?: string | null
           custom_css?: string | null
-          custom_domain?: string | null
           deleted_at?: string | null
           domain?: string | null
           id?: string
@@ -71,6 +76,10 @@ export type Database = {
           support_email?: string | null
           trial_ends_at?: string | null
           updated_at?: string | null
+          whitelabel_domain?: string | null
+          whitelabel_subdomain?: string | null
+          whitelabel_verified?: boolean | null
+          whitelabel_verified_at?: string | null
         }
         Relationships: []
       }
@@ -693,6 +702,57 @@ export type Database = {
           },
         ]
       }
+      auth_contexts: {
+        Row: {
+          agency_id: string | null
+          client_id: string | null
+          context_type: string
+          created_at: string | null
+          expires_at: string
+          id: string
+          is_preview: boolean | null
+          token: string
+          user_id: string
+        }
+        Insert: {
+          agency_id?: string | null
+          client_id?: string | null
+          context_type: string
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          is_preview?: boolean | null
+          token: string
+          user_id: string
+        }
+        Update: {
+          agency_id?: string | null
+          client_id?: string | null
+          context_type?: string
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          is_preview?: boolean | null
+          token?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auth_contexts_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auth_contexts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_settings: {
         Row: {
           client_id: string
@@ -902,7 +962,7 @@ export type Database = {
           {
             foreignKeyName: "client_users_user_id_fkey"
             columns: ["user_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -922,6 +982,7 @@ export type Database = {
           logo_url: string | null
           name: string
           scheduled_deletion_date: string | null
+          slug: string
           status: string | null
           subscription_status: string | null
           updated_at: string | null
@@ -939,6 +1000,7 @@ export type Database = {
           logo_url?: string | null
           name: string
           scheduled_deletion_date?: string | null
+          slug: string
           status?: string | null
           subscription_status?: string | null
           updated_at?: string | null
@@ -956,6 +1018,7 @@ export type Database = {
           logo_url?: string | null
           name?: string
           scheduled_deletion_date?: string | null
+          slug?: string
           status?: string | null
           subscription_status?: string | null
           updated_at?: string | null
@@ -1356,6 +1419,7 @@ export type Database = {
         Args: { _client_id: string; _page_name: string; _user_id: string }
         Returns: boolean
       }
+      cleanup_expired_auth_contexts: { Args: never; Returns: undefined }
       get_user_agency_id: { Args: { _user_id: string }; Returns: string }
       get_user_client_ids: {
         Args: { user_id: string }

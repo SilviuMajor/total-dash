@@ -68,10 +68,17 @@ export default function AdminClients() {
   const handleCreateClient = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      // Generate slug from client name
+      const slug = newClientName.toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .trim();
+      
       const {
         error
       } = await supabase.from('clients').insert([{
-        name: newClientName
+        name: newClientName,
+        slug: slug
       }]);
       if (error) throw error;
       toast({

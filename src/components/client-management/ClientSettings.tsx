@@ -29,17 +29,68 @@ export function ClientSettings({ client, onUpdate }: ClientSettingsProps) {
     name: client.name,
     logo_url: client.logo_url || "",
     status: client.status || "active",
+    slug: "",
   });
+  const [originalSlug, setOriginalSlug] = useState("");
   const [saving, setSaving] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [showSlugWarning, setShowSlugWarning] = useState(false);
+  const [pendingSlug, setPendingSlug] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [agencyData, setAgencyData] = useState<any>(null);
   const { toast } = useToast();
   
   const isAdmin = profile?.role === 'admin' || userType === 'super_admin';
   const canDelete = isAdmin || userType === 'agency';
   const isDeleting = client.status === 'deleting';
+
+  useEffect(() => {
+    // Load current client slug and agency data
+    const loadClientData = async () => {
+      try {
+        const { data: clientData } = await supabase
+          .from('clients')
+          .select('slug, agency_id')
+          .eq('id', client.id)
+          .single();
+
+        if (clientData) {
+          setFormData(prev => ({ ...prev, slug: clientData.slug }));
+          setOriginalSlug(clientData.slug);
+
+          // Load agency data for URL preview
+          const { data: agency } = await supabase
+            .from('agencies')
+            .select('slug, whitelabel_domain, whitelabel_subdomain, whitelabel_verified')
+            .eq('id', clientData.agency_id)
+            .single();
+
+          if (agency) {
+            setAgencyData(agency);
+          }
+        }
+      } catch (error: any) {
+        console.error('Error loading client data:', error);
+      }
+    };
+
+    loadClientData();
+  }, [client.id]);
+
+  const handleSlugChange = (newSlug: string) => {
+    const normalized = newSlug.toLowerCase()
+      .replace(/[^a-z0-9-]/g, '')
+      .replace(/^-+|-+$/g, '');
+    setPendingSlug(normalized);
+    setShowSlugWarning(true);
+  };
+
+  const confirmSlugChange = () => {
+    setFormData({ ...formData, slug: pendingSlug });
+    setShowSlugWarning(false);
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -219,6 +270,29 @@ export function ClientSettings({ client, onUpdate }: ClientSettingsProps) {
             />
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="slug">Client Slug (URL Path)</Label>
+            <Input
+              id="slug"
+              value={formData.slug}
+              onChange={(e) => handleSlugChange(e.target.value)}
+              placeholder="client-name"
+              className="bg-muted/50 border-border"
+            />
+            <div className="text-xs text-muted-foreground space-y-1">
+              <p className="font-semibold">Standard URL:</p>
+              <p className="font-mono">total-dash.com/{agencyData?.slug || 'agency'}/{formData.slug || 'client'}</p>
+              {agencyData?.whitelabel_verified && (
+                <>
+                  <p className="font-semibold mt-2">Whitelabel URL:</p>
+                  <p className="font-mono">
+                    {agencyData.whitelabel_subdomain}.{agencyData.whitelabel_domain}/{formData.slug || 'client'}
+                  </p>
+                </>
+              )}
+            </div>
+          </div>
+
           <ClientLogoUpload
             currentUrl={formData.logo_url}
             onUploadComplete={async (url) => {
@@ -369,6 +443,52 @@ export function ClientSettings({ client, onUpdate }: ClientSettingsProps) {
             >
               {deleting ? "Deleting..." : "Confirm Deletion"}
             </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Slug change warning dialog */}
+      <AlertDialog open={showSlugWarning} onOpenChange={setShowSlugWarning}>
+        <AlertDialogContent className="bg-card border-border">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-yellow-500" />
+              Change Client URL?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-4">
+              <p>
+                Changing the client slug will update all dashboard URLs:
+              </p>
+              <div className="p-3 bg-muted rounded font-mono text-sm space-y-2">
+                <div>
+                  <div className="line-through text-muted-foreground">
+                    total-dash.com/{agencyData?.slug}/{originalSlug}
+                  </div>
+                  <div className="text-foreground font-semibold">
+                    total-dash.com/{agencyData?.slug}/{pendingSlug}
+                  </div>
+                </div>
+                {agencyData?.whitelabel_verified && (
+                  <div className="pt-2 border-t">
+                    <div className="line-through text-muted-foreground">
+                      {agencyData.whitelabel_subdomain}.{agencyData.whitelabel_domain}/{originalSlug}
+                    </div>
+                    <div className="text-foreground font-semibold">
+                      {agencyData.whitelabel_subdomain}.{agencyData.whitelabel_domain}/{pendingSlug}
+                    </div>
+                  </div>
+                )}
+              </div>
+              <p className="text-destructive font-semibold">
+                ⚠️ This will affect all client user links and bookmarks. Make sure to notify your client users.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setPendingSlug("")}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmSlugChange}>
+              Confirm Change
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

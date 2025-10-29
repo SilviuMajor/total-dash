@@ -89,10 +89,18 @@ export default function AgencyClients() {
 
     const formData = new FormData(e.currentTarget);
     try {
+      const clientName = formData.get('name') as string;
+      // Generate slug from client name
+      const slug = clientName.toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .trim();
+      
       const { error} = await supabase
         .from('clients')
         .insert([{
-          name: formData.get('name') as string,
+          name: clientName,
+          slug: slug,
           agency_id: agencyId,
           contact_email: formData.get('email') as string,
         }]);
