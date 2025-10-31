@@ -14,7 +14,8 @@ import { isValidPhoneNumber } from "react-phone-number-input";
 export default function AgencyLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [agencyName, setAgencyName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState<string>("");
   const [emailError, setEmailError] = useState<string>("");
@@ -91,7 +92,9 @@ export default function AgencyLogin() {
         password,
         options: {
           data: {
-            full_name: fullName,
+            first_name: firstName,
+            last_name: lastName,
+            full_name: `${firstName} ${lastName}`,
             role: 'admin',
           },
           emailRedirectTo: `${window.location.origin}/agency`,
@@ -211,7 +214,7 @@ export default function AgencyLogin() {
             <TabsContent value="login" className="space-y-4">
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="login-email">Email</Label>
+                  <Label htmlFor="login-email">Email *</Label>
                   <Input
                     id="login-email"
                     type="email"
@@ -226,7 +229,7 @@ export default function AgencyLogin() {
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="login-password">Password</Label>
+                  <Label htmlFor="login-password">Password *</Label>
                   <Input
                     id="login-password"
                     type="password"
@@ -255,20 +258,34 @@ export default function AgencyLogin() {
 
             <TabsContent value="signup" className="space-y-4">
               <form onSubmit={handleSignup} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signup-name">Full Name</Label>
-                  <Input
-                    id="signup-name"
-                    type="text"
-                    placeholder="John Doe"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    required
-                    disabled={loading}
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-firstname">First Name *</Label>
+                    <Input
+                      id="signup-firstname"
+                      type="text"
+                      placeholder="John"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      required
+                      disabled={loading}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-lastname">Last Name *</Label>
+                    <Input
+                      id="signup-lastname"
+                      type="text"
+                      placeholder="Doe"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      required
+                      disabled={loading}
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-agency">Agency Name</Label>
+                  <Label htmlFor="signup-agency">Agency Name *</Label>
                   <Input
                     id="signup-agency"
                     type="text"
@@ -280,7 +297,7 @@ export default function AgencyLogin() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
+                  <Label htmlFor="signup-email">Email *</Label>
                   <Input
                     id="signup-email"
                     type="email"
@@ -310,7 +327,7 @@ export default function AgencyLogin() {
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
+                  <Label htmlFor="signup-password">Password *</Label>
                   <Input
                     id="signup-password"
                     type="password"
@@ -330,7 +347,8 @@ export default function AgencyLogin() {
                     !!emailError || 
                     !password || 
                     !agencyName || 
-                    !fullName || 
+                    !firstName || 
+                    !lastName || 
                     !phoneNumber ||
                     (phoneNumber && !isValidPhoneNumber(phoneNumber))
                   }
