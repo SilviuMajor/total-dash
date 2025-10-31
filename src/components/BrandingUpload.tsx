@@ -6,15 +6,17 @@ import { useToast } from "@/hooks/use-toast";
 
 interface BrandingUploadProps {
   label: string;
+  description?: string;
   currentUrl?: string;
   onUpload: (url: string) => void;
   bucket: string;
   acceptedTypes: string[];
-  type: "logo" | "favicon";
+  type: "logo" | "favicon" | "full-logo";
 }
 
 export const BrandingUpload = ({
   label,
+  description,
   currentUrl,
   onUpload,
   bucket,
@@ -89,15 +91,24 @@ export const BrandingUpload = ({
   return (
     <div className="space-y-2">
       <label className="text-sm font-medium">{label}</label>
+      {description && (
+        <p className="text-sm text-muted-foreground">{description}</p>
+      )}
       
       {preview ? (
         <div className="relative inline-block">
           <div className="border rounded-lg p-4 bg-muted/50">
-            {type === 'logo' ? (
+            {type === 'full-logo' ? (
               <img 
                 src={preview} 
                 alt={label}
-                className="max-w-[200px] max-h-[100px] object-contain"
+                className="max-w-[400px] max-h-[100px] object-contain"
+              />
+            ) : type === 'logo' ? (
+              <img 
+                src={preview} 
+                alt={label}
+                className="max-w-[128px] max-h-[128px] object-contain"
               />
             ) : (
               <img 

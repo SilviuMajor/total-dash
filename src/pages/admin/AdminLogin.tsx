@@ -7,12 +7,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { useBranding } from "@/hooks/useBranding";
 
 export default function SuperAdminLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const branding = useBranding({ isClientView: false });
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,7 +58,12 @@ export default function SuperAdminLogin() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-3xl font-bold text-center">Admin</CardTitle>
+          {branding.fullLogoUrl && (
+            <div className="flex justify-center mb-4">
+              <img src={branding.fullLogoUrl} alt={branding.companyName} className="h-16 w-auto object-contain" />
+            </div>
+          )}
+          <CardTitle className="text-3xl font-bold text-center">{branding.companyName} Admin</CardTitle>
           <CardDescription className="text-center">
             Sign in to manage your platform
           </CardDescription>

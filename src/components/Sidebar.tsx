@@ -10,7 +10,6 @@ import { ClientAgentSelector } from "./ClientAgentSelector";
 import { UserProfileCard } from "./UserProfileCard";
 import { Button } from "./ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import fiveleafLogo from "@/assets/fiveleaf-logo.png";
 
 const clientNavigation = [
   { name: "Conversations", href: "/", icon: MessageSquare, permissionKey: "conversations", provider: "voiceflow" },
@@ -136,7 +135,19 @@ export function Sidebar() {
   return (
     <div className="flex flex-col w-64 h-screen border-r border-border bg-card/50 backdrop-blur-sm overflow-hidden flex-shrink-0">
       <div className="flex items-center justify-center p-6 border-b border-border">
-        <img src={branding.logoUrl || fiveleafLogo} alt={branding.companyName} className="w-12 h-12 object-contain" />
+        {branding.logoUrl ? (
+          <img 
+            src={branding.logoUrl} 
+            alt={branding.companyName} 
+            className="w-12 h-12 object-contain" 
+          />
+        ) : (
+          <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
+            <span className="text-lg font-bold text-primary">
+              {branding.companyName.substring(0, 2).toUpperCase()}
+            </span>
+          </div>
+        )}
       </div>
       
       {(mtIsPreviewMode || isClientPreviewMode) && (

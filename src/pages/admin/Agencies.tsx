@@ -12,7 +12,10 @@ interface Agency {
   id: string;
   name: string;
   slug: string;
-  logo_url: string | null;
+  logo_light_url?: string;
+  logo_dark_url?: string;
+  full_logo_light_url?: string;
+  full_logo_dark_url?: string;
   support_email: string | null;
   is_active: boolean;
   created_at: string;
@@ -126,11 +129,11 @@ export default function Agencies() {
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
                     {/* Logo */}
-                    {agency.logo_url ? (
+                    {(agency.logo_light_url || agency.logo_dark_url) ? (
                       <img
-                        src={agency.logo_url}
+                        src={agency.logo_light_url || agency.logo_dark_url || ''}
                         alt={agency.name}
-                        className="w-10 h-10 rounded-lg object-cover"
+                        className="w-10 h-10 rounded-lg object-contain"
                       />
                     ) : (
                       <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">

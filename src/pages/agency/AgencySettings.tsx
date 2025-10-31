@@ -105,9 +105,12 @@ export default function AgencySettings() {
       const updateData: any = {
         name: agency.name,
         support_email: agency.support_email,
-        logo_url: agency.logo_url,
-        primary_color: agency.primary_color,
-        secondary_color: agency.secondary_color,
+        logo_light_url: agency.logo_light_url,
+        logo_dark_url: agency.logo_dark_url,
+        full_logo_light_url: agency.full_logo_light_url,
+        full_logo_dark_url: agency.full_logo_dark_url,
+        favicon_light_url: agency.favicon_light_url,
+        favicon_dark_url: agency.favicon_dark_url,
       };
 
       // Only update slug if it's different from current
@@ -237,10 +240,18 @@ export default function AgencySettings() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleSave} className="space-y-6">
+              <form onSubmit={handleSave} className="space-y-6">
+                  <div className="space-y-2 mb-4">
+                    <h3 className="text-sm font-semibold">Client-Facing Branding Override</h3>
+                    <p className="text-xs text-muted-foreground">
+                      These settings allow you to customize the branding that YOUR CLIENTS see when they log in and use their dashboards. Any element you don't upload will automatically show the platform's default branding.
+                    </p>
+                  </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <BrandingUpload
-                      label="Logo (Light Mode)"
+                      label="Sidebar Logo (Light Mode)"
+                      description="Square logo shown in client sidebar (light theme). Leave empty to show platform default."
                       currentUrl={agency?.logo_light_url}
                       onUpload={(url) => setAgency({ ...agency, logo_light_url: url })}
                       bucket="agency-logos"
@@ -249,7 +260,8 @@ export default function AgencySettings() {
                     />
 
                     <BrandingUpload
-                      label="Logo (Dark Mode)"
+                      label="Sidebar Logo (Dark Mode)"
+                      description="Square logo shown in client sidebar (dark theme). Leave empty to show platform default."
                       currentUrl={agency?.logo_dark_url}
                       onUpload={(url) => setAgency({ ...agency, logo_dark_url: url })}
                       bucket="agency-logos"
@@ -260,7 +272,30 @@ export default function AgencySettings() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <BrandingUpload
+                      label="Full Logo (Light Mode)"
+                      description="Wide format logo for client login page (light theme). Client sees this on login screen at your custom domain. Leave empty to show platform default."
+                      currentUrl={agency?.full_logo_light_url}
+                      onUpload={(url) => setAgency({ ...agency, full_logo_light_url: url })}
+                      bucket="agency-logos"
+                      acceptedTypes={['.png', '.jpg', '.jpeg', '.svg']}
+                      type="full-logo"
+                    />
+
+                    <BrandingUpload
+                      label="Full Logo (Dark Mode)"
+                      description="Wide format logo for client login page (dark theme). Client sees this on login screen at your custom domain. Leave empty to show platform default."
+                      currentUrl={agency?.full_logo_dark_url}
+                      onUpload={(url) => setAgency({ ...agency, full_logo_dark_url: url })}
+                      bucket="agency-logos"
+                      acceptedTypes={['.png', '.jpg', '.jpeg', '.svg']}
+                      type="full-logo"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <BrandingUpload
                       label="Favicon (Light Mode)"
+                      description="Browser tab icon for client dashboard (light theme). Leave empty to show platform default."
                       currentUrl={agency?.favicon_light_url}
                       onUpload={(url) => setAgency({ ...agency, favicon_light_url: url })}
                       bucket="agency-logos"
@@ -270,6 +305,7 @@ export default function AgencySettings() {
 
                     <BrandingUpload
                       label="Favicon (Dark Mode)"
+                      description="Browser tab icon for client dashboard (dark theme). Leave empty to show platform default."
                       currentUrl={agency?.favicon_dark_url}
                       onUpload={(url) => setAgency({ ...agency, favicon_dark_url: url })}
                       bucket="agency-logos"

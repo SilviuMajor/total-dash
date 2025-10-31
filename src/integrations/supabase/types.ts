@@ -23,6 +23,8 @@ export type Database = {
           domain: string | null
           favicon_dark_url: string | null
           favicon_light_url: string | null
+          full_logo_dark_url: string | null
+          full_logo_light_url: string | null
           id: string
           is_active: boolean | null
           logo_dark_url: string | null
@@ -49,6 +51,8 @@ export type Database = {
           domain?: string | null
           favicon_dark_url?: string | null
           favicon_light_url?: string | null
+          full_logo_dark_url?: string | null
+          full_logo_light_url?: string | null
           id?: string
           is_active?: boolean | null
           logo_dark_url?: string | null
@@ -75,6 +79,8 @@ export type Database = {
           domain?: string | null
           favicon_dark_url?: string | null
           favicon_light_url?: string | null
+          full_logo_dark_url?: string | null
+          full_logo_light_url?: string | null
           id?: string
           is_active?: boolean | null
           logo_dark_url?: string | null
@@ -1244,6 +1250,8 @@ export type Database = {
           created_at: string | null
           favicon_dark_url: string | null
           favicon_light_url: string | null
+          full_logo_dark_url: string | null
+          full_logo_light_url: string | null
           id: string
           logo_dark_url: string | null
           logo_light_url: string | null
@@ -1254,6 +1262,8 @@ export type Database = {
           created_at?: string | null
           favicon_dark_url?: string | null
           favicon_light_url?: string | null
+          full_logo_dark_url?: string | null
+          full_logo_light_url?: string | null
           id?: string
           logo_dark_url?: string | null
           logo_light_url?: string | null
@@ -1264,6 +1274,8 @@ export type Database = {
           created_at?: string | null
           favicon_dark_url?: string | null
           favicon_light_url?: string | null
+          full_logo_dark_url?: string | null
+          full_logo_light_url?: string | null
           id?: string
           logo_dark_url?: string | null
           logo_light_url?: string | null
@@ -1513,10 +1525,13 @@ export type Database = {
           current_team_members: number
           custom_price_monthly_cents: number
           display_price_cents: number
+          full_logo_dark_url: string
+          full_logo_light_url: string
           id: string
           is_active: boolean
           is_custom_pricing: boolean
-          logo_url: string
+          logo_dark_url: string
+          logo_light_url: string
           name: string
           owner_id: string
           plan_name: string

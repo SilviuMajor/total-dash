@@ -45,6 +45,8 @@ export default function SuperAdminSettings() {
     company_name: 'FiveLeaf',
     logo_light_url: '',
     logo_dark_url: '',
+    full_logo_light_url: '',
+    full_logo_dark_url: '',
     favicon_light_url: '',
     favicon_dark_url: ''
   });
@@ -90,6 +92,8 @@ export default function SuperAdminSettings() {
           company_name: data.company_name || 'FiveLeaf',
           logo_light_url: data.logo_light_url || '',
           logo_dark_url: data.logo_dark_url || '',
+          full_logo_light_url: data.full_logo_light_url || '',
+          full_logo_dark_url: data.full_logo_dark_url || '',
           favicon_light_url: data.favicon_light_url || '',
           favicon_dark_url: data.favicon_dark_url || ''
         });
@@ -108,6 +112,8 @@ export default function SuperAdminSettings() {
           company_name: branding.company_name,
           logo_light_url: branding.logo_light_url,
           logo_dark_url: branding.logo_dark_url,
+          full_logo_light_url: branding.full_logo_light_url,
+          full_logo_dark_url: branding.full_logo_dark_url,
           favicon_light_url: branding.favicon_light_url,
           favicon_dark_url: branding.favicon_dark_url
         })
@@ -513,11 +519,22 @@ export default function SuperAdminSettings() {
                   onChange={(e) => setBranding({ ...branding, company_name: e.target.value })}
                   placeholder="Enter company name"
                 />
+                <p className="text-xs text-muted-foreground">
+                  Used across all dashboards and communications
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold">Logo Usage Guide</h3>
+                <p className="text-xs text-muted-foreground mb-4">
+                  Two logo types: <strong>Sidebar Logo</strong> (square, 48-128px) for dashboards, and <strong>Full Logo</strong> (wide, 400x100px) for login pages and emails.
+                </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <BrandingUpload
-                  label="Logo (Light Mode)"
+                  label="Sidebar Logo (Light Mode)"
+                  description="Square logo displayed in sidebars when light theme is active. Appears in: Admin sidebar, Agency sidebar."
                   currentUrl={branding.logo_light_url}
                   onUpload={(url) => setBranding({ ...branding, logo_light_url: url })}
                   bucket="platform-branding"
@@ -526,7 +543,8 @@ export default function SuperAdminSettings() {
                 />
 
                 <BrandingUpload
-                  label="Logo (Dark Mode)"
+                  label="Sidebar Logo (Dark Mode)"
+                  description="Square logo displayed in sidebars when dark theme is active. Appears in: Admin sidebar, Agency sidebar."
                   currentUrl={branding.logo_dark_url}
                   onUpload={(url) => setBranding({ ...branding, logo_dark_url: url })}
                   bucket="platform-branding"
@@ -537,7 +555,30 @@ export default function SuperAdminSettings() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <BrandingUpload
+                  label="Full Logo (Light Mode)"
+                  description="Wide format logo for login pages and email templates (light theme). Appears in: Super Admin login, Agency login, Email headers."
+                  currentUrl={branding.full_logo_light_url}
+                  onUpload={(url) => setBranding({ ...branding, full_logo_light_url: url })}
+                  bucket="platform-branding"
+                  acceptedTypes={['.png', '.jpg', '.jpeg', '.svg']}
+                  type="full-logo"
+                />
+
+                <BrandingUpload
+                  label="Full Logo (Dark Mode)"
+                  description="Wide format logo for login pages and email templates (dark theme). Appears in: Super Admin login, Agency login, Email headers."
+                  currentUrl={branding.full_logo_dark_url}
+                  onUpload={(url) => setBranding({ ...branding, full_logo_dark_url: url })}
+                  bucket="platform-branding"
+                  acceptedTypes={['.png', '.jpg', '.jpeg', '.svg']}
+                  type="full-logo"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <BrandingUpload
                   label="Favicon (Light Mode)"
+                  description="Browser tab icon shown when light theme is active. Appears in: Browser tabs, bookmarks."
                   currentUrl={branding.favicon_light_url}
                   onUpload={(url) => setBranding({ ...branding, favicon_light_url: url })}
                   bucket="platform-branding"
@@ -547,6 +588,7 @@ export default function SuperAdminSettings() {
 
                 <BrandingUpload
                   label="Favicon (Dark Mode)"
+                  description="Browser tab icon shown when dark theme is active. Appears in: Browser tabs, bookmarks."
                   currentUrl={branding.favicon_dark_url}
                   onUpload={(url) => setBranding({ ...branding, favicon_dark_url: url })}
                   bucket="platform-branding"

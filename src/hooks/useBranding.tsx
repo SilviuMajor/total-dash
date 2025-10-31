@@ -4,9 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 export interface BrandingData {
   companyName: string;
   logoUrl: string;
+  fullLogoUrl: string;
   faviconUrl: string;
   logoLightUrl?: string;
   logoDarkUrl?: string;
+  fullLogoLightUrl?: string;
+  fullLogoDarkUrl?: string;
   faviconLightUrl?: string;
   faviconDarkUrl?: string;
 }
@@ -20,7 +23,8 @@ export const useBranding = ({ isClientView, agencyId }: UseBrandingContext) => {
   const [branding, setBranding] = useState<BrandingData>({
     companyName: 'FiveLeaf',
     logoUrl: '',
-    faviconUrl: '',
+    fullLogoUrl: '',
+    faviconUrl: '/favicon.ico',
   });
   const [isDarkMode, setIsDarkMode] = useState(false);
 
@@ -50,17 +54,20 @@ export const useBranding = ({ isClientView, agencyId }: UseBrandingContext) => {
         companyName: platformData?.company_name || 'FiveLeaf',
         logoLightUrl: platformData?.logo_light_url,
         logoDarkUrl: platformData?.logo_dark_url,
+        fullLogoLightUrl: platformData?.full_logo_light_url,
+        fullLogoDarkUrl: platformData?.full_logo_dark_url,
         faviconLightUrl: platformData?.favicon_light_url,
         faviconDarkUrl: platformData?.favicon_dark_url,
         logoUrl: '',
-        faviconUrl: '',
+        fullLogoUrl: '',
+        faviconUrl: '/favicon.ico',
       };
 
       // If client view and agency ID provided, fetch agency whitelabel (override layer)
       if (isClientView && agencyId) {
         const { data: agencyData } = await supabase
           .from('agencies')
-          .select('logo_light_url, logo_dark_url, favicon_light_url, favicon_dark_url, name')
+          .select('logo_light_url, logo_dark_url, full_logo_light_url, full_logo_dark_url, favicon_light_url, favicon_dark_url, name')
           .eq('id', agencyId)
           .single();
 
@@ -68,6 +75,8 @@ export const useBranding = ({ isClientView, agencyId }: UseBrandingContext) => {
           // Override with agency branding if provided (partial override support)
           if (agencyData.logo_light_url) finalBranding.logoLightUrl = agencyData.logo_light_url;
           if (agencyData.logo_dark_url) finalBranding.logoDarkUrl = agencyData.logo_dark_url;
+          if (agencyData.full_logo_light_url) finalBranding.fullLogoLightUrl = agencyData.full_logo_light_url;
+          if (agencyData.full_logo_dark_url) finalBranding.fullLogoDarkUrl = agencyData.full_logo_dark_url;
           if (agencyData.favicon_light_url) finalBranding.faviconLightUrl = agencyData.favicon_light_url;
           if (agencyData.favicon_dark_url) finalBranding.faviconDarkUrl = agencyData.favicon_dark_url;
           if (agencyData.name) finalBranding.companyName = agencyData.name;
@@ -78,6 +87,11 @@ export const useBranding = ({ isClientView, agencyId }: UseBrandingContext) => {
       finalBranding.logoUrl = isDarkMode 
         ? (finalBranding.logoDarkUrl || finalBranding.logoLightUrl || '')
         : (finalBranding.logoLightUrl || finalBranding.logoDarkUrl || '');
+
+      // Auto-select full logo based on theme, fallback to sidebar logo if no full logo
+      finalBranding.fullLogoUrl = isDarkMode
+        ? (finalBranding.fullLogoDarkUrl || finalBranding.fullLogoLightUrl || finalBranding.logoDarkUrl || finalBranding.logoLightUrl || '')
+        : (finalBranding.fullLogoLightUrl || finalBranding.fullLogoDarkUrl || finalBranding.logoLightUrl || finalBranding.logoDarkUrl || '');
 
       finalBranding.faviconUrl = isDarkMode
         ? (finalBranding.faviconDarkUrl || finalBranding.faviconLightUrl || '/favicon.ico')
@@ -90,6 +104,7 @@ export const useBranding = ({ isClientView, agencyId }: UseBrandingContext) => {
       setBranding({
         companyName: 'FiveLeaf',
         logoUrl: '',
+        fullLogoUrl: '',
         faviconUrl: '/favicon.ico',
       });
     }

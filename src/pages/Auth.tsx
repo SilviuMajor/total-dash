@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { signIn, signUp } from "@/lib/auth";
 import { useAuth } from "@/hooks/useAuth";
+import { useBranding } from "@/hooks/useBranding";
 import logo from "@/assets/fiveleaf-logo.png";
 
 export default function Auth() {
@@ -18,6 +19,7 @@ export default function Auth() {
   const { toast } = useToast();
   const { user, profile } = useAuth();
   const navigate = useNavigate();
+  const branding = useBranding({ isClientView: true });
 
   useEffect(() => {
     if (user && profile) {
@@ -69,9 +71,11 @@ export default function Auth() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/30 p-4">
       <Card className="w-full max-w-md bg-gradient-card border-border/50">
         <CardHeader className="space-y-4 text-center">
-          <div className="flex justify-center">
-            <img src={logo} alt="Logo" className="h-16 w-auto" />
-          </div>
+          {branding.fullLogoUrl && (
+            <div className="flex justify-center">
+              <img src={branding.fullLogoUrl} alt={branding.companyName} className="h-16 w-auto object-contain" />
+            </div>
+          )}
           <div>
             <CardTitle className="text-2xl font-bold text-foreground">
               {isSignUp ? "Create Account" : "Welcome Back"}
