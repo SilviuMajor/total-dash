@@ -46,54 +46,29 @@ export default function AgencyBilling() {
 
   const loadBillingData = async () => {
     try {
-      const { data, error } = await supabase
-        .from('agencies')
-        .select(`
-          id,
-          name,
-          logo_url,
-          created_at,
-          agency_subscriptions (
-            status,
-            current_period_end,
-            trial_ends_at,
-            created_at,
-            stripe_subscription_id,
-            snapshot_plan_name,
-            snapshot_price_monthly_cents,
-            custom_price_monthly_cents,
-            is_custom_pricing,
-            plan:subscription_plans (
-              name,
-              price_monthly_cents
-            )
-          )
-        `);
+      console.log("Loading billing data via edge function...");
+      
+      const { data: session } = await supabase.auth.getSession();
+      if (!session?.session) {
+        console.error("Not authenticated");
+        return;
+      }
 
-      if (error) throw error;
+      const { data, error } = await supabase.functions.invoke('get-billing-data', {
+        headers: {
+          Authorization: `Bearer ${session.session.access_token}`,
+        },
+      });
 
-      const formatted = data?.map((agency: any) => {
-        const sub = agency.agency_subscriptions?.[0];
-        const price = sub?.is_custom_pricing 
-          ? sub.custom_price_monthly_cents 
-          : (sub?.snapshot_price_monthly_cents || sub?.plan?.price_monthly_cents || 0);
-        
-        return {
-          id: agency.id,
-          name: agency.name,
-          logo_url: agency.logo_url,
-          created_at: agency.created_at,
-          status: sub?.status || 'none',
-          current_period_end: sub?.current_period_end,
-          trial_ends_at: sub?.trial_ends_at,
-          subscription_created_at: sub?.created_at,
-          plan_name: sub?.snapshot_plan_name || sub?.plan?.name || 'No Plan',
-          price_monthly_cents: price,
-          stripe_subscription_id: sub?.stripe_subscription_id,
-        };
-      }) || [];
+      if (error) {
+        console.error("Edge function error:", error);
+        throw error;
+      }
 
-      setBillingData(formatted);
+      console.log(`Loaded ${data?.data?.length || 0} agencies from edge function`);
+      console.log("Sample agency data:", data?.data?.[0]);
+      
+      setBillingData(data?.data || []);
     } catch (error) {
       console.error('Error loading billing data:', error);
     } finally {
