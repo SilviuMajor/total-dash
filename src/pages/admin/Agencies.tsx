@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Users, Calendar, ArrowRight } from "lucide-react";
+import { Building2, Users, Calendar, ArrowRight, Settings, Eye } from "lucide-react";
 import { toast } from "sonner";
 
 interface Agency {
@@ -21,6 +21,7 @@ interface Agency {
     status: string;
     plan: {
       name: string;
+      price_cents: number;
     };
     current_clients: number;
     current_agents: number;
@@ -38,32 +39,26 @@ export default function Agencies() {
 
   const loadAgencies = async () => {
     try {
-      console.log("Loading agencies..."); // Debug logging
+      console.log("Loading agencies via edge function...");
       
-      const { data, error } = await supabase
-        .from('agencies')
-        .select(`
-          *,
-          subscription:agency_subscriptions (
-            status,
-            current_clients,
-            current_agents,
-            plan:subscription_plans (
-              name
-            )
-          )
-        `)
-        .order('created_at', { ascending: false });
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session) {
+        throw new Error("Not authenticated");
+      }
 
-      console.log("Agencies query result:", { data, error }); // Debug logging
+      const { data, error } = await supabase.functions.invoke('get-agencies-overview', {
+        headers: {
+          Authorization: `Bearer ${session.session.access_token}`,
+        },
+      });
 
       if (error) {
-        console.error("Query error:", error); // Debug logging
+        console.error("Edge function error:", error);
         throw error;
       }
-      
-      console.log(`Loaded ${data?.length || 0} agencies`); // Debug logging
-      setAgencies(data || []);
+
+      console.log("Agencies loaded:", data?.agencies?.length || 0);
+      setAgencies(data?.agencies || []);
     } catch (error: any) {
       toast.error("Failed to load agencies");
       console.error("Load agencies error:", error);
@@ -77,7 +72,7 @@ export default function Agencies() {
       return <Badge variant="destructive">Inactive</Badge>;
     }
     
-    const subscription = agency.subscription?.[0];
+    const subscription = agency.subscription;
     if (!subscription) {
       return <Badge variant="secondary">No Subscription</Badge>;
     }
@@ -121,7 +116,7 @@ export default function Agencies() {
 
       <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
         {agencies.map((agency) => {
-          const subscription = agency.subscription?.[0];
+          const subscription = agency.subscription;
           
           return (
             <Card key={agency.id} className="hover:shadow-lg transition-shadow">
@@ -143,11 +138,17 @@ export default function Agencies() {
                 <CardTitle className="text-lg">{agency.name}</CardTitle>
                 <CardDescription className="text-xs">@{agency.slug}</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-4">
                 <div className="space-y-2 text-sm">
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground">Plan</span>
                     <span className="font-medium">{subscription?.plan?.name || 'No Plan'}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">MRR</span>
+                    <span className="font-medium">
+                      ${((subscription?.plan?.price_cents || 0) / 100).toFixed(2)}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground">Clients</span>
@@ -165,15 +166,26 @@ export default function Agencies() {
                   </div>
                 </div>
 
-                <Button
-                  className="w-full"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => navigate(`/admin/agencies/${agency.id}`)}
-                >
-                  Manage Agency
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    className="flex-1"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate(`/admin/agencies/${agency.id}`)}
+                  >
+                    <Settings className="w-4 h-4 mr-2" />
+                    Settings
+                  </Button>
+                  <Button
+                    className="flex-1"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open(`/agency?preview=true&agencyId=${agency.id}`, '_blank')}
+                  >
+                    <Eye className="w-4 h-4 mr-2" />
+                    Preview
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           );

@@ -45,31 +45,9 @@ serve(async (req) => {
       });
     }
 
-    // Fetch all agencies with their subscriptions (no RLS restrictions)
+    // Use database function to get billing data
     const { data: agencies, error } = await supabaseAdmin
-      .from('agencies')
-      .select(`
-        id,
-        name,
-        logo_url,
-        created_at,
-        agency_subscriptions (
-          status,
-          current_period_end,
-          trial_ends_at,
-          created_at,
-          stripe_subscription_id,
-          snapshot_plan_name,
-          custom_price_monthly_cents,
-          snapshot_price_monthly_cents,
-          is_custom_pricing,
-          subscription_plans (
-            name,
-            price_monthly_cents
-          )
-        )
-      `)
-      .order('created_at', { ascending: false });
+      .rpc('get_billing_data_detailed');
 
     if (error) {
       console.error("Database query error:", error);
@@ -80,35 +58,31 @@ serve(async (req) => {
 
     // Format the data
     const formatted = agencies?.map((agency: any) => {
-      const sub = agency.agency_subscriptions?.[0];
-      
-      // Determine price based on custom pricing or snapshot/plan
-      const price = sub?.is_custom_pricing 
-        ? sub.custom_price_monthly_cents 
-        : (sub?.snapshot_price_monthly_cents || sub?.subscription_plans?.price_monthly_cents || 0);
-      
       // Determine plan name with custom indicator
       let planName = 'No Plan';
-      if (sub) {
-        if (sub.is_custom_pricing) {
-          planName = `${sub.snapshot_plan_name || 'Custom Plan'} (Custom)`;
+      if (agency.subscription_status) {
+        if (agency.is_custom_pricing) {
+          planName = `${agency.plan_name || 'Custom Plan'} (Custom)`;
         } else {
-          planName = sub.snapshot_plan_name || sub.subscription_plans?.name || 'No Plan';
+          planName = agency.plan_name || 'No Plan';
         }
       }
       
       return {
         id: agency.id,
         name: agency.name,
-        logo_url: agency.logo_url,
+        slug: agency.slug,
         created_at: agency.created_at,
-        status: sub?.status || 'none',
-        current_period_end: sub?.current_period_end,
-        trial_ends_at: sub?.trial_ends_at,
-        subscription_created_at: sub?.created_at,
+        status: agency.subscription_status || 'none',
+        current_period_end: agency.current_period_end,
+        trial_ends_at: agency.trial_ends_at,
         plan_name: planName,
-        price_monthly_cents: price,
-        stripe_subscription_id: sub?.stripe_subscription_id,
+        price_monthly_cents: agency.display_price_cents || 0,
+        stripe_subscription_id: agency.stripe_subscription_id,
+        current_clients: agency.current_clients || 0,
+        current_agents: agency.current_agents || 0,
+        max_clients: agency.max_clients || 0,
+        max_agents: agency.max_agents || 0,
       };
     }) || [];
 

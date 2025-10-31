@@ -1462,6 +1462,56 @@ export type Database = {
         Returns: boolean
       }
       cleanup_expired_auth_contexts: { Args: never; Returns: undefined }
+      get_agencies_overview_data: {
+        Args: never
+        Returns: {
+          created_at: string
+          current_agents: number
+          current_clients: number
+          current_team_members: number
+          custom_price_monthly_cents: number
+          display_price_cents: number
+          id: string
+          is_active: boolean
+          is_custom_pricing: boolean
+          logo_url: string
+          name: string
+          owner_id: string
+          plan_name: string
+          plan_price_cents: number
+          slug: string
+          subscription_status: string
+          support_email: string
+          trial_ends_at: string
+        }[]
+      }
+      get_billing_data_detailed: {
+        Args: never
+        Returns: {
+          created_at: string
+          current_agents: number
+          current_clients: number
+          current_period_end: string
+          current_period_start: string
+          current_team_members: number
+          custom_price_monthly_cents: number
+          display_price_cents: number
+          id: string
+          is_custom_limits: boolean
+          is_custom_pricing: boolean
+          max_agents: number
+          max_clients: number
+          max_team_members: number
+          name: string
+          plan_name: string
+          plan_price_cents: number
+          slug: string
+          stripe_customer_id: string
+          stripe_subscription_id: string
+          subscription_status: string
+          trial_ends_at: string
+        }[]
+      }
       get_user_agency_id: { Args: { _user_id: string }; Returns: string }
       get_user_client_ids: {
         Args: { user_id: string }

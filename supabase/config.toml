@@ -38,3 +38,6 @@ verify_jwt = true
 
 [functions.schedule-trial-reminder-emails]
 verify_jwt = false
+
+[functions.get-agencies-overview]
+verify_jwt = true
