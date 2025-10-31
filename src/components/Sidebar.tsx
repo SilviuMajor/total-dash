@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
 import { useClientAgentContext } from "@/hooks/useClientAgentContext";
 import { useBranding } from "@/hooks/useBranding";
+import { useTheme } from "@/hooks/useTheme";
 import { ClientAgentSelector } from "./ClientAgentSelector";
 import { UserProfileCard } from "./UserProfileCard";
 import { Button } from "./ui/button";
@@ -40,6 +41,7 @@ export function Sidebar() {
   const { profile, signOut } = useAuth();
   const { profile: mtProfile, userType, signOut: mtSignOut, isPreviewMode: mtIsPreviewMode, previewAgency, isClientPreviewMode, previewClient, previewClientAgencyId } = useMultiTenantAuth();
   const { selectedAgentPermissions, agents, selectedAgentId } = useClientAgentContext();
+  const { effectiveTheme } = useTheme();
   const location = useLocation();
   const isAdmin = profile?.role === 'admin';
   const [clientPermissions, setClientPermissions] = useState<any>(null);
@@ -49,7 +51,7 @@ export function Sidebar() {
   const agencyId = previewClientAgencyId || (mtProfile?.agency?.id);
   
   // Use branding hook for dynamic branding
-  const branding = useBranding({ isClientView, agencyId });
+  const branding = useBranding({ isClientView, agencyId, appTheme: effectiveTheme });
   
   // Use multi-tenant auth if available
   const effectiveProfile = mtProfile || profile;

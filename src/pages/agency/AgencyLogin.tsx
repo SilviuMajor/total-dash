@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { PhoneNumberInput } from "@/components/ui/phone-input";
 import { isValidPhoneNumber } from "react-phone-number-input";
+import { useBranding } from "@/hooks/useBranding";
 
 export default function AgencyLogin() {
   const [email, setEmail] = useState("");
@@ -21,6 +22,7 @@ export default function AgencyLogin() {
   const [emailError, setEmailError] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const branding = useBranding({ isClientView: false, agencyId: undefined, appTheme: 'light' });
 
   // Email validation function
   const validateEmail = (email: string): boolean => {
@@ -198,11 +200,24 @@ export default function AgencyLogin() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-3xl font-bold text-center">Agency Portal</CardTitle>
-          <CardDescription className="text-center">
-            Create your agency account or sign in
-          </CardDescription>
+        <CardHeader className="space-y-4">
+          {branding.fullLogoUrl && (
+            <div className="flex justify-center">
+              <img 
+                src={branding.fullLogoUrl} 
+                alt={branding.companyName} 
+                className="h-12 object-contain" 
+              />
+            </div>
+          )}
+          <div className="space-y-1">
+            <CardTitle className="text-3xl font-bold text-center">
+              {branding.companyName} Agency Portal
+            </CardTitle>
+            <CardDescription className="text-center">
+              Create your agency account or sign in
+            </CardDescription>
+          </div>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="signup" className="w-full">
