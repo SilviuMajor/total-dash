@@ -45,59 +45,22 @@ serve(async (req) => {
       );
     }
 
-    if (!plan.stripe_price_id) {
-      throw new Error("Plan has no Stripe price ID configured");
-    }
+    // Calculate trial end date (no Stripe needed for trials)
+    const trialEndsAt = new Date();
+    trialEndsAt.setDate(trialEndsAt.getDate() + plan.trial_duration_days);
 
-    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-    if (!stripeKey) {
-      throw new Error("STRIPE_SECRET_KEY not configured");
-    }
-
-    const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
-
-    // Create or find Stripe customer
-    let customer;
-    const existingCustomers = await stripe.customers.list({
-      email: userEmail,
-      limit: 1,
-    });
-
-    if (existingCustomers.data.length > 0) {
-      customer = existingCustomers.data[0];
-    } else {
-      customer = await stripe.customers.create({
-        email: userEmail,
-        metadata: { agency_id: agencyId },
-      });
-    }
-
-    // Create Stripe subscription with trial
-    const subscription = await stripe.subscriptions.create({
-      customer: customer.id,
-      items: [{ price: plan.stripe_price_id }],
-      trial_period_days: plan.trial_duration_days,
-      payment_behavior: "default_incomplete",
-      payment_settings: {
-        save_default_payment_method: "on_subscription",
-      },
-      expand: ["latest_invoice.payment_intent"],
-    });
-
-    const trialEndsAt = new Date(subscription.trial_end! * 1000);
-
-    // Store in agency_subscriptions
+    // Store trial subscription in database (Stripe IDs will be added later when they subscribe)
     const { error: upsertError } = await supabaseClient
       .from("agency_subscriptions")
       .upsert({
         agency_id: agencyId,
         plan_id: plan.id,
-        stripe_subscription_id: subscription.id,
-        stripe_customer_id: customer.id,
+        stripe_subscription_id: null, // Will be set when they subscribe after trial
+        stripe_customer_id: null,     // Will be set when they subscribe after trial
         status: "trialing",
         trial_ends_at: trialEndsAt.toISOString(),
-        current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-        current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+        current_period_start: new Date().toISOString(),
+        current_period_end: trialEndsAt.toISOString(),
         snapshot_plan_name: plan.name,
         snapshot_price_monthly_cents: plan.price_monthly_cents,
         snapshot_max_clients: plan.max_clients,
@@ -105,6 +68,9 @@ serve(async (req) => {
         snapshot_max_team_members: plan.max_team_members,
         snapshot_extras: plan.extras,
         snapshot_created_at: new Date().toISOString(),
+        current_clients: 0,
+        current_agents: 0,
+        current_team_members: 1, // The owner
       }, {
         onConflict: "agency_id"
       });
@@ -145,9 +111,8 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        subscriptionId: subscription.id,
         trialEndsAt: trialEndsAt.toISOString(),
-        clientSecret: (subscription.latest_invoice as any)?.payment_intent?.client_secret,
+        message: "Trial subscription created successfully",
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

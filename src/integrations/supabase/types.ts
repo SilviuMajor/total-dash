@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       agencies: {
         Row: {
+          contact_phone: string | null
           created_at: string | null
           custom_css: string | null
           deleted_at: string | null
@@ -38,6 +39,7 @@ export type Database = {
           whitelabel_verified_at: string | null
         }
         Insert: {
+          contact_phone?: string | null
           created_at?: string | null
           custom_css?: string | null
           deleted_at?: string | null
@@ -60,6 +62,7 @@ export type Database = {
           whitelabel_verified_at?: string | null
         }
         Update: {
+          contact_phone?: string | null
           created_at?: string | null
           custom_css?: string | null
           deleted_at?: string | null

@@ -8,46 +8,72 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { PhoneNumberInput } from "@/components/ui/phone-input";
+import { isValidPhoneNumber } from "react-phone-number-input";
 
 export default function AgencyLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [agencyName, setAgencyName] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState<string>("");
+  const [emailError, setEmailError] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  // Email validation function
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  // Handle email change with validation
+  const handleEmailChange = (value: string) => {
+    setEmail(value);
+    if (value && !validateEmail(value)) {
+      setEmailError("Please enter a valid email address");
+    } else {
+      setEmailError("");
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
+      // Step 1: Authenticate user
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) throw error;
-
-      if (data.user) {
-        // Verify agency user status
-        const { data: agencyUserData, error: agencyError } = await supabase
-          .from('agency_users')
-          .select('*')
-          .eq('user_id', data.user.id)
-          .single();
-
-        if (agencyError || !agencyUserData) {
-          await supabase.auth.signOut();
-          toast.error("Access denied. Agency account required.");
-          setLoading(false);
-          return;
-        }
-
-        toast.success("Welcome back!");
-        navigate("/agency");
+      if (error) {
+        throw new Error("Invalid email or password");
       }
+
+      // Step 2: Verify agency association
+      const { data: agencyUsers, error: agencyUserError } = await supabase
+        .from('agency_users')
+        .select('agency_id, role')
+        .eq('user_id', data.user.id);
+
+      if (agencyUserError) {
+        console.error("Agency lookup error:", agencyUserError);
+        throw new Error("Failed to verify agency access. Please try again.");
+      }
+
+      if (!agencyUsers || agencyUsers.length === 0) {
+        await supabase.auth.signOut();
+        throw new Error("No agency found for this account. Please sign up first.");
+      }
+
+      // Step 3: Success - redirect
+      toast.success("Welcome back!");
+      navigate("/agency");
+      
     } catch (error: any) {
+      console.error("Login error:", error);
       toast.error(error.message || "Failed to sign in");
     } finally {
       setLoading(false);
@@ -78,13 +104,25 @@ export default function AgencyLogin() {
         // Create agency slug from name
         const slug = agencyName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
-        // Create agency
+        // Check if slug already exists
+        const { data: existingAgency } = await supabase
+          .from('agencies')
+          .select('id')
+          .eq('slug', slug)
+          .maybeSingle();
+
+        if (existingAgency) {
+          throw new Error(`Agency name "${agencyName}" is already taken. Please choose a different name.`);
+        }
+
+        // Create agency with phone number
         const { data: agencyData, error: agencyError } = await supabase
           .from('agencies')
           .insert({
             name: agencyName,
             slug: slug,
             owner_id: data.user.id,
+            contact_phone: phoneNumber,
             trial_ends_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days
           })
           .select()
@@ -110,32 +148,44 @@ export default function AgencyLogin() {
         if (agencyUserError) throw agencyUserError;
 
         // Create trial subscription via edge function
-        try {
-          const { data: trialData, error: trialError } = await supabase.functions.invoke(
-            'create-trial-subscription',
-            {
-              body: {
-                agencyId: agencyData.id,
-                userEmail: email,
-              },
-            }
-          );
-
-          if (trialError) {
-            console.error("Trial subscription setup failed:", trialError);
-            // Don't fail signup if trial setup fails
+        const { data: trialData, error: trialError } = await supabase.functions.invoke(
+          'create-trial-subscription',
+          {
+            body: {
+              agencyId: agencyData.id,
+              userEmail: email,
+            },
           }
+        );
 
+        if (trialError) {
+          console.error("Trial setup error:", trialError);
+          toast.warning(
+            "Account created successfully! Trial setup pending - please contact support if you don't receive a welcome email.",
+            { duration: 5000 }
+          );
+        } else {
           toast.success("Account created! Your 7-day trial has started. Check your email for details.");
-        } catch (trialError) {
-          console.error("Trial subscription error:", trialError);
-          toast.success("Account created! Please complete payment setup.");
         }
 
+        // Redirect after edge function completes
         navigate("/agency");
       }
     } catch (error: any) {
-      toast.error(error.message || "Failed to create account");
+      console.error("Signup error:", error);
+      
+      // Check for specific error types
+      if (error.message?.includes("duplicate") || error.code === "23505") {
+        toast.error("An account with this email already exists. Please sign in instead.");
+      } else if (error.message?.includes("invalid email")) {
+        toast.error("Please enter a valid email address.");
+      } else if (error.message?.includes("password")) {
+        toast.error("Password must be at least 6 characters.");
+      } else if (error.message?.includes("Agency name") && error.message?.includes("taken")) {
+        toast.error(error.message);
+      } else {
+        toast.error(error.message || "Failed to create account. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -167,10 +217,13 @@ export default function AgencyLogin() {
                     type="email"
                     placeholder="you@agency.com"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => handleEmailChange(e.target.value)}
                     required
                     disabled={loading}
                   />
+                  {emailError && (
+                    <p className="text-sm text-destructive">{emailError}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="login-password">Password</Label>
@@ -183,7 +236,11 @@ export default function AgencyLogin() {
                     disabled={loading}
                   />
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button 
+                  type="submit" 
+                  className="w-full" 
+                  disabled={loading || !email || !!emailError || !password}
+                >
                   {loading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -229,10 +286,28 @@ export default function AgencyLogin() {
                     type="email"
                     placeholder="you@agency.com"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => handleEmailChange(e.target.value)}
                     required
                     disabled={loading}
                   />
+                  {emailError && (
+                    <p className="text-sm text-destructive">{emailError}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-phone">Phone Number *</Label>
+                  <PhoneNumberInput
+                    value={phoneNumber}
+                    onChange={(value) => setPhoneNumber(value || "")}
+                    required
+                    placeholder="+1 (555) 123-4567"
+                    disabled={loading}
+                  />
+                  {phoneNumber && !isValidPhoneNumber(phoneNumber) && (
+                    <p className="text-sm text-destructive">
+                      Please enter a valid phone number
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signup-password">Password</Label>
@@ -246,7 +321,20 @@ export default function AgencyLogin() {
                     minLength={6}
                   />
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button 
+                  type="submit" 
+                  className="w-full" 
+                  disabled={
+                    loading || 
+                    !email || 
+                    !!emailError || 
+                    !password || 
+                    !agencyName || 
+                    !fullName || 
+                    !phoneNumber ||
+                    (phoneNumber && !isValidPhoneNumber(phoneNumber))
+                  }
+                >
                   {loading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
