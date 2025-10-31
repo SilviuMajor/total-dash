@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
+import { useTheme } from "@/hooks/useTheme";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronDown, ChevronLeft, User, Mail, Lock, Bell } from "lucide-react";
+import { ChevronDown, ChevronLeft, User, Mail, Lock, Bell, Sun, Moon } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 interface Department {
@@ -24,6 +25,7 @@ type MenuView = 'main' | 'account' | 'edit-name' | 'change-email' | 'change-pass
 
 export function UserProfileCard({ onSignOut }: UserProfileCardProps) {
   const { profile, userType } = useMultiTenantAuth();
+  const { effectiveTheme, setTheme, isLoading: themeLoading } = useTheme();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [menuView, setMenuView] = useState<MenuView>('main');
@@ -272,19 +274,36 @@ export function UserProfileCard({ onSignOut }: UserProfileCardProps) {
         {/* Main Menu */}
         {menuView === 'main' && (
           <div className="space-y-1 p-2">
-            <div className="px-3 py-2 mb-2">
-              <p className="text-sm font-medium text-foreground">
-                {firstName && lastName ? `${firstName} ${lastName}` : 'User Profile'}
-              </p>
-              <p className="text-xs text-muted-foreground">{email}</p>
-              {department && (
-                <Badge 
-                  className="mt-2 text-xs"
-                  style={{ backgroundColor: department.color }}
-                >
-                  {department.name}
-                </Badge>
-              )}
+            <div className="px-3 py-2 mb-2 flex items-start justify-between">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground">
+                  {firstName && lastName ? `${firstName} ${lastName}` : 'User Profile'}
+                </p>
+                <p className="text-xs text-muted-foreground">{email}</p>
+                {department && (
+                  <Badge 
+                    className="mt-2 text-xs"
+                    style={{ backgroundColor: department.color }}
+                  >
+                    {department.name}
+                  </Badge>
+                )}
+              </div>
+              
+              {/* Theme toggle button */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 flex-shrink-0 ml-2"
+                onClick={() => setTheme(effectiveTheme === 'dark' ? 'light' : 'dark')}
+                disabled={themeLoading}
+              >
+                {effectiveTheme === 'dark' ? (
+                  <Sun className="h-4 w-4" />
+                ) : (
+                  <Moon className="h-4 w-4" />
+                )}
+              </Button>
             </div>
             <Separator />
             <Button

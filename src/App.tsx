@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-route
 import { AuthProvider } from "./hooks/useAuth";
 import { MultiTenantAuthProvider, useMultiTenantAuth } from "./hooks/useMultiTenantAuth";
 import { ClientAgentProvider } from "./hooks/useClientAgentContext";
+import { ThemeProvider, useTheme } from "./hooks/useTheme";
 import { useBranding } from "./hooks/useBranding";
 import { useFavicon } from "./hooks/useFavicon";
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -46,10 +47,15 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 const BrandingWrapper = ({ children }: { children: React.ReactNode }) => {
+  const { effectiveTheme } = useTheme();
   const { isClientPreviewMode, previewClientAgencyId } = useMultiTenantAuth();
   const location = useLocation();
   const isClientView = isClientPreviewMode || location.pathname.startsWith('/');
-  const branding = useBranding({ isClientView, agencyId: previewClientAgencyId });
+  const branding = useBranding({ 
+    isClientView, 
+    agencyId: previewClientAgencyId,
+    appTheme: effectiveTheme
+  });
   
   useFavicon(branding.faviconUrl);
   
@@ -68,8 +74,9 @@ const App = () => (
       <BrowserRouter>
         <MultiTenantAuthProvider>
           <AuthProvider>
-            <ClientAgentProvider>
-              <BrandingWrapper>
+            <ThemeProvider>
+              <ClientAgentProvider>
+                <BrandingWrapper>
               <Routes>
                 {/* Admin Routes (Super Admin) */}
                 <Route path="/admin/login" element={<AdminLogin />} />
@@ -180,8 +187,9 @@ const App = () => (
                 </ProtectedRoute>
               } />
               </Routes>
-              </BrandingWrapper>
-            </ClientAgentProvider>
+                </BrandingWrapper>
+              </ClientAgentProvider>
+            </ThemeProvider>
           </AuthProvider>
         </MultiTenantAuthProvider>
       </BrowserRouter>

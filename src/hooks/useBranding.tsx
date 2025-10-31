@@ -17,30 +17,31 @@ export interface BrandingData {
 interface UseBrandingContext {
   isClientView: boolean;
   agencyId?: string;
+  appTheme?: 'light' | 'dark';
 }
 
-export const useBranding = ({ isClientView, agencyId }: UseBrandingContext) => {
+export const useBranding = ({ isClientView, agencyId, appTheme = 'light' }: UseBrandingContext) => {
   const [branding, setBranding] = useState<BrandingData>({
     companyName: 'FiveLeaf',
     logoUrl: '',
     fullLogoUrl: '',
     faviconUrl: '/favicon.ico',
   });
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [systemTheme, setSystemTheme] = useState(false);
 
-  // Detect system theme
+  // Detect system theme for favicon only
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    setIsDarkMode(mediaQuery.matches);
+    setSystemTheme(mediaQuery.matches);
 
-    const handler = (e: MediaQueryListEvent) => setIsDarkMode(e.matches);
+    const handler = (e: MediaQueryListEvent) => setSystemTheme(e.matches);
     mediaQuery.addEventListener('change', handler);
     return () => mediaQuery.removeEventListener('change', handler);
   }, []);
 
   useEffect(() => {
     loadBranding();
-  }, [isClientView, agencyId, isDarkMode]);
+  }, [isClientView, agencyId, appTheme, systemTheme]);
 
   const loadBranding = async () => {
     try {
@@ -83,17 +84,18 @@ export const useBranding = ({ isClientView, agencyId }: UseBrandingContext) => {
         }
       }
 
-      // Auto-select logo and favicon based on theme
-      finalBranding.logoUrl = isDarkMode 
+      // Select logos based on APP THEME (user's toggle)
+      finalBranding.logoUrl = appTheme === 'dark' 
         ? (finalBranding.logoDarkUrl || finalBranding.logoLightUrl || '')
         : (finalBranding.logoLightUrl || finalBranding.logoDarkUrl || '');
 
-      // Auto-select full logo based on theme, fallback to sidebar logo if no full logo
-      finalBranding.fullLogoUrl = isDarkMode
+      // Select full logo based on APP THEME, fallback to sidebar logo if no full logo
+      finalBranding.fullLogoUrl = appTheme === 'dark'
         ? (finalBranding.fullLogoDarkUrl || finalBranding.fullLogoLightUrl || finalBranding.logoDarkUrl || finalBranding.logoLightUrl || '')
         : (finalBranding.fullLogoLightUrl || finalBranding.fullLogoDarkUrl || finalBranding.logoLightUrl || finalBranding.logoDarkUrl || '');
 
-      finalBranding.faviconUrl = isDarkMode
+      // Select favicon based on SYSTEM THEME (independent of app theme toggle)
+      finalBranding.faviconUrl = systemTheme
         ? (finalBranding.faviconDarkUrl || finalBranding.faviconLightUrl || '/favicon.ico')
         : (finalBranding.faviconLightUrl || finalBranding.faviconDarkUrl || '/favicon.ico');
 
