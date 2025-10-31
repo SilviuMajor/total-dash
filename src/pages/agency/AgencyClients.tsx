@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Eye, Trash2, AlertCircle } from "lucide-react";
+import { Plus, Eye, Settings, AlertCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,6 +21,7 @@ export default function AgencyClients() {
   const [open, setOpen] = useState(false);
   const [canAddMore, setCanAddMore] = useState(true);
   const [limits, setLimits] = useState<any>(null);
+  const [clientAgents, setClientAgents] = useState<Record<string, Array<{ name: string; provider: string }>>>({});
 
   useEffect(() => {
     loadClients();
@@ -65,6 +66,11 @@ export default function AgencyClients() {
 
       if (error) throw error;
       setClients(data || []);
+      
+      // Load agents for each client
+      if (data && data.length > 0) {
+        loadClientAgents(data.map(c => c.id));
+      }
     } catch (error: any) {
       toast({
         title: "Error",
@@ -73,6 +79,33 @@ export default function AgencyClients() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadClientAgents = async (clientIds: string[]) => {
+    try {
+      const { data, error } = await supabase
+        .from('agent_assignments')
+        .select('client_id, agents(name, provider)')
+        .in('client_id', clientIds);
+
+      if (error) throw error;
+
+      // Group agents by client_id
+      const grouped = (data || []).reduce((acc: Record<string, Array<{ name: string; provider: string }>>, item: any) => {
+        if (!acc[item.client_id]) acc[item.client_id] = [];
+        if (item.agents) {
+          acc[item.client_id].push({
+            name: item.agents.name,
+            provider: item.agents.provider
+          });
+        }
+        return acc;
+      }, {});
+
+      setClientAgents(grouped);
+    } catch (error: any) {
+      console.error('Error loading client agents:', error);
     }
   };
 
@@ -114,34 +147,6 @@ export default function AgencyClients() {
       setOpen(false);
       loadClients();
       checkLimits();
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this client?')) return;
-
-    try {
-      const { error } = await supabase
-        .from('clients')
-        .update({
-          deleted_at: new Date().toISOString(),
-          scheduled_deletion_date: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString()
-        })
-        .eq('id', id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Client scheduled for deletion in 90 days",
-      });
-      loadClients();
     } catch (error: any) {
       toast({
         title: "Error",
@@ -265,13 +270,33 @@ export default function AgencyClients() {
             </CardHeader>
             <CardContent className="space-y-2">
               <p className="text-sm text-muted-foreground">{client.contact_email}</p>
-              <div className="flex gap-2">
+              
+              {/* Assigned Agents Preview */}
+              {clientAgents[client.id]?.length > 0 && (
+                <div className="mt-3 space-y-1">
+                  <p className="text-xs text-muted-foreground font-medium">Assigned Agents:</p>
+                  <div className="flex flex-wrap gap-1">
+                    {clientAgents[client.id].map((agent, idx) => (
+                      <Badge 
+                        key={idx}
+                        variant="outline" 
+                        className="text-xs px-2 py-0.5 font-normal"
+                      >
+                        {agent.name} : {agent.provider === 'voiceflow' ? 'Voiceflow' : 'Retell'}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-2 pt-2">
                 <Button
                   size="sm"
                   variant="default"
                   onClick={() => navigate(`/agency/clients/${client.id}`)}
                 >
-                  View Details
+                  <Settings className="mr-2 h-4 w-4" />
+                  Settings
                 </Button>
                 <Button
                   size="sm"
@@ -283,13 +308,6 @@ export default function AgencyClients() {
                 >
                   <Eye className="mr-2 h-4 w-4" />
                   Preview Dashboard
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => handleDelete(client.id)}
-                >
-                  <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
             </CardContent>
