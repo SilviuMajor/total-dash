@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Building2, Users, Calendar, ArrowRight, Settings, Eye } from "lucide-react";
 import { toast } from "sonner";
@@ -114,98 +115,106 @@ export default function Agencies() {
         </div>
       </div>
 
-      <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
+      <div className="space-y-3">
         {agencies.map((agency) => {
           const subscription = agency.subscription;
           
           return (
-            <Card key={agency.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between mb-3">
-                  {agency.logo_url ? (
-                    <img
-                      src={agency.logo_url}
-                      alt={agency.name}
-                      className="w-10 h-10 rounded-lg object-cover"
-                    />
-                  ) : (
-                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <Building2 className="w-5 h-5 text-primary" />
+            <Card key={agency.id} className="w-full hover:shadow-lg transition-shadow">
+              <CardContent className="p-4">
+                {/* Row 1: Logo | Agency Name | Status | Plan | Preview Button */}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    {/* Logo */}
+                    {agency.logo_url ? (
+                      <img
+                        src={agency.logo_url}
+                        alt={agency.name}
+                        className="w-10 h-10 rounded-lg object-cover"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <Building2 className="w-5 h-5 text-primary" />
+                      </div>
+                    )}
+                    
+                    {/* Agency Name */}
+                    <h3 className="text-lg font-semibold">{agency.name}</h3>
+                    
+                    {/* Status Badge */}
+                    {getStatusBadge(agency)}
+                    
+                    {/* Separator */}
+                    <Separator orientation="vertical" className="h-6" />
+                    
+                    {/* Plan */}
+                    <div className="text-sm">
+                      <span className="text-muted-foreground">Plan: </span>
+                      <span className="font-medium">{subscription?.plan?.name || 'No Plan'}</span>
                     </div>
-                  )}
-                  {getStatusBadge(agency)}
-                </div>
-                <CardTitle className="text-lg">{agency.name}</CardTitle>
-                <CardDescription className="text-xs">@{agency.slug}</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Plan</span>
-                    <span className="font-medium">{subscription?.plan?.name || 'No Plan'}</span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">MRR</span>
-                    <span className="font-medium">
-                      ${((subscription?.plan?.price_cents || 0) / 100).toFixed(2)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Clients</span>
-                    <span className="font-medium">{subscription?.current_clients || 0}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Agents</span>
-                    <span className="font-medium">{subscription?.current_agents || 0}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Created</span>
-                    <span className="font-medium text-xs">
-                      {new Date(agency.created_at).toLocaleDateString()}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex gap-2">
+                  
+                  {/* Preview Button */}
                   <Button
-                    className="flex-1"
                     variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      try {
+                        const { data: session } = await supabase.auth.getSession();
+                        const { data, error } = await supabase.functions.invoke('authenticate-with-context', {
+                          headers: {
+                            Authorization: `Bearer ${session.session?.access_token}`,
+                          },
+                          body: {
+                            contextType: 'agency',
+                            agencyId: agency.id,
+                            isPreview: true,
+                          },
+                        });
+                        
+                        if (error) throw error;
+                        
+                        window.open(`/agency?token=${data.token}`, '_blank');
+                      } catch (error) {
+                        toast.error('Failed to enter preview mode');
+                        console.error(error);
+                      }
+                    }}
+                  >
+                    <Eye className="w-4 h-4 mr-2" />
+                    Preview
+                  </Button>
+                </div>
+                
+                {/* Row 2: Clients | Agents | MRR | Settings Button */}
+                <div className="flex items-center justify-between pl-[52px]">
+                  <div className="flex items-center gap-6 text-sm text-muted-foreground">
+                    <div>
+                      Clients: <span className="font-medium text-foreground">
+                        {subscription?.current_clients || 0}
+                      </span>
+                    </div>
+                    <div>
+                      Agents: <span className="font-medium text-foreground">
+                        {subscription?.current_agents || 0}
+                      </span>
+                    </div>
+                    <div>
+                      MRR: <span className="font-medium text-foreground">
+                        ${((subscription?.plan?.price_cents || 0) / 100).toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {/* Settings Button */}
+                  <Button
+                    variant="default"
                     size="sm"
                     onClick={() => navigate(`/admin/agencies/${agency.id}`)}
                   >
                     <Settings className="w-4 h-4 mr-2" />
                     Settings
                   </Button>
-          <Button
-            className="flex-1"
-            variant="outline"
-            size="sm"
-            onClick={async () => {
-              try {
-                const { data: session } = await supabase.auth.getSession();
-                const { data, error } = await supabase.functions.invoke('authenticate-with-context', {
-                  headers: {
-                    Authorization: `Bearer ${session.session?.access_token}`,
-                  },
-                  body: {
-                    contextType: 'agency',
-                    agencyId: agency.id,
-                    isPreview: true,
-                  },
-                });
-                
-                if (error) throw error;
-                
-                window.open(`/agency?token=${data.token}`, '_blank');
-              } catch (error) {
-                toast.error('Failed to enter preview mode');
-                console.error(error);
-              }
-            }}
-          >
-            <Eye className="w-4 h-4 mr-2" />
-            Preview
-          </Button>
                 </div>
               </CardContent>
             </Card>

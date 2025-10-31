@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Eye, Settings, AlertCircle } from "lucide-react";
+import { Plus, Eye, Settings, AlertCircle, Building2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -243,61 +243,48 @@ export default function AgencyClients() {
         </Card>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="space-y-3">
         {clients.map((client) => (
-          <Card key={client.id}>
-            <CardHeader>
-              <div className="flex justify-between items-start">
-                <div>
-                  <CardTitle>{client.name}</CardTitle>
+          <Card key={client.id} className="w-full">
+            <CardContent className="p-4">
+              {/* Row 1: Logo/Icon | Client Name | Status Badge | Preview Button */}
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  {/* Logo/Icon */}
+                  {client.logo_url ? (
+                    <img
+                      src={client.logo_url}
+                      alt={client.name}
+                      className="w-10 h-10 rounded-lg object-cover"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Building2 className="w-5 h-5 text-primary" />
+                    </div>
+                  )}
+                  
+                  {/* Client Name */}
+                  <h3 className="text-lg font-semibold">{client.name}</h3>
+                  
+                  {/* Status Badge */}
                   {(() => {
                     const status = client.status?.toLowerCase() || 'active';
                     switch (status) {
                       case 'active':
-                        return <Badge className="mt-2 bg-green-600 hover:bg-green-700">Active</Badge>;
+                        return <Badge className="bg-green-600 hover:bg-green-700">Active</Badge>;
                       case 'inactive':
-                        return <Badge className="mt-2 bg-gray-500 hover:bg-gray-600">Inactive</Badge>;
+                        return <Badge className="bg-gray-500 hover:bg-gray-600">Inactive</Badge>;
                       case 'pending':
-                        return <Badge className="mt-2 border-yellow-500 text-yellow-600" variant="outline">Pending</Badge>;
+                        return <Badge className="border-yellow-500 text-yellow-600" variant="outline">Pending</Badge>;
                       case 'suspended':
-                        return <Badge className="mt-2" variant="destructive">Suspended</Badge>;
+                        return <Badge variant="destructive">Suspended</Badge>;
                       default:
-                        return <Badge className="mt-2" variant="outline">{client.status}</Badge>;
+                        return <Badge variant="outline">{client.status}</Badge>;
                     }
                   })()}
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <p className="text-sm text-muted-foreground">{client.contact_email}</p>
-              
-              {/* Assigned Agents Preview */}
-              {clientAgents[client.id]?.length > 0 && (
-                <div className="mt-3 space-y-1">
-                  <p className="text-xs text-muted-foreground font-medium">Assigned Agents:</p>
-                  <div className="flex flex-wrap gap-1">
-                    {clientAgents[client.id].map((agent, idx) => (
-                      <Badge 
-                        key={idx}
-                        variant="outline" 
-                        className="text-xs px-2 py-0.5 font-normal"
-                      >
-                        {agent.name} : {agent.provider === 'voiceflow' ? 'Voiceflow' : 'Retell'}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="flex gap-2 pt-2">
-                <Button
-                  size="sm"
-                  variant="default"
-                  onClick={() => navigate(`/agency/clients/${client.id}`)}
-                >
-                  <Settings className="mr-2 h-4 w-4" />
-                  Settings
-                </Button>
+                
+                {/* Preview Button */}
                 <Button
                   size="sm"
                   variant="outline"
@@ -307,7 +294,27 @@ export default function AgencyClients() {
                   }}
                 >
                   <Eye className="mr-2 h-4 w-4" />
-                  Preview Dashboard
+                  Preview
+                </Button>
+              </div>
+              
+              {/* Row 2: Assigned Agents Count | Settings Button */}
+              <div className="flex items-center justify-between pl-[52px]">
+                {/* Agent Count */}
+                <div className="text-sm text-muted-foreground">
+                  Agents: <span className="font-medium text-foreground">
+                    {clientAgents[client.id]?.length || 0}
+                  </span>
+                </div>
+                
+                {/* Settings Button */}
+                <Button
+                  size="sm"
+                  variant="default"
+                  onClick={() => navigate(`/agency/clients/${client.id}`)}
+                >
+                  <Settings className="mr-2 h-4 w-4" />
+                  Settings
                 </Button>
               </div>
             </CardContent>
