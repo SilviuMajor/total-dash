@@ -55,8 +55,12 @@ export function AgencyProtectedRoute({ children }: AgencyProtectedRouteProps) {
     );
   }
 
-  // Allow super admins in preview mode
-  if (isPreviewMode && userType === 'super_admin') {
+  // Check if in preview mode via token
+  const previewToken = sessionStorage.getItem('preview_token');
+  const isValidPreview = isPreviewMode && userType === 'super_admin' && previewToken;
+
+  // Allow super admins with valid preview token
+  if (isValidPreview) {
     return <>{children}</>;
   }
 
@@ -68,7 +72,7 @@ export function AgencyProtectedRoute({ children }: AgencyProtectedRouteProps) {
   const isInGracePeriod = gracePeriodEndsAt && new Date(gracePeriodEndsAt) > new Date();
   const gracePeriodExpired = gracePeriodEndsAt && new Date(gracePeriodEndsAt) <= new Date();
 
-  // Block access if grace period has expired (unless super admin preview)
+  // Block access if grace period has expired
   if (subscriptionStatus === 'past_due' && gracePeriodExpired) {
     return <Navigate to="/agency/subscription-required" replace />;
   }

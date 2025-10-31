@@ -79,6 +79,56 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
   const location = useLocation();
 
   useEffect(() => {
+    // Check for token-based preview mode FIRST
+    const searchParams = new URLSearchParams(window.location.search);
+    const tokenParam = searchParams.get('token');
+
+    if (tokenParam) {
+      // Validate token via auth_contexts table
+      const validateToken = async () => {
+        try {
+          const { data: authContext, error } = await supabase
+            .from('auth_contexts')
+            .select('*')
+            .eq('token', tokenParam)
+            .eq('is_preview', true)
+            .single();
+          
+          if (error || !authContext) {
+            console.error('Invalid preview token:', error);
+            navigate('/admin/agencies');
+            return;
+          }
+          
+          // Check if token has expired
+          if (new Date(authContext.expires_at) < new Date()) {
+            console.error('Preview session expired');
+            navigate('/admin/agencies');
+            return;
+          }
+          
+          // Token is valid - set up preview mode
+          if (authContext.context_type === 'agency' && authContext.agency_id) {
+            setIsPreviewMode(true);
+            setPreviewDepth('agency');
+            sessionStorage.setItem(PREVIEW_MODE_KEY, 'agency');
+            sessionStorage.setItem(PREVIEW_AGENCY_KEY, authContext.agency_id);
+            sessionStorage.setItem('preview_token', tokenParam);
+            await loadPreviewAgency(authContext.agency_id);
+            
+            // Clean URL (remove token param)
+            window.history.replaceState({}, '', '/agency');
+          }
+        } catch (err) {
+          console.error('Token validation error:', err);
+          navigate('/admin/agencies');
+        }
+      };
+      
+      validateToken();
+      return; // Skip other URL param checks
+    }
+
     // Check sessionStorage first for preview mode persistence
     const storedPreviewMode = sessionStorage.getItem(PREVIEW_MODE_KEY);
     const storedPreviewAgency = sessionStorage.getItem(PREVIEW_AGENCY_KEY);
@@ -86,7 +136,6 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
     const storedPreviewClientAgency = sessionStorage.getItem(PREVIEW_CLIENT_AGENCY_KEY);
     
     // Then check URL params (priority: URL > sessionStorage)
-    const searchParams = new URLSearchParams(window.location.search);
     const previewParam = searchParams.get('preview') === 'true';
     const agencyId = searchParams.get('agencyId');
     const clientId = searchParams.get('clientId');
@@ -117,10 +166,38 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
         }
       }
     } else if (storedPreviewMode === 'agency' && storedPreviewAgency) {
-      // Restore agency preview from session
-      setIsPreviewMode(true);
-      setPreviewDepth('agency');
-      loadPreviewAgency(storedPreviewAgency);
+      // Validate stored preview token before restoring
+      const storedToken = sessionStorage.getItem('preview_token');
+      
+      if (storedToken) {
+        const validateStoredToken = async () => {
+          const { data: authContext } = await supabase
+            .from('auth_contexts')
+            .select('expires_at')
+            .eq('token', storedToken)
+            .single();
+          
+          if (!authContext || new Date(authContext.expires_at) < new Date()) {
+            // Token expired - clear preview mode
+            sessionStorage.removeItem(PREVIEW_MODE_KEY);
+            sessionStorage.removeItem(PREVIEW_AGENCY_KEY);
+            sessionStorage.removeItem('preview_token');
+            console.error('Preview session expired');
+            navigate('/admin/agencies');
+          } else {
+            // Token still valid - restore preview
+            setIsPreviewMode(true);
+            setPreviewDepth('agency');
+            loadPreviewAgency(storedPreviewAgency);
+          }
+        };
+        
+        validateStoredToken();
+      } else {
+        // No token but preview mode set - clear it
+        sessionStorage.removeItem(PREVIEW_MODE_KEY);
+        sessionStorage.removeItem(PREVIEW_AGENCY_KEY);
+      }
     } else if (storedPreviewMode === 'client' && storedPreviewClient && storedPreviewClientAgency) {
       // Restore client preview from session
       setIsClientPreviewMode(true);
@@ -319,6 +396,20 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
   };
 
   const handleSignOut = async () => {
+    // Clean up preview token if exists
+    const previewToken = sessionStorage.getItem('preview_token');
+    if (previewToken) {
+      try {
+        // Delete the auth context token
+        await supabase
+          .from('auth_contexts')
+          .delete()
+          .eq('token', previewToken);
+      } catch (error) {
+        console.error('Failed to cleanup preview token:', error);
+      }
+    }
+    
     await supabase.auth.signOut();
     
     // Clear preview mode from session storage
@@ -326,6 +417,7 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
     sessionStorage.removeItem(PREVIEW_AGENCY_KEY);
     sessionStorage.removeItem(PREVIEW_CLIENT_KEY);
     sessionStorage.removeItem(PREVIEW_CLIENT_AGENCY_KEY);
+    sessionStorage.removeItem('preview_token');
     
     // Redirect based on current path
     const currentPath = window.location.pathname;

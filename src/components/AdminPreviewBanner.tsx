@@ -14,7 +14,34 @@ export function AdminPreviewBanner() {
     previewAgency, 
     previewClient 
   } = useMultiTenantAuth();
+  const [timeRemaining, setTimeRemaining] = useState<string>('');
   
+  useEffect(() => {
+    const updateTimer = async () => {
+      const token = sessionStorage.getItem('preview_token');
+      if (!token) return;
+      
+      const { data } = await supabase
+        .from('auth_contexts')
+        .select('expires_at')
+        .eq('token', token)
+        .single();
+      
+      if (data) {
+        const expiresAt = new Date(data.expires_at);
+        const now = new Date();
+        const diff = expiresAt.getTime() - now.getTime();
+        const minutes = Math.floor(diff / 60000);
+        setTimeRemaining(`${minutes} min remaining`);
+      }
+    };
+    
+    updateTimer();
+    const interval = setInterval(updateTimer, 60000); // Update every minute
+    
+    return () => clearInterval(interval);
+  }, []);
+
   const handleExitPreview = () => {
     window.close();
   };
@@ -38,7 +65,7 @@ export function AdminPreviewBanner() {
             Super Admin Preview Mode
           </p>
           <p className="text-sm text-blue-100">
-            Previewing Agency: {previewAgency?.name || 'Loading...'}
+            Previewing Agency: {previewAgency?.name || 'Loading...'} {timeRemaining && `• ${timeRemaining}`}
           </p>
         </div>
       </div>

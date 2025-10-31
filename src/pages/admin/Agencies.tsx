@@ -176,15 +176,36 @@ export default function Agencies() {
                     <Settings className="w-4 h-4 mr-2" />
                     Settings
                   </Button>
-                  <Button
-                    className="flex-1"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => window.open(`/agency?preview=true&agencyId=${agency.id}`, '_blank')}
-                  >
-                    <Eye className="w-4 h-4 mr-2" />
-                    Preview
-                  </Button>
+          <Button
+            className="flex-1"
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              try {
+                const { data: session } = await supabase.auth.getSession();
+                const { data, error } = await supabase.functions.invoke('authenticate-with-context', {
+                  headers: {
+                    Authorization: `Bearer ${session.session?.access_token}`,
+                  },
+                  body: {
+                    contextType: 'agency',
+                    agencyId: agency.id,
+                    isPreview: true,
+                  },
+                });
+                
+                if (error) throw error;
+                
+                window.open(`/agency?token=${data.token}`, '_blank');
+              } catch (error) {
+                toast.error('Failed to enter preview mode');
+                console.error(error);
+              }
+            }}
+          >
+            <Eye className="w-4 h-4 mr-2" />
+            Preview
+          </Button>
                 </div>
               </CardContent>
             </Card>
