@@ -21,9 +21,12 @@ export type Database = {
           custom_css: string | null
           deleted_at: string | null
           domain: string | null
+          favicon_dark_url: string | null
+          favicon_light_url: string | null
           id: string
           is_active: boolean | null
-          logo_url: string | null
+          logo_dark_url: string | null
+          logo_light_url: string | null
           name: string
           owner_id: string
           primary_color: string | null
@@ -44,9 +47,12 @@ export type Database = {
           custom_css?: string | null
           deleted_at?: string | null
           domain?: string | null
+          favicon_dark_url?: string | null
+          favicon_light_url?: string | null
           id?: string
           is_active?: boolean | null
-          logo_url?: string | null
+          logo_dark_url?: string | null
+          logo_light_url?: string | null
           name: string
           owner_id: string
           primary_color?: string | null
@@ -67,9 +73,12 @@ export type Database = {
           custom_css?: string | null
           deleted_at?: string | null
           domain?: string | null
+          favicon_dark_url?: string | null
+          favicon_light_url?: string | null
           id?: string
           is_active?: boolean | null
-          logo_url?: string | null
+          logo_dark_url?: string | null
+          logo_light_url?: string | null
           name?: string
           owner_id?: string
           primary_color?: string | null
@@ -1226,6 +1235,39 @@ export type Database = {
           is_custom?: boolean
           name?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      platform_branding: {
+        Row: {
+          company_name: string
+          created_at: string | null
+          favicon_dark_url: string | null
+          favicon_light_url: string | null
+          id: string
+          logo_dark_url: string | null
+          logo_light_url: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          company_name?: string
+          created_at?: string | null
+          favicon_dark_url?: string | null
+          favicon_light_url?: string | null
+          id?: string
+          logo_dark_url?: string | null
+          logo_light_url?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          company_name?: string
+          created_at?: string | null
+          favicon_dark_url?: string | null
+          favicon_light_url?: string | null
+          id?: string
+          logo_dark_url?: string | null
+          logo_light_url?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }

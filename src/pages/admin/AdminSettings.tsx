@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Eye, EyeOff, Trash2, ExternalLink, CheckCircle, XCircle } from "lucide-react";
+import { BrandingUpload } from "@/components/BrandingUpload";
 
 interface KeyStatus {
   exists: boolean;
@@ -38,6 +39,16 @@ export default function SuperAdminSettings() {
     stripe_publishable: { exists: false, maskedValue: null }
   });
 
+  // Platform branding state
+  const [branding, setBranding] = useState({
+    id: '',
+    company_name: 'FiveLeaf',
+    logo_light_url: '',
+    logo_dark_url: '',
+    favicon_light_url: '',
+    favicon_dark_url: ''
+  });
+
   const fetchKeyStatus = async (keyName: string) => {
     try {
       const { data, error } = await supabase.functions.invoke('get-api-key-status', {
@@ -64,8 +75,65 @@ export default function SuperAdminSettings() {
     setKeyStatuses(statusMap);
   };
 
+  const fetchBranding = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('platform_branding')
+        .select('*')
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        setBranding({
+          id: data.id,
+          company_name: data.company_name || 'FiveLeaf',
+          logo_light_url: data.logo_light_url || '',
+          logo_dark_url: data.logo_dark_url || '',
+          favicon_light_url: data.favicon_light_url || '',
+          favicon_dark_url: data.favicon_dark_url || ''
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching platform branding:', error);
+    }
+  };
+
+  const saveBranding = async () => {
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('platform_branding')
+        .update({
+          company_name: branding.company_name,
+          logo_light_url: branding.logo_light_url,
+          logo_dark_url: branding.logo_dark_url,
+          favicon_light_url: branding.favicon_light_url,
+          favicon_dark_url: branding.favicon_dark_url
+        })
+        .eq('id', branding.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Platform branding updated successfully.",
+      });
+    } catch (error: any) {
+      console.error('Error saving branding:', error);
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   useEffect(() => {
     loadAllKeyStatuses();
+    fetchBranding();
   }, []);
 
   const handleSaveOpenAI = async () => {
@@ -410,6 +478,7 @@ export default function SuperAdminSettings() {
       <Tabs defaultValue="general" className="space-y-4">
         <TabsList>
           <TabsTrigger value="general">General</TabsTrigger>
+          <TabsTrigger value="branding">Branding</TabsTrigger>
           <TabsTrigger value="agent-types">Agent Types</TabsTrigger>
           <TabsTrigger value="integrations">API Integration</TabsTrigger>
         </TabsList>
@@ -423,6 +492,72 @@ export default function SuperAdminSettings() {
               <p className="text-muted-foreground">
                 Super admin general settings will be available here.
               </p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="branding" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Platform Branding</CardTitle>
+              <CardDescription>
+                Customize your platform's branding. This serves as the base branding for all agencies and clients.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="company-name">Company Name</Label>
+                <Input
+                  id="company-name"
+                  value={branding.company_name}
+                  onChange={(e) => setBranding({ ...branding, company_name: e.target.value })}
+                  placeholder="Enter company name"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <BrandingUpload
+                  label="Logo (Light Mode)"
+                  currentUrl={branding.logo_light_url}
+                  onUpload={(url) => setBranding({ ...branding, logo_light_url: url })}
+                  bucket="platform-branding"
+                  acceptedTypes={['.png', '.jpg', '.jpeg', '.svg']}
+                  type="logo"
+                />
+
+                <BrandingUpload
+                  label="Logo (Dark Mode)"
+                  currentUrl={branding.logo_dark_url}
+                  onUpload={(url) => setBranding({ ...branding, logo_dark_url: url })}
+                  bucket="platform-branding"
+                  acceptedTypes={['.png', '.jpg', '.jpeg', '.svg']}
+                  type="logo"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <BrandingUpload
+                  label="Favicon (Light Mode)"
+                  currentUrl={branding.favicon_light_url}
+                  onUpload={(url) => setBranding({ ...branding, favicon_light_url: url })}
+                  bucket="platform-branding"
+                  acceptedTypes={['.ico', '.png']}
+                  type="favicon"
+                />
+
+                <BrandingUpload
+                  label="Favicon (Dark Mode)"
+                  currentUrl={branding.favicon_dark_url}
+                  onUpload={(url) => setBranding({ ...branding, favicon_dark_url: url })}
+                  bucket="platform-branding"
+                  acceptedTypes={['.ico', '.png']}
+                  type="favicon"
+                />
+              </div>
+
+              <Button onClick={saveBranding} disabled={saving}>
+                {saving ? 'Saving...' : 'Save Branding'}
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,10 +8,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Save, AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
-import { AgencyLogoUpload } from "@/components/agency-management/AgencyLogoUpload";
 import { AgencyUsersContent } from "@/components/agency-management/AgencyUsersContent";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { BrandingUpload } from "@/components/BrandingUpload";
 
 export default function AgencySettings() {
   const { profile, isPreviewMode, previewAgency } = useMultiTenantAuth();
@@ -232,13 +232,51 @@ export default function AgencySettings() {
             <Card>
               <CardHeader>
                 <CardTitle>Whitelabel Settings</CardTitle>
+                <CardDescription>
+                  Customize branding for your client dashboards. These settings override platform branding only for your clients.
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSave} className="space-y-6">
-                  <AgencyLogoUpload
-                    currentUrl={agency?.logo_url}
-                    onUploadComplete={(url) => setAgency({ ...agency, logo_url: url })}
-                  />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <BrandingUpload
+                      label="Logo (Light Mode)"
+                      currentUrl={agency?.logo_light_url}
+                      onUpload={(url) => setAgency({ ...agency, logo_light_url: url })}
+                      bucket="agency-logos"
+                      acceptedTypes={['.png', '.jpg', '.jpeg', '.svg']}
+                      type="logo"
+                    />
+
+                    <BrandingUpload
+                      label="Logo (Dark Mode)"
+                      currentUrl={agency?.logo_dark_url}
+                      onUpload={(url) => setAgency({ ...agency, logo_dark_url: url })}
+                      bucket="agency-logos"
+                      acceptedTypes={['.png', '.jpg', '.jpeg', '.svg']}
+                      type="logo"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <BrandingUpload
+                      label="Favicon (Light Mode)"
+                      currentUrl={agency?.favicon_light_url}
+                      onUpload={(url) => setAgency({ ...agency, favicon_light_url: url })}
+                      bucket="agency-logos"
+                      acceptedTypes={['.ico', '.png']}
+                      type="favicon"
+                    />
+
+                    <BrandingUpload
+                      label="Favicon (Dark Mode)"
+                      currentUrl={agency?.favicon_dark_url}
+                      onUpload={(url) => setAgency({ ...agency, favicon_dark_url: url })}
+                      bucket="agency-logos"
+                      acceptedTypes={['.ico', '.png']}
+                      type="favicon"
+                    />
+                  </div>
                   
                   <div className="space-y-4">
                     <div className="space-y-2">

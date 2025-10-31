@@ -1,11 +1,14 @@
+import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider } from "./hooks/useAuth";
-import { MultiTenantAuthProvider } from "./hooks/useMultiTenantAuth";
+import { MultiTenantAuthProvider, useMultiTenantAuth } from "./hooks/useMultiTenantAuth";
 import { ClientAgentProvider } from "./hooks/useClientAgentContext";
+import { useBranding } from "./hooks/useBranding";
+import { useFavicon } from "./hooks/useFavicon";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminProtectedRoute } from "./components/AdminProtectedRoute";
 import { AgencyProtectedRoute } from "./components/AgencyProtectedRoute";
@@ -42,6 +45,21 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+const BrandingWrapper = ({ children }: { children: React.ReactNode }) => {
+  const { isClientPreviewMode, previewClientAgencyId } = useMultiTenantAuth();
+  const location = useLocation();
+  const isClientView = isClientPreviewMode || location.pathname.startsWith('/');
+  const branding = useBranding({ isClientView, agencyId: previewClientAgencyId });
+  
+  useFavicon(branding.faviconUrl);
+  
+  useEffect(() => {
+    document.title = branding.companyName || 'FiveLeaf';
+  }, [branding.companyName]);
+  
+  return <>{children}</>;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -51,6 +69,7 @@ const App = () => (
         <MultiTenantAuthProvider>
           <AuthProvider>
             <ClientAgentProvider>
+              <BrandingWrapper>
               <Routes>
                 {/* Admin Routes (Super Admin) */}
                 <Route path="/admin/login" element={<AdminLogin />} />
@@ -161,6 +180,7 @@ const App = () => (
                 </ProtectedRoute>
               } />
               </Routes>
+              </BrandingWrapper>
             </ClientAgentProvider>
           </AuthProvider>
         </MultiTenantAuthProvider>

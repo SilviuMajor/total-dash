@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
 import { useClientAgentContext } from "@/hooks/useClientAgentContext";
+import { useBranding } from "@/hooks/useBranding";
 import { ClientAgentSelector } from "./ClientAgentSelector";
 import { UserProfileCard } from "./UserProfileCard";
 import { Button } from "./ui/button";
@@ -42,41 +43,18 @@ export function Sidebar() {
   const { selectedAgentPermissions, agents, selectedAgentId } = useClientAgentContext();
   const location = useLocation();
   const isAdmin = profile?.role === 'admin';
-  const [agencyName, setAgencyName] = useState("Fiveleaf");
-  const [agencyLogo, setAgencyLogo] = useState(fiveleafLogo);
   const [clientPermissions, setClientPermissions] = useState<any>(null);
+  
+  // Determine branding context
+  const isClientView = isClientPreviewMode;
+  const agencyId = previewClientAgencyId || (mtProfile?.agency?.id);
+  
+  // Use branding hook for dynamic branding
+  const branding = useBranding({ isClientView, agencyId });
   
   // Use multi-tenant auth if available
   const effectiveProfile = mtProfile || profile;
   const effectiveSignOut = mtProfile ? mtSignOut : signOut;
-  
-  useEffect(() => {
-    const loadAgencyBranding = async () => {
-      // If super admin previewing agency, use preview agency branding
-      if (mtIsPreviewMode && previewAgency) {
-        if (previewAgency.name) setAgencyName(previewAgency.name);
-        if (previewAgency.logo_url) setAgencyLogo(previewAgency.logo_url);
-        return;
-      }
-      
-      // For agency users, use their agency branding
-      if (mtProfile?.agency) {
-        if (mtProfile.agency.name) setAgencyName(mtProfile.agency.name);
-        if (mtProfile.agency.logo_url) setAgencyLogo(mtProfile.agency.logo_url);
-        return;
-      }
-      
-      // Fallback to agency_settings for backward compatibility
-      const { data } = await supabase
-        .from('agency_settings')
-        .select('agency_name, agency_logo_url')
-        .single();
-      
-      if (data?.agency_name) setAgencyName(data.agency_name);
-      if (data?.agency_logo_url) setAgencyLogo(data.agency_logo_url);
-    };
-    loadAgencyBranding();
-  }, [mtProfile, mtIsPreviewMode, previewAgency]);
 
   useEffect(() => {
     if (isClientPreviewMode && previewClient) {
@@ -158,7 +136,7 @@ export function Sidebar() {
   return (
     <div className="flex flex-col w-64 h-screen border-r border-border bg-card/50 backdrop-blur-sm overflow-hidden flex-shrink-0">
       <div className="flex items-center justify-center p-6 border-b border-border">
-        <img src={agencyLogo} alt={agencyName} className="w-12 h-12 object-contain" />
+        <img src={branding.logoUrl || fiveleafLogo} alt={branding.companyName} className="w-12 h-12 object-contain" />
       </div>
       
       {(mtIsPreviewMode || isClientPreviewMode) && (

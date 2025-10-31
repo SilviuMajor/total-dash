@@ -16,7 +16,8 @@ interface AgencyData {
   id: string;
   name: string;
   slug: string;
-  logo_url: string | null;
+  logo_light_url: string | null;
+  logo_dark_url: string | null;
   has_whitelabel_access: boolean;
 }
 
@@ -265,7 +266,7 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
     try {
       const { data: agencyData } = await supabase
         .from('agencies')
-        .select('id, name, slug, logo_url')
+        .select('id, name, slug, logo_light_url, logo_dark_url')
         .eq('id', agencyId)
         .single();
 
@@ -356,7 +357,8 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
             id,
             name,
             slug,
-            logo_url
+            logo_light_url,
+            logo_dark_url
           )
         `)
         .eq('user_id', userId)
