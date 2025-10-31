@@ -22,6 +22,7 @@ export default function AgencyClients() {
   const [canAddMore, setCanAddMore] = useState(true);
   const [limits, setLimits] = useState<any>(null);
   const [clientAgents, setClientAgents] = useState<Record<string, Array<{ name: string; provider: string }>>>({});
+  const [clientUsers, setClientUsers] = useState<Record<string, number>>({});
 
   useEffect(() => {
     loadClients();
@@ -67,9 +68,10 @@ export default function AgencyClients() {
       if (error) throw error;
       setClients(data || []);
       
-      // Load agents for each client
+      // Load agents and users for each client
       if (data && data.length > 0) {
         loadClientAgents(data.map(c => c.id));
+        loadClientUsers(data.map(c => c.id));
       }
     } catch (error: any) {
       toast({
@@ -106,6 +108,28 @@ export default function AgencyClients() {
       setClientAgents(grouped);
     } catch (error: any) {
       console.error('Error loading client agents:', error);
+    }
+  };
+
+  const loadClientUsers = async (clientIds: string[]) => {
+    try {
+      const { data, error } = await supabase
+        .from('client_users')
+        .select('client_id')
+        .in('client_id', clientIds);
+
+      if (error) throw error;
+
+      // Count users per client_id
+      const counts = (data || []).reduce((acc: Record<string, number>, item: any) => {
+        if (!acc[item.client_id]) acc[item.client_id] = 0;
+        acc[item.client_id]++;
+        return acc;
+      }, {});
+
+      setClientUsers(counts);
+    } catch (error: any) {
+      console.error('Error loading client users:', error);
     }
   };
 
@@ -298,13 +322,20 @@ export default function AgencyClients() {
                 </Button>
               </div>
               
-              {/* Row 2: Assigned Agents Count | Settings Button */}
+              {/* Row 2: Agents & Users Count | Settings Button */}
               <div className="flex items-center justify-between pl-[52px]">
-                {/* Agent Count */}
-                <div className="text-sm text-muted-foreground">
-                  Agents: <span className="font-medium text-foreground">
-                    {clientAgents[client.id]?.length || 0}
-                  </span>
+                {/* Agent & User Count */}
+                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                  <div>
+                    Agents: <span className="font-medium text-foreground">
+                      {clientAgents[client.id]?.length || 0}
+                    </span>
+                  </div>
+                  <div>
+                    Users: <span className="font-medium text-foreground">
+                      {clientUsers[client.id] || 0}
+                    </span>
+                  </div>
                 </div>
                 
                 {/* Settings Button */}
