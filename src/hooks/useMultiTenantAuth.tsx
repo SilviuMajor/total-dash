@@ -329,8 +329,8 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
     
     // Redirect based on current path
     const currentPath = window.location.pathname;
-    if (currentPath.startsWith('/super-admin')) {
-      navigate('/super-admin/login');
+    if (currentPath.startsWith('/admin')) {
+      navigate('/admin/login');
     } else if (currentPath.startsWith('/agency')) {
       navigate('/agency/login');
     } else {

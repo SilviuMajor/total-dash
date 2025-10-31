@@ -3,11 +3,11 @@ import { Navigate } from "react-router-dom";
 import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
 import { Loader2 } from "lucide-react";
 
-interface SuperAdminProtectedRouteProps {
+interface AdminProtectedRouteProps {
   children: ReactNode;
 }
 
-export function SuperAdminProtectedRoute({ children }: SuperAdminProtectedRouteProps) {
+export function AdminProtectedRoute({ children }: AdminProtectedRouteProps) {
   const { userType, loading } = useMultiTenantAuth();
 
   if (loading) {
@@ -19,7 +19,7 @@ export function SuperAdminProtectedRoute({ children }: SuperAdminProtectedRouteP
   }
 
   if (userType !== 'super_admin') {
-    return <Navigate to="/super-admin/login" replace />;
+    return <Navigate to="/admin/login" replace />;
   }
 
   return <>{children}</>;

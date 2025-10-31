@@ -7,20 +7,21 @@ import { AuthProvider } from "./hooks/useAuth";
 import { MultiTenantAuthProvider } from "./hooks/useMultiTenantAuth";
 import { ClientAgentProvider } from "./hooks/useClientAgentContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
-import { SuperAdminProtectedRoute } from "./components/SuperAdminProtectedRoute";
+import { AdminProtectedRoute } from "./components/AdminProtectedRoute";
 import { AgencyProtectedRoute } from "./components/AgencyProtectedRoute";
 import { Sidebar } from "./components/Sidebar";
 import { AdminPreviewBanner } from "./components/AdminPreviewBanner";
 import { ClientPreviewBanner } from "./components/ClientPreviewBanner";
 import { AgencyClientPreviewBanner } from "./components/AgencyClientPreviewBanner";
 import Auth from "./pages/Auth";
-import SuperAdminLogin from "./pages/superadmin/SuperAdminLogin";
+import AdminLogin from "./pages/admin/AdminLogin";
 import AgencyLogin from "./pages/agency/AgencyLogin";
-import Agencies from "./pages/superadmin/Agencies";
-import AgencyDetails from "./pages/superadmin/AgencyDetails";
-import AgencyBilling from "./pages/superadmin/AgencyBilling";
-import SubscriptionPlans from "./pages/superadmin/SubscriptionPlans";
-import SuperAdminSettings from "./pages/superadmin/SuperAdminSettings";
+import Agencies from "./pages/admin/Agencies";
+import AgencyDetails from "./pages/admin/AgencyDetails";
+import AgencyBilling from "./pages/admin/AgencyBilling";
+import SubscriptionPlans from "./pages/admin/SubscriptionPlans";
+import AdminSettings from "./pages/admin/AdminSettings";
+import EmailTemplates from "./pages/admin/EmailTemplates";
 
 import AgencyClients from "./pages/agency/AgencyClients";
 import AgencyAgents from "./pages/agency/AgencyAgents";
@@ -30,11 +31,6 @@ import AgencyClientDetails from "./pages/agency/AgencyClientDetails";
 import AgencyAgentDetails from "./pages/agency/AgencyAgentDetails";
 import SubscriptionRequired from "./pages/agency/SubscriptionRequired";
 import Settings from "./pages/Settings";
-import AdminClients from "./pages/admin/Clients";
-import AdminAgents from "./pages/admin/Agents";
-import AgentDetails from "./pages/admin/AgentDetails";
-import AdminSettings from "./pages/admin/Settings";
-import ClientDetails from "./pages/admin/ClientDetails";
 import Conversations from "./pages/client/Conversations";
 import Transcripts from "./pages/client/Transcripts";
 import Analytics from "./pages/client/Analytics";
@@ -56,10 +52,10 @@ const App = () => (
           <AuthProvider>
             <ClientAgentProvider>
               <Routes>
-                {/* Super Admin Routes */}
-                <Route path="/super-admin/login" element={<SuperAdminLogin />} />
-                <Route path="/super-admin/*" element={
-                  <SuperAdminProtectedRoute>
+                {/* Admin Routes (Super Admin) */}
+                <Route path="/admin/login" element={<AdminLogin />} />
+                <Route path="/admin/*" element={
+                  <AdminProtectedRoute>
                     <div className="flex h-screen w-full bg-background overflow-hidden">
                       <Sidebar />
                       <div className="flex-1 flex flex-col overflow-hidden">
@@ -71,12 +67,13 @@ const App = () => (
                             <Route path="/agencies/:id" element={<AgencyDetails />} />
                             <Route path="/billing" element={<AgencyBilling />} />
                             <Route path="/plans" element={<SubscriptionPlans />} />
-                            <Route path="/settings" element={<SuperAdminSettings />} />
+                            <Route path="/email-templates" element={<EmailTemplates />} />
+                            <Route path="/settings" element={<AdminSettings />} />
                           </Routes>
                         </main>
                       </div>
                     </div>
-                  </SuperAdminProtectedRoute>
+                  </AdminProtectedRoute>
                 } />
 
                 {/* Agency Routes */}
@@ -110,25 +107,6 @@ const App = () => (
                 {/* Client Auth Route */}
                 <Route path="/auth" element={<Auth />} />
               
-              {/* Admin Routes - Isolated */}
-              <Route path="/admin/*" element={
-                <ProtectedRoute requireAdmin>
-                  <div className="flex h-screen w-full bg-background overflow-hidden">
-                    <Sidebar />
-                    <div className="flex-1 flex flex-col overflow-hidden">
-                      <main className="flex-1 p-8 overflow-y-auto">
-                        <Routes>
-                          <Route path="/clients" element={<AdminClients />} />
-                          <Route path="/clients/:clientId/:tab" element={<ClientDetails />} />
-                          <Route path="/agents" element={<AdminAgents />} />
-                          <Route path="/agents/:agentId" element={<AgentDetails />} />
-                          <Route path="/settings" element={<AdminSettings />} />
-                        </Routes>
-                      </main>
-                    </div>
-                  </div>
-                </ProtectedRoute>
-              } />
 
               {/* Client Routes - Isolated */}
               <Route path="/*" element={

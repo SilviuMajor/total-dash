@@ -449,7 +449,7 @@ export default function AgencyBilling() {
                     <TableRow 
                       key={agency.id}
                       className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => navigate(`/super-admin/agencies/${agency.id}`)}
+                      onClick={() => navigate(`/admin/agencies/${agency.id}`)}
                     >
                       <TableCell>
                         <div className="flex items-center gap-3">

@@ -38,6 +38,8 @@ export default function Agencies() {
 
   const loadAgencies = async () => {
     try {
+      console.log("Loading agencies..."); // Debug logging
+      
       const { data, error } = await supabase
         .from('agencies')
         .select(`
@@ -53,11 +55,18 @@ export default function Agencies() {
         `)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      console.log("Agencies query result:", { data, error }); // Debug logging
+
+      if (error) {
+        console.error("Query error:", error); // Debug logging
+        throw error;
+      }
+      
+      console.log(`Loaded ${data?.length || 0} agencies`); // Debug logging
       setAgencies(data || []);
     } catch (error: any) {
       toast.error("Failed to load agencies");
-      console.error(error);
+      console.error("Load agencies error:", error);
     } finally {
       setLoading(false);
     }
@@ -160,7 +169,7 @@ export default function Agencies() {
                   className="w-full"
                   variant="outline"
                   size="sm"
-                  onClick={() => navigate(`/super-admin/agencies/${agency.id}`)}
+                  onClick={() => navigate(`/admin/agencies/${agency.id}`)}
                 >
                   Manage Agency
                   <ArrowRight className="w-4 h-4 ml-2" />

@@ -42,7 +42,7 @@ export default function SuperAdminLogin() {
         }
 
         toast.success("Welcome back!");
-        navigate("/super-admin");
+        navigate("/admin/agencies");
       }
     } catch (error: any) {
       toast.error(error.message || "Failed to sign in");
@@ -56,7 +56,7 @@ export default function SuperAdminLogin() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/super-admin`,
+          redirectTo: `${window.location.origin}/admin`,
         },
       });
 
@@ -70,7 +70,7 @@ export default function SuperAdminLogin() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-3xl font-bold text-center">Super Admin</CardTitle>
+          <CardTitle className="text-3xl font-bold text-center">Admin</CardTitle>
           <CardDescription className="text-center">
             Sign in to manage your platform
           </CardDescription>

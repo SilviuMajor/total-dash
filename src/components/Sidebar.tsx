@@ -21,12 +21,6 @@ const clientNavigation = [
   { name: "Agent Settings", href: "/agent-settings", icon: Settings, permissionKey: "agent_settings" },
 ];
 
-const adminNavigation = [
-  { name: "Clients", href: "/admin/clients", icon: Users },
-  { name: "Agents", href: "/admin/agents", icon: Bot },
-  { name: "Settings", href: "/admin/settings", icon: Settings },
-];
-
 const agencyNavigation = [
   { name: "Clients", href: "/agency/clients", icon: Users, permissionKey: "clients" },
   { name: "Agents", href: "/agency/agents", icon: Bot, permissionKey: "agents" },
@@ -34,11 +28,12 @@ const agencyNavigation = [
   { name: "Settings", href: "/agency/settings", icon: Settings as any, permissionKey: "settings" },
 ];
 
-const superAdminNavigation = [
-  { name: "Agencies", href: "/super-admin/agencies", icon: Building2 },
-  { name: "Billing", href: "/super-admin/billing", icon: DollarSign },
-  { name: "Plans", href: "/super-admin/plans", icon: CreditCard },
-  { name: "Settings", href: "/super-admin/settings", icon: Settings },
+const adminNavigation = [
+  { name: "Agencies", href: "/admin/agencies", icon: Building2 },
+  { name: "Billing", href: "/admin/billing", icon: DollarSign },
+  { name: "Plans", href: "/admin/plans", icon: CreditCard },
+  { name: "Email Templates", href: "/admin/email-templates", icon: FileText },
+  { name: "Settings", href: "/admin/settings", icon: Settings },
 ];
 
 export function Sidebar() {
@@ -123,14 +118,11 @@ export function Sidebar() {
     // Agency preview mode → show agency navigation
     navigation = agencyNavigation;
   } else if (userType === 'super_admin') {
-    // Regular super admin → show super admin navigation
-    navigation = superAdminNavigation;
+    // Regular super admin → show admin navigation
+    navigation = adminNavigation;
   } else if (userType === 'agency') {
     // Regular agency → show agency navigation
     navigation = agencyNavigation;
-  } else if (effectiveProfile?.role === 'admin') {
-    // Admin users → show admin navigation
-    navigation = adminNavigation;
   } else {
     // Client navigation with filtering
     navigation = clientNavigation.filter(item => {

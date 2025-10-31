@@ -273,7 +273,7 @@ export default function AgencyDetails() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => navigate('/super-admin/agencies')}
+            onClick={() => navigate('/admin/agencies')}
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
