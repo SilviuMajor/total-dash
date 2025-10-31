@@ -10,7 +10,7 @@ interface AgencyProtectedRouteProps {
 }
 
 export function AgencyProtectedRoute({ children }: AgencyProtectedRouteProps) {
-  const { userType, loading, profile, isPreviewMode } = useMultiTenantAuth();
+  const { userType, loading, profile, isPreviewMode, isValidatingToken } = useMultiTenantAuth();
   const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
   const [checkingSubscription, setCheckingSubscription] = useState(true);
   const [gracePeriodEndsAt, setGracePeriodEndsAt] = useState<string | null>(null);
@@ -47,7 +47,15 @@ export function AgencyProtectedRoute({ children }: AgencyProtectedRouteProps) {
     }
   }, [profile?.agency?.id, userType, loading]);
 
-  if (loading || checkingSubscription) {
+  if (loading || checkingSubscription || isValidatingToken) {
+    console.log('[AgencyProtectedRoute] Loading state:', {
+      loading,
+      checkingSubscription,
+      isValidatingToken,
+      userType,
+      isPreviewMode,
+      hasToken: !!sessionStorage.getItem('preview_token')
+    });
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

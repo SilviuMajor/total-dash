@@ -37,6 +37,7 @@ interface MultiTenantAuthContextType {
   profile: MultiTenantProfile | null;
   userType: UserType;
   loading: boolean;
+  isValidatingToken: boolean;
   signOut: () => Promise<void>;
   isPreviewMode: boolean;
   previewAgency: AgencyData | null;
@@ -52,6 +53,7 @@ const MultiTenantAuthContext = createContext<MultiTenantAuthContextType>({
   profile: null,
   userType: null,
   loading: true,
+  isValidatingToken: false,
   signOut: async () => {},
   isPreviewMode: false,
   previewAgency: null,
@@ -69,6 +71,7 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<MultiTenantProfile | null>(null);
   const [userType, setUserType] = useState<UserType>(null);
   const [loading, setLoading] = useState(true);
+  const [isValidatingToken, setIsValidatingToken] = useState(false);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [previewAgency, setPreviewAgency] = useState<AgencyData | null>(null);
   const [isClientPreviewMode, setIsClientPreviewMode] = useState(false);
@@ -84,9 +87,13 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
     const tokenParam = searchParams.get('token');
 
     if (tokenParam) {
+      setIsValidatingToken(true);
+      console.log('[Preview] Token detected:', tokenParam);
+      
       // Validate token via auth_contexts table
       const validateToken = async () => {
         try {
+          console.log('[Preview] Validation starting...');
           const { data: authContext, error } = await supabase
             .from('auth_contexts')
             .select('*')
@@ -97,6 +104,7 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
           if (error || !authContext) {
             console.error('Invalid preview token:', error);
             navigate('/admin/agencies');
+            setIsValidatingToken(false);
             return;
           }
           
@@ -104,16 +112,23 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
           if (new Date(authContext.expires_at) < new Date()) {
             console.error('Preview session expired');
             navigate('/admin/agencies');
+            setIsValidatingToken(false);
             return;
           }
           
           // Token is valid - set up preview mode
           if (authContext.context_type === 'agency' && authContext.agency_id) {
+            // Set preview states SYNCHRONOUSLY first
             setIsPreviewMode(true);
             setPreviewDepth('agency');
+            console.log('[Preview] States set - isPreviewMode:', true, 'previewDepth:', 'agency');
+            
+            // sessionStorage (synchronous)
             sessionStorage.setItem(PREVIEW_MODE_KEY, 'agency');
             sessionStorage.setItem(PREVIEW_AGENCY_KEY, authContext.agency_id);
             sessionStorage.setItem('preview_token', tokenParam);
+            
+            // Async agency data loading
             await loadPreviewAgency(authContext.agency_id);
             
             // Clean URL (remove token param)
@@ -122,6 +137,8 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
         } catch (err) {
           console.error('Token validation error:', err);
           navigate('/admin/agencies');
+        } finally {
+          setIsValidatingToken(false);
         }
       };
       
@@ -178,16 +195,19 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
             .single();
           
           if (!authContext || new Date(authContext.expires_at) < new Date()) {
-            // Token expired - clear preview mode
+            // Token expired - clear everything
+            setIsPreviewMode(false);
+            setPreviewDepth('none');
             sessionStorage.removeItem(PREVIEW_MODE_KEY);
             sessionStorage.removeItem(PREVIEW_AGENCY_KEY);
             sessionStorage.removeItem('preview_token');
             console.error('Preview session expired');
             navigate('/admin/agencies');
           } else {
-            // Token still valid - restore preview
+            // Token valid - load agency data
             setIsPreviewMode(true);
             setPreviewDepth('agency');
+            console.log('[Preview] Restoring from sessionStorage');
             loadPreviewAgency(storedPreviewAgency);
           }
         };
@@ -438,14 +458,15 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
         profile,
         userType,
         loading,
+        isValidatingToken,
         signOut: handleSignOut,
-      isPreviewMode,
-      previewAgency,
-      isClientPreviewMode,
-      previewClient,
-      previewClientAgencyId,
-      previewDepth,
-    }}
+        isPreviewMode,
+        previewAgency,
+        isClientPreviewMode,
+        previewClient,
+        previewClientAgencyId,
+        previewDepth,
+      }}
     >
       {children}
     </MultiTenantAuthContext.Provider>
