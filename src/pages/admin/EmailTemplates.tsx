@@ -8,13 +8,16 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Mail, Edit, Send } from "lucide-react";
+import { Mail, Edit, Send, CheckCircle, XCircle, Clock } from "lucide-react";
 
 export default function EmailTemplates() {
   const [templates, setTemplates] = useState<any[]>([]);
+  const [emailHistory, setEmailHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingHistory, setLoadingHistory] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<any>(null);
   const [subject, setSubject] = useState("");
   const [htmlContent, setHtmlContent] = useState("");
@@ -56,6 +59,24 @@ export default function EmailTemplates() {
     }
   };
 
+  const loadEmailHistory = async () => {
+    setLoadingHistory(true);
+    try {
+      const { data, error } = await supabase
+        .from("email_send_log")
+        .select("*")
+        .order("sent_at", { ascending: false })
+        .limit(100);
+
+      if (error) throw error;
+      setEmailHistory(data || []);
+    } catch (error: any) {
+      toast.error("Failed to load email history: " + error.message);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
   const generatePreview = (html: string, variables: any[]) => {
     let preview = html;
     // Replace variables with sample data
@@ -65,11 +86,13 @@ export default function EmailTemplates() {
       trialEndDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString(),
       planName: "Starter Plan",
       monthlyPrice: "$49.00",
+      minPlanPrice: "$99.00",
       daysRemaining: "3",
       loginUrl: "#",
+      subscriptionUrl: "#",
       manageSubscriptionUrl: "#",
       cancelUrl: "#",
-      supportEmail: "support@example.com",
+      supportEmail: "support@totaldash.com",
       nextBillingDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString(),
       invoiceUrl: "#",
       maxClients: "10",
@@ -77,9 +100,15 @@ export default function EmailTemplates() {
       maxTeamMembers: "5",
       dashboardUrl: "#",
       accessEndsDate: new Date().toLocaleDateString(),
+      dataDeleteDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString(),
       resubscribeUrl: "#",
       gracePeriodDays: "3",
       updatePaymentUrl: "#",
+      featureName: "Advanced Analytics",
+      featureBenefit: "track your performance better",
+      featureDescription: "Get detailed insights into your agent performance with our new analytics dashboard.",
+      howToSteps: "<ol><li>Go to Analytics</li><li>Select your agent</li><li>View detailed metrics</li></ol>",
+      featureUrl: "#",
     };
 
     for (const [key, value] of Object.entries(sampleData)) {
@@ -134,11 +163,19 @@ export default function EmailTemplates() {
         trialEndDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString(),
         planName: "Starter Plan",
         monthlyPrice: "$49.00",
+        minPlanPrice: "$99.00",
         daysRemaining: "3",
         loginUrl: window.location.origin,
-        manageSubscriptionUrl: window.location.origin,
-        cancelUrl: window.location.origin,
-        supportEmail: "support@example.com",
+        subscriptionUrl: window.location.origin + "/agency/subscription",
+        manageSubscriptionUrl: window.location.origin + "/agency/subscription",
+        cancelUrl: window.location.origin + "/agency/subscription",
+        supportEmail: "support@totaldash.com",
+        dataDeleteDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString(),
+        featureName: "Advanced Analytics",
+        featureBenefit: "track your performance better",
+        featureDescription: "Get detailed insights with our new analytics dashboard.",
+        howToSteps: "<ol><li>Go to Analytics</li><li>Select your agent</li><li>View metrics</li></ol>",
+        featureUrl: window.location.origin + "/analytics",
       };
 
       const { error } = await supabase.functions.invoke("send-email", {
@@ -180,6 +217,8 @@ export default function EmailTemplates() {
           <TabsTrigger value="subscription">Subscription</TabsTrigger>
           <TabsTrigger value="support">Support</TabsTrigger>
           <TabsTrigger value="team">Team</TabsTrigger>
+          <TabsTrigger value="announcements">Announcements</TabsTrigger>
+          <TabsTrigger value="history">Email History</TabsTrigger>
         </TabsList>
 
         {Object.entries(templatesByCategory).map(([category, categoryTemplates]: [string, any[]]) => (
@@ -215,6 +254,75 @@ export default function EmailTemplates() {
             ))}
           </TabsContent>
         ))}
+
+        <TabsContent value="history" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Email Send History</CardTitle>
+                  <CardDescription>Track all emails sent from the system</CardDescription>
+                </div>
+                <Button onClick={loadEmailHistory} variant="outline" size="sm">
+                  Refresh
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {loadingHistory ? (
+                <p className="text-muted-foreground text-center py-8">Loading history...</p>
+              ) : emailHistory.length === 0 ? (
+                <p className="text-muted-foreground text-center py-8">No emails sent yet</p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Template</TableHead>
+                      <TableHead>Recipient</TableHead>
+                      <TableHead>Subject</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {emailHistory.map((log) => (
+                      <TableRow key={log.id}>
+                        <TableCell className="text-sm">
+                          {new Date(log.sent_at).toLocaleString()}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{log.template_key}</Badge>
+                        </TableCell>
+                        <TableCell className="text-sm">{log.recipient_email}</TableCell>
+                        <TableCell className="text-sm max-w-xs truncate">
+                          {log.subject}
+                        </TableCell>
+                        <TableCell>
+                          {log.delivery_status === 'sent' ? (
+                            <Badge variant="default" className="gap-1">
+                              <CheckCircle className="h-3 w-3" />
+                              Sent
+                            </Badge>
+                          ) : log.delivery_status === 'failed' ? (
+                            <Badge variant="destructive" className="gap-1">
+                              <XCircle className="h-3 w-3" />
+                              Failed
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary" className="gap-1">
+                              <Clock className="h-3 w-3" />
+                              {log.delivery_status}
+                            </Badge>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
 
       <Dialog open={!!editingTemplate} onOpenChange={(open) => !open && setEditingTemplate(null)}>

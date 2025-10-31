@@ -1121,6 +1121,45 @@ export type Database = {
           },
         ]
       }
+      email_send_log: {
+        Row: {
+          created_at: string | null
+          delivery_status: string | null
+          error_message: string | null
+          id: string
+          recipient_email: string
+          resend_message_id: string | null
+          sent_at: string | null
+          subject: string
+          template_key: string
+          variables_used: Json | null
+        }
+        Insert: {
+          created_at?: string | null
+          delivery_status?: string | null
+          error_message?: string | null
+          id?: string
+          recipient_email: string
+          resend_message_id?: string | null
+          sent_at?: string | null
+          subject: string
+          template_key: string
+          variables_used?: Json | null
+        }
+        Update: {
+          created_at?: string | null
+          delivery_status?: string | null
+          error_message?: string | null
+          id?: string
+          recipient_email?: string
+          resend_message_id?: string | null
+          sent_at?: string | null
+          subject?: string
+          template_key?: string
+          variables_used?: Json | null
+        }
+        Relationships: []
+      }
       email_templates: {
         Row: {
           category: string

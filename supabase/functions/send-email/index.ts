@@ -56,7 +56,7 @@ serve(async (req) => {
     const resend = new Resend(resendApiKey);
 
     const { data, error } = await resend.emails.send({
-      from: "onboarding@resend.dev", // Update with your verified domain
+      from: "Total Dash <noreply@totaldash.com>",
       to: recipientEmail,
       subject: subject,
       html: htmlContent,
@@ -68,6 +68,21 @@ serve(async (req) => {
     }
 
     console.log("Email sent successfully:", data);
+
+    // Log the email send to database
+    try {
+      await supabaseClient.from('email_send_log').insert({
+        template_key: templateKey,
+        recipient_email: recipientEmail,
+        subject: subject,
+        variables_used: variables,
+        resend_message_id: data?.id,
+        delivery_status: 'sent'
+      });
+    } catch (logError) {
+      console.error("Failed to log email send:", logError);
+      // Don't throw - email was sent successfully
+    }
 
     return new Response(
       JSON.stringify({ success: true, messageId: data?.id }),

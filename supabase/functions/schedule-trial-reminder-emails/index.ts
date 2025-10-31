@@ -17,6 +17,19 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
+    // Get minimum plan price for dynamic pricing
+    const { data: minPlanData } = await supabaseClient
+      .from("subscription_plans")
+      .select("price_monthly_cents")
+      .eq("is_active", true)
+      .order("price_monthly_cents", { ascending: true })
+      .limit(1)
+      .single();
+    
+    const minPlanPrice = minPlanData 
+      ? `$${(minPlanData.price_monthly_cents / 100).toFixed(2)}`
+      : "$99.00";
+
     const now = new Date();
     const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
     const oneDayFromNow = new Date(now.getTime() + 1 * 24 * 60 * 60 * 1000);
@@ -26,24 +39,35 @@ serve(async (req) => {
       .from("agency_subscriptions")
       .select(`
         *,
-        agencies(name, owner_id),
-        subscription_plans(name, price_monthly_cents)
+        agencies(name, owner_id)
       `)
       .eq("status", "trialing")
       .gte("trial_ends_at", now.toISOString())
-      .lte("trial_ends_at", threeDaysFromNow.toISOString());
+      .lte("trial_ends_at", threeDaysFromNow.toISOString())
+      .is("stripe_subscription_id", null);
 
     // Find trials ending in 1 day
     const { data: oneDayTrials } = await supabaseClient
       .from("agency_subscriptions")
       .select(`
         *,
-        agencies(name, owner_id),
-        subscription_plans(name, price_monthly_cents)
+        agencies(name, owner_id)
       `)
       .eq("status", "trialing")
       .gte("trial_ends_at", now.toISOString())
-      .lte("trial_ends_at", oneDayFromNow.toISOString());
+      .lte("trial_ends_at", oneDayFromNow.toISOString())
+      .is("stripe_subscription_id", null);
+
+    // Find trials that have ended without subscription
+    const { data: endedTrials } = await supabaseClient
+      .from("agency_subscriptions")
+      .select(`
+        *,
+        agencies(name, owner_id)
+      `)
+      .eq("status", "trialing")
+      .lt("trial_ends_at", now.toISOString())
+      .is("stripe_subscription_id", null);
 
     let emailsSent = 0;
 
@@ -64,13 +88,10 @@ serve(async (req) => {
               variables: {
                 userName: owner.email.split("@")[0],
                 agencyName: trial.agencies.name,
-                daysRemaining: "3",
                 trialEndDate: new Date(trial.trial_ends_at).toLocaleDateString(),
-                planName: trial.subscription_plans.name,
-                monthlyPrice: `$${(trial.subscription_plans.price_monthly_cents / 100).toFixed(2)}`,
-                manageSubscriptionUrl: `${Deno.env.get("SUPABASE_URL")}/agency/subscription`,
-                cancelUrl: `${Deno.env.get("SUPABASE_URL")}/agency/subscription`,
-                supportEmail: "support@yourplatform.com",
+                minPlanPrice: minPlanPrice,
+                subscriptionUrl: `${Deno.env.get("VITE_SUPABASE_URL") || "https://app.totaldash.com"}/agency/subscription`,
+                supportEmail: "support@totaldash.com",
               },
             },
           });
@@ -98,9 +119,10 @@ serve(async (req) => {
               variables: {
                 userName: owner.email.split("@")[0],
                 agencyName: trial.agencies.name,
-                planName: trial.subscription_plans.name,
-                monthlyPrice: `$${(trial.subscription_plans.price_monthly_cents / 100).toFixed(2)}`,
-                cancelUrl: `${Deno.env.get("SUPABASE_URL")}/agency/subscription`,
+                trialEndDate: new Date(trial.trial_ends_at).toLocaleDateString(),
+                minPlanPrice: minPlanPrice,
+                subscriptionUrl: `${Deno.env.get("VITE_SUPABASE_URL") || "https://app.totaldash.com"}/agency/subscription`,
+                supportEmail: "support@totaldash.com",
               },
             },
           });
@@ -111,12 +133,49 @@ serve(async (req) => {
       }
     }
 
+    // Send trial ended emails
+    for (const trial of endedTrials || []) {
+      try {
+        const { data: owner } = await supabaseClient
+          .from("profiles")
+          .select("email")
+          .eq("id", trial.agencies.owner_id)
+          .single();
+
+        if (owner?.email) {
+          const trialEndDate = new Date(trial.trial_ends_at);
+          const dataDeleteDate = new Date(trialEndDate);
+          dataDeleteDate.setDate(dataDeleteDate.getDate() + 30);
+
+          await supabaseClient.functions.invoke("send-email", {
+            body: {
+              templateKey: "trial_ended",
+              recipientEmail: owner.email,
+              variables: {
+                userName: owner.email.split("@")[0],
+                agencyName: trial.agencies.name,
+                trialEndDate: trialEndDate.toLocaleDateString(),
+                minPlanPrice: minPlanPrice,
+                subscriptionUrl: `${Deno.env.get("VITE_SUPABASE_URL") || "https://app.totaldash.com"}/agency/subscription`,
+                dataDeleteDate: dataDeleteDate.toLocaleDateString(),
+                supportEmail: "support@totaldash.com",
+              },
+            },
+          });
+          emailsSent++;
+        }
+      } catch (error) {
+        console.error("Failed to send trial ended email:", error);
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
         emailsSent,
         threeDayTrials: threeDayTrials?.length || 0,
         oneDayTrials: oneDayTrials?.length || 0,
+        endedTrials: endedTrials?.length || 0,
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
