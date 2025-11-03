@@ -49,12 +49,13 @@ const queryClient = new QueryClient();
 
 const BrandingWrapper = ({ children }: { children: React.ReactNode }) => {
   const { effectiveTheme } = useTheme();
-  const { isClientPreviewMode, previewClientAgencyId } = useMultiTenantAuth();
+  const { isClientPreviewMode, previewClientAgencyId, isPreviewMode, previewAgency } = useMultiTenantAuth();
   const location = useLocation();
-  const isClientView = isClientPreviewMode || location.pathname.startsWith('/');
+  const isClientView = isClientPreviewMode || (!location.pathname.startsWith('/admin') && !location.pathname.startsWith('/agency') && !location.pathname.startsWith('/auth'));
+  const relevantAgencyId = isClientView ? previewClientAgencyId : (isPreviewMode ? previewAgency?.id : undefined);
   const branding = useBranding({ 
     isClientView, 
-    agencyId: previewClientAgencyId,
+    agencyId: relevantAgencyId,
     appTheme: effectiveTheme
   });
   
