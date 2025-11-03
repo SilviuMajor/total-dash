@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { signIn, signUp } from "@/lib/auth";
 import { useAuth } from "@/hooks/useAuth";
 import { useBranding } from "@/hooks/useBranding";
+import { ForgotPasswordDialog } from "@/components/ForgotPasswordDialog";
 import logo from "@/assets/fiveleaf-logo.png";
 
 export default function Auth() {
@@ -115,18 +116,37 @@ export default function Auth() {
                 className="bg-muted/50 border-border"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-                className="bg-muted/50 border-border"
-              />
-            </div>
+            {!isSignUp && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Password</Label>
+                  <ForgotPasswordDialog />
+                </div>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  className="bg-muted/50 border-border"
+                />
+              </div>
+            )}
+            {isSignUp && (
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  className="bg-muted/50 border-border"
+                />
+              </div>
+            )}
             <Button
               type="submit"
               disabled={loading}

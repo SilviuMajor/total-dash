@@ -11,6 +11,7 @@ import { Loader2 } from "lucide-react";
 import { PhoneNumberInput } from "@/components/ui/phone-input";
 import { isValidPhoneNumber } from "react-phone-number-input";
 import { useBranding } from "@/hooks/useBranding";
+import { ForgotPasswordDialog } from "@/components/ForgotPasswordDialog";
 
 export default function AgencyLogin() {
   const [email, setEmail] = useState("");
@@ -244,7 +245,10 @@ export default function AgencyLogin() {
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="login-password">Password *</Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="login-password">Password *</Label>
+                    <ForgotPasswordDialog />
+                  </div>
                   <Input
                     id="login-password"
                     type="password"

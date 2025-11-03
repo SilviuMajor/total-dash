@@ -18,6 +18,7 @@ import { AdminPreviewBanner } from "./components/AdminPreviewBanner";
 import { ClientPreviewBanner } from "./components/ClientPreviewBanner";
 import { AgencyClientPreviewBanner } from "./components/AgencyClientPreviewBanner";
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AgencyLogin from "./pages/agency/AgencyLogin";
 import Agencies from "./pages/admin/Agencies";
@@ -78,6 +79,9 @@ const App = () => (
               <ClientAgentProvider>
                 <BrandingWrapper>
               <Routes>
+                {/* Public Routes */}
+                <Route path="/reset-password" element={<ResetPassword />} />
+                
                 {/* Admin Routes (Super Admin) */}
                 <Route path="/admin/login" element={<AdminLogin />} />
                 <Route path="/admin/*" element={

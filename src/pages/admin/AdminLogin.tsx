@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { useBranding } from "@/hooks/useBranding";
+import { ForgotPasswordDialog } from "@/components/ForgotPasswordDialog";
 
 export default function SuperAdminLogin() {
   const [email, setEmail] = useState("");
@@ -88,17 +89,20 @@ export default function SuperAdminLogin() {
                 disabled={loading}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                disabled={loading}
-              />
-            </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="password">Password</Label>
+                    <ForgotPasswordDialog />
+                  </div>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    disabled={loading}
+                  />
+                </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? (
                 <>
