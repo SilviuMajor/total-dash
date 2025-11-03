@@ -26,6 +26,17 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>('light');
   const [effectiveTheme, setEffectiveTheme] = useState<EffectiveTheme>('light');
   const [isLoading, setIsLoading] = useState(true);
+  const [systemIsDark, setSystemIsDark] = useState(false);
+
+  // Detect system theme preference
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    setSystemIsDark(mediaQuery.matches);
+    
+    const handler = (e: MediaQueryListEvent) => setSystemIsDark(e.matches);
+    mediaQuery.addEventListener('change', handler);
+    return () => mediaQuery.removeEventListener('change', handler);
+  }, []);
 
   // Load theme from profile on mount and when profile changes
   useEffect(() => {
@@ -34,8 +45,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       const userTheme = savedTheme || 'light';
       setThemeState(userTheme);
       
-      // For now, system mode resolves to light (can be enhanced later)
-      const resolved: EffectiveTheme = userTheme === 'system' ? 'light' : userTheme;
+      // System mode now properly resolves to actual system preference
+      const resolved: EffectiveTheme = userTheme === 'system' 
+        ? (systemIsDark ? 'dark' : 'light')
+        : userTheme;
       setEffectiveTheme(resolved);
       setIsLoading(false);
     } else {
@@ -44,7 +57,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       setEffectiveTheme('light');
       setIsLoading(false);
     }
-  }, [profile]);
+  }, [profile, systemIsDark]);
 
   // Apply theme to document
   useEffect(() => {
@@ -55,7 +68,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     } else {
       root.classList.remove('dark');
     }
-  }, [effectiveTheme]);
+  }, [effectiveTheme, systemIsDark]);
 
   const setTheme = async (newTheme: EffectiveTheme) => {
     if (!user?.id) return;

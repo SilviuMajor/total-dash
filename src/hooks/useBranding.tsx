@@ -64,8 +64,8 @@ export const useBranding = ({ isClientView, agencyId, appTheme = 'light' }: UseB
         faviconUrl: '/favicon.ico',
       };
 
-      // If client view and agency ID provided, fetch agency whitelabel (override layer)
-      if (isClientView && agencyId) {
+      // If agency ID provided, fetch agency whitelabel (override layer)
+      if (agencyId) {
         const { data: agencyData } = await supabase
           .from('agencies')
           .select('logo_light_url, logo_dark_url, full_logo_light_url, full_logo_dark_url, favicon_light_url, favicon_dark_url, name')

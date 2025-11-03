@@ -51,8 +51,12 @@ const BrandingWrapper = ({ children }: { children: React.ReactNode }) => {
   const { effectiveTheme } = useTheme();
   const { isClientPreviewMode, previewClientAgencyId, isPreviewMode, previewAgency } = useMultiTenantAuth();
   const location = useLocation();
-  const isClientView = isClientPreviewMode || (!location.pathname.startsWith('/admin') && !location.pathname.startsWith('/agency') && !location.pathname.startsWith('/auth'));
-  const relevantAgencyId = isClientView ? previewClientAgencyId : (isPreviewMode ? previewAgency?.id : undefined);
+  // Only consider it client view if actually in client preview mode
+  const isClientView = isClientPreviewMode;
+  // For agency preview, pass the agency ID; for client preview, pass the client's agency ID; otherwise undefined
+  const relevantAgencyId = isClientView 
+    ? previewClientAgencyId 
+    : (isPreviewMode && previewAgency?.id ? previewAgency.id : undefined);
   const branding = useBranding({ 
     isClientView, 
     agencyId: relevantAgencyId,

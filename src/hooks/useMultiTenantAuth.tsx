@@ -132,8 +132,8 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
             // Async agency data loading
             await loadPreviewAgency(authContext.agency_id);
             
-            // Clean URL (remove token param)
-            window.history.replaceState({}, '', '/agency/clients');
+            // Clean URL (remove token param) and navigate
+            navigate('/agency/clients', { replace: true });
           }
         } catch (err) {
           console.error('Token validation error:', err);
