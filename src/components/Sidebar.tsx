@@ -48,7 +48,7 @@ export function Sidebar() {
   
   // Determine branding context
   const isClientView = isClientPreviewMode;
-  const agencyId = previewClientAgencyId || (mtProfile?.agency?.id);
+  const agencyId = isClientView ? previewClientAgencyId : undefined;
   
   // Use branding hook for dynamic branding
   const branding = useBranding({ isClientView, agencyId, appTheme: effectiveTheme });
