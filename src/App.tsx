@@ -53,10 +53,8 @@ const BrandingWrapper = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
   // Only consider it client view if actually in client preview mode
   const isClientView = isClientPreviewMode;
-  // For agency preview, pass the agency ID; for client preview, pass the client's agency ID; otherwise undefined
-  const relevantAgencyId = isClientView 
-    ? previewClientAgencyId 
-    : (isPreviewMode && previewAgency?.id ? previewAgency.id : undefined);
+  // For client preview, pass the client's agency ID; otherwise undefined (show platform branding)
+  const relevantAgencyId = isClientView ? previewClientAgencyId : undefined;
   const branding = useBranding({ 
     isClientView, 
     agencyId: relevantAgencyId,
