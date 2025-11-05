@@ -16,17 +16,17 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { email, firstName, lastName, role, agencyId } = await req.json();
+    const { email, firstName, lastName, role, agencyId, password } = await req.json();
 
     console.log('Inviting agency user:', { email, firstName, lastName, role, agencyId });
 
     // Validate required fields
-    if (!email || !firstName || !lastName || !role || !agencyId) {
-      throw new Error('Missing required fields: email, firstName, lastName, role, agencyId');
+    if (!email || !firstName || !lastName || !role || !agencyId || !password) {
+      throw new Error('Missing required fields: email, firstName, lastName, role, agencyId, password');
     }
 
-    // Generate temporary password
-    const tempPassword = `Temp${Math.random().toString(36).slice(-8)}!`;
+    // Use provided password
+    const tempPassword = password;
 
     // Create user in auth
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
@@ -93,49 +93,55 @@ serve(async (req) => {
       console.error('Error storing password:', passwordError);
     }
 
-    // Get agency settings for email
+    // Get agency and platform branding
+    const { data: agency } = await supabase
+      .from('agencies')
+      .select('name, slug')
+      .eq('id', agencyId)
+      .single();
+
+    const { data: branding } = await supabase
+      .from('platform_branding')
+      .select('company_name')
+      .single();
+
+    const platformName = branding?.company_name || 'FiveLeaf';
+    const dashboardUrl = `${Deno.env.get('SUPABASE_URL')?.replace('supabase.co', 'lovable.app') || 'http://localhost:8080'}/agency`;
+
+    // Get support email
     const { data: agencySettings } = await supabase
       .from('agency_settings')
-      .select('agency_name, support_email, resend_api_key')
+      .select('support_email')
       .eq('agency_id', agencyId)
       .single();
 
-    // Send invitation email if Resend API key is configured
-    if (agencySettings?.resend_api_key) {
-      try {
-        const emailResponse = await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${agencySettings.resend_api_key}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            from: agencySettings.support_email || 'noreply@youragency.com',
-            to: email,
-            subject: `Invitation to join ${agencySettings?.agency_name || 'the team'}`,
-            html: `
-              <h2>You've been invited!</h2>
-              <p>Hi ${firstName} ${lastName},</p>
-              <p>You've been invited to join ${agencySettings?.agency_name || 'the team'} as a ${role}.</p>
-              <p>Your login credentials:</p>
-              <ul>
-                <li><strong>Email:</strong> ${email}</li>
-                <li><strong>Temporary Password:</strong> ${tempPassword}</li>
-              </ul>
-              <p>Please log in and change your password as soon as possible.</p>
-              <p>Welcome aboard!</p>
-            `,
-          }),
-        });
+    const supportEmail = agencySettings?.support_email || 'support@fiveleaf.co.uk';
 
-        if (!emailResponse.ok) {
-          console.error('Failed to send email:', await emailResponse.text());
-        } else {
-          console.log('Invitation email sent successfully');
-        }
-      } catch (emailError) {
-        console.error('Error sending invitation email:', emailError);
+    // Send welcome email using template
+    try {
+      const { error: emailError } = await supabase.functions.invoke('send-email', {
+        body: {
+          templateKey: 'user_invitation_welcome',
+          to: email,
+          variables: {
+            user_name: `${firstName} ${lastName}`,
+            email: email,
+            password: tempPassword,
+            dashboard_url: dashboardUrl,
+            platform_name: platformName,
+            agency_name: agency?.name,
+            support_email: supportEmail,
+          },
+        },
+      });
+
+      if (emailError) {
+        console.error('Failed to send email:', emailError);
+      } else {
+        console.log('Invitation email sent successfully');
       }
+    } catch (emailError) {
+      console.error('Error sending invitation email:', emailError);
     }
 
     return new Response(

@@ -27,6 +27,7 @@ import AgencyBilling from "./pages/admin/AgencyBilling";
 import SubscriptionPlans from "./pages/admin/SubscriptionPlans";
 import AdminSettings from "./pages/admin/AdminSettings";
 import EmailTemplates from "./pages/admin/EmailTemplates";
+import SuperAdminUsers from "./pages/admin/SuperAdminUsers";
 
 import AgencyClients from "./pages/agency/AgencyClients";
 import AgencyAgents from "./pages/agency/AgencyAgents";
@@ -101,6 +102,7 @@ const App = () => (
                             <Route path="/billing" element={<AgencyBilling />} />
                             <Route path="/plans" element={<SubscriptionPlans />} />
                             <Route path="/email-templates" element={<EmailTemplates />} />
+                            <Route path="/users" element={<SuperAdminUsers />} />
                             <Route path="/settings" element={<AdminSettings />} />
                           </Routes>
                         </main>

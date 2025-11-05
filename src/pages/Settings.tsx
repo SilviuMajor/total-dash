@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
 import { TeamMembersCard } from "@/components/client-management/TeamMembersCard";
 import { DefaultPermissionsCard } from "@/components/client-management/DefaultPermissionsCard";
+import { DepartmentManagement } from "@/components/client-management/DepartmentManagement";
+import { ClientUsersManagement } from "@/components/client-management/ClientUsersManagement";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function Settings() {
   const { user } = useAuth();
@@ -44,8 +47,25 @@ export default function Settings() {
         <p className="text-muted-foreground">Manage your team and preferences</p>
       </div>
 
-      <TeamMembersCard clientId={clientId} />
-      <DefaultPermissionsCard clientId={clientId} />
+      <Tabs defaultValue="users" className="w-full">
+        <TabsList>
+          <TabsTrigger value="users">Users</TabsTrigger>
+          <TabsTrigger value="departments">Departments</TabsTrigger>
+          <TabsTrigger value="permissions">Permissions</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="users" className="space-y-6">
+          <ClientUsersManagement clientId={clientId} />
+        </TabsContent>
+
+        <TabsContent value="departments" className="space-y-6">
+          <DepartmentManagement clientId={clientId} />
+        </TabsContent>
+
+        <TabsContent value="permissions" className="space-y-6">
+          <DefaultPermissionsCard clientId={clientId} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

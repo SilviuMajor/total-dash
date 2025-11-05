@@ -2,57 +2,41 @@ import { useState, useEffect } from "react";
 import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Loader2, Mail, UserPlus, Shield, User, Crown, CheckCircle, Copy, Trash2, Edit2, X, Check } from "lucide-react";
+import { Loader2, UserPlus, Search } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-
-interface AgencyUser {
-  id: string;
-  user_id: string;
-  role: 'owner' | 'admin' | 'user';
-  created_at: string;
-  profiles: {
-    email: string;
-    full_name: string | null;
-  };
-}
+import { AgencyUserManagementTable, type AgencyUser } from "./AgencyUserManagementTable";
 
 interface AgencyUsersContentProps {
   agencyId: string | undefined;
 }
 
 export function AgencyUsersContent({ agencyId }: AgencyUsersContentProps) {
-  const { profile, isPreviewMode } = useMultiTenantAuth();
+  const { isPreviewMode } = useMultiTenantAuth();
   const [users, setUsers] = useState<AgencyUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviting, setInviting] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<AgencyUser | null>(null);
+  const [selectedRole, setSelectedRole] = useState<'owner' | 'admin' | 'user'>('user');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<AgencyUser | null>(null);
+  
   const [inviteData, setInviteData] = useState({
     email: "",
     firstName: "",
     lastName: "",
+    password: "",
     role: "user" as 'owner' | 'admin' | 'user',
   });
-  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
-  const [invitedUserData, setInvitedUserData] = useState<{
-    email: string;
-    firstName: string;
-    lastName: string;
-    tempPassword: string;
-  } | null>(null);
-  const [editingUserId, setEditingUserId] = useState<string | null>(null);
-  const [selectedRole, setSelectedRole] = useState<'owner' | 'admin' | 'user'>('user');
-  const [updatingRole, setUpdatingRole] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [userToDelete, setUserToDelete] = useState<AgencyUser | null>(null);
-  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (agencyId) {
@@ -77,14 +61,20 @@ export function AgencyUsersContent({ agencyId }: AgencyUsersContentProps) {
         const userIds = agencyUsers.map(u => u.user_id);
         const { data: profiles, error: profilesError } = await supabase
           .from('profiles')
-          .select('id, email, full_name')
+          .select('id, email, full_name, first_name, last_name, updated_at')
           .in('id', userIds);
 
         if (profilesError) throw profilesError;
 
-        const combinedData = agencyUsers.map(user => ({
+        const combinedData: AgencyUser[] = agencyUsers.map(user => ({
           ...user,
-          profiles: profiles?.find(p => p.id === user.user_id) || { email: '', full_name: null }
+          profile: profiles?.find(p => p.id === user.user_id) || { 
+            email: '', 
+            full_name: null,
+            first_name: null,
+            last_name: null,
+            updated_at: new Date().toISOString()
+          }
         }));
 
         setUsers(combinedData);
@@ -99,16 +89,23 @@ export function AgencyUsersContent({ agencyId }: AgencyUsersContentProps) {
     }
   };
 
-  const handleInviteUser = async () => {
+  const handleInviteUser = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!agencyId) return;
     
+    if (!inviteData.password || inviteData.password.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+
     setInviting(true);
     try {
-      const { data, error } = await supabase.functions.invoke('invite-agency-user', {
+      const { error } = await supabase.functions.invoke('invite-agency-user', {
         body: {
           email: inviteData.email,
           firstName: inviteData.firstName,
           lastName: inviteData.lastName,
+          password: inviteData.password,
           role: inviteData.role,
           agencyId: agencyId,
         },
@@ -116,15 +113,9 @@ export function AgencyUsersContent({ agencyId }: AgencyUsersContentProps) {
 
       if (error) throw error;
 
-      setInvitedUserData({
-        email: inviteData.email,
-        firstName: inviteData.firstName,
-        lastName: inviteData.lastName,
-        tempPassword: data.tempPassword,
-      });
-      setPasswordDialogOpen(true);
+      toast.success("Team member invited successfully");
       setInviteOpen(false);
-      setInviteData({ email: "", firstName: "", lastName: "", role: "user" });
+      setInviteData({ email: "", firstName: "", lastName: "", password: "", role: "user" });
       loadUsers();
     } catch (error: any) {
       console.error('Error inviting user:', error);
@@ -134,33 +125,51 @@ export function AgencyUsersContent({ agencyId }: AgencyUsersContentProps) {
     }
   };
 
-  const handleUpdateRole = async (userId: string, newRole: 'owner' | 'admin' | 'user') => {
-    if (!agencyId) return;
+  const handleEditUser = (user: AgencyUser) => {
+    setSelectedUser(user);
+    setSelectedRole(user.role);
+    setEditDialogOpen(true);
+  };
+
+  const handleUpdateRole = async () => {
+    if (!selectedUser || !agencyId) return;
     
     const ownerCount = users.filter(u => u.role === 'owner').length;
-    const currentUser = users.find(u => u.id === userId);
-    
-    if (currentUser?.role === 'owner' && ownerCount === 1 && newRole !== 'owner') {
+    if (selectedUser.role === 'owner' && ownerCount === 1 && selectedRole !== 'owner') {
       toast.error("Cannot demote the last owner");
       return;
     }
     
-    setUpdatingRole(true);
     try {
       const { error } = await supabase
         .from('agency_users')
-        .update({ role: newRole })
-        .eq('id', userId);
+        .update({ role: selectedRole })
+        .eq('id', selectedUser.id);
         
       if (error) throw error;
       
       toast.success("Role updated successfully");
-      setEditingUserId(null);
+      setEditDialogOpen(false);
+      setSelectedUser(null);
       loadUsers();
     } catch (error: any) {
       toast.error("Failed to update role");
-    } finally {
-      setUpdatingRole(false);
+    }
+  };
+
+  const handleReinvite = async (userId: string) => {
+    try {
+      await supabase.functions.invoke('reinvite-user', {
+        body: {
+          userId,
+          userType: 'agency',
+          contextId: agencyId,
+        },
+      });
+
+      toast.success("Invitation email sent");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to send invitation");
     }
   };
 
@@ -174,7 +183,6 @@ export function AgencyUsersContent({ agencyId }: AgencyUsersContentProps) {
       return;
     }
     
-    setDeleting(true);
     try {
       const { error } = await supabase
         .from('agency_users')
@@ -183,43 +191,25 @@ export function AgencyUsersContent({ agencyId }: AgencyUsersContentProps) {
         
       if (error) throw error;
       
-      toast.success(`${userToDelete.profiles.full_name} has been removed`);
+      const userName = userToDelete.profile.full_name || 
+                       `${userToDelete.profile.first_name} ${userToDelete.profile.last_name}`;
+      toast.success(`${userName} has been removed`);
       setDeleteDialogOpen(false);
       setUserToDelete(null);
       loadUsers();
     } catch (error: any) {
       toast.error("Failed to remove user");
-    } finally {
-      setDeleting(false);
     }
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast.success("Copied to clipboard");
-  };
-
-  const getRoleIcon = (role: string) => {
-    switch (role) {
-      case 'owner':
-        return <Crown className="h-4 w-4" />;
-      case 'admin':
-        return <Shield className="h-4 w-4" />;
-      default:
-        return <User className="h-4 w-4" />;
-    }
-  };
-
-  const getRoleBadgeVariant = (role: string): "default" | "secondary" | "outline" => {
-    switch (role) {
-      case 'owner':
-        return "default";
-      case 'admin':
-        return "secondary";
-      default:
-        return "outline";
-    }
-  };
+  const filteredUsers = users.filter((user) => {
+    const searchLower = searchQuery.toLowerCase();
+    const fullName = user.profile.full_name || `${user.profile.first_name} ${user.profile.last_name}`;
+    return (
+      fullName.toLowerCase().includes(searchLower) ||
+      user.profile.email.toLowerCase().includes(searchLower)
+    );
+  });
 
   if (loading) {
     return (
@@ -233,135 +223,73 @@ export function AgencyUsersContent({ agencyId }: AgencyUsersContentProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold">Team Members</h3>
-          <p className="text-sm text-muted-foreground">Manage your agency team members</p>
-        </div>
-        <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <UserPlus className="mr-2 h-4 w-4" />
-              Invite User
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Invite Team Member</DialogTitle>
-              <DialogDescription>
-                Send an invitation to add a new team member to your agency
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="user@example.com"
-                  value={inviteData.email}
-                  onChange={(e) => setInviteData({ ...inviteData, email: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="firstName">First Name</Label>
-                <Input
-                  id="firstName"
-                  placeholder="John"
-                  value={inviteData.firstName}
-                  onChange={(e) => setInviteData({ ...inviteData, firstName: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="lastName">Last Name</Label>
-                <Input
-                  id="lastName"
-                  placeholder="Doe"
-                  value={inviteData.lastName}
-                  onChange={(e) => setInviteData({ ...inviteData, lastName: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="role">Role</Label>
-                <Select
-                  value={inviteData.role}
-                  onValueChange={(value: 'owner' | 'admin' | 'user') => 
-                    setInviteData({ ...inviteData, role: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="user">User</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="owner">Owner</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold">Team Members</h3>
+              <p className="text-sm text-muted-foreground">Manage your agency team members</p>
             </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setInviteOpen(false)}
-                disabled={inviting}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleInviteUser}
-                disabled={inviting || !inviteData.email || !inviteData.firstName || !inviteData.lastName}
-              >
-                {inviting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Send Invitation
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      {users.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <UserPlus className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-lg font-medium mb-2">No team members yet</p>
-            <p className="text-muted-foreground text-center mb-4">
-              Invite team members to collaborate on your agency
-            </p>
-            <Button onClick={() => setInviteOpen(true)}>
-              <UserPlus className="mr-2 h-4 w-4" />
-              Invite First Member
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-4">
-          {users.map((user) => (
-            <Card key={user.id}>
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                      {getRoleIcon(user.role)}
+            {!isPreviewMode && (
+              <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    Invite User
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Invite Team Member</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={handleInviteUser} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>First Name *</Label>
+                        <Input
+                          value={inviteData.firstName}
+                          onChange={(e) => setInviteData({ ...inviteData, firstName: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Last Name *</Label>
+                        <Input
+                          value={inviteData.lastName}
+                          onChange={(e) => setInviteData({ ...inviteData, lastName: e.target.value })}
+                          required
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <CardTitle className="text-xl">
-                        {user.profiles?.full_name || "Unnamed User"}
-                      </CardTitle>
-                      <CardDescription className="flex items-center gap-2 mt-1">
-                        <Mail className="h-3 w-3" />
-                        {user.profiles?.email}
-                      </CardDescription>
+                    <div className="space-y-2">
+                      <Label>Email *</Label>
+                      <Input
+                        type="email"
+                        value={inviteData.email}
+                        onChange={(e) => setInviteData({ ...inviteData, email: e.target.value })}
+                        required
+                      />
                     </div>
-                  </div>
-                  {editingUserId === user.id ? (
-                    <div className="flex items-center gap-2">
+                    <div className="space-y-2">
+                      <Label>Password *</Label>
+                      <Input
+                        type="password"
+                        value={inviteData.password}
+                        onChange={(e) => setInviteData({ ...inviteData, password: e.target.value })}
+                        placeholder="Minimum 6 characters"
+                        required
+                        minLength={6}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Role *</Label>
                       <Select
-                        value={selectedRole}
-                        onValueChange={(value: 'owner' | 'admin' | 'user') => setSelectedRole(value)}
-                        disabled={updatingRole}
+                        value={inviteData.role}
+                        onValueChange={(value: 'owner' | 'admin' | 'user') => 
+                          setInviteData({ ...inviteData, role: value })
+                        }
                       >
-                        <SelectTrigger className="w-32">
+                        <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -370,149 +298,92 @@ export function AgencyUsersContent({ agencyId }: AgencyUsersContentProps) {
                           <SelectItem value="owner">Owner</SelectItem>
                         </SelectContent>
                       </Select>
-                      <Button 
-                        size="sm" 
-                        onClick={() => handleUpdateRole(user.id, selectedRole)}
-                        disabled={updatingRole}
-                      >
-                        {updatingRole ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button type="button" variant="outline" onClick={() => setInviteOpen(false)}>
+                        Cancel
                       </Button>
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        onClick={() => setEditingUserId(null)}
-                        disabled={updatingRole}
-                      >
-                        <X className="h-4 w-4" />
+                      <Button type="submit" disabled={inviting}>
+                        {inviting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Invite User
                       </Button>
                     </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <Badge variant={getRoleBadgeVariant(user.role)} className="capitalize">
-                        {user.role}
-                      </Badge>
-                      {(users.find(u => u.user_id === profile?.id)?.role === 'owner' || isPreviewMode) && (
-                        <Button 
-                          size="sm" 
-                          variant="ghost" 
-                          onClick={() => {
-                            setEditingUserId(user.id);
-                            setSelectedRole(user.role);
-                          }}
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between">
-                  <p className="text-sm text-muted-foreground">
-                    Joined {new Date(user.created_at).toLocaleDateString()}
-                  </p>
-                  {(users.find(u => u.user_id === profile?.id)?.role === 'owner' || isPreviewMode) && user.user_id !== profile?.id && (
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => {
-                        setUserToDelete(user);
-                        setDeleteDialogOpen(true);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Remove
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+                  </form>
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
+          <div className="mt-4 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by name or email..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+        </CardHeader>
+        <CardContent>
+          <AgencyUserManagementTable
+            users={filteredUsers}
+            onEdit={handleEditUser}
+            onReinvite={handleReinvite}
+            onDelete={(user) => {
+              setUserToDelete(user);
+              setDeleteDialogOpen(true);
+            }}
+          />
+        </CardContent>
+      </Card>
 
-      <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+      {/* Edit Role Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent>
           <DialogHeader>
-            <div className="flex items-center gap-2">
-              <CheckCircle className="h-6 w-6 text-green-500" />
-              <DialogTitle>User Invited Successfully</DialogTitle>
-            </div>
-            <DialogDescription>
-              {invitedUserData?.firstName} {invitedUserData?.lastName} has been invited to join your agency
-            </DialogDescription>
+            <DialogTitle>Edit User Role</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Email</Label>
-              <div className="flex items-center gap-2">
-                <Input value={invitedUserData?.email || ''} readOnly />
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => copyToClipboard(invitedUserData?.email || '')}
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
-              </div>
+              <Label>Role</Label>
+              <Select
+                value={selectedRole}
+                onValueChange={(value: 'owner' | 'admin' | 'user') => setSelectedRole(value)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="user">User</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="owner">Owner</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <div className="space-y-2">
-              <Label>Temporary Password</Label>
-              <div className="flex items-center gap-2">
-                <Input value={invitedUserData?.tempPassword || ''} readOnly type="text" className="font-mono" />
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => copyToClipboard(invitedUserData?.tempPassword || '')}
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Save this password - it won't be shown again
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label>Login URL</Label>
-              <div className="flex items-center gap-2">
-                <Input value={`${window.location.origin}/agency/login`} readOnly />
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => copyToClipboard(`${window.location.origin}/agency/login`)}
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
-              </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleUpdateRole}>Update Role</Button>
             </div>
           </div>
-          <DialogFooter>
-            <Button onClick={() => setPasswordDialogOpen(false)}>
-              Done
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
+      {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Remove Team Member</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to remove {userToDelete?.profiles?.full_name}? This action cannot be undone.
+              Are you sure you want to remove{" "}
+              {userToDelete?.profile.full_name || 
+               `${userToDelete?.profile.first_name} ${userToDelete?.profile.last_name}`}? 
+              This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleRemoveUser}
-              disabled={deleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Remove
-            </AlertDialogAction>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleRemoveUser}>Remove</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
