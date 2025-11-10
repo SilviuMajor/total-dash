@@ -163,11 +163,7 @@ export default function Agencies() {
                     size="sm"
                     onClick={async () => {
                       try {
-                        const { data: session } = await supabase.auth.getSession();
                         const { data, error } = await supabase.functions.invoke('authenticate-with-context', {
-                          headers: {
-                            Authorization: `Bearer ${session.session?.access_token}`,
-                          },
                           body: {
                             contextType: 'agency',
                             agencyId: agency.id,
@@ -175,7 +171,16 @@ export default function Agencies() {
                           },
                         });
                         
-                        if (error) throw error;
+                        if (error) {
+                          console.error('Auth context error:', error);
+                          toast.error('Failed to generate preview token');
+                          return;
+                        }
+                        
+                        if (!data?.token) {
+                          toast.error('No token received');
+                          return;
+                        }
                         
                         window.open(`/agency?token=${data.token}`, '_blank');
                       } catch (error) {
