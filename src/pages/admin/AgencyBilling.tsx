@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Loader2, DollarSign, Users, TrendingUp, TrendingDown, Download, Search, Calendar } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
+import { toast } from "sonner";
 
 interface BillingData {
   id: string;
@@ -44,6 +45,15 @@ export default function AgencyBilling() {
     filterAndSortData();
   }, [billingData, searchTerm, statusFilter, planFilter, sortField, sortDirection]);
 
+  const getHttpStatus = (err: any): number | null => {
+    if (!err) return null;
+    if (typeof err.status === 'number') return err.status;
+    if (err.context?.status) return err.context.status;
+    if (err.message?.includes('401')) return 401;
+    if (err.message?.includes('403')) return 403;
+    return null;
+  };
+
   const loadBillingData = async (retrying = false) => {
     try {
       console.log("Loading billing data via edge function...");
@@ -52,13 +62,15 @@ export default function AgencyBilling() {
 
       if (error) {
         console.error("Edge function error:", error);
+        const status = getHttpStatus(error);
         
         // Retry once on 401 by refreshing session
-        if (!retrying && (error as any).status === 401) {
+        if (!retrying && status === 401) {
           console.log("Got 401, refreshing session and retrying...");
           const { error: refreshError } = await supabase.auth.refreshSession();
           if (refreshError) {
             console.error("Session refresh failed:", refreshError);
+            toast.error("Session expired. Please log in again.");
             return;
           }
           return loadBillingData(true);

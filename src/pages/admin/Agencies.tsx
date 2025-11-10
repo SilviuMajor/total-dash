@@ -41,6 +41,15 @@ export default function Agencies() {
     loadAgencies();
   }, []);
 
+  const getHttpStatus = (err: any): number | null => {
+    if (!err) return null;
+    if (typeof err.status === 'number') return err.status;
+    if (err.context?.status) return err.context.status;
+    if (err.message?.includes('401')) return 401;
+    if (err.message?.includes('403')) return 403;
+    return null;
+  };
+
   const loadAgencies = async (retrying = false) => {
     try {
       console.log("Loading agencies via edge function...");
@@ -49,9 +58,10 @@ export default function Agencies() {
 
       if (error) {
         console.error("Edge function error:", error);
+        const status = getHttpStatus(error);
         
         // Retry once on 401 by refreshing session
-        if (!retrying && (error as any).status === 401) {
+        if (!retrying && status === 401) {
           console.log("Got 401, refreshing session and retrying...");
           const { error: refreshError } = await supabase.auth.refreshSession();
           if (refreshError) {
@@ -166,31 +176,54 @@ export default function Agencies() {
                     variant="outline"
                     size="sm"
                     onClick={async () => {
-                      try {
-                        const { data, error } = await supabase.functions.invoke('authenticate-with-context', {
-                          body: {
-                            contextType: 'agency',
-                            agencyId: agency.id,
-                            isPreview: true,
-                          },
-                        });
-                        
-                        if (error) {
-                          console.error('Auth context error:', error);
-                          toast.error('Failed to generate preview token');
-                          return;
+                      const invokePreview = async (retrying = false): Promise<void> => {
+                        try {
+                          const { data, error } = await supabase.functions.invoke('authenticate-with-context', {
+                            body: {
+                              contextType: 'agency',
+                              agencyId: agency.id,
+                              isPreview: true,
+                            },
+                          });
+                          
+                          if (error) {
+                            console.error('Auth context error:', error);
+                            const status = getHttpStatus(error);
+                            
+                            // Retry once on 401 by refreshing session
+                            if (!retrying && status === 401) {
+                              console.log("Got 401, refreshing session and retrying preview...");
+                              const { error: refreshError } = await supabase.auth.refreshSession();
+                              if (refreshError) {
+                                console.error("Session refresh failed:", refreshError);
+                                toast.error("Session expired. Please log in again.");
+                                return;
+                              }
+                              return invokePreview(true);
+                            }
+                            
+                            if (status === 403) {
+                              toast.error('You do not have permission to preview this agency');
+                              return;
+                            }
+                            
+                            toast.error('Failed to generate preview token');
+                            return;
+                          }
+                          
+                          if (!data?.token) {
+                            toast.error('No token received');
+                            return;
+                          }
+                          
+                          window.open(`/agency?token=${data.token}`, '_blank');
+                        } catch (error) {
+                          toast.error('Failed to enter preview mode');
+                          console.error(error);
                         }
-                        
-                        if (!data?.token) {
-                          toast.error('No token received');
-                          return;
-                        }
-                        
-                        window.open(`/agency?token=${data.token}`, '_blank');
-                      } catch (error) {
-                        toast.error('Failed to enter preview mode');
-                        console.error(error);
-                      }
+                      };
+                      
+                      await invokePreview();
                     }}
                   >
                     <Eye className="w-4 h-4 mr-2" />
