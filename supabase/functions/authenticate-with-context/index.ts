@@ -14,7 +14,15 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
+      console.error('Missing Authorization header');
       throw new Error('Authorization header required');
+    }
+
+    // Extract Bearer token
+    const jwtToken = authHeader.replace('Bearer ', '');
+    if (!jwtToken) {
+      console.error('Invalid Authorization header format');
+      throw new Error('Invalid Authorization header format');
     }
 
     const { contextType, agencyId, clientId, isPreview = false } = await req.json();
@@ -23,27 +31,20 @@ serve(async (req) => {
       throw new Error('Context type is required');
     }
 
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: authHeader },
-        },
-      }
-    );
-
-    // Get current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      throw new Error('Invalid authentication');
-    }
-
-    // Validate context permissions
+    // Use admin client to validate the token directly
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
+
+    // Get user from token using admin client
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(jwtToken);
+    if (userError || !user) {
+      console.error('Token validation failed:', userError?.message || 'No user found');
+      throw new Error('Invalid authentication');
+    }
+
+    console.log('User authenticated successfully:', user.id);
 
     // Check if user is a super admin (needed for preview mode bypass)
     const { data: superAdminRec } = await supabaseAdmin

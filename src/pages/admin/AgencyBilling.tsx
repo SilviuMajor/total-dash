@@ -44,24 +44,26 @@ export default function AgencyBilling() {
     filterAndSortData();
   }, [billingData, searchTerm, statusFilter, planFilter, sortField, sortDirection]);
 
-  const loadBillingData = async () => {
+  const loadBillingData = async (retrying = false) => {
     try {
       console.log("Loading billing data via edge function...");
-      
-      const { data: session } = await supabase.auth.getSession();
-      if (!session?.session) {
-        console.error("Not authenticated");
-        return;
-      }
 
-      const { data, error } = await supabase.functions.invoke('get-billing-data', {
-        headers: {
-          Authorization: `Bearer ${session.session.access_token}`,
-        },
-      });
+      const { data, error } = await supabase.functions.invoke('get-billing-data');
 
       if (error) {
         console.error("Edge function error:", error);
+        
+        // Retry once on 401 by refreshing session
+        if (!retrying && (error as any).status === 401) {
+          console.log("Got 401, refreshing session and retrying...");
+          const { error: refreshError } = await supabase.auth.refreshSession();
+          if (refreshError) {
+            console.error("Session refresh failed:", refreshError);
+            return;
+          }
+          return loadBillingData(true);
+        }
+        
         throw error;
       }
 

@@ -41,3 +41,6 @@ verify_jwt = false
 
 [functions.get-agencies-overview]
 verify_jwt = true
+
+[functions.authenticate-with-context]
+verify_jwt = true
