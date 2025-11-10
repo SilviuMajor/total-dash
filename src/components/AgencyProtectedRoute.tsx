@@ -15,6 +15,12 @@ export function AgencyProtectedRoute({ children }: AgencyProtectedRouteProps) {
   const [checkingSubscription, setCheckingSubscription] = useState(true);
   const [gracePeriodEndsAt, setGracePeriodEndsAt] = useState<string | null>(null);
 
+  // Check for token in URL or sessionStorage
+  const searchParams = new URLSearchParams(window.location.search);
+  const tokenInUrl = searchParams.get('token');
+  const tokenInSession = sessionStorage.getItem('preview_token');
+  const hasToken = !!(tokenInUrl || tokenInSession);
+
   useEffect(() => {
     const checkSubscription = async () => {
       if (!profile?.agency?.id) {
@@ -47,14 +53,15 @@ export function AgencyProtectedRoute({ children }: AgencyProtectedRouteProps) {
     }
   }, [profile?.agency?.id, userType, loading]);
 
-  if (loading || checkingSubscription || isValidatingToken) {
+  // Show loading if validating token, checking subscription, or if token exists but userType not set yet
+  if (loading || checkingSubscription || isValidatingToken || (hasToken && !userType)) {
     console.log('[AgencyProtectedRoute] Loading state:', {
       loading,
       checkingSubscription,
       isValidatingToken,
+      hasToken,
       userType,
-      isPreviewMode,
-      hasToken: !!sessionStorage.getItem('preview_token')
+      isPreviewMode
     });
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -64,15 +71,15 @@ export function AgencyProtectedRoute({ children }: AgencyProtectedRouteProps) {
   }
 
   // Check if in preview mode via token
-  const previewToken = sessionStorage.getItem('preview_token');
-  const isValidPreview = isPreviewMode && userType === 'super_admin' && previewToken;
+  const isValidPreview = isPreviewMode && userType === 'super_admin' && hasToken;
 
   // Allow super admins with valid preview token
   if (isValidPreview) {
     return <>{children}</>;
   }
 
-  if (userType !== 'agency') {
+  // Don't redirect if token is being validated
+  if (!hasToken && userType !== 'agency') {
     return <Navigate to="/agency/login" replace />;
   }
 

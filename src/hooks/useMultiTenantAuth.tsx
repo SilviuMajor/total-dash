@@ -67,12 +67,18 @@ const MultiTenantAuthContext = createContext<MultiTenantAuthContextType>({
 export const useMultiTenantAuth = () => useContext(MultiTenantAuthContext);
 
 export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
+  // Check for token IMMEDIATELY on mount to set validating state synchronously
+  const searchParams = new URLSearchParams(window.location.search);
+  const tokenParam = searchParams.get('token');
+  const sessionToken = sessionStorage.getItem('preview_token');
+  const hasToken = tokenParam || sessionToken;
+
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<MultiTenantProfile | null>(null);
   const [userType, setUserType] = useState<UserType>(null);
   const [loading, setLoading] = useState(true);
-  const [isValidatingToken, setIsValidatingToken] = useState(false);
+  const [isValidatingToken, setIsValidatingToken] = useState(!!hasToken); // Set immediately if token exists
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [previewAgency, setPreviewAgency] = useState<AgencyData | null>(null);
   const [isClientPreviewMode, setIsClientPreviewMode] = useState(false);
