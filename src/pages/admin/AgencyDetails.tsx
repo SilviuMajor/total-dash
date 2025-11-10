@@ -168,8 +168,93 @@ export default function AgencyDetails() {
     );
   };
 
+  // Helper to extract HTTP status from Supabase function errors
+  const getHttpStatus = (err: any): number | null => {
+    // Direct status property
+    if (typeof err?.status === 'number') return err.status;
+    
+    // Nested in context
+    if (typeof err?.context?.status === 'number') return err.context.status;
+    
+    // In FunctionsHttpError or FunctionsRelayError
+    if (err?.context?.body) {
+      try {
+        const parsed = typeof err.context.body === 'string' 
+          ? JSON.parse(err.context.body) 
+          : err.context.body;
+        if (typeof parsed?.status === 'number') return parsed.status;
+      } catch {}
+    }
+    
+    return null;
+  };
+
+  const invokePreview = async (isRetry = false) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('authenticate-with-context', {
+        body: {
+          contextType: 'agency',
+          agencyId: id,
+          isPreview: true,
+        },
+      });
+
+      if (error) {
+        const status = getHttpStatus(error);
+        
+        // On 401 and not retrying: refresh session and retry once
+        if (status === 401 && !isRetry) {
+          console.log('Preview auth failed with 401, refreshing session and retrying...');
+          const { error: refreshError } = await supabase.auth.refreshSession();
+          if (refreshError) {
+            console.error('Session refresh failed:', refreshError);
+            toast({
+              title: "Session expired",
+              description: "Please log in again.",
+              variant: "destructive",
+            });
+            return;
+          }
+          // Retry once
+          return invokePreview(true);
+        }
+        
+        // Handle 403 specifically
+        if (status === 403) {
+          toast({
+            title: "Permission denied",
+            description: "You do not have permission to preview this agency.",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        // Other errors
+        throw error;
+      }
+
+      if (!data?.token) {
+        toast({
+          title: "Error",
+          description: "No preview token received.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      window.open(`/agency?token=${data.token}`, '_blank');
+    } catch (error: any) {
+      console.error('Error generating preview token:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to generate preview token",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handlePreview = () => {
-    window.open(`/agency?preview=true&agencyId=${id}`, '_blank');
+    invokePreview();
   };
 
   const handleToggleManualOverride = async (enabled: boolean) => {
