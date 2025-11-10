@@ -45,15 +45,17 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
+    // Check if user is a super admin (needed for preview mode bypass)
+    const { data: superAdminRec } = await supabaseAdmin
+      .from('super_admin_users')
+      .select('id')
+      .eq('user_id', user.id)
+      .single();
+    const isSuperAdmin = !!superAdminRec;
+
     if (contextType === 'super_admin') {
       // Verify user is a super admin
-      const { data: superAdmin } = await supabaseAdmin
-        .from('super_admin_users')
-        .select('id')
-        .eq('user_id', user.id)
-        .single();
-
-      if (!superAdmin) {
+      if (!isSuperAdmin) {
         throw new Error('User is not a super admin');
       }
     } else if (contextType === 'agency') {
@@ -61,32 +63,48 @@ serve(async (req) => {
         throw new Error('Agency ID required for agency context');
       }
 
-      // Verify user belongs to this agency
-      const { data: agencyUser } = await supabaseAdmin
-        .from('agency_users')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('agency_id', agencyId)
-        .single();
+      // Super admins in preview mode can access any agency
+      if (!(isSuperAdmin && isPreview)) {
+        // Verify user belongs to this agency
+        const { data: agencyUser } = await supabaseAdmin
+          .from('agency_users')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('agency_id', agencyId)
+          .single();
 
-      if (!agencyUser) {
-        throw new Error('User does not belong to this agency');
+        if (!agencyUser) {
+          throw new Error('User does not belong to this agency');
+        }
+      } else {
+        console.log('Super admin preview: bypassing agency membership validation', { 
+          userId: user.id, 
+          agencyId 
+        });
       }
     } else if (contextType === 'client') {
       if (!clientId) {
         throw new Error('Client ID required for client context');
       }
 
-      // Verify user belongs to this client
-      const { data: clientUser } = await supabaseAdmin
-        .from('client_users')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('client_id', clientId)
-        .single();
+      // Super admins in preview mode can access any client
+      if (!(isSuperAdmin && isPreview)) {
+        // Verify user belongs to this client
+        const { data: clientUser } = await supabaseAdmin
+          .from('client_users')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('client_id', clientId)
+          .single();
 
-      if (!clientUser) {
-        throw new Error('User does not belong to this client');
+        if (!clientUser) {
+          throw new Error('User does not belong to this client');
+        }
+      } else {
+        console.log('Super admin preview: bypassing client membership validation', { 
+          userId: user.id, 
+          clientId 
+        });
       }
     }
 
