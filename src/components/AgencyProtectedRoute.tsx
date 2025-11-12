@@ -78,8 +78,8 @@ export function AgencyProtectedRoute({ children }: AgencyProtectedRouteProps) {
     return <>{children}</>;
   }
 
-  // Don't redirect if token is being validated
-  if (!hasToken && userType !== 'agency') {
+  // Don't redirect if token is being validated or if no token and not agency user
+  if (!hasToken && !isValidatingToken && userType !== 'agency') {
     return <Navigate to="/agency/login" replace />;
   }
 

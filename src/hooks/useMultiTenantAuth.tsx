@@ -88,16 +88,51 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Effect 1: Auth initialization - ALWAYS runs, never returns early
   useEffect(() => {
-    // Check for token-based preview mode FIRST
+    console.log('[Auth] Initializing auth listener and session');
+    
+    // Set up auth state listener FIRST
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log('[Auth] Auth state change:', _event, session?.user?.id);
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        loadProfile(session.user.id);
+      } else {
+        setProfile(null);
+        setUserType(null);
+        setLoading(false);
+      }
+    });
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('[Auth] Initial session loaded:', session?.user?.id);
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        loadProfile(session.user.id);
+      } else {
+        setLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []); // Only run once on mount
+
+  // Effect 2: Preview token validation - runs when URL changes
+  useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
     const tokenParam = searchParams.get('token');
 
+    // Handle token-based preview mode
     if (tokenParam) {
       setIsValidatingToken(true);
       console.log('[Preview] Token detected:', tokenParam);
       
-      // Validate token via auth_contexts table
       const validateToken = async () => {
         try {
           console.log('[Preview] Validation starting...');
@@ -110,7 +145,7 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
           
           if (error || !authContext) {
             console.error('Invalid preview token:', error);
-            navigate('/admin/agencies');
+            navigate('/admin/agencies', { replace: true });
             setIsValidatingToken(false);
             return;
           }
@@ -118,39 +153,35 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
           // Check if token has expired
           if (new Date(authContext.expires_at) < new Date()) {
             console.error('Preview session expired');
-            navigate('/admin/agencies');
+            navigate('/admin/agencies', { replace: true });
             setIsValidatingToken(false);
             return;
           }
           
           // Token is valid - set up preview mode
           if (authContext.context_type === 'agency' && authContext.agency_id) {
-            // Set preview states SYNCHRONOUSLY first
             setIsPreviewMode(true);
             setPreviewDepth('agency');
-            console.log('[Preview] States set - isPreviewMode:', true, 'previewDepth:', 'agency');
+            console.log('[Preview] States set - isPreviewMode: true, previewDepth: agency');
             
-            // sessionStorage (synchronous)
             sessionStorage.setItem(PREVIEW_MODE_KEY, 'agency');
             sessionStorage.setItem(PREVIEW_AGENCY_KEY, authContext.agency_id);
             sessionStorage.setItem('preview_token', tokenParam);
             
-            // Async agency data loading
             await loadPreviewAgency(authContext.agency_id);
             
-            // Clean URL (remove token param) and navigate
             navigate('/agency/clients', { replace: true });
           }
         } catch (err) {
           console.error('Token validation error:', err);
-          navigate('/admin/agencies');
+          navigate('/admin/agencies', { replace: true });
         } finally {
           setIsValidatingToken(false);
         }
       };
       
       validateToken();
-      return; // Skip other URL param checks
+      return; // Skip other URL param checks for this effect
     }
 
     // Check sessionStorage first for preview mode persistence
@@ -165,14 +196,12 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
     const clientId = searchParams.get('clientId');
     
     if (previewParam && agencyId && !clientId) {
-      // Agency preview mode (super admin -> agency)
       setIsPreviewMode(true);
       setPreviewDepth('agency');
       sessionStorage.setItem(PREVIEW_MODE_KEY, 'agency');
       sessionStorage.setItem(PREVIEW_AGENCY_KEY, agencyId);
       loadPreviewAgency(agencyId);
     } else if (previewParam && clientId && agencyId) {
-      // Client preview mode - check if agency preview is active
       const hasAgencyPreview = sessionStorage.getItem(PREVIEW_AGENCY_KEY) !== null;
       setIsClientPreviewMode(true);
       setPreviewDepth(hasAgencyPreview ? 'agency_to_client' : 'client');
@@ -181,7 +210,6 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
       sessionStorage.setItem(PREVIEW_CLIENT_AGENCY_KEY, agencyId);
       loadPreviewClient(clientId, agencyId);
       
-      // If agency preview exists, load it too
       if (hasAgencyPreview) {
         const storedAgencyId = sessionStorage.getItem(PREVIEW_AGENCY_KEY);
         if (storedAgencyId) {
@@ -190,7 +218,6 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
         }
       }
     } else if (storedPreviewMode === 'agency' && storedPreviewAgency) {
-      // Validate stored preview token before restoring
       const storedToken = sessionStorage.getItem('preview_token');
       
       if (storedToken) {
@@ -202,16 +229,14 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
             .single();
           
           if (!authContext || new Date(authContext.expires_at) < new Date()) {
-            // Token expired - clear everything
             setIsPreviewMode(false);
             setPreviewDepth('none');
             sessionStorage.removeItem(PREVIEW_MODE_KEY);
             sessionStorage.removeItem(PREVIEW_AGENCY_KEY);
             sessionStorage.removeItem('preview_token');
             console.error('Preview session expired');
-            navigate('/admin/agencies');
+            navigate('/admin/agencies', { replace: true });
           } else {
-            // Token valid - load agency data
             setIsPreviewMode(true);
             setPreviewDepth('agency');
             console.log('[Preview] Restoring from sessionStorage');
@@ -221,18 +246,15 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
         
         validateStoredToken();
       } else {
-        // No token but preview mode set - clear it
         sessionStorage.removeItem(PREVIEW_MODE_KEY);
         sessionStorage.removeItem(PREVIEW_AGENCY_KEY);
       }
     } else if (storedPreviewMode === 'client' && storedPreviewClient && storedPreviewClientAgency) {
-      // Restore client preview from session
       setIsClientPreviewMode(true);
       const hasAgencyPreview = storedPreviewAgency !== null;
       setPreviewDepth(hasAgencyPreview ? 'agency_to_client' : 'client');
       loadPreviewClient(storedPreviewClient, storedPreviewClientAgency);
       
-      // If agency preview exists, restore it too
       if (hasAgencyPreview) {
         setIsPreviewMode(true);
         loadPreviewAgency(storedPreviewAgency);
@@ -240,33 +262,7 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
     } else {
       setPreviewDepth('none');
     }
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        loadProfile(session.user.id);
-      } else {
-        setLoading(false);
-      }
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        loadProfile(session.user.id);
-      } else {
-        setProfile(null);
-        setUserType(null);
-        setLoading(false);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [location.pathname, location.search]);
+  }, [location.search]); // Run when URL search params change
 
   const loadPreviewAgency = async (agencyId: string) => {
     try {
