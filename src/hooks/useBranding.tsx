@@ -78,8 +78,6 @@ export const useBranding = ({ isClientView, agencyId, appTheme = 'light' }: UseB
           if (agencyData.logo_dark_url) finalBranding.logoDarkUrl = agencyData.logo_dark_url;
           if (agencyData.full_logo_light_url) finalBranding.fullLogoLightUrl = agencyData.full_logo_light_url;
           if (agencyData.full_logo_dark_url) finalBranding.fullLogoDarkUrl = agencyData.full_logo_dark_url;
-          if (agencyData.favicon_light_url) finalBranding.faviconLightUrl = agencyData.favicon_light_url;
-          if (agencyData.favicon_dark_url) finalBranding.faviconDarkUrl = agencyData.favicon_dark_url;
           if (agencyData.name) finalBranding.companyName = agencyData.name;
         }
       }
