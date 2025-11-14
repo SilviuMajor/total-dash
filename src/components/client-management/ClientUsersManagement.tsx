@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Card } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Settings, Trash2, UserPlus, Copy } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { PasswordDisplay } from "@/components/PasswordDisplay";
 
@@ -58,6 +59,7 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [permissionsOpen, setPermissionsOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<ClientUser | null>(null);
@@ -84,6 +86,7 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
 
   const loadUsers = async () => {
     try {
+      console.log('[ClientUsersManagement] Loading users for clientId:', clientId);
       const { data, error } = await supabase
         .from('client_users')
         .select(`
@@ -93,7 +96,12 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
         `)
         .eq('client_id', clientId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('[ClientUsersManagement] Error loading users:', error);
+        throw error;
+      }
+
+      console.log('[ClientUsersManagement] Users loaded:', data?.length);
 
       // Fetch roles for each user
       const usersWithRoles = await Promise.all(
@@ -112,7 +120,10 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
       );
 
       setUsers(usersWithRoles as ClientUser[]);
+      setError(null);
     } catch (error: any) {
+      console.error('[ClientUsersManagement] Error in loadUsers:', error);
+      setError(error.message || 'Failed to load users');
       toast({
         title: "Error",
         description: error.message,
@@ -125,21 +136,28 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
 
   const loadDepartments = async () => {
     try {
+      console.log('[ClientUsersManagement] Loading departments for clientId:', clientId);
       const { data, error } = await supabase
         .from('departments')
         .select('*')
         .eq('client_id', clientId)
         .order('name');
 
-      if (error) throw error;
+      if (error) {
+        console.error('[ClientUsersManagement] Error loading departments:', error);
+        throw error;
+      }
+      console.log('[ClientUsersManagement] Departments loaded:', data?.length);
       setDepartments(data || []);
     } catch (error: any) {
-      console.error('Error loading departments:', error);
+      console.error('[ClientUsersManagement] Error in loadDepartments:', error);
+      // Don't set error state for departments - it's not critical
     }
   };
 
   const loadAgents = async () => {
     try {
+      console.log('[ClientUsersManagement] Loading agents for clientId:', clientId);
       const { data, error } = await supabase
         .from('agent_assignments')
         .select(`
@@ -154,7 +172,13 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
         .eq('client_id', clientId)
         .order('sort_order', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error('[ClientUsersManagement] Error loading agents:', error);
+        // Don't throw - agents might not be accessible in preview mode
+        // Just log and continue with empty agents list
+        setAgents([]);
+        return;
+      }
       
       const agentsList = data
         ?.map(a => ({
@@ -165,6 +189,7 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
         }))
         .filter(a => a.id) || [];
 
+      console.log('[ClientUsersManagement] Agents loaded:', agentsList.length);
       setAgents(agentsList);
 
       // Initialize permissions for new user
@@ -182,7 +207,8 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
       });
       setNewUserAgentPermissions(initialPermissions);
     } catch (error: any) {
-      console.error('Error loading agents:', error);
+      console.error('[ClientUsersManagement] Error in loadAgents:', error);
+      setAgents([]);
     }
   };
 
@@ -519,6 +545,28 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
       });
     }
   };
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Error Loading Users</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+          <Button onClick={() => { setError(null); setLoading(true); loadUsers(); }} className="mt-4">
+            Retry
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <>

@@ -23,7 +23,9 @@ export default function AgencySettings() {
   const [verifying, setVerifying] = useState(false);
   const [showSlugWarning, setShowSlugWarning] = useState(false);
   const [pendingSlug, setPendingSlug] = useState("");
-  const hasWhitelabel = profile?.agency?.has_whitelabel_access;
+  const hasWhitelabel = isPreviewMode 
+    ? previewAgency?.has_whitelabel_access 
+    : profile?.agency?.has_whitelabel_access;
 
   useEffect(() => {
     loadAgency();
