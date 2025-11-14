@@ -102,13 +102,13 @@ export const BrandingUpload = ({
               <img 
                 src={preview} 
                 alt={label}
-                className="max-w-[400px] max-h-[100px] object-contain"
+                className="max-w-[200px] max-h-[50px] object-contain"
               />
             ) : type === 'logo' ? (
               <img 
                 src={preview} 
                 alt={label}
-                className="max-w-[128px] max-h-[128px] object-contain"
+                className="max-w-[64px] max-h-[64px] object-contain"
               />
             ) : (
               <img 

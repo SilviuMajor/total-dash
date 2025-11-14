@@ -93,9 +93,10 @@ export const useBranding = ({ isClientView, agencyId, appTheme = 'light' }: UseB
         : (finalBranding.fullLogoLightUrl || finalBranding.fullLogoDarkUrl || finalBranding.logoLightUrl || finalBranding.logoDarkUrl || '');
 
       // Select favicon based on SYSTEM THEME (independent of app theme toggle)
+      // NO fallbacks to other logo types - favicon should ONLY use favicon URLs
       finalBranding.faviconUrl = systemTheme
-        ? (finalBranding.faviconDarkUrl || finalBranding.faviconLightUrl || '/favicon.ico')
-        : (finalBranding.faviconLightUrl || finalBranding.faviconDarkUrl || '/favicon.ico');
+        ? (finalBranding.faviconDarkUrl || '/favicon.ico')
+        : (finalBranding.faviconLightUrl || '/favicon.ico');
 
       setBranding(finalBranding);
     } catch (error) {
