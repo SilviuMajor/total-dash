@@ -466,7 +466,8 @@ export default function SuperAdminSettings() {
                 Customize your platform's branding. This serves as the base branding for all agencies and clients.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-8">
+              {/* Company Name */}
               <div className="space-y-2">
                 <Label htmlFor="company-name">Company Name</Label>
                 <Input
@@ -480,77 +481,94 @@ export default function SuperAdminSettings() {
                 </p>
               </div>
 
-              <div className="space-y-2">
-                <h3 className="text-sm font-semibold">Logo Usage Guide</h3>
-                <p className="text-xs text-muted-foreground mb-4">
-                  Two logo types: <strong>Sidebar Logo</strong> (square, 48-128px) for dashboards, and <strong>Full Logo</strong> (wide, 400x100px) for login pages and emails.
-                </p>
+              {/* Sidebar Logos Section */}
+              <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+                <div>
+                  <h3 className="text-sm font-semibold mb-1">Sidebar Logos</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Square logos (48-128px) displayed in navigation sidebars
+                  </p>
+                </div>
+                <div className="space-y-4">
+                  <BrandingUpload
+                    label="Light Mode"
+                    description="Appears in sidebars when light theme is active"
+                    currentUrl={branding.logo_light_url}
+                    onUpload={(url) => setBranding({ ...branding, logo_light_url: url })}
+                    bucket="platform-branding"
+                    acceptedTypes={['.png', '.jpg', '.jpeg', '.svg']}
+                    type="logo"
+                  />
+                  <BrandingUpload
+                    label="Dark Mode"
+                    description="Appears in sidebars when dark theme is active"
+                    currentUrl={branding.logo_dark_url}
+                    onUpload={(url) => setBranding({ ...branding, logo_dark_url: url })}
+                    bucket="platform-branding"
+                    acceptedTypes={['.png', '.jpg', '.jpeg', '.svg']}
+                    type="logo"
+                  />
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <BrandingUpload
-                  label="Sidebar Logo (Light Mode)"
-                  description="Square logo displayed in sidebars when light theme is active. Appears in: Admin sidebar, Agency sidebar."
-                  currentUrl={branding.logo_light_url}
-                  onUpload={(url) => setBranding({ ...branding, logo_light_url: url })}
-                  bucket="platform-branding"
-                  acceptedTypes={['.png', '.jpg', '.jpeg', '.svg']}
-                  type="logo"
-                />
-
-                <BrandingUpload
-                  label="Sidebar Logo (Dark Mode)"
-                  description="Square logo displayed in sidebars when dark theme is active. Appears in: Admin sidebar, Agency sidebar."
-                  currentUrl={branding.logo_dark_url}
-                  onUpload={(url) => setBranding({ ...branding, logo_dark_url: url })}
-                  bucket="platform-branding"
-                  acceptedTypes={['.png', '.jpg', '.jpeg', '.svg']}
-                  type="logo"
-                />
+              {/* Full Logos Section */}
+              <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+                <div>
+                  <h3 className="text-sm font-semibold mb-1">Full Logos</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Wide format logos (400x100px) for login pages and email headers
+                  </p>
+                </div>
+                <div className="space-y-4">
+                  <BrandingUpload
+                    label="Light Mode"
+                    description="Used on login pages and emails in light theme"
+                    currentUrl={branding.full_logo_light_url}
+                    onUpload={(url) => setBranding({ ...branding, full_logo_light_url: url })}
+                    bucket="platform-branding"
+                    acceptedTypes={['.png', '.jpg', '.jpeg', '.svg']}
+                    type="full-logo"
+                  />
+                  <BrandingUpload
+                    label="Dark Mode"
+                    description="Used on login pages and emails in dark theme"
+                    currentUrl={branding.full_logo_dark_url}
+                    onUpload={(url) => setBranding({ ...branding, full_logo_dark_url: url })}
+                    bucket="platform-branding"
+                    acceptedTypes={['.png', '.jpg', '.jpeg', '.svg']}
+                    type="full-logo"
+                  />
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <BrandingUpload
-                  label="Full Logo (Light Mode)"
-                  description="Wide format logo for login pages and email templates (light theme). Appears in: Super Admin login, Agency login, Email headers."
-                  currentUrl={branding.full_logo_light_url}
-                  onUpload={(url) => setBranding({ ...branding, full_logo_light_url: url })}
-                  bucket="platform-branding"
-                  acceptedTypes={['.png', '.jpg', '.jpeg', '.svg']}
-                  type="full-logo"
-                />
-
-                <BrandingUpload
-                  label="Full Logo (Dark Mode)"
-                  description="Wide format logo for login pages and email templates (dark theme). Appears in: Super Admin login, Agency login, Email headers."
-                  currentUrl={branding.full_logo_dark_url}
-                  onUpload={(url) => setBranding({ ...branding, full_logo_dark_url: url })}
-                  bucket="platform-branding"
-                  acceptedTypes={['.png', '.jpg', '.jpeg', '.svg']}
-                  type="full-logo"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <BrandingUpload
-                  label="Favicon (Light Mode)"
-                  description="Browser tab icon shown when light theme is active. Appears in: Browser tabs, bookmarks."
-                  currentUrl={branding.favicon_light_url}
-                  onUpload={(url) => setBranding({ ...branding, favicon_light_url: url })}
-                  bucket="platform-branding"
-                  acceptedTypes={['.ico', '.png']}
-                  type="favicon"
-                />
-
-                <BrandingUpload
-                  label="Favicon (Dark Mode)"
-                  description="Browser tab icon shown when dark theme is active. Appears in: Browser tabs, bookmarks."
-                  currentUrl={branding.favicon_dark_url}
-                  onUpload={(url) => setBranding({ ...branding, favicon_dark_url: url })}
-                  bucket="platform-branding"
-                  acceptedTypes={['.ico', '.png']}
-                  type="favicon"
-                />
+              {/* Favicons Section */}
+              <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+                <div>
+                  <h3 className="text-sm font-semibold mb-1">Favicons</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Small icons (16x16px) shown in browser tabs and bookmarks. Responds to system theme (not app theme toggle).
+                  </p>
+                </div>
+                <div className="space-y-4">
+                  <BrandingUpload
+                    label="Light Mode"
+                    description="Shown when user's operating system is in light mode"
+                    currentUrl={branding.favicon_light_url}
+                    onUpload={(url) => setBranding({ ...branding, favicon_light_url: url })}
+                    bucket="platform-branding"
+                    acceptedTypes={['.ico', '.png']}
+                    type="favicon"
+                  />
+                  <BrandingUpload
+                    label="Dark Mode"
+                    description="Shown when user's operating system is in dark mode"
+                    currentUrl={branding.favicon_dark_url}
+                    onUpload={(url) => setBranding({ ...branding, favicon_dark_url: url })}
+                    bucket="platform-branding"
+                    acceptedTypes={['.ico', '.png']}
+                    type="favicon"
+                  />
+                </div>
               </div>
 
               <Button onClick={saveBranding} disabled={saving}>
