@@ -97,6 +97,15 @@ export const useBranding = ({ isClientView, agencyId, appTheme = 'light' }: UseB
       finalBranding.faviconUrl = systemTheme
         ? (finalBranding.faviconDarkUrl || '/favicon.ico')
         : (finalBranding.faviconLightUrl || '/favicon.ico');
+      
+      console.log('[useBranding] Favicon selection:', {
+        systemTheme: systemTheme ? 'dark' : 'light',
+        faviconLightUrl: finalBranding.faviconLightUrl,
+        faviconDarkUrl: finalBranding.faviconDarkUrl,
+        selectedFaviconUrl: finalBranding.faviconUrl,
+        isClientView,
+        agencyId
+      });
 
       setBranding(finalBranding);
     } catch (error) {

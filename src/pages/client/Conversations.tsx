@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Phone, Clock, CheckCircle, MessageSquare } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -62,6 +62,7 @@ export default function Conversations() {
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const { selectedAgentId, agents } = useClientAgentContext();
   const { toast } = useToast();
+  const transcriptsEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (selectedAgentId) {
@@ -92,6 +93,13 @@ export default function Conversations() {
       setAssignedTags(selectedConversation.metadata?.tags || []);
     }
   }, [selectedConversation]);
+
+  // Auto-scroll to bottom when transcripts load or update
+  useEffect(() => {
+    if (transcriptsEndRef.current) {
+      transcriptsEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [transcripts]);
 
   // Real-time subscriptions for conversations
   useEffect(() => {
@@ -499,6 +507,7 @@ export default function Conversations() {
                         />
                       );
                     })}
+                    <div ref={transcriptsEndRef} />
                   </div>
                 )}
               </ScrollArea>
