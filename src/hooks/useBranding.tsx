@@ -79,6 +79,12 @@ export const useBranding = ({ isClientView, agencyId, appTheme = 'light' }: UseB
           if (agencyData.full_logo_light_url) finalBranding.fullLogoLightUrl = agencyData.full_logo_light_url;
           if (agencyData.full_logo_dark_url) finalBranding.fullLogoDarkUrl = agencyData.full_logo_dark_url;
           if (agencyData.name) finalBranding.companyName = agencyData.name;
+          
+          // ONLY override favicon in client view
+          if (isClientView) {
+            if (agencyData.favicon_light_url) finalBranding.faviconLightUrl = agencyData.favicon_light_url;
+            if (agencyData.favicon_dark_url) finalBranding.faviconDarkUrl = agencyData.favicon_dark_url;
+          }
         }
       }
 
@@ -93,18 +99,21 @@ export const useBranding = ({ isClientView, agencyId, appTheme = 'light' }: UseB
         : (finalBranding.fullLogoLightUrl || finalBranding.fullLogoDarkUrl || finalBranding.logoLightUrl || finalBranding.logoDarkUrl || '');
 
       // Select favicon based on SYSTEM THEME (independent of app theme toggle)
-      // NO fallbacks to other logo types - favicon should ONLY use favicon URLs
+      // In client view with agency ID: use agency favicon if available
+      // Otherwise: always use platform favicon
       finalBranding.faviconUrl = systemTheme
         ? (finalBranding.faviconDarkUrl || '/favicon.ico')
         : (finalBranding.faviconLightUrl || '/favicon.ico');
       
       console.log('[useBranding] Favicon selection:', {
+        mode: isClientView ? 'CLIENT_VIEW' : 'ADMIN/AGENCY_VIEW',
         systemTheme: systemTheme ? 'dark' : 'light',
         faviconLightUrl: finalBranding.faviconLightUrl,
         faviconDarkUrl: finalBranding.faviconDarkUrl,
         selectedFaviconUrl: finalBranding.faviconUrl,
         isClientView,
-        agencyId
+        agencyId,
+        usingAgencyFavicon: isClientView && agencyId && (finalBranding.faviconLightUrl !== platformData?.favicon_light_url)
       });
 
       setBranding(finalBranding);

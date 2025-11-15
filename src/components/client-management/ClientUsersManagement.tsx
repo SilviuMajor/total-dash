@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Settings, Trash2, UserPlus, Copy } from "lucide-react";
+import { Settings, Trash2, UserPlus, Copy, AlertCircle, Loader2 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AvatarUpload } from "@/components/AvatarUpload";
@@ -78,6 +78,15 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
 
   const { toast } = useToast();
 
+  // Safe helper for getting initials
+  const getInitials = (name?: string | null, fallback?: string): string => {
+    const src = name || fallback || "";
+    if (!src.trim()) return "U";
+    const parts = src.trim().split(/\s+/);
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  };
+
   useEffect(() => {
     loadUsers();
     loadDepartments();
@@ -87,6 +96,9 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
   const loadUsers = async () => {
     try {
       console.log('[ClientUsersManagement] Loading users for clientId:', clientId);
+      setLoading(true);
+      setError(null);
+      
       const { data, error } = await supabase
         .from('client_users')
         .select(`
@@ -98,7 +110,9 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
 
       if (error) {
         console.error('[ClientUsersManagement] Error loading users:', error);
-        throw error;
+        setError(`Failed to load users: ${error.message}`);
+        setUsers([]);
+        return;
       }
 
       console.log('[ClientUsersManagement] Users loaded:', data?.length);
@@ -439,16 +453,6 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
         variant: "destructive",
       });
     }
-  };
-
-  const getInitials = (name: string | null) => {
-    if (!name) return "?";
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
   };
 
   const copyPassword = () => {

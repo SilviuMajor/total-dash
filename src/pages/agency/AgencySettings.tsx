@@ -14,8 +14,9 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { BrandingUpload } from "@/components/BrandingUpload";
 
 export default function AgencySettings() {
-  const { profile, isPreviewMode, previewAgency } = useMultiTenantAuth();
-  const agencyId = isPreviewMode ? previewAgency?.id : profile?.agency?.id;
+  const { profile, isPreviewMode, previewAgency, userType, previewDepth } = useMultiTenantAuth();
+  const effectiveIsPreviewMode = userType === 'super_admin' && previewDepth === 'agency';
+  const effectiveAgencyId = effectiveIsPreviewMode ? previewAgency?.id : profile?.agency?.id;
   const { toast } = useToast();
   const [agency, setAgency] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -23,22 +24,50 @@ export default function AgencySettings() {
   const [verifying, setVerifying] = useState(false);
   const [showSlugWarning, setShowSlugWarning] = useState(false);
   const [pendingSlug, setPendingSlug] = useState("");
-  const hasWhitelabel = isPreviewMode 
-    ? previewAgency?.has_whitelabel_access 
-    : profile?.agency?.has_whitelabel_access;
+  const [hasWhitelabel, setHasWhitelabel] = useState<boolean>(false);
+
+  // Check whitelabel access using database function
+  useEffect(() => {
+    const checkWhitelabelAccess = async () => {
+      if (!effectiveAgencyId) {
+        setHasWhitelabel(false);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase.rpc('has_whitelabel_access', {
+          _agency_id: effectiveAgencyId
+        });
+
+        if (error) {
+          console.error('[AgencySettings] Error checking whitelabel access:', error);
+          setHasWhitelabel(false);
+          return;
+        }
+
+        console.log('[AgencySettings] Whitelabel access for agency', effectiveAgencyId, ':', data);
+        setHasWhitelabel(data || false);
+      } catch (err) {
+        console.error('[AgencySettings] Failed to check whitelabel access:', err);
+        setHasWhitelabel(false);
+      }
+    };
+
+    checkWhitelabelAccess();
+  }, [effectiveAgencyId]);
 
   useEffect(() => {
     loadAgency();
   }, [profile]);
 
   const loadAgency = async () => {
-    if (!agencyId) return;
+    if (!effectiveAgencyId) return;
 
     try {
       const { data, error } = await supabase
         .from('agencies')
         .select('*')
-        .eq('id', agencyId)
+        .eq('id', effectiveAgencyId)
         .single();
 
       if (error) throw error;
@@ -72,7 +101,7 @@ export default function AgencySettings() {
     try {
       const { data, error } = await supabase.functions.invoke('verify-whitelabel-domain', {
         body: {
-          agencyId,
+          agencyId: effectiveAgencyId,
           domain: agency.whitelabel_domain,
           subdomain: agency.whitelabel_subdomain || 'dashboard',
         },
@@ -129,7 +158,7 @@ export default function AgencySettings() {
       const { error } = await supabase
         .from('agencies')
         .update(updateData)
-        .eq('id', agencyId);
+        .eq('id', effectiveAgencyId);
 
       if (error) throw error;
 
@@ -429,7 +458,7 @@ export default function AgencySettings() {
         </TabsContent>
 
         <TabsContent value="users" className="space-y-6">
-          <AgencyUsersContent agencyId={agencyId} />
+          <AgencyUsersContent agencyId={effectiveAgencyId} />
         </TabsContent>
       </Tabs>
 
