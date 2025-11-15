@@ -62,7 +62,15 @@ export default function Conversations() {
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const { selectedAgentId, agents } = useClientAgentContext();
   const { toast } = useToast();
-  const transcriptsEndRef = useRef<HTMLDivElement>(null);
+  const transcriptContainerRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll transcript to bottom when conversation changes or new messages arrive
+  useEffect(() => {
+    const container = transcriptContainerRef.current;
+    if (container && transcripts.length > 0) {
+      container.scrollTop = container.scrollHeight;
+    }
+  }, [selectedConversation?.id, transcripts.length]);
 
   useEffect(() => {
     if (selectedAgentId) {
@@ -93,13 +101,6 @@ export default function Conversations() {
       setAssignedTags(selectedConversation.metadata?.tags || []);
     }
   }, [selectedConversation]);
-
-  // Auto-scroll to bottom when transcripts load or update
-  useEffect(() => {
-    if (transcriptsEndRef.current) {
-      transcriptsEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [transcripts]);
 
   // Real-time subscriptions for conversations
   useEffect(() => {
@@ -507,7 +508,6 @@ export default function Conversations() {
                         />
                       );
                     })}
-                    <div ref={transcriptsEndRef} />
                   </div>
                 )}
               </ScrollArea>
