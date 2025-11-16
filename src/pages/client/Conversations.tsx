@@ -62,15 +62,12 @@ export default function Conversations() {
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const { selectedAgentId, agents } = useClientAgentContext();
   const { toast } = useToast();
-  const transcriptContainerRef = useRef<HTMLDivElement>(null);
+  const transcriptsEndRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll transcript to bottom when conversation changes or new messages arrive
+  // Auto-scroll transcript to bottom when messages change (like chat widget)
   useEffect(() => {
-    const container = transcriptContainerRef.current;
-    if (container && transcripts.length > 0) {
-      container.scrollTop = container.scrollHeight;
-    }
-  }, [selectedConversation?.id, transcripts.length]);
+    transcriptsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [transcripts]);
 
   useEffect(() => {
     if (selectedAgentId) {
@@ -508,6 +505,7 @@ export default function Conversations() {
                         />
                       );
                     })}
+                    <div ref={transcriptsEndRef} />
                   </div>
                 )}
               </ScrollArea>
