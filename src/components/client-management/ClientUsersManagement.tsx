@@ -96,6 +96,11 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
   const loadUsers = async () => {
     try {
       console.log('[ClientUsersManagement] Loading users for clientId:', clientId);
+      
+      // Log auth context for debugging preview mode
+      const { data: { user } } = await supabase.auth.getUser();
+      console.log('[ClientUsersManagement] Current auth.uid():', user?.id);
+      
       setLoading(true);
       setError(null);
       
@@ -103,14 +108,14 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
         .from('client_users')
         .select(`
           *,
-          profiles!inner(email),
-          departments(name)
+          profiles(email),
+          departments(name, color)
         `)
         .eq('client_id', clientId);
 
       if (error) {
         console.error('[ClientUsersManagement] Error loading users:', error);
-        setError(`Failed to load users: ${error.message}`);
+        setError(`Failed to load users. ${error.message.includes('RLS') ? 'You may not have permission to view these users in preview mode.' : error.message}`);
         setUsers([]);
         return;
       }
@@ -674,10 +679,10 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
                   <div className="flex items-center gap-2">
                     <p className="font-medium text-foreground truncate">{user.full_name || "Unnamed User"}</p>
                     {user.roles.includes('admin') && <Badge variant="default">Admin</Badge>}
-                    {user.departments && <Badge variant="secondary">{user.departments.name}</Badge>}
+                    {user.departments?.name && <Badge variant="secondary">{user.departments.name}</Badge>}
                   </div>
                   <div className="flex items-center gap-3 text-sm mt-1">
-                    <p className="text-muted-foreground truncate">{user.profiles.email}</p>
+                    <p className="text-muted-foreground truncate">{user.profiles?.email || 'No email'}</p>
                     <span className="text-muted-foreground">|</span>
                     <PasswordDisplay userId={user.user_id} />
                   </div>
