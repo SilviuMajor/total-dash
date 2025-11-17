@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -55,6 +56,7 @@ interface AgentPermission {
 }
 
 export function ClientUsersManagement({ clientId }: { clientId: string }) {
+  const { isPreviewMode } = useMultiTenantAuth();
   const [users, setUsers] = useState<ClientUser[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -94,56 +96,116 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
   }, [clientId]);
 
   const loadUsers = async () => {
+    if (!clientId) return;
+
+    setLoading(true);
+    setError(null);
+
     try {
-      console.log('[ClientUsersManagement] Loading users for clientId:', clientId);
-      
-      // Log auth context for debugging preview mode
+      // Check if we're in preview mode as super admin
       const { data: { user } } = await supabase.auth.getUser();
-      console.log('[ClientUsersManagement] Current auth.uid():', user?.id);
+      let isPreviewSuperAdmin = false;
       
-      setLoading(true);
-      setError(null);
-      
-      const { data, error } = await supabase
+      if (user && isPreviewMode) {
+        const { data: isSuperAdmin } = await supabase.rpc('is_super_admin', {
+          _user_id: user.id
+        });
+        isPreviewSuperAdmin = !!isSuperAdmin;
+      }
+
+      // If preview super admin, always use the bypass function
+      if (isPreviewSuperAdmin) {
+        console.log('[ClientUsersManagement] Preview super admin detected, using bypass function');
+        
+        const { data: functionData, error: functionError } = await supabase.functions.invoke(
+          'get-client-users',
+          { body: { clientId } }
+        );
+
+        if (functionError) {
+          console.error('[ClientUsersManagement] Bypass function error:', functionError);
+          setError('Failed to load users in preview mode');
+          setUsers([]);
+          return;
+        }
+
+        if (functionData?.users) {
+          const usersWithRoles = functionData.users.map((u: any) => ({
+            id: u.id,
+            user_id: u.user_id,
+            full_name: u.full_name,
+            avatar_url: u.avatar_url,
+            department_id: u.department_id,
+            profiles: u.profiles,
+            departments: u.departments,
+            roles: u.roles || [],
+          }));
+          setUsers(usersWithRoles);
+          return;
+        }
+      }
+
+      // Normal path: direct table query
+      const { data: clientUsers, error } = await supabase
         .from('client_users')
         .select(`
-          *,
-          profiles(email),
-          departments(name, color)
+          id,
+          user_id,
+          full_name,
+          avatar_url,
+          department_id,
+          profiles:profiles(email),
+          departments:departments(name, color)
         `)
         .eq('client_id', clientId);
 
-        console.error('[ClientUsersManagement] Error loading users:', error);
-        // Attempt preview fallback via backend function for super admins
-        try {
-          const lowerMsg = (error.message || '').toLowerCase();
-          const shouldTryPreview = lowerMsg.includes('rls') || lowerMsg.includes('permission') || (error as any).code === 'PGRST301' || (error as any).code === '401' || (error as any).code === '403';
-          if (shouldTryPreview) {
-            const { data: fnData, error: fnError } = await supabase.functions.invoke('get-client-users', {
-              body: { clientId },
-            });
-            if (!fnError && fnData && Array.isArray((fnData as any).users)) {
-              console.log('[ClientUsersManagement] Loaded users via get-client-users function:', (fnData as any).users.length);
-              setUsers((fnData as any).users as any);
-              setError(null);
-              return;
-            }
-            if (fnError) {
-              console.error('[ClientUsersManagement] get-client-users fallback error:', fnError);
-            }
-          }
-        } catch (ferr) {
-          console.error('[ClientUsersManagement] get-client-users call failed:', ferr);
-        }
-        setError(`Failed to load users. ${error.message.includes('RLS') ? 'You may not have permission to view these users in preview mode.' : error.message}`);
-        setUsers([]);
-        return;
+      if (error) {
+        // Check if we encountered an RLS or permission error
+        const errorMessage = error.message || '';
+        const isRLSError = errorMessage.toLowerCase().includes('row-level security') ||
+                           errorMessage.toLowerCase().includes('permission denied') ||
+                           error?.code === 'PGRST301' ||
+                           error?.code === '401' ||
+                           error?.code === '403';
 
-      console.log('[ClientUsersManagement] Users loaded:', data?.length);
+        if (isRLSError) {
+          console.log('[ClientUsersManagement] RLS/Permission error, trying fallback function:', error);
+          
+          // Fallback to backend function that bypasses RLS
+          const { data: functionData, error: functionError } = await supabase.functions.invoke(
+            'get-client-users',
+            { body: { clientId } }
+          );
+
+          if (functionError) {
+            console.error('[ClientUsersManagement] Fallback function error:', functionError);
+            setError('Failed to load users');
+            setUsers([]);
+            return;
+          }
+
+          if (functionData?.users) {
+            const usersWithRoles = functionData.users.map((u: any) => ({
+              id: u.id,
+              user_id: u.user_id,
+              full_name: u.full_name,
+              avatar_url: u.avatar_url,
+              department_id: u.department_id,
+              profiles: u.profiles,
+              departments: u.departments,
+              roles: u.roles || [],
+            }));
+            setUsers(usersWithRoles);
+            return;
+          }
+        } else {
+          throw error;
+        }
+      }
 
       // Fetch roles for each user
       const usersWithRoles = await Promise.all(
-        (data || []).map(async (user) => {
+        (clientUsers || []).map(async (user) => {
           const { data: roleData } = await supabase
             .from('user_roles')
             .select('role')
@@ -158,15 +220,10 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
       );
 
       setUsers(usersWithRoles as ClientUser[]);
-      setError(null);
     } catch (error: any) {
-      console.error('[ClientUsersManagement] Error in loadUsers:', error);
+      console.error('[ClientUsersManagement] Error loading users:', error);
       setError(error.message || 'Failed to load users');
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+      setUsers([]);
     } finally {
       setLoading(false);
     }

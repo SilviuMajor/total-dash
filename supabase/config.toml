@@ -44,3 +44,9 @@ verify_jwt = true
 
 [functions.authenticate-with-context]
 verify_jwt = true
+
+[functions.get-client-users]
+verify_jwt = true
+
+[functions.get-agency-users]
+verify_jwt = true

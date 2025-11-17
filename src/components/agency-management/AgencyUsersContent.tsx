@@ -49,6 +49,41 @@ export function AgencyUsersContent({ agencyId }: AgencyUsersContentProps) {
     
     setLoading(true);
     try {
+      // Check if we're in preview mode as super admin
+      const { data: { user } } = await supabase.auth.getUser();
+      let isPreviewSuperAdmin = false;
+      
+      if (user && isPreviewMode) {
+        const { data: isSuperAdmin } = await supabase.rpc('is_super_admin', {
+          _user_id: user.id
+        });
+        isPreviewSuperAdmin = !!isSuperAdmin;
+      }
+
+      // If preview super admin, always use the bypass function
+      if (isPreviewSuperAdmin) {
+        console.log('[AgencyUsersContent] Preview super admin detected, using bypass function');
+        
+        const { data: functionData, error: functionError } = await supabase.functions.invoke(
+          'get-agency-users',
+          { body: { agencyId } }
+        );
+
+        if (functionError) {
+          console.error('[AgencyUsersContent] Bypass function error:', functionError);
+          toast.error("Failed to load team members in preview mode");
+          setLoading(false);
+          return;
+        }
+
+        if (functionData?.users) {
+          setUsers(functionData.users);
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Normal path: direct table query
       const { data: agencyUsers, error } = await supabase
         .from('agency_users')
         .select('id, user_id, role, created_at')
