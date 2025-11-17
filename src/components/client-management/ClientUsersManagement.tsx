@@ -113,12 +113,31 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
         `)
         .eq('client_id', clientId);
 
-      if (error) {
         console.error('[ClientUsersManagement] Error loading users:', error);
+        // Attempt preview fallback via backend function for super admins
+        try {
+          const lowerMsg = (error.message || '').toLowerCase();
+          const shouldTryPreview = lowerMsg.includes('rls') || lowerMsg.includes('permission') || (error as any).code === 'PGRST301' || (error as any).code === '401' || (error as any).code === '403';
+          if (shouldTryPreview) {
+            const { data: fnData, error: fnError } = await supabase.functions.invoke('get-client-users', {
+              body: { clientId },
+            });
+            if (!fnError && fnData && Array.isArray((fnData as any).users)) {
+              console.log('[ClientUsersManagement] Loaded users via get-client-users function:', (fnData as any).users.length);
+              setUsers((fnData as any).users as any);
+              setError(null);
+              return;
+            }
+            if (fnError) {
+              console.error('[ClientUsersManagement] get-client-users fallback error:', fnError);
+            }
+          }
+        } catch (ferr) {
+          console.error('[ClientUsersManagement] get-client-users call failed:', ferr);
+        }
         setError(`Failed to load users. ${error.message.includes('RLS') ? 'You may not have permission to view these users in preview mode.' : error.message}`);
         setUsers([]);
         return;
-      }
 
       console.log('[ClientUsersManagement] Users loaded:', data?.length);
 
