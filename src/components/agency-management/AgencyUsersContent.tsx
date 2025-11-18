@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
+import { useSuperAdminStatus } from "@/hooks/useSuperAdminStatus";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -19,6 +20,7 @@ interface AgencyUsersContentProps {
 
 export function AgencyUsersContent({ agencyId }: AgencyUsersContentProps) {
   const { isPreviewMode } = useMultiTenantAuth();
+  const { isSuperAdmin, loading: isSuperAdminLoading } = useSuperAdminStatus();
   const [users, setUsers] = useState<AgencyUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -49,20 +51,11 @@ export function AgencyUsersContent({ agencyId }: AgencyUsersContentProps) {
     
     setLoading(true);
     try {
-      // Check if we're in preview mode as super admin
-      const { data: { user } } = await supabase.auth.getUser();
-      let isPreviewSuperAdmin = false;
-      
-      if (user && isPreviewMode) {
-        const { data: isSuperAdmin } = await supabase.rpc('is_super_admin', {
-          _user_id: user.id
-        });
-        isPreviewSuperAdmin = !!isSuperAdmin;
-      }
+      const isSuperAdminPreview = isPreviewMode && isSuperAdmin === true;
 
-      // If preview super admin, always use the bypass function
-      if (isPreviewSuperAdmin) {
-        console.log('[AgencyUsersContent] Preview super admin detected, using bypass function');
+      // If super admin preview, always use bypass function
+      if (isSuperAdminPreview) {
+        console.log('[AgencyUsersContent] Super admin preview: using bypass function');
         
         const { data: functionData, error: functionError } = await supabase.functions.invoke(
           'get-agency-users',
@@ -70,7 +63,7 @@ export function AgencyUsersContent({ agencyId }: AgencyUsersContentProps) {
         );
 
         if (functionError) {
-          console.error('[AgencyUsersContent] Bypass function error:', functionError);
+          console.error('[AgencyUsersContent] get-agency-users error:', functionError);
           toast.error("Failed to load team members in preview mode");
           setLoading(false);
           return;
@@ -83,7 +76,7 @@ export function AgencyUsersContent({ agencyId }: AgencyUsersContentProps) {
         }
       }
 
-      // Normal path: direct table query
+      // Normal path: direct RLS-governed queries
       const { data: agencyUsers, error } = await supabase
         .from('agency_users')
         .select('id, user_id, role, created_at')
@@ -101,24 +94,29 @@ export function AgencyUsersContent({ agencyId }: AgencyUsersContentProps) {
 
         if (profilesError) throw profilesError;
 
-        const combinedData: AgencyUser[] = agencyUsers.map(user => ({
-          ...user,
-          profile: profiles?.find(p => p.id === user.user_id) || { 
-            email: '', 
-            full_name: null,
-            first_name: null,
-            last_name: null,
-            updated_at: new Date().toISOString()
-          }
-        }));
+        const combinedUsers = agencyUsers.map(agencyUser => {
+          const profile = profiles?.find(p => p.id === agencyUser.user_id);
+          return {
+            ...agencyUser,
+            profile: profile || { 
+              id: agencyUser.user_id,
+              email: '', 
+              full_name: null,
+              first_name: null,
+              last_name: null,
+              updated_at: new Date().toISOString()
+            },
+          };
+        });
 
-        setUsers(combinedData);
+        setUsers(combinedUsers);
       } else {
         setUsers([]);
       }
-    } catch (error: any) {
-      console.error('Error loading users:', error);
+    } catch (error) {
+      console.error('Error loading agency users:', error);
       toast.error("Failed to load team members");
+      setUsers([]);
     } finally {
       setLoading(false);
     }
