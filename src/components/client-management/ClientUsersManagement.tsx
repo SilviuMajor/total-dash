@@ -92,10 +92,17 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
   };
 
   useEffect(() => {
+    // Wait for super admin status to be determined before loading
+    if (isSuperAdminLoading) {
+      console.log('[ClientUsersManagement] Waiting for super admin status...');
+      return;
+    }
+    
+    console.log('[ClientUsersManagement] Loading data. isSuperAdmin:', isSuperAdmin, 'isPreviewMode:', isPreviewMode);
     loadUsers();
     loadDepartments();
     loadAgents();
-  }, [clientId]);
+  }, [clientId, isSuperAdmin, isSuperAdminLoading, isPreviewMode]);
 
   const loadUsers = async () => {
     if (!clientId) return;
