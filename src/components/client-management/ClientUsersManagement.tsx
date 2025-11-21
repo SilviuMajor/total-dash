@@ -79,6 +79,11 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
   const [newUserPassword, setNewUserPassword] = useState("");
   const [newUserAgentPermissions, setNewUserAgentPermissions] = useState<Record<string, AgentPermission>>({});
   const [selectedUserAgentPermissions, setSelectedUserAgentPermissions] = useState<Record<string, AgentPermission>>({});
+  const [profileAccessControl, setProfileAccessControl] = useState({
+    edit_name: 'all',
+    change_email: 'admin_only',
+    change_password: 'all',
+  });
 
   const { toast } = useToast();
 
@@ -103,6 +108,10 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
     loadDepartments();
     loadAgents();
   }, [clientId, isSuperAdmin, isSuperAdminLoading, isPreviewMode]);
+
+  useEffect(() => {
+    loadProfileAccessSettings();
+  }, [clientId]);
 
   const loadUsers = async () => {
     if (!clientId) return;
@@ -308,6 +317,51 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
       setSelectedUserAgentPermissions(permissions);
     } catch (error: any) {
       console.error('Error loading user permissions:', error);
+    }
+  };
+
+  const loadProfileAccessSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('client_settings')
+        .select('profile_access_control')
+        .eq('client_id', clientId)
+        .single();
+
+      if (error) throw error;
+      if (data?.profile_access_control) {
+        setProfileAccessControl(data.profile_access_control as any);
+      }
+    } catch (error: any) {
+      console.error('Error loading profile access settings:', error);
+    }
+  };
+
+  const updateAccessControl = async (field: string, value: string) => {
+    try {
+      const newAccessControl = {
+        ...profileAccessControl,
+        [field]: value,
+      };
+
+      const { error } = await supabase
+        .from('client_settings')
+        .update({ profile_access_control: newAccessControl })
+        .eq('client_id', clientId);
+
+      if (error) throw error;
+
+      setProfileAccessControl(newAccessControl);
+      toast({
+        title: "Success",
+        description: "Profile access settings updated",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   };
 
@@ -554,65 +608,6 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
         </div>
       </Card>
     );
-  }
-
-  const [profileAccessControl, setProfileAccessControl] = useState({
-    edit_name: 'all',
-    change_email: 'admin_only',
-    change_password: 'all',
-  });
-
-  useEffect(() => {
-    loadProfileAccessSettings();
-  }, [clientId]);
-
-  const loadProfileAccessSettings = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('client_settings')
-        .select('profile_access_control')
-        .eq('client_id', clientId)
-        .single();
-
-      if (error) throw error;
-      if (data?.profile_access_control) {
-        setProfileAccessControl(data.profile_access_control as any);
-      }
-    } catch (error: any) {
-      console.error('Error loading profile access settings:', error);
-    }
-  };
-
-  const updateAccessControl = async (field: string, value: string) => {
-    try {
-      const newAccessControl = {
-        ...profileAccessControl,
-        [field]: value,
-      };
-
-      const { error } = await supabase
-        .from('client_settings')
-        .update({ profile_access_control: newAccessControl })
-        .eq('client_id', clientId);
-
-      if (error) throw error;
-
-      setProfileAccessControl(newAccessControl);
-      toast({
-        title: "Success",
-        description: "Profile access settings updated",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
-
-  if (loading) {
-    return <div>Loading...</div>;
   }
 
   if (error) {
