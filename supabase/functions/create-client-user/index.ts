@@ -66,10 +66,17 @@ serve(async (req) => {
       customPassword 
     } = await req.json();
 
-    console.log('Creating user:', { email, firstName, lastName, role, clientId });
+    console.log('Creating user with:', { email, firstName, lastName, role, clientId });
 
-    if (!firstName || !lastName) {
-      throw new Error('First name and last name are required');
+    // Better validation
+    if (!email || !firstName || !lastName || !clientId || !role) {
+      const missing = [];
+      if (!email) missing.push('email');
+      if (!firstName) missing.push('firstName');
+      if (!lastName) missing.push('lastName');
+      if (!clientId) missing.push('clientId');
+      if (!role) missing.push('role');
+      throw new Error(`Missing required fields: ${missing.join(', ')}`);
     }
 
     // Use custom password if provided, otherwise generate secure password
@@ -117,7 +124,6 @@ serve(async (req) => {
       .insert({
         user_id: authData.user.id,
         client_id: clientId,
-        role: role,
         first_name: firstName,
         last_name: lastName,
         avatar_url: avatarUrl,
@@ -130,6 +136,22 @@ serve(async (req) => {
       // Cleanup: delete auth user if client_users insert fails
       await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
       throw clientUserError;
+    }
+
+    // Create entry in user_roles table
+    const { error: roleError } = await supabaseAdmin
+      .from('user_roles')
+      .insert({
+        user_id: authData.user.id,
+        client_id: clientId,
+        role: role
+      });
+
+    if (roleError) {
+      console.error('Role error:', roleError);
+      // Cleanup: delete auth user and client_user if role insert fails
+      await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
+      throw roleError;
     }
 
     // Store password in user_passwords table
