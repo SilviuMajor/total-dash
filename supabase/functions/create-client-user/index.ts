@@ -101,15 +101,17 @@ serve(async (req) => {
 
     console.log('Auth user created:', authData.user.id);
 
-    // Create profile
+    // Upsert profile (trigger may have already created it)
     const { error: profileError } = await supabaseAdmin
       .from('profiles')
-      .insert({
+      .upsert({
         id: authData.user.id,
         email,
         first_name: firstName,
         last_name: lastName,
         role: 'client'
+      }, {
+        onConflict: 'id'
       });
 
     if (profileError) {

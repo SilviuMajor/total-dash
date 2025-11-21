@@ -57,74 +57,81 @@ export function AgencyUserManagementTable({
   };
 
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto rounded-lg border border-border">
       <table className="w-full">
         <thead>
-          <tr className="border-b">
-            <th className="text-left py-3 px-4 font-medium">User</th>
-            <th className="text-left py-3 px-4 font-medium">Email</th>
-            <th className="text-left py-3 px-4 font-medium">Role</th>
-            <th className="text-left py-3 px-4 font-medium">Password</th>
-            <th className="text-left py-3 px-4 font-medium">Last Changed</th>
-            <th className="text-right py-3 px-4 font-medium">Actions</th>
+          <tr className="border-b bg-muted/50">
+            <th className="text-left py-2 px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">User</th>
+            <th className="text-left py-2 px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">Email</th>
+            <th className="text-left py-2 px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">Role</th>
+            <th className="text-left py-2 px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">Password</th>
+            <th className="text-left py-2 px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">Last Changed</th>
+            <th className="text-right py-2 px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">Actions</th>
           </tr>
         </thead>
         <tbody>
           {users.map((user) => (
-            <tr key={user.id} className="border-b hover:bg-muted/50">
-              <td className="py-3 px-4">
-                <div className="flex items-center gap-3">
-                  <Avatar>
-                    <AvatarFallback>
+            <tr 
+              key={user.id} 
+              className="border-b last:border-b-0 hover:bg-muted/30 transition-colors"
+            >
+              <td className="py-2 px-3">
+                <div className="flex items-center gap-2">
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback className="text-xs">
                       {getInitials(user.profile.full_name, user.profile.first_name, user.profile.last_name)}
                     </AvatarFallback>
                   </Avatar>
-                  <div>
-                    <div className="font-medium">
-                      {user.profile.full_name || `${user.profile.first_name} ${user.profile.last_name}`}
-                    </div>
+                  <div className="font-medium text-sm">
+                    {user.profile.full_name || `${user.profile.first_name} ${user.profile.last_name}`}
                   </div>
                 </div>
               </td>
-              <td className="py-3 px-4 text-sm text-muted-foreground">
+              <td className="py-2 px-3 text-sm text-muted-foreground">
                 {user.profile.email}
               </td>
-              <td className="py-3 px-4">
-                <Badge variant={getRoleBadgeVariant(user.role)}>
+              <td className="py-2 px-3">
+                <Badge 
+                  variant={getRoleBadgeVariant(user.role)}
+                  className="text-xs py-0 px-2"
+                >
                   {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
                 </Badge>
               </td>
-              <td className="py-3 px-4">
+              <td className="py-2 px-3">
                 <PasswordDisplay userId={user.user_id} />
               </td>
-              <td className="py-3 px-4 text-sm text-muted-foreground">
+              <td className="py-2 px-3 text-xs text-muted-foreground">
                 {format(new Date(user.profile.updated_at), 'MMM d, yyyy')}
               </td>
-              <td className="py-3 px-4">
-                <div className="flex items-center justify-end gap-2">
+              <td className="py-2 px-3">
+                <div className="flex items-center justify-end gap-1">
                   <Button
-                    size="icon"
+                    size="sm"
                     variant="ghost"
                     onClick={() => onReinvite(user.user_id)}
                     title="Reinvite user"
+                    className="h-7 w-7 p-0"
                   >
-                    <Mail className="h-4 w-4" />
+                    <Mail className="h-3.5 w-3.5" />
                   </Button>
                   <Button
-                    size="icon"
+                    size="sm"
                     variant="ghost"
                     onClick={() => onEdit(user)}
                     title="Edit permissions"
+                    className="h-7 w-7 p-0"
                   >
-                    <Settings className="h-4 w-4" />
+                    <Settings className="h-3.5 w-3.5" />
                   </Button>
                   <Button
-                    size="icon"
+                    size="sm"
                     variant="ghost"
                     onClick={() => onDelete(user)}
                     title="Remove user"
+                    className="h-7 w-7 p-0"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 </div>
               </td>
@@ -133,7 +140,7 @@ export function AgencyUserManagementTable({
         </tbody>
       </table>
       {users.length === 0 && (
-        <div className="text-center py-8 text-muted-foreground">
+        <div className="text-center py-8 text-sm text-muted-foreground">
           No users found
         </div>
       )}
