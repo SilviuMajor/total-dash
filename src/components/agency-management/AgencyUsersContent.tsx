@@ -41,10 +41,17 @@ export function AgencyUsersContent({ agencyId }: AgencyUsersContentProps) {
   });
 
   useEffect(() => {
+    // Wait for super admin status to be determined before loading
+    if (isSuperAdminLoading) {
+      console.log('[AgencyUsersContent] Waiting for super admin status...');
+      return;
+    }
+    
     if (agencyId) {
+      console.log('[AgencyUsersContent] Loading data. isSuperAdmin:', isSuperAdmin, 'isPreviewMode:', isPreviewMode);
       loadUsers();
     }
-  }, [agencyId]);
+  }, [agencyId, isSuperAdmin, isSuperAdminLoading, isPreviewMode]);
 
   const loadUsers = async () => {
     if (!agencyId) return;
