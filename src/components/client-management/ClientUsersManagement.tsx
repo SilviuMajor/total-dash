@@ -97,6 +97,17 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
   };
 
   useEffect(() => {
+    // Check authentication first
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.log('[ClientUsersManagement] No session found');
+        return;
+      }
+    };
+    
+    checkAuth();
+    
     // Wait for super admin status to be determined before loading
     if (isSuperAdminLoading) {
       console.log('[ClientUsersManagement] Waiting for super admin status...');
@@ -367,34 +378,50 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
 
   const handleAddUser = async () => {
     try {
-      // Only include agents where user has access
-      const activePermissions = Object.values(newUserAgentPermissions);
+      // Parse fullName into firstName and lastName
+      const nameParts = newUserFullName.trim().split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || nameParts[0];
       
       const { data, error } = await supabase.functions.invoke('create-client-user', {
         body: {
           clientId,
           email: newUserEmail,
-          fullName: newUserFullName,
+          firstName: firstName,
+          lastName: lastName,
+          role: newUserRole,
           departmentId: newUserDepartment === "none" ? null : newUserDepartment || null,
           avatarUrl: newUserAvatar || null,
-          agentPermissions: activePermissions,
+          pagePermissions: null,
           customPassword: newUserPassword || undefined,
         },
       });
 
       if (error) throw error;
 
-      // Add role to user_roles table
+      // Add agent permissions if user was created successfully
       if (data.success && data.userId) {
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .insert({
-            user_id: data.userId,
-            client_id: clientId,
-            role: newUserRole
-          });
-
-        if (roleError) throw roleError;
+        const activePermissions = Object.values(newUserAgentPermissions);
+        
+        for (const permission of activePermissions) {
+          const { error: permError } = await supabase
+            .from('client_user_agent_permissions')
+            .insert({
+              user_id: data.userId,
+              agent_id: permission.agent_id,
+              client_id: clientId,
+              permissions: {
+                analytics: permission.analytics,
+                conversations: permission.conversations,
+                agent_settings: permission.agent_settings,
+                knowledge_base: permission.knowledge_base,
+              },
+            });
+          
+          if (permError) {
+            console.error('Error adding agent permission:', permError);
+          }
+        }
       }
 
       if (data.success) {
@@ -404,6 +431,7 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
           description: `User created successfully`,
         });
         loadUsers();
+        setOpen(false);
         setNewUserEmail("");
         setNewUserFullName("");
         setNewUserRole("user");
@@ -427,11 +455,12 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
         setNewUserAgentPermissions(initialPermissions);
       }
     } catch (error: any) {
-      setOpen(false);
-      setGeneratedPassword("");
+      console.error('[ClientUsersManagement] User creation failed:', error);
+      
+      // Don't close dialog on error - let user fix the issue
       toast({
-        title: "Error",
-        description: error.message,
+        title: "Error Creating User",
+        description: error.message || 'Failed to create user. Please try again.',
         variant: "destructive",
       });
     }
