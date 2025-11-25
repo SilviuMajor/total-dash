@@ -36,14 +36,20 @@ export default function AgencyClients() {
     
     const { data: agency } = await supabase
       .from('agencies')
-      .select('whitelabel_domain, whitelabel_subdomain, whitelabel_verified')
+      .select('slug, whitelabel_domain, whitelabel_subdomain, whitelabel_verified')
       .eq('id', agencyId)
       .single();
     
     if (agency?.whitelabel_verified && agency?.whitelabel_domain) {
+      // Agency has verified whitelabel - use custom domain
       const subdomain = agency.whitelabel_subdomain || 'dashboard';
       setClientLoginUrl(`https://${subdomain}.${agency.whitelabel_domain}/auth`);
+    } else if (agency?.slug) {
+      // No whitelabel - use current host with agency slug path
+      const baseUrl = window.location.origin;
+      setClientLoginUrl(`${baseUrl}/${agency.slug}`);
     } else {
+      // Fallback to default /auth
       setClientLoginUrl('/auth');
     }
   };
@@ -223,7 +229,7 @@ export default function AgencyClients() {
             onClick={() => window.open(clientLoginUrl, '_blank')}
           >
             <LogIn className="mr-2 h-4 w-4" />
-            My Login
+            Client Login
           </Button>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
