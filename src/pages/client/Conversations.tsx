@@ -63,7 +63,6 @@ export default function Conversations() {
   const [showJumpToLatest, setShowJumpToLatest] = useState(false);
   const { selectedAgentId, agents } = useClientAgentContext();
   const { toast } = useToast();
-  const transcriptsEndRef = useRef<HTMLDivElement>(null);
   const transcriptScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -95,9 +94,11 @@ export default function Conversations() {
       setAssignedTags(selectedConversation.metadata?.tags || []);
       setShowJumpToLatest(false);
       
-      // Scroll transcript to bottom after load
+      // Scroll transcript viewport to bottom after load
       setTimeout(() => {
-        transcriptsEndRef.current?.scrollIntoView({ behavior: 'auto' });
+        if (transcriptScrollRef.current) {
+          transcriptScrollRef.current.scrollTop = transcriptScrollRef.current.scrollHeight;
+        }
       }, 100);
     }
   }, [selectedConversation?.id]);
@@ -304,7 +305,12 @@ export default function Conversations() {
   };
 
   const jumpToLatest = () => {
-    transcriptsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (transcriptScrollRef.current) {
+      transcriptScrollRef.current.scrollTo({
+        top: transcriptScrollRef.current.scrollHeight,
+        behavior: 'smooth'
+      });
+    }
     setShowJumpToLatest(false);
   };
 
@@ -474,7 +480,8 @@ export default function Conversations() {
               </div>
               <ScrollArea 
                 className="flex-1 p-4" 
-                onScrollCapture={handleTranscriptScroll}
+                viewportRef={transcriptScrollRef}
+                onViewportScroll={handleTranscriptScroll}
               >
                 {transcripts.length === 0 ? (
                   <div className="text-center py-12 text-muted-foreground">
@@ -515,7 +522,6 @@ export default function Conversations() {
                         />
                       );
                     })}
-                    <div ref={transcriptsEndRef} />
                   </div>
                 )}
               </ScrollArea>
