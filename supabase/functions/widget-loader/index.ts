@@ -100,7 +100,7 @@ serve(async (req) => {
       headers: {
         ...corsHeaders,
         'Content-Type': 'application/javascript',
-        'Cache-Control': 'public, max-age=300', // Cache for 5 minutes
+        'Cache-Control': 'no-store, no-cache, must-revalidate', // No caching for instant updates
       },
       status: 200,
     });
@@ -1051,6 +1051,94 @@ function generateWidgetScript(config: any): string {
     /* Hide elements */
     .hidden {
       display: none !important;
+    }
+    
+    /* Mobile Breakpoint - 640px */
+    @media (max-width: 640px) {
+      /* Chat Button - Smaller on mobile */
+      .vf-widget-button {
+        width: 52px;
+        height: 52px;
+        right: 16px;
+        bottom: 16px;
+      }
+      
+      .vf-widget-button.has-custom-icon img {
+        width: 52px;
+        height: 52px;
+      }
+      
+      .vf-widget-button.default-icon svg {
+        width: 24px;
+        height: 24px;
+      }
+      
+      /* Widget Panel - Full screen on mobile */
+      .vf-widget-panel {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        max-width: 100% !important;
+        max-height: 100% !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+      }
+      
+      /* Header - Account for notches */
+      .vf-widget-header {
+        border-radius: 0;
+        padding-top: max(20px, env(safe-area-inset-top));
+        padding-left: max(20px, env(safe-area-inset-left));
+        padding-right: max(20px, env(safe-area-inset-right));
+      }
+      
+      /* Home gradient header */
+      .vf-home-gradient-header {
+        padding-top: max(48px, calc(48px + env(safe-area-inset-top)));
+        padding-left: max(24px, env(safe-area-inset-left));
+        padding-right: max(24px, env(safe-area-inset-right));
+      }
+      
+      /* Bottom tabs - Account for home indicator */
+      .vf-bottom-tabs {
+        padding-bottom: max(8px, env(safe-area-inset-bottom));
+      }
+      
+      .vf-widget-tabs {
+        padding-bottom: max(8px, env(safe-area-inset-bottom));
+      }
+      
+      /* Input area - Account for keyboard/home indicator */
+      .vf-input-area {
+        padding-bottom: max(12px, env(safe-area-inset-bottom));
+        padding-left: max(12px, env(safe-area-inset-left));
+        padding-right: max(12px, env(safe-area-inset-right));
+      }
+      
+      /* Touch targets - Larger for mobile */
+      .vf-message-button {
+        min-height: 44px;
+        padding: 12px 16px;
+      }
+      
+      .vf-tab {
+        min-height: 44px;
+      }
+      
+      /* Input field - 16px prevents iOS zoom */
+      .vf-input-field {
+        font-size: 16px;
+      }
+      
+      /* Home buttons - Better touch targets */
+      .vf-home-button {
+        min-height: 56px;
+        padding: 16px 20px;
+      }
     }
   \`;
   document.head.appendChild(style);
