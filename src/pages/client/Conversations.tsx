@@ -479,51 +479,43 @@ export default function Conversations() {
                 </p>
               </div>
               <ScrollArea 
-                className="flex-1 p-4" 
+                className="flex-1 min-h-0" 
                 viewportRef={transcriptScrollRef}
                 onViewportScroll={handleTranscriptScroll}
               >
-                {transcripts.length === 0 ? (
-                  <div className="text-center py-12 text-muted-foreground">
-                    No transcript available for this conversation.
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {transcripts.map((t, index) => {
-                      const selectedButton = t.metadata?.button_click 
-                        ? t.text 
-                        : undefined;
-                      
-                      const prevMessage = index > 0 ? transcripts[index - 1] : null;
-                      const buttonsToDisplay = t.speaker === 'user' && selectedButton && prevMessage?.buttons
-                        ? prevMessage.buttons
-                        : t.buttons;
-                      
-                      return (
-                        <MessageBubble
-                          key={t.id}
-                          speaker={t.speaker}
-                          text={t.text}
-                          buttons={buttonsToDisplay}
-                          timestamp={t.timestamp}
-                          appearance={{
-                            primaryColor: agentConfig?.widget_settings?.appearance?.primary_color || '#000000',
-                            secondaryColor: agentConfig?.widget_settings?.appearance?.secondary_color || '#ffffff',
-                            textColor: agentConfig?.widget_settings?.appearance?.text_color || '#000000',
-                            chatIconUrl: agentConfig?.widget_settings?.appearance?.chat_icon_url,
-                            messageTextColor: agentConfig?.widget_settings?.functions?.message_text_color,
-                            messageBgColor: agentConfig?.widget_settings?.functions?.message_background_color,
-                            fontSize: agentConfig?.widget_settings?.appearance?.font_size || 14,
-                            messageBubbleStyle: agentConfig?.widget_settings?.appearance?.message_bubble_style || 'rounded',
-                            interactiveButtonStyle: agentConfig?.widget_settings?.appearance?.interactive_button_style || 'solid'
-                          }}
-                          selectedButton={selectedButton}
-                          isWidget={false}
-                        />
-                      );
-                    })}
-                  </div>
-                )}
+                <div className="p-4">
+                  {transcripts.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      No transcript available for this conversation.
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {transcripts.map((transcript, index) => {
+                        const speaker = (transcript.speaker.toLowerCase().includes('user') || 
+                                       transcript.speaker.toLowerCase().includes('caller')) ? 'user' : 'assistant';
+                        
+                        return (
+                          <MessageBubble
+                            key={transcript.id || index}
+                            text={transcript.text}
+                            speaker={speaker}
+                            timestamp={transcript.timestamp}
+                            buttons={transcript.buttons}
+                            appearance={{
+                              primaryColor: '#3b82f6',
+                              secondaryColor: '#ffffff',
+                              textColor: '#1f2937',
+                              messageTextColor: '#1f2937',
+                              messageBgColor: '#f3f4f6',
+                              fontSize: 14,
+                              messageBubbleStyle: 'rounded',
+                            }}
+                          />
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </ScrollArea>
               
               {/* Jump to latest button */}
