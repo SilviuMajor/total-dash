@@ -47,19 +47,23 @@ serve(async (req) => {
 
     console.log('Auth user created:', authData.user.id);
 
-    // Create profile
+    // Upsert profile (trigger may have already created it)
     const { error: profileError } = await supabase
       .from('profiles')
-      .insert({
+      .upsert({
         id: authData.user.id,
         email,
         first_name: firstName,
         last_name: lastName,
-        role: 'agency',
+        role: 'client',
+      }, {
+        onConflict: 'id'
       });
 
     if (profileError) {
       console.error('Error creating profile:', profileError);
+      // Clean up auth user on profile failure
+      await supabase.auth.admin.deleteUser(authData.user.id);
       throw new Error(`Failed to create profile: ${profileError.message}`);
     }
 
@@ -76,6 +80,9 @@ serve(async (req) => {
 
     if (agencyUserError) {
       console.error('Error adding to agency_users:', agencyUserError);
+      // Full cleanup on agency_users failure
+      await supabase.from('profiles').delete().eq('id', authData.user.id);
+      await supabase.auth.admin.deleteUser(authData.user.id);
       throw new Error(`Failed to add user to agency: ${agencyUserError.message}`);
     }
 
