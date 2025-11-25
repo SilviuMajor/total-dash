@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { Phone, Clock, CheckCircle, MessageSquare } from "lucide-react";
+import { Phone, Clock, CheckCircle, MessageSquare, ArrowDown } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -60,14 +60,11 @@ export default function Conversations() {
   const [savingNote, setSavingNote] = useState(false);
   const [updatingTags, setUpdatingTags] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [showJumpToLatest, setShowJumpToLatest] = useState(false);
   const { selectedAgentId, agents } = useClientAgentContext();
   const { toast } = useToast();
   const transcriptsEndRef = useRef<HTMLDivElement>(null);
-
-  // Auto-scroll transcript to bottom when messages change (like chat widget)
-  useEffect(() => {
-    transcriptsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [transcripts]);
+  const transcriptScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (selectedAgentId) {
@@ -96,8 +93,14 @@ export default function Conversations() {
       loadTranscripts(selectedConversation.id);
       setNote(selectedConversation.metadata?.note || "");
       setAssignedTags(selectedConversation.metadata?.tags || []);
+      setShowJumpToLatest(false);
+      
+      // Scroll transcript to bottom after load
+      setTimeout(() => {
+        transcriptsEndRef.current?.scrollIntoView({ behavior: 'auto' });
+      }, 100);
     }
-  }, [selectedConversation]);
+  }, [selectedConversation?.id]);
 
   // Real-time subscriptions for conversations
   useEffect(() => {
@@ -157,13 +160,6 @@ export default function Conversations() {
         (payload) => {
           console.log('New transcript:', payload);
           setTranscripts(prev => [...prev, payload.new as Transcript]);
-          
-          setTimeout(() => {
-            const scrollArea = document.querySelector('[data-radix-scroll-area-viewport]');
-            if (scrollArea) {
-              scrollArea.scrollTop = scrollArea.scrollHeight;
-            }
-          }, 100);
         }
       )
       .subscribe();
@@ -299,6 +295,17 @@ export default function Conversations() {
     } finally {
       setUpdatingTags(false);
     }
+  };
+
+  const handleTranscriptScroll = (event: React.UIEvent<HTMLDivElement>) => {
+    const target = event.currentTarget;
+    const isNearBottom = target.scrollHeight - target.scrollTop - target.clientHeight < 100;
+    setShowJumpToLatest(!isNearBottom);
+  };
+
+  const jumpToLatest = () => {
+    transcriptsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    setShowJumpToLatest(false);
   };
 
   const updateStatus = async (newStatus: string) => {
@@ -454,7 +461,7 @@ export default function Conversations() {
             </div>
 
             {/* Middle Panel: Transcript */}
-            <div className="col-span-6 flex flex-col border-r border-border h-full">
+            <div className="col-span-6 flex flex-col border-r border-border h-full relative">
           {selectedConversation ? (
             <>
               <div className="p-4 border-b border-border">
@@ -465,7 +472,10 @@ export default function Conversations() {
                   Started {format(new Date(selectedConversation.started_at), 'PPp')}
                 </p>
               </div>
-              <ScrollArea className="flex-1 p-4">
+              <ScrollArea 
+                className="flex-1 p-4" 
+                onScrollCapture={handleTranscriptScroll}
+              >
                 {transcripts.length === 0 ? (
                   <div className="text-center py-12 text-muted-foreground">
                     No transcript available for this conversation.
@@ -509,6 +519,18 @@ export default function Conversations() {
                   </div>
                 )}
               </ScrollArea>
+              
+              {/* Jump to latest button */}
+              {showJumpToLatest && (
+                <Button
+                  className="absolute bottom-4 left-1/2 -translate-x-1/2 shadow-lg z-10"
+                  size="sm"
+                  onClick={jumpToLatest}
+                >
+                  <ArrowDown className="mr-2 h-4 w-4" />
+                  Jump to latest
+                </Button>
+              )}
             </>
           ) : (
             <div className="flex-1 flex items-center justify-center text-muted-foreground">
@@ -518,7 +540,9 @@ export default function Conversations() {
             </div>
 
             {/* Right Panel: Details */}
-            <div className="col-span-3 p-6 flex flex-col h-full overflow-y-auto space-y-4">
+            <div className="col-span-3 flex flex-col h-full">
+              <ScrollArea className="flex-1">
+                <div className="p-6 space-y-4">
           {selectedConversation ? (
             <>
               {selectedConversation?.metadata?.variables && 
@@ -662,6 +686,8 @@ export default function Conversations() {
               Select a conversation to view options
             </div>
           )}
+                </div>
+              </ScrollArea>
             </div>
           </div>
         </Card>
