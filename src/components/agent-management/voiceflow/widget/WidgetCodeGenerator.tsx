@@ -16,24 +16,10 @@ export function WidgetCodeGenerator({ agent }: WidgetCodeGeneratorProps) {
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
 
-  const widgetSettings = agent.config?.widget_settings || {};
-  const apiKey = agent.config?.api_key || '';
-  const projectId = agent.config?.project_id || '';
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const projectId = supabaseUrl.match(/https:\/\/([^.]+)/)?.[1] || '';
 
-  const embedCode = `<script>
-(function() {
-  window.VoiceflowWidget = {
-    agentId: '${agent.id}',
-    apiKey: '${apiKey}',
-    projectId: '${projectId}',
-    config: ${JSON.stringify(widgetSettings, null, 6).split('\n').join('\n    ')}
-  };
-  var script = document.createElement('script');
-  script.src = 'https://${window.location.hostname}/voiceflow-widget.js';
-  script.async = true;
-  document.body.appendChild(script);
-})();
-</script>`;
+  const embedCode = `<script src="https://${projectId}.supabase.co/functions/v1/widget-loader?agentId=${agent.id}" async></script>`;
 
   const handleCopy = async () => {
     try {
@@ -99,15 +85,21 @@ export function WidgetCodeGenerator({ agent }: WidgetCodeGeneratorProps) {
             <li>Open your website's HTML file or template</li>
             <li>Paste the code just before the closing <code className="bg-muted px-1 py-0.5 rounded text-xs">&lt;/body&gt;</code> tag</li>
             <li>Save and publish your changes</li>
-            <li>The widget will appear automatically on all pages where the code is added</li>
+            <li>The chat button will appear in the bottom-right corner of your website</li>
           </ol>
         </div>
 
         <div className="bg-primary/5 p-4 rounded-lg border border-primary/20">
           <p className="text-sm text-muted-foreground">
-            <strong className="text-foreground">Note:</strong> The widget will use the appearance settings configured in the "Appearance & Branding" tab. 
-            Any changes you make to those settings will automatically apply to the deployed widget.
+            <strong className="text-foreground">Features:</strong>
           </p>
+          <ul className="text-sm space-y-1 mt-2 text-muted-foreground list-disc list-inside">
+            <li>Floating chat button with custom icon (or styled default)</li>
+            <li>Conversation history preserved across page refreshes</li>
+            <li>All branding and appearance settings applied automatically</li>
+            <li>Secure: API keys never exposed to the client</li>
+            <li>Works on any website without conflicts</li>
+          </ul>
         </div>
       </div>
     </Card>

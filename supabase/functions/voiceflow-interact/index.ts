@@ -16,6 +16,7 @@ serve(async (req) => {
 
     console.log('Voiceflow interact request:', { agentId, userId, action, isTestMode });
 
+    // Use service role key for all requests (supports both authenticated dashboard and public widget)
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
