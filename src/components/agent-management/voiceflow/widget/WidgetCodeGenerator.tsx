@@ -16,10 +16,7 @@ export function WidgetCodeGenerator({ agent }: WidgetCodeGeneratorProps) {
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
 
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-  const projectId = supabaseUrl.match(/https:\/\/([^.]+)/)?.[1] || '';
-
-  const embedCode = `<script src="https://${projectId}.supabase.co/functions/v1/widget-loader?agentId=${agent.id}" async></script>`;
+  const embedCode = `<script src="${import.meta.env.VITE_SUPABASE_URL}/functions/v1/widget-loader?agentId=${agent.id}" async></script>`;
 
   const handleCopy = async () => {
     try {
@@ -72,8 +69,8 @@ export function WidgetCodeGenerator({ agent }: WidgetCodeGeneratorProps) {
           </div>
 
           <div className="relative">
-            <pre className="bg-muted p-4 rounded-lg overflow-x-auto text-xs">
-              <code>{embedCode}</code>
+            <pre className="bg-muted p-3 rounded-lg overflow-x-auto text-xs font-mono border">
+              <code className="break-all whitespace-pre-wrap">{embedCode}</code>
             </pre>
           </div>
         </div>

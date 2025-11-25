@@ -130,10 +130,13 @@ function generateWidgetScript(config: any): string {
 (function() {
   'use strict';
   
-  // Configuration
-  const CONFIG = ${JSON.stringify(config, null, 2)};
-  const INTERACT_URL = '${interactUrl}';
-  const STORAGE_KEY = 'voiceflow_widget_' + CONFIG.agentId;
+  function initWidget() {
+    console.log('[VF Widget] Initializing for agent:', '${config.agentId}');
+    
+    // Configuration
+    const CONFIG = ${JSON.stringify(config, null, 2)};
+    const INTERACT_URL = '${interactUrl}';
+    const STORAGE_KEY = 'voiceflow_widget_' + CONFIG.agentId;
   
   // Session Manager
   const SessionManager = {
@@ -210,10 +213,15 @@ function generateWidgetScript(config: any): string {
     }
   };
   
+  // Load Google Fonts reliably
+  const fontLink = document.createElement('link');
+  fontLink.rel = 'stylesheet';
+  fontLink.href = \`https://fonts.googleapis.com/css2?family=\${CONFIG.appearance.fontFamily.replace(' ', '+')}:wght@400;500;600;700&display=swap\`;
+  document.head.appendChild(fontLink);
+  
   // Inject CSS
   const style = document.createElement('style');
   style.textContent = \`
-    @import url('https://fonts.googleapis.com/css2?family=\${CONFIG.appearance.fontFamily.replace(' ', '+')}:wght@400;500;600;700&display=swap');
     
     .vf-widget-container * {
       box-sizing: border-box;
@@ -1005,6 +1013,16 @@ function generateWidgetScript(config: any): string {
   });
   
   renderContent();
+  
+  console.log('[VF Widget] Widget loaded successfully');
+  }
+  
+  // Wait for DOM to be ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initWidget);
+  } else {
+    initWidget();
+  }
 })();
 `;
 }
