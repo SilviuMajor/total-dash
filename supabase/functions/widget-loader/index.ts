@@ -179,7 +179,7 @@ function generateWidgetScript(config: any): string {
         id: conversationId,
         messages,
         timestamp: new Date().toISOString(),
-        preview: messages[0]?.text || 'New conversation',
+        preview: messages.find(m => m.speaker === 'user')?.text || 'New conversation',
         messageCount: messages.length
       };
       
@@ -222,65 +222,76 @@ function generateWidgetScript(config: any): string {
   // Inject CSS
   const style = document.createElement('style');
   style.textContent = \`
+    * { box-sizing: border-box; }
     
-    .vf-widget-container * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-    
+    /* Chat Icon Button */
     .vf-widget-button {
       position: fixed;
-      bottom: 20px;
-      right: 20px;
+      bottom: 24px;
+      right: 24px;
       width: 60px;
       height: 60px;
-      border-radius: 50%;
-      background: \${CONFIG.appearance.primaryColor};
       border: none;
       cursor: pointer;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
       display: flex;
       align-items: center;
       justify-content: center;
+      transition: all 0.2s;
       z-index: 999998;
-      transition: transform 0.2s, box-shadow 0.2s;
     }
     
-    .vf-widget-button:hover {
+    /* Custom icon - no background */
+    .vf-widget-button.has-custom-icon {
+      background: transparent;
+      box-shadow: none;
+      border-radius: 50%;
+    }
+    
+    .vf-widget-button.has-custom-icon img {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+    
+    .vf-widget-button.has-custom-icon:hover {
+      transform: scale(1.05);
+    }
+    
+    /* Default icon - colored background */
+    .vf-widget-button.default-icon {
+      background: \${CONFIG.appearance.primaryColor};
+      border-radius: 50%;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    .vf-widget-button.default-icon:hover {
       transform: scale(1.05);
       box-shadow: 0 6px 16px rgba(0,0,0,0.2);
     }
     
-    .vf-widget-button img {
-      width: 32px;
-      height: 32px;
-      object-fit: contain;
-    }
-    
-    .vf-widget-button svg {
-      width: 32px;
-      height: 32px;
+    .vf-widget-button.default-icon svg {
       fill: white;
+      width: 28px;
+      height: 28px;
     }
     
+    /* Widget Panel */
     .vf-widget-panel {
       position: fixed;
-      bottom: 90px;
-      right: 20px;
+      bottom: 100px;
+      right: 24px;
       width: 380px;
-      max-width: calc(100vw - 40px);
+      max-width: calc(100vw - 48px);
       height: 600px;
-      max-height: calc(100vh - 120px);
-      background: \${CONFIG.appearance.secondaryColor};
+      max-height: calc(100vh - 140px);
+      background: #ffffff;
       border-radius: 16px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.15);
       z-index: 999999;
       display: flex;
       flex-direction: column;
       font-family: \${CONFIG.appearance.fontFamily}, sans-serif;
-      font-size: \${CONFIG.appearance.fontSize}px;
-      color: \${CONFIG.appearance.textColor};
       overflow: hidden;
       transition: opacity 0.2s, transform 0.2s;
     }
@@ -291,10 +302,12 @@ function generateWidgetScript(config: any): string {
       pointer-events: none;
     }
     
+    /* Header with gradient and wave */
     .vf-widget-header {
-      background: \${CONFIG.appearance.primaryColor};
-      color: white;
-      padding: 16px;
+      position: relative;
+      background: linear-gradient(135deg, \${CONFIG.appearance.primaryColor} 0%, \${CONFIG.appearance.primaryColor}dd 100%);
+      color: \${CONFIG.appearance.secondaryColor};
+      padding: 20px;
       display: flex;
       align-items: center;
       gap: 12px;
@@ -302,11 +315,12 @@ function generateWidgetScript(config: any): string {
     }
     
     .vf-widget-header img {
-      width: 40px;
-      height: 40px;
+      width: 44px;
+      height: 44px;
       border-radius: 50%;
-      object-fit: cover;
+      border: 2px solid \${CONFIG.appearance.secondaryColor}40;
       background: white;
+      object-fit: cover;
     }
     
     .vf-widget-header-text {
@@ -327,7 +341,7 @@ function generateWidgetScript(config: any): string {
     .vf-widget-close {
       background: transparent;
       border: none;
-      color: white;
+      color: \${CONFIG.appearance.secondaryColor};
       cursor: pointer;
       width: 32px;
       height: 32px;
@@ -336,103 +350,342 @@ function generateWidgetScript(config: any): string {
       justify-content: center;
       border-radius: 50%;
       transition: background 0.2s;
+      flex-shrink: 0;
     }
     
     .vf-widget-close:hover {
       background: rgba(255,255,255,0.2);
     }
     
-    .vf-widget-tabs {
+    .vf-wave-decoration {
+      width: 100%;
+      height: 32px;
+    }
+    
+    /* Home Tab Gradient Header */
+    .vf-home-gradient-header {
+      position: relative;
+      padding: 48px 24px 96px 24px;
+      background: linear-gradient(160deg, \${CONFIG.appearance.primaryColor} 0%, \${CONFIG.appearance.primaryColor}dd 50%, transparent 100%);
+    }
+    
+    .vf-home-logo-text {
       display: flex;
-      border-bottom: 1px solid rgba(0,0,0,0.1);
+      align-items: center;
+      gap: 16px;
+    }
+    
+    .vf-home-logo {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      border: 3px solid \${CONFIG.appearance.secondaryColor};
+      background: white;
+      object-fit: cover;
       flex-shrink: 0;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
     
-    .vf-widget-tab {
+    .vf-home-text {
       flex: 1;
-      padding: 12px;
-      text-align: center;
-      cursor: pointer;
-      border: none;
-      background: transparent;
-      color: \${CONFIG.appearance.textColor};
-      font-family: inherit;
-      font-size: inherit;
-      transition: background 0.2s;
     }
     
-    .vf-widget-tab:hover {
-      background: rgba(0,0,0,0.05);
-    }
-    
-    .vf-widget-tab.active {
-      border-bottom: 2px solid \${CONFIG.appearance.primaryColor};
-      color: \${CONFIG.appearance.primaryColor};
-      font-weight: 600;
-    }
-    
-    .vf-widget-content {
-      flex: 1;
-      overflow-y: auto;
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-    }
-    
-    .vf-widget-home {
-      text-align: center;
-    }
-    
-    .vf-widget-home-title {
-      font-size: 20px;
-      font-weight: 600;
+    .vf-home-title {
+      font-size: 28px;
+      font-weight: 700;
+      color: \${CONFIG.appearance.secondaryColor};
       margin-bottom: 8px;
     }
     
-    .vf-widget-home-subtitle {
-      color: rgba(0,0,0,0.6);
-      margin-bottom: 24px;
+    .vf-home-subtitle {
+      font-size: 18px;
+      font-weight: 500;
+      color: \${CONFIG.appearance.secondaryColor};
+      opacity: 0.95;
     }
     
-    .vf-widget-home-buttons {
+    .vf-home-content {
+      flex: 1;
+      background: #ffffff;
+      padding: 0 24px;
+      margin-top: -64px;
+      position: relative;
+      z-index: 10;
+      overflow-y: auto;
+    }
+    
+    .vf-home-buttons {
       display: flex;
       flex-direction: column;
       gap: 12px;
     }
     
-    .vf-widget-home-button {
-      padding: 14px 20px;
+    .vf-home-button {
+      width: 100%;
+      padding: 16px;
       border: none;
-      border-radius: 12px;
-      background: \${CONFIG.appearance.primaryColor};
-      color: white;
-      font-family: inherit;
-      font-size: inherit;
-      font-weight: 500;
+      border-radius: 16px;
+      background: rgba(0,0,0,0.03);
       cursor: pointer;
-      transition: transform 0.2s, box-shadow 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.2s;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      color: inherit;
+    }
+    
+    .vf-home-button:hover {
+      background: rgba(0,0,0,0.06);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .vf-home-button-content {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .vf-home-button-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #ffffff;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
     }
     
-    .vf-widget-home-button:hover {
-      transform: translateY(-2px);
+    .vf-home-button-icon svg {
+      width: 20px;
+      height: 20px;
+      stroke: \${CONFIG.appearance.primaryColor};
+      fill: none;
+    }
+    
+    .vf-home-button-arrow {
+      color: rgba(0,0,0,0.4);
+      transition: transform 0.2s;
+    }
+    
+    .vf-home-button:hover .vf-home-button-arrow {
+      transform: translateX(4px);
+    }
+    
+    /* Floating close button for Home tab */
+    .vf-floating-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      z-index: 50;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.2);
+      backdrop-filter: blur(8px);
+      border: none;
+      color: \${CONFIG.appearance.secondaryColor};
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      transition: all 0.2s;
     }
     
-    .vf-widget-messages {
+    .vf-floating-close:hover {
+      background: rgba(255,255,255,0.3);
+    }
+    
+    /* Content Area */
+    .vf-widget-content {
       flex: 1;
+      overflow-y: auto;
       display: flex;
       flex-direction: column;
+      min-height: 0;
+      background: #ffffff;
+    }
+    
+    /* Chat List View */
+    .vf-chats-header {
+      padding: 20px 24px;
+      flex-shrink: 0;
+    }
+    
+    .vf-chats-title-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    
+    .vf-chats-title-row svg {
+      width: 20px;
+      height: 20px;
+      stroke: \${CONFIG.appearance.primaryColor};
+    }
+    
+    .vf-chats-title {
+      font-size: 18px;
+      font-weight: 600;
+    }
+    
+    .vf-new-chat-button {
+      width: 100%;
+      padding: 16px 8px;
+      border: none;
+      border-radius: 12px;
+      background: \${CONFIG.appearance.primaryColor}25;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.2s;
+      font-family: inherit;
+      font-weight: 500;
+    }
+    
+    .vf-new-chat-button:hover {
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .vf-new-chat-content {
+      display: flex;
+      align-items: center;
       gap: 12px;
+    }
+    
+    .vf-new-chat-content svg {
+      width: 20px;
+      height: 20px;
+      stroke: \${CONFIG.appearance.primaryColor};
+    }
+    
+    .vf-chats-section {
+      padding: 0 16px 20px 24px;
+    }
+    
+    .vf-chats-section-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: rgba(0,0,0,0.5);
+      margin-bottom: 12px;
+    }
+    
+    .vf-conversation-card {
+      width: 100%;
+      padding: 16px 8px 16px 16px;
+      border-radius: 12px;
+      background: \${CONFIG.appearance.primaryColor}15;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: start;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    
+    .vf-conversation-card:hover {
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .vf-conversation-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: \${CONFIG.appearance.primaryColor}30;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    
+    .vf-conversation-icon svg {
+      width: 20px;
+      height: 20px;
+      stroke: \${CONFIG.appearance.primaryColor};
+    }
+    
+    .vf-conversation-details {
+      flex: 1;
+      min-width: 0;
+    }
+    
+    .vf-conversation-preview {
+      font-weight: 500;
+      font-size: 14px;
+      margin-bottom: 4px;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      word-break: break-all;
+    }
+    
+    .vf-conversation-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: rgba(0,0,0,0.5);
+    }
+    
+    .vf-conversation-meta svg {
+      width: 12px;
+      height: 12px;
+      stroke: currentColor;
+    }
+    
+    .vf-conversation-badge {
+      background: rgba(0,0,0,0.1);
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      margin-left: auto;
+    }
+    
+    .vf-conversation-chevron {
+      width: 20px;
+      height: 20px;
+      stroke: rgba(0,0,0,0.4);
+      flex-shrink: 0;
+      transition: transform 0.2s;
+    }
+    
+    .vf-conversation-card:hover .vf-conversation-chevron {
+      transform: translateX(2px);
+    }
+    
+    .vf-empty-state {
+      text-align: center;
+      padding: 60px 32px;
+      color: rgba(0,0,0,0.4);
+    }
+    
+    .vf-empty-state svg {
+      width: 48px;
+      height: 48px;
+      opacity: 0.3;
+      margin: 0 auto 12px;
+    }
+    
+    /* Messages View */
+    .vf-messages-container {
+      flex: 1;
+      padding: 16px;
+      overflow-y: auto;
       min-height: 0;
     }
     
-    .vf-widget-message {
+    .vf-message {
       display: flex;
-      gap: 8px;
+      gap: 12px;
+      margin-bottom: 16px;
       animation: fadeIn 0.3s;
     }
     
@@ -441,144 +694,285 @@ function generateWidgetScript(config: any): string {
       to { opacity: 1; transform: translateY(0); }
     }
     
-    .vf-widget-message.user {
+    .vf-message.user {
       flex-direction: row-reverse;
     }
     
-    .vf-widget-message-bubble {
-      padding: 12px 16px;
-      max-width: 75%;
-      word-wrap: break-word;
-      border-radius: \${CONFIG.appearance.messageBubbleStyle === 'rounded' ? '12px' : CONFIG.appearance.messageBubbleStyle === 'pill' ? '20px' : '4px'};
+    .vf-message-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: \${CONFIG.appearance.primaryColor}20;
     }
     
-    .vf-widget-message.assistant .vf-widget-message-bubble {
+    .vf-message-avatar img {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+    
+    .vf-message-avatar svg {
+      width: 16px;
+      height: 16px;
+      fill: \${CONFIG.appearance.primaryColor};
+    }
+    
+    .vf-message-content {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      max-width: 75%;
+    }
+    
+    .vf-message.user .vf-message-content {
+      align-items: end;
+    }
+    
+    .vf-message-bubble {
+      padding: 12px 16px;
+      word-wrap: break-word;
+      border-radius: \${CONFIG.appearance.messageBubbleStyle === 'pill' ? '20px' : CONFIG.appearance.messageBubbleStyle === 'square' ? '4px' : '16px'};
+    }
+    
+    .vf-message.assistant .vf-message-bubble {
       background: \${CONFIG.functions.messageBgColor};
       color: \${CONFIG.functions.messageTextColor};
     }
     
-    .vf-widget-message.user .vf-widget-message-bubble {
+    .vf-message.user .vf-message-bubble {
       background: \${CONFIG.appearance.primaryColor};
-      color: white;
+      color: \${CONFIG.appearance.secondaryColor};
     }
     
-    .vf-widget-message-buttons {
+    .vf-message-timestamp {
+      font-size: 11px;
+      color: rgba(0,0,0,0.4);
+      padding: 0 4px;
+    }
+    
+    .vf-message-buttons {
       display: flex;
       flex-direction: column;
       gap: 8px;
       margin-top: 8px;
     }
     
-    .vf-widget-message-button {
+    .vf-message-button {
       padding: 10px 16px;
-      border: 1px solid \${CONFIG.appearance.primaryColor};
-      background: white;
-      color: \${CONFIG.appearance.primaryColor};
       border-radius: 8px;
       cursor: pointer;
       font-family: inherit;
-      font-size: inherit;
+      font-size: 14px;
+      font-weight: 500;
       transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
     }
     
-    .vf-widget-message-button:hover:not(:disabled) {
+    .vf-message-button.solid {
       background: \${CONFIG.appearance.primaryColor};
-      color: white;
+      color: \${CONFIG.appearance.secondaryColor};
+      border: none;
     }
     
-    .vf-widget-message-button:disabled {
+    .vf-message-button.outlined {
+      background: transparent;
+      color: \${CONFIG.appearance.primaryColor};
+      border: 2px solid \${CONFIG.appearance.primaryColor};
+    }
+    
+    .vf-message-button.soft {
+      background: \${CONFIG.appearance.primaryColor}20;
+      color: \${CONFIG.appearance.primaryColor};
+      border: 1px solid \${CONFIG.appearance.primaryColor}50;
+    }
+    
+    .vf-message-button:hover:not(:disabled) {
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      transform: translateY(-1px);
+    }
+    
+    .vf-message-button:disabled {
       opacity: 0.5;
       cursor: not-allowed;
     }
     
-    .vf-widget-typing {
+    .vf-message-button.selected {
+      background: \${CONFIG.appearance.primaryColor};
+      color: \${CONFIG.appearance.secondaryColor};
+      border: 2px solid \${CONFIG.appearance.primaryColor};
+    }
+    
+    /* Typing Indicator */
+    .vf-typing-container {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    
+    .vf-typing-indicator {
       display: flex;
       gap: 4px;
       padding: 12px 16px;
-      background: \${CONFIG.functions.messageBgColor};
-      border-radius: 12px;
+      background: rgba(0,0,0,0.05);
+      border-radius: 16px;
       width: fit-content;
     }
     
-    .vf-widget-typing-dot {
+    .vf-typing-dot {
       width: 8px;
       height: 8px;
-      background: rgba(0,0,0,0.4);
+      background: \${CONFIG.appearance.primaryColor}99;
       border-radius: 50%;
       animation: bounce 1.4s infinite ease-in-out both;
     }
     
-    .vf-widget-typing-dot:nth-child(1) { animation-delay: -0.32s; }
-    .vf-widget-typing-dot:nth-child(2) { animation-delay: -0.16s; }
+    .vf-typing-dot:nth-child(1) { animation-delay: -0.32s; }
+    .vf-typing-dot:nth-child(2) { animation-delay: -0.16s; }
     
     @keyframes bounce {
       0%, 80%, 100% { transform: scale(0); }
       40% { transform: scale(1); }
     }
     
-    .vf-widget-input-area {
-      padding: 12px 16px;
-      border-top: 1px solid rgba(0,0,0,0.1);
-      display: flex;
-      gap: 8px;
+    /* Input Area */
+    .vf-input-area {
+      padding: 16px;
+      background: \${CONFIG.appearance.primaryColor}08;
+      border-top: 1px solid rgba(0,0,0,0.06);
       flex-shrink: 0;
     }
     
-    .vf-widget-input {
-      flex: 1;
-      padding: 10px 12px;
-      border: 1px solid rgba(0,0,0,0.2);
-      border-radius: 8px;
-      font-family: inherit;
-      font-size: inherit;
-      outline: none;
-      transition: border-color 0.2s;
+    .vf-input-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
     
-    .vf-widget-input:focus {
-      border-color: \${CONFIG.appearance.primaryColor};
-    }
-    
-    .vf-widget-send {
-      padding: 10px 16px;
-      background: \${CONFIG.appearance.primaryColor};
-      color: white;
+    .vf-input-attach {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: transparent;
       border: none;
-      border-radius: 8px;
+      color: rgba(0,0,0,0.5);
       cursor: pointer;
-      font-family: inherit;
-      transition: opacity 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
     }
     
-    .vf-widget-send:disabled {
+    .vf-input-attach:hover {
+      background: rgba(0,0,0,0.05);
+      color: rgba(0,0,0,0.7);
+    }
+    
+    .vf-input-attach svg {
+      width: 20px;
+      height: 20px;
+      stroke: currentColor;
+    }
+    
+    .vf-input {
+      flex: 1;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 24px;
+      background: #ffffff;
+      font-family: inherit;
+      font-size: 14px;
+      outline: none;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .vf-input:focus {
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    
+    .vf-send-button {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: \${CONFIG.appearance.primaryColor};
+      color: \${CONFIG.appearance.secondaryColor};
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .vf-send-button:hover:not(:disabled) {
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    
+    .vf-send-button:disabled {
       opacity: 0.5;
       cursor: not-allowed;
     }
     
-    .vf-widget-conversation-card {
+    .vf-send-button svg {
+      width: 18px;
+      height: 18px;
+      fill: currentColor;
+    }
+    
+    /* Bottom Tabs */
+    .vf-bottom-tabs {
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      padding: 8px;
+      border-top: 1px solid rgba(0,0,0,0.1);
+      background: #ffffff;
+      flex-shrink: 0;
+    }
+    
+    .vf-tab {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
       padding: 12px;
-      border-radius: 12px;
-      background: rgba(0,0,0,0.03);
+      border: none;
+      background: transparent;
       cursor: pointer;
-      transition: background 0.2s;
-      margin-bottom: 8px;
+      border-radius: 8px;
+      transition: all 0.2s;
+      font-family: inherit;
     }
     
-    .vf-widget-conversation-card:hover {
-      background: rgba(0,0,0,0.06);
+    .vf-tab.active {
+      background: \${CONFIG.appearance.primaryColor}15;
+      color: \${CONFIG.appearance.primaryColor};
     }
     
-    .vf-widget-conversation-preview {
-      font-weight: 500;
-      margin-bottom: 4px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+    .vf-tab svg {
+      width: 20px;
+      height: 20px;
+      stroke: currentColor;
     }
     
-    .vf-widget-conversation-meta {
+    .vf-tab-label {
       font-size: 12px;
-      color: rgba(0,0,0,0.5);
+      font-weight: 500;
+    }
+    
+    /* Hide elements */
+    .hidden {
+      display: none !important;
     }
   \`;
   document.head.appendChild(style);
@@ -593,51 +987,60 @@ function generateWidgetScript(config: any): string {
   let isInActiveChat = false;
   let clickedButtonIds = new Set();
   
+  // Helper function to format time ago
+  function formatTimeAgo(date) {
+    const seconds = Math.floor((new Date() - new Date(date)) / 1000);
+    if (seconds < 60) return 'just now';
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return minutes + 'm ago';
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return hours + 'h ago';
+    const days = Math.floor(hours / 24);
+    if (days < 7) return days + 'd ago';
+    return new Date(date).toLocaleDateString();
+  }
+  
+  // Helper function to format time
+  function formatTime(date) {
+    return new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+  
+  // SVG Icons
+  const icons = {
+    messageSquare: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>',
+    plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>',
+    chevronRight: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>',
+    messageCircle: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>',
+    clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>',
+    home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>',
+    x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>',
+    send: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>',
+    paperclip: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>',
+    bot: '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="11" width="18" height="10" rx="2"></rect><circle cx="12" cy="5" r="2"></circle><path d="M12 7v4"></path><line x1="8" y1="16" x2="8" y2="16"></line><line x1="16" y1="16" x2="16" y2="16"></line></svg>',
+    phone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>'
+  };
+  
   // Create Widget Container
   const container = document.createElement('div');
-  container.className = 'vf-widget-container';
+  const hasCustomIcon = !!CONFIG.appearance.chatIconUrl;
+  
   container.innerHTML = \`
-    <button class="vf-widget-button" id="vf-chat-button">
-      \${CONFIG.appearance.chatIconUrl 
+    <button class="vf-widget-button \${hasCustomIcon ? 'has-custom-icon' : 'default-icon'}">
+      \${hasCustomIcon 
         ? \`<img src="\${CONFIG.appearance.chatIconUrl}" alt="Chat" />\`
-        : \`<svg viewBox="0 0 24 24">
-            <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
-          </svg>\`
+        : icons.messageSquare
       }
     </button>
-    <div class="vf-widget-panel hidden" id="vf-chat-panel">
-      <div class="vf-widget-header">
-        \${CONFIG.appearance.logoUrl ? \`<img src="\${CONFIG.appearance.logoUrl}" alt="Logo" />\` : ''}
-        <div class="vf-widget-header-text">
-          <div class="vf-widget-header-title">\${CONFIG.title}</div>
-          <div class="vf-widget-header-desc">\${CONFIG.description}</div>
-        </div>
-        <button class="vf-widget-close" id="vf-chat-close">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
-      </div>
-      <div class="vf-widget-tabs" id="vf-tabs"></div>
-      <div class="vf-widget-content" id="vf-content"></div>
-      <div class="vf-widget-input-area hidden" id="vf-input-area">
-        <input type="text" class="vf-widget-input" id="vf-input" placeholder="Type a message..." />
-        <button class="vf-widget-send" id="vf-send">Send</button>
-      </div>
+    <div class="vf-widget-panel hidden">
+      <div id="vf-panel-content"></div>
     </div>
   \`;
   document.body.appendChild(container);
   
   // Elements
-  const chatButton = document.getElementById('vf-chat-button');
-  const chatPanel = document.getElementById('vf-chat-panel');
-  const closeButton = document.getElementById('vf-chat-close');
-  const tabsContainer = document.getElementById('vf-tabs');
-  const contentContainer = document.getElementById('vf-content');
-  const inputArea = document.getElementById('vf-input-area');
-  const input = document.getElementById('vf-input');
-  const sendButton = document.getElementById('vf-send');
+  const chatButton = container.querySelector('.vf-widget-button');
+  const chatPanel = container.querySelector('.vf-widget-panel');
+  const panelContent = document.getElementById('vf-panel-content');
   
   // Initialize
   const session = SessionManager.initSession();
@@ -652,145 +1055,281 @@ function generateWidgetScript(config: any): string {
     }
   }
   
-  // Render tabs
-  function renderTabs() {
+  // Render Functions
+  function renderPanel() {
+    const showHeader = currentTab !== 'Home' || isInActiveChat;
+    const showFloatingClose = currentTab === 'Home' && !isInActiveChat;
+    const showTabs = !isInActiveChat;
     const tabs = [];
     if (CONFIG.tabs.home.enabled) tabs.push('Home');
     if (CONFIG.tabs.chats.enabled) tabs.push('Chats');
     if (CONFIG.tabs.faq.enabled) tabs.push('FAQ');
     
-    tabsContainer.innerHTML = tabs.map(tab => 
-      \`<button class="vf-widget-tab \${tab === currentTab ? 'active' : ''}" data-tab="\${tab}">\${tab}</button>\`
-    ).join('');
+    panelContent.innerHTML = \`
+      \${showFloatingClose ? \`
+        <button class="vf-floating-close" onclick="window.vfCloseWidget()">
+          \${icons.x}
+        </button>
+      \` : ''}
+      
+      \${showHeader ? \`
+        <div class="vf-widget-header">
+          \${CONFIG.appearance.logoUrl ? \`<img src="\${CONFIG.appearance.logoUrl}" alt="Logo" />\` : ''}
+          <div class="vf-widget-header-text">
+            <div class="vf-widget-header-title">\${CONFIG.title}</div>
+            <div class="vf-widget-header-desc">\${CONFIG.description}</div>
+          </div>
+          <button class="vf-widget-close" onclick="window.vfCloseWidget()">
+            \${icons.x}
+          </button>
+        </div>
+        <svg viewBox="0 0 400 50" class="vf-wave-decoration" preserveAspectRatio="none">
+          <path d="M0,25 Q100,10 200,25 T400,25 L400,50 L0,50 Z" fill="\${CONFIG.appearance.secondaryColor}" opacity="0.15"/>
+        </svg>
+      \` : ''}
+      
+      <div class="vf-widget-content" id="vf-content"></div>
+      
+      \${isInActiveChat ? \`
+        <div class="vf-input-area">
+          <div class="vf-input-row">
+            \${CONFIG.functions.fileUploadEnabled ? \`
+              <button class="vf-input-attach">
+                \${icons.paperclip}
+              </button>
+            \` : ''}
+            <input type="text" class="vf-input" id="vf-input" placeholder="Type your message..." />
+            <button class="vf-send-button" onclick="window.vfSendMessage()">
+              \${icons.send}
+            </button>
+          </div>
+        </div>
+      \` : ''}
+      
+      \${showTabs && tabs.length > 1 ? \`
+        <div class="vf-bottom-tabs">
+          \${tabs.map(tab => \`
+            <button class="vf-tab \${tab === currentTab ? 'active' : ''}" onclick="window.vfSwitchTab('\${tab}')">
+              \${tab === 'Home' ? icons.home : icons.messageSquare}
+              <span class="vf-tab-label">\${tab}</span>
+            </button>
+          \`).join('')}
+        </div>
+      \` : ''}
+    \`;
     
-    tabsContainer.querySelectorAll('.vf-widget-tab').forEach(tab => {
-      tab.addEventListener('click', () => {
-        currentTab = tab.dataset.tab;
-        renderContent();
-      });
-    });
+    renderContent();
   }
   
-  // Render content
   function renderContent() {
-    renderTabs();
+    const contentEl = document.getElementById('vf-content');
+    if (!contentEl) return;
     
     if (currentTab === 'Home' && !isInActiveChat) {
-      renderHome();
-    } else if (currentTab === 'Chats') {
+      renderHome(contentEl);
+    } else if (currentTab === 'Chats' || isInActiveChat) {
       if (isInActiveChat) {
-        renderChat();
+        renderMessages(contentEl);
       } else {
-        renderChatHistory();
+        renderChatHistory(contentEl);
       }
     } else if (currentTab === 'FAQ') {
-      renderFAQ();
-    } else {
-      renderChat();
+      renderFAQ(contentEl);
     }
   }
   
-  function renderHome() {
-    inputArea.classList.add('hidden');
-    contentContainer.innerHTML = \`
-      <div class="vf-widget-home">
-        <div class="vf-widget-home-title">\${CONFIG.tabs.home.title}</div>
-        <div class="vf-widget-home-subtitle">\${CONFIG.tabs.home.subtitle}</div>
-        <div class="vf-widget-home-buttons" id="vf-home-buttons"></div>
+  function renderHome(container) {
+    container.innerHTML = \`
+      <div class="vf-home-gradient-header">
+        <div class="vf-home-logo-text">
+          \${CONFIG.appearance.logoUrl ? \`
+            <img src="\${CONFIG.appearance.logoUrl}" alt="Logo" class="vf-home-logo" />
+          \` : ''}
+          <div class="vf-home-text">
+            <h2 class="vf-home-title">\${CONFIG.tabs.home.title}</h2>
+            <p class="vf-home-subtitle">\${CONFIG.tabs.home.subtitle}</p>
+          </div>
+        </div>
+      </div>
+      <div class="vf-home-content">
+        <div class="vf-home-buttons">
+          \${CONFIG.tabs.home.buttons.filter(btn => btn.enabled).map(btn => \`
+            <button class="vf-home-button" onclick="window.vfHandleHomeAction('\${btn.action}', '\${btn.phoneNumber || ''}')">
+              <div class="vf-home-button-content">
+                <div class="vf-home-button-icon">
+                  \${btn.action === 'call' ? icons.phone : icons.messageSquare}
+                </div>
+                <span>\${btn.text}</span>
+              </div>
+              <span class="vf-home-button-arrow">\${icons.chevronRight}</span>
+            </button>
+          \`).join('')}
+        </div>
       </div>
     \`;
-    
-    const buttonsContainer = document.getElementById('vf-home-buttons');
-    CONFIG.tabs.home.buttons.filter(btn => btn.enabled).forEach(btn => {
-      const button = document.createElement('button');
-      button.className = 'vf-widget-home-button';
-      button.textContent = btn.text;
-      button.onclick = () => handleHomeButtonAction(btn.action, btn.phone_number);
-      buttonsContainer.appendChild(button);
-    });
   }
   
-  function renderChatHistory() {
-    inputArea.classList.add('hidden');
+  function renderChatHistory(container) {
     const history = SessionManager.getConversationHistory();
     
     if (history.length === 0) {
-      contentContainer.innerHTML = \`
-        <div style="text-align: center; padding: 40px 20px; color: rgba(0,0,0,0.5);">
-          <p>No conversations yet</p>
-          <button class="vf-widget-home-button" onclick="window.vfStartNewChat()" style="margin-top: 20px;">
-            Start a new chat
-          </button>
+      container.innerHTML = \`
+        <div class="vf-empty-state">
+          \${icons.messageCircle}
+          <p style="margin-bottom: 4px;">No conversations yet</p>
+          <p style="font-size: 13px; opacity: 0.7;">Start a new chat to get going</p>
         </div>
       \`;
     } else {
-      contentContainer.innerHTML = history.map(conv => \`
-        <div class="vf-widget-conversation-card" onclick="window.vfLoadConversation('\${conv.id}')">
-          <div class="vf-widget-conversation-preview">\${conv.preview}</div>
-          <div class="vf-widget-conversation-meta">
-            \${new Date(conv.timestamp).toLocaleDateString()} • \${conv.messageCount} messages
+      const recent = history[0];
+      const older = history.slice(1);
+      
+      container.innerHTML = \`
+        <div class="vf-chats-header">
+          <div class="vf-chats-title-row">
+            \${icons.messageSquare}
+            <h3 class="vf-chats-title">Chats</h3>
           </div>
+          <button class="vf-new-chat-button" onclick="window.vfStartNewChat()">
+            <div class="vf-new-chat-content">
+              \${icons.plus}
+              <span>New Chat</span>
+            </div>
+            \${icons.chevronRight}
+          </button>
         </div>
-      \`).join('');
+        
+        \${recent ? \`
+          <div class="vf-chats-section">
+            <div class="vf-chats-section-title">Continue recent conversation</div>
+            <div class="vf-conversation-card" onclick="window.vfLoadConversation('\${recent.id}')">
+              <div class="vf-conversation-icon">
+                \${icons.messageCircle}
+              </div>
+              <div class="vf-conversation-details">
+                <div class="vf-conversation-preview">\${recent.preview}</div>
+                <div class="vf-conversation-meta">
+                  \${icons.clock}
+                  <span>\${formatTimeAgo(recent.timestamp)}</span>
+                  <span class="vf-conversation-badge">\${recent.messageCount}</span>
+                </div>
+              </div>
+              <span class="vf-conversation-chevron">\${icons.chevronRight}</span>
+            </div>
+          </div>
+        \` : ''}
+        
+        \${older.length > 0 ? \`
+          <div class="vf-chats-section">
+            <div class="vf-chats-section-title">Previous conversations</div>
+            \${older.map(conv => \`
+              <div class="vf-conversation-card" onclick="window.vfLoadConversation('\${conv.id}')">
+                <div class="vf-conversation-icon">
+                  \${icons.messageCircle}
+                </div>
+                <div class="vf-conversation-details">
+                  <div class="vf-conversation-preview">\${conv.preview}</div>
+                  <div class="vf-conversation-meta">
+                    \${icons.clock}
+                    <span>\${formatTimeAgo(conv.timestamp)}</span>
+                    <span class="vf-conversation-badge">\${conv.messageCount}</span>
+                  </div>
+                </div>
+                <span class="vf-conversation-chevron">\${icons.chevronRight}</span>
+              </div>
+            \`).join('')}
+          </div>
+        \` : ''}
+      \`;
     }
   }
   
-  function renderChat() {
-    inputArea.classList.remove('hidden');
-    contentContainer.innerHTML = '<div class="vf-widget-messages" id="vf-messages"></div>';
-    const messagesContainer = document.getElementById('vf-messages');
+  function renderMessages(container) {
+    container.innerHTML = '<div class="vf-messages-container" id="vf-messages"></div>';
+    const messagesEl = document.getElementById('vf-messages');
     
     messages.forEach(msg => {
-      const messageEl = document.createElement('div');
-      messageEl.className = \`vf-widget-message \${msg.speaker}\`;
+      const messageDiv = document.createElement('div');
+      messageDiv.className = \`vf-message \${msg.speaker}\`;
       
-      const bubble = document.createElement('div');
-      bubble.className = 'vf-widget-message-bubble';
-      bubble.textContent = msg.text || '';
-      messageEl.appendChild(bubble);
+      const isAssistant = msg.speaker === 'assistant';
+      const buttonStyle = CONFIG.appearance.interactiveButtonStyle || 'solid';
       
-      if (msg.buttons && !clickedButtonIds.has(msg.id)) {
-        const buttonsContainer = document.createElement('div');
-        buttonsContainer.className = 'vf-widget-message-buttons';
-        msg.buttons.forEach(btn => {
-          const button = document.createElement('button');
-          button.className = 'vf-widget-message-button';
-          button.textContent = btn.text;
-          button.onclick = () => handleButtonClick(btn.payload, btn.text, msg.id);
-          buttonsContainer.appendChild(button);
-        });
-        bubble.appendChild(buttonsContainer);
-      }
+      messageDiv.innerHTML = \`
+        \${isAssistant ? \`
+          <div class="vf-message-avatar">
+            \${CONFIG.appearance.chatIconUrl 
+              ? \`<img src="\${CONFIG.appearance.chatIconUrl}" alt="Bot" />\`
+              : icons.bot
+            }
+          </div>
+        \` : ''}
+        <div class="vf-message-content">
+          <div class="vf-message-bubble">
+            \${msg.text || ''}
+            \${msg.buttons && !clickedButtonIds.has(msg.id) ? \`
+              <div class="vf-message-buttons">
+                \${msg.buttons.map((btn, idx) => \`
+                  <button class="vf-message-button \${buttonStyle}" onclick="window.vfHandleButtonClick('\${msg.id}', \${idx})">
+                    \${btn.text}
+                  </button>
+                \`).join('')}
+              </div>
+            \` : ''}
+          </div>
+          <span class="vf-message-timestamp">\${formatTime(msg.timestamp)}</span>
+        </div>
+      \`;
       
-      messagesContainer.appendChild(messageEl);
+      messagesEl.appendChild(messageDiv);
     });
     
     if (isTyping) {
-      const typingEl = document.createElement('div');
-      typingEl.className = 'vf-widget-typing';
-      typingEl.innerHTML = '<div class="vf-widget-typing-dot"></div><div class="vf-widget-typing-dot"></div><div class="vf-widget-typing-dot"></div>';
-      messagesContainer.appendChild(typingEl);
+      const typingDiv = document.createElement('div');
+      typingDiv.className = 'vf-typing-container';
+      typingDiv.innerHTML = \`
+        <div class="vf-message-avatar">
+          \${CONFIG.appearance.chatIconUrl 
+            ? \`<img src="\${CONFIG.appearance.chatIconUrl}" alt="Bot" />\`
+            : icons.bot
+          }
+        </div>
+        <div class="vf-typing-indicator">
+          <div class="vf-typing-dot"></div>
+          <div class="vf-typing-dot"></div>
+          <div class="vf-typing-dot"></div>
+        </div>
+      \`;
+      messagesEl.appendChild(typingDiv);
     }
     
-    contentContainer.scrollTop = contentContainer.scrollHeight;
+    container.scrollTop = container.scrollHeight;
   }
   
-  function renderFAQ() {
-    inputArea.classList.add('hidden');
+  function renderFAQ(container) {
     if (CONFIG.tabs.faq.items.length === 0) {
-      contentContainer.innerHTML = '<div style="text-align: center; padding: 40px; color: rgba(0,0,0,0.5);">No FAQs available</div>';
+      container.innerHTML = \`
+        <div class="vf-empty-state">
+          <p>No FAQs available</p>
+        </div>
+      \`;
     } else {
-      contentContainer.innerHTML = CONFIG.tabs.faq.items.map((item, i) => \`
-        <details style="margin-bottom: 12px; padding: 12px; border-radius: 8px; background: rgba(0,0,0,0.03);">
-          <summary style="cursor: pointer; font-weight: 500;">\${item.question}</summary>
-          <p style="margin-top: 8px; color: rgba(0,0,0,0.7);">\${item.answer}</p>
-        </details>
-      \`).join('');
+      container.innerHTML = \`
+        <div style="padding: 20px;">
+          \${CONFIG.tabs.faq.items.map((item, i) => \`
+            <details style="margin-bottom: 12px; padding: 16px; border-radius: 12px; background: rgba(0,0,0,0.03);">
+              <summary style="cursor: pointer; font-weight: 600; font-size: 15px; outline: none;">\${item.question}</summary>
+              <p style="margin-top: 12px; color: rgba(0,0,0,0.7); line-height: 1.5;">\${item.answer}</p>
+            </details>
+          \`).join('')}
+        </div>
+      \`;
     }
   }
   
+  // API Functions
   async function sendMessage(text) {
-    if (!text.trim()) return;
+    if (!text?.trim()) return;
     
     const userMsg = {
       id: 'msg_' + Date.now(),
@@ -800,9 +1339,10 @@ function generateWidgetScript(config: any): string {
     };
     
     messages.push(userMsg);
-    input.value = '';
+    const input = document.getElementById('vf-input');
+    if (input) input.value = '';
     isTyping = true;
-    renderChat();
+    renderPanel();
     
     try {
       const response = await fetch(INTERACT_URL, {
@@ -838,11 +1378,11 @@ function generateWidgetScript(config: any): string {
           
           messages.push(botMsg);
           isTyping = false;
-          renderChat();
+          renderPanel();
         }
       } else {
         isTyping = false;
-        renderChat();
+        renderPanel();
       }
       
       if (conversationId) {
@@ -851,68 +1391,7 @@ function generateWidgetScript(config: any): string {
     } catch (error) {
       console.error('Send message error:', error);
       isTyping = false;
-      renderChat();
-    }
-  }
-  
-  async function handleButtonClick(payload, text, messageId) {
-    clickedButtonIds.add(messageId);
-    
-    const userMsg = {
-      id: 'msg_' + Date.now(),
-      speaker: 'user',
-      text,
-      timestamp: new Date().toISOString()
-    };
-    
-    messages.push(userMsg);
-    isTyping = true;
-    renderChat();
-    
-    try {
-      const response = await fetch(INTERACT_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          agentId: CONFIG.agentId,
-          userId,
-          message: JSON.stringify(payload),
-          action: 'button',
-          conversationId,
-          isTestMode: false
-        })
-      });
-      
-      const data = await response.json();
-      
-      if (data.botResponses) {
-        for (const resp of data.botResponses) {
-          await new Promise(resolve => setTimeout(resolve, CONFIG.functions.typingDelayMs));
-          
-          const botMsg = {
-            id: 'msg_' + Date.now(),
-            speaker: 'assistant',
-            text: resp.text,
-            buttons: resp.buttons,
-            timestamp: new Date().toISOString()
-          };
-          
-          messages.push(botMsg);
-          isTyping = false;
-          renderChat();
-        }
-      } else {
-        isTyping = false;
-        renderChat();
-      }
-      
-      if (conversationId) {
-        SessionManager.saveConversation(conversationId, messages);
-      }
-    } catch (error) {
-      console.error('Button click error:', error);
-      isTyping = false;
-      renderChat();
+      renderPanel();
     }
   }
   
@@ -924,10 +1403,10 @@ function generateWidgetScript(config: any): string {
     
     isInActiveChat = true;
     currentTab = 'Chats';
-    renderContent();
+    renderPanel();
     
     isTyping = true;
-    renderChat();
+    renderPanel();
     
     try {
       const response = await fetch(INTERACT_URL, {
@@ -962,57 +1441,140 @@ function generateWidgetScript(config: any): string {
           
           messages.push(botMsg);
           isTyping = false;
-          renderChat();
+          renderPanel();
         }
       } else {
         isTyping = false;
-        renderChat();
+        renderPanel();
       }
     } catch (error) {
       console.error('Start chat error:', error);
       isTyping = false;
-      renderChat();
+      renderPanel();
     }
   }
   
-  function handleHomeButtonAction(action, phoneNumber) {
-    if (action === 'new_chat') {
-      startNewChat();
-    } else if (action === 'call' && phoneNumber) {
-      window.location.href = 'tel:' + phoneNumber;
+  async function handleButtonClick(messageId, buttonIndex) {
+    const msg = messages.find(m => m.id === messageId);
+    if (!msg || !msg.buttons || !msg.buttons[buttonIndex]) return;
+    
+    clickedButtonIds.add(messageId);
+    const button = msg.buttons[buttonIndex];
+    
+    const userMsg = {
+      id: 'msg_' + Date.now(),
+      speaker: 'user',
+      text: button.text,
+      timestamp: new Date().toISOString()
+    };
+    
+    messages.push(userMsg);
+    isTyping = true;
+    renderPanel();
+    
+    try {
+      const response = await fetch(INTERACT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          agentId: CONFIG.agentId,
+          userId,
+          message: JSON.stringify(button.payload),
+          action: 'button',
+          conversationId,
+          isTestMode: false
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.botResponses) {
+        for (const resp of data.botResponses) {
+          await new Promise(resolve => setTimeout(resolve, CONFIG.functions.typingDelayMs));
+          
+          const botMsg = {
+            id: 'msg_' + Date.now(),
+            speaker: 'assistant',
+            text: resp.text,
+            buttons: resp.buttons,
+            timestamp: new Date().toISOString()
+          };
+          
+          messages.push(botMsg);
+          isTyping = false;
+          renderPanel();
+        }
+      } else {
+        isTyping = false;
+        renderPanel();
+      }
+      
+      if (conversationId) {
+        SessionManager.saveConversation(conversationId, messages);
+      }
+    } catch (error) {
+      console.error('Button click error:', error);
+      isTyping = false;
+      renderPanel();
     }
   }
+  
+  // Global functions
+  window.vfCloseWidget = function() {
+    isOpen = false;
+    chatPanel.classList.add('hidden');
+  };
+  
+  window.vfSendMessage = function() {
+    const input = document.getElementById('vf-input');
+    if (input) {
+      sendMessage(input.value);
+    }
+  };
   
   window.vfStartNewChat = startNewChat;
+  
   window.vfLoadConversation = function(convId) {
     const conv = SessionManager.loadConversation(convId);
     if (conv) {
       messages = conv.messages;
       conversationId = conv.id;
       isInActiveChat = true;
-      renderContent();
+      renderPanel();
     }
   };
+  
+  window.vfSwitchTab = function(tab) {
+    currentTab = tab;
+    if (tab !== 'Chats') {
+      isInActiveChat = false;
+    }
+    renderPanel();
+  };
+  
+  window.vfHandleHomeAction = function(action, phoneNumber) {
+    if (action === 'new_chat') {
+      startNewChat();
+    } else if (action === 'call' && phoneNumber) {
+      window.location.href = 'tel:' + phoneNumber;
+    }
+  };
+  
+  window.vfHandleButtonClick = handleButtonClick;
   
   // Event listeners
   chatButton.addEventListener('click', () => {
     isOpen = !isOpen;
     chatPanel.classList.toggle('hidden');
-    if (isOpen) renderContent();
+    if (isOpen) renderPanel();
   });
   
-  closeButton.addEventListener('click', () => {
-    isOpen = false;
-    chatPanel.classList.add('hidden');
-  });
-  
-  sendButton.addEventListener('click', () => sendMessage(input.value));
-  
-  input.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') sendMessage(input.value);
-  });
-  
-  renderContent();
+  const inputEl = document.getElementById('vf-input');
+  if (inputEl) {
+    inputEl.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') window.vfSendMessage();
+    });
+  }
   
   console.log('[VF Widget] Widget loaded successfully');
   }
