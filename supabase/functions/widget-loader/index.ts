@@ -440,6 +440,7 @@ function generateWidgetScript(config: any): string {
       display: flex;
       flex-direction: column;
       min-height: 0;
+      justify-content: flex-start;
     }
     
     .vf-home-buttons {
@@ -548,6 +549,14 @@ function generateWidgetScript(config: any): string {
       flex-direction: column;
       min-height: 0;
       height: 100%;
+    }
+    
+    /* Panel Content Container */
+    #vf-panel-content {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      min-height: 0;
       background: #ffffff;
       overscroll-behavior: contain;
     }
@@ -1015,6 +1024,7 @@ function generateWidgetScript(config: any): string {
       border-top: 1px solid rgba(0,0,0,0.1);
       background: #ffffff;
       flex-shrink: 0;
+      margin-top: auto;
     }
     
     .vf-tab {
@@ -1055,6 +1065,11 @@ function generateWidgetScript(config: any): string {
     
     /* Mobile Breakpoint - 640px */
     @media (max-width: 640px) {
+      /* Hide chat button when widget is open on mobile */
+      .vf-widget-panel:not(.hidden) ~ .vf-widget-button {
+        display: none !important;
+      }
+      
       /* Chat Button - Smaller on mobile */
       .vf-widget-button {
         width: 52px;
@@ -1074,18 +1089,21 @@ function generateWidgetScript(config: any): string {
       }
       
       /* Widget Panel - Full screen on mobile */
-      .vf-widget-panel {
+      .vf-widget-panel:not(.hidden) {
         position: fixed !important;
         top: 0 !important;
         left: 0 !important;
         right: 0 !important;
         bottom: 0 !important;
-        width: 100% !important;
-        height: 100% !important;
-        max-width: 100% !important;
-        max-height: 100% !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+        max-width: 100vw !important;
+        max-height: 100vh !important;
+        max-height: 100dvh !important;
         border-radius: 0 !important;
         box-shadow: none !important;
+        margin: 0 !important;
       }
       
       /* Header - Account for notches */
