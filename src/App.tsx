@@ -36,6 +36,7 @@ import AgencySettings from "./pages/agency/AgencySettings";
 import AgencyClientDetails from "./pages/agency/AgencyClientDetails";
 import AgencyAgentDetails from "./pages/agency/AgencyAgentDetails";
 import SubscriptionRequired from "./pages/agency/SubscriptionRequired";
+import SlugBasedAuth from "./pages/SlugBasedAuth";
 import Settings from "./pages/Settings";
 import Conversations from "./pages/client/Conversations";
 import Transcripts from "./pages/client/Transcripts";
@@ -146,7 +147,9 @@ const App = () => (
                 
                 {/* Client Auth Route */}
                 <Route path="/auth" element={<Auth />} />
-              
+                
+                {/* Slug-based client login route */}
+                <Route path="/:agencySlug" element={<SlugBasedAuth />} />
 
               {/* Client Routes - Isolated */}
               <Route path="/*" element={
