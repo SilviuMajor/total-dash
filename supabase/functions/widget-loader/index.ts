@@ -357,6 +357,31 @@ function generateWidgetScript(config: any): string {
       background: rgba(255,255,255,0.2);
     }
     
+    .vf-back-button {
+      background: transparent;
+      border: none;
+      color: \${CONFIG.appearance.secondaryColor};
+      cursor: pointer;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: background 0.2s;
+      flex-shrink: 0;
+      margin-left: -8px;
+    }
+    
+    .vf-back-button:hover {
+      background: rgba(255,255,255,0.2);
+    }
+    
+    .vf-back-button svg {
+      width: 20px;
+      height: 20px;
+    }
+    
     .vf-wave-decoration {
       width: 100%;
       height: 32px;
@@ -507,6 +532,24 @@ function generateWidgetScript(config: any): string {
       flex-direction: column;
       min-height: 0;
       background: #ffffff;
+      overscroll-behavior: contain;
+    }
+    
+    .vf-widget-content::-webkit-scrollbar {
+      width: 8px;
+    }
+    
+    .vf-widget-content::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    
+    .vf-widget-content::-webkit-scrollbar-thumb {
+      background: rgba(0,0,0,0.2);
+      border-radius: 4px;
+    }
+    
+    .vf-widget-content::-webkit-scrollbar-thumb:hover {
+      background: rgba(0,0,0,0.3);
     }
     
     /* Chat List View */
@@ -680,6 +723,24 @@ function generateWidgetScript(config: any): string {
       padding: 16px;
       overflow-y: auto;
       min-height: 0;
+      overscroll-behavior: contain;
+    }
+    
+    .vf-messages-container::-webkit-scrollbar {
+      width: 8px;
+    }
+    
+    .vf-messages-container::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    
+    .vf-messages-container::-webkit-scrollbar-thumb {
+      background: rgba(0,0,0,0.2);
+      border-radius: 4px;
+    }
+    
+    .vf-messages-container::-webkit-scrollbar-thumb:hover {
+      background: rgba(0,0,0,0.3);
     }
     
     .vf-message {
@@ -1059,7 +1120,8 @@ function generateWidgetScript(config: any): string {
   function renderPanel() {
     const showHeader = currentTab !== 'Home' || isInActiveChat;
     const showFloatingClose = currentTab === 'Home' && !isInActiveChat;
-    const showTabs = !isInActiveChat;
+    const showBackButton = isInActiveChat && currentTab === 'Chats';
+    const showTabs = !(currentTab === 'Chats' && isInActiveChat);
     const tabs = [];
     if (CONFIG.tabs.home.enabled) tabs.push('Home');
     if (CONFIG.tabs.chats.enabled) tabs.push('Chats');
@@ -1074,6 +1136,14 @@ function generateWidgetScript(config: any): string {
       
       \${showHeader ? \`
         <div class="vf-widget-header">
+          \${showBackButton ? \`
+            <button class="vf-back-button" onclick="window.vfGoBack()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="19" y1="12" x2="5" y2="12"></line>
+                <polyline points="12 19 5 12 12 5"></polyline>
+              </svg>
+            </button>
+          \` : ''}
           \${CONFIG.appearance.logoUrl ? \`<img src="\${CONFIG.appearance.logoUrl}" alt="Logo" />\` : ''}
           <div class="vf-widget-header-text">
             <div class="vf-widget-header-title">\${CONFIG.title}</div>
@@ -1561,6 +1631,11 @@ function generateWidgetScript(config: any): string {
   };
   
   window.vfHandleButtonClick = handleButtonClick;
+  
+  window.vfGoBack = function() {
+    isInActiveChat = false;
+    renderPanel();
+  };
   
   // Event listeners
   chatButton.addEventListener('click', () => {
