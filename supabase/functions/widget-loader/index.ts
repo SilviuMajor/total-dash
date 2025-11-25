@@ -1148,8 +1148,8 @@ function generateWidgetScript(config: any): string {
       }
       
       /* Input field - 16px prevents iOS zoom */
-      .vf-input-field {
-        font-size: 16px;
+      .vf-input {
+        font-size: 16px !important;
       }
       
       /* Home buttons - Better touch targets */
@@ -1438,6 +1438,15 @@ function generateWidgetScript(config: any): string {
     }
   }
   
+  function scrollToLatestMessage() {
+    const contentEl = document.getElementById('vf-content');
+    if (contentEl) {
+      requestAnimationFrame(() => {
+        contentEl.scrollTop = contentEl.scrollHeight;
+      });
+    }
+  }
+  
   function renderMessages(container) {
     container.innerHTML = '<div class="vf-messages-container" id="vf-messages"></div>';
     const messagesEl = document.getElementById('vf-messages');
@@ -1505,7 +1514,7 @@ function generateWidgetScript(config: any): string {
       messagesEl.appendChild(typingDiv);
     }
     
-    container.scrollTop = container.scrollHeight;
+    scrollToLatestMessage();
   }
   
   function renderFAQ(container) {
@@ -1581,6 +1590,7 @@ function generateWidgetScript(config: any): string {
           messages.push(botMsg);
           isTyping = false;
           renderPanel();
+          scrollToLatestMessage();
         }
       } else {
         isTyping = false;
