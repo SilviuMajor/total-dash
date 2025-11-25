@@ -467,7 +467,7 @@ export default function Conversations() {
             </div>
 
             {/* Middle Panel: Transcript */}
-            <div className="col-span-6 flex flex-col border-r border-border h-full relative">
+            <div className="col-span-6 flex flex-col border-r border-border h-full overflow-hidden relative">
           {selectedConversation ? (
             <>
               <div className="p-4 border-b border-border">
