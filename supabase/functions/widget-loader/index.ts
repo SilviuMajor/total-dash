@@ -430,19 +430,23 @@ function generateWidgetScript(config: any): string {
     }
     
     .vf-home-content {
-      flex: 1;
+      flex: 1 1 auto;
       background: #ffffff;
-      padding: 0 24px;
+      padding: 0 24px 24px 24px;
       margin-top: -64px;
       position: relative;
       z-index: 10;
       overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
     }
     
     .vf-home-buttons {
       display: flex;
       flex-direction: column;
       gap: 12px;
+      padding-top: 24px;
     }
     
     .vf-home-button {
@@ -499,6 +503,18 @@ function generateWidgetScript(config: any): string {
       transform: translateX(4px);
     }
     
+    .vf-message-button.clicked {
+      opacity: 0.6;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+    
+    .vf-message-button.selected {
+      background: \${CONFIG.appearance.primaryColor} !important;
+      color: white !important;
+      border-color: \${CONFIG.appearance.primaryColor} !important;
+    }
+    
     /* Floating close button for Home tab */
     .vf-floating-close {
       position: absolute;
@@ -526,11 +542,12 @@ function generateWidgetScript(config: any): string {
     
     /* Content Area */
     .vf-widget-content {
-      flex: 1;
+      flex: 1 1 auto;
       overflow-y: auto;
       display: flex;
       flex-direction: column;
       min-height: 0;
+      height: 100%;
       background: #ffffff;
       overscroll-behavior: contain;
     }
@@ -1047,6 +1064,7 @@ function generateWidgetScript(config: any): string {
   let currentTab = 'Home';
   let isInActiveChat = false;
   let clickedButtonIds = new Set();
+  let clickedButtonSelections = {};
   
   // Helper function to format time ago
   function formatTimeAgo(date) {
@@ -1337,13 +1355,21 @@ function generateWidgetScript(config: any): string {
         <div class="vf-message-content">
           <div class="vf-message-bubble">
             \${msg.text || ''}
-            \${msg.buttons && !clickedButtonIds.has(msg.id) ? \`
+            \${msg.buttons ? \`
               <div class="vf-message-buttons">
-                \${msg.buttons.map((btn, idx) => \`
-                  <button class="vf-message-button \${buttonStyle}" onclick="window.vfHandleButtonClick('\${msg.id}', \${idx})">
-                    \${btn.text}
-                  </button>
-                \`).join('')}
+                \${msg.buttons.map((btn, idx) => {
+                  const isClicked = clickedButtonIds.has(msg.id);
+                  const isSelected = clickedButtonSelections[msg.id] === idx;
+                  return \`
+                    <button 
+                      class="vf-message-button \${buttonStyle} \${isClicked ? 'clicked' : ''} \${isSelected ? 'selected' : ''}" 
+                      \${isClicked ? 'disabled' : ''}
+                      onclick="window.vfHandleButtonClick('\${msg.id}', \${idx})"
+                    >
+                      \${btn.text}
+                    </button>
+                  \`;
+                }).join('')}
               </div>
             \` : ''}
           </div>
@@ -1529,6 +1555,7 @@ function generateWidgetScript(config: any): string {
     if (!msg || !msg.buttons || !msg.buttons[buttonIndex]) return;
     
     clickedButtonIds.add(messageId);
+    clickedButtonSelections[messageId] = buttonIndex;
     const button = msg.buttons[buttonIndex];
     
     const userMsg = {
