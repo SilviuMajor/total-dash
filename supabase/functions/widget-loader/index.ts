@@ -1440,11 +1440,11 @@ function generateWidgetScript(config: any): string {
   }
   
   function scrollToLatestMessage() {
-    const contentEl = document.getElementById('vf-content');
-    if (contentEl) {
+    const messagesEl = document.getElementById('vf-messages');
+    if (messagesEl) {
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          contentEl.scrollTop = contentEl.scrollHeight;
+          messagesEl.scrollTop = messagesEl.scrollHeight;
         });
       });
     }
