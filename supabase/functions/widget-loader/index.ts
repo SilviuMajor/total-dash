@@ -1070,22 +1070,22 @@ function generateWidgetScript(config: any): string {
         display: none !important;
       }
       
-      /* Chat Button - Smaller on mobile */
+      /* Chat Button - Larger on mobile with more spacing */
       .vf-widget-button {
-        width: 52px;
-        height: 52px;
-        right: 16px;
-        bottom: 16px;
+        width: 70px;
+        height: 70px;
+        right: 24px;
+        bottom: 24px;
       }
       
       .vf-widget-button.has-custom-icon img {
-        width: 52px;
-        height: 52px;
+        width: 70px;
+        height: 70px;
       }
       
       .vf-widget-button.default-icon svg {
-        width: 24px;
-        height: 24px;
+        width: 28px;
+        height: 28px;
       }
       
       /* Widget Panel - Full screen on mobile */
@@ -1554,6 +1554,7 @@ function generateWidgetScript(config: any): string {
     if (input) input.value = '';
     isTyping = true;
     renderPanel();
+    scrollToLatestMessage();
     
     try {
       const response = await fetch(INTERACT_URL, {
