@@ -547,6 +547,7 @@ function generateWidgetScript(config: any): string {
       overflow-y: auto;
       display: flex;
       flex-direction: column;
+      justify-content: flex-start;
       min-height: 0;
       height: 100%;
     }
@@ -1442,7 +1443,9 @@ function generateWidgetScript(config: any): string {
     const contentEl = document.getElementById('vf-content');
     if (contentEl) {
       requestAnimationFrame(() => {
-        contentEl.scrollTop = contentEl.scrollHeight;
+        requestAnimationFrame(() => {
+          contentEl.scrollTop = contentEl.scrollHeight;
+        });
       });
     }
   }
@@ -1755,6 +1758,7 @@ function generateWidgetScript(config: any): string {
       conversationId = conv.id;
       isInActiveChat = true;
       renderPanel();
+      scrollToLatestMessage();
     }
   };
   
