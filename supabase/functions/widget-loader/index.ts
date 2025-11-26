@@ -1508,12 +1508,12 @@ function generateWidgetScript(config: any): string {
       let isImage = false;
       
       // Detect file patterns: [Image: filename]\nurl or [File: filename]\nurl
-      const fileMatch = messageContent.match(/\[(Image|File): ([^\]]+)\]\n(https?:\/\/[^\s]+)/);
+      const fileMatch = messageContent.match(/\\[(Image|File): ([^\\]]+)\\]\\n(https?:\\/\\/[^\\s]+)/);
       if (fileMatch) {
         fileName = fileMatch[2];
         fileUrl = fileMatch[3];
-        isImage = fileMatch[1] === 'Image' || /\.(jpg|jpeg|png|gif|webp)$/i.test(fileUrl);
-        messageContent = messageContent.replace(/\[(Image|File): [^\]]+\]\n[^\s]+/, '').trim();
+        isImage = fileMatch[1] === 'Image' || /\\.(jpg|jpeg|png|gif|webp)$/i.test(fileUrl);
+        messageContent = messageContent.replace(/\\[(Image|File): [^\\]]+\\]\\n[^\\s]+/, '').trim();
       }
       
       messageDiv.innerHTML = \`
@@ -1645,8 +1645,8 @@ function generateWidgetScript(config: any): string {
         
         const result = await uploadFile(file);
         if (result) {
-          const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(file.name);
-          const messageText = \`[\${isImage ? 'Image' : 'File'}: \${result.fileName}]\n\${result.publicUrl}\`;
+          const isImage = /\\.(jpg|jpeg|png|gif|webp)$/i.test(file.name);
+          const messageText = \`[\${isImage ? 'Image' : 'File'}: \${result.fileName}]\\n\${result.publicUrl}\`;
           sendMessage(messageText);
         }
         
