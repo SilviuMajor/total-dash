@@ -898,6 +898,42 @@ function generateWidgetScript(config: any): string {
       border: 2px solid \${CONFIG.appearance.primaryColor};
     }
     
+    .vf-message-image {
+      max-width: 100%;
+      border-radius: 8px;
+      margin-top: 8px;
+      display: block;
+      cursor: pointer;
+    }
+    
+    .vf-message-file {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px;
+      margin-top: 8px;
+      background: rgba(0,0,0,0.05);
+      border-radius: 8px;
+      text-decoration: none;
+      color: inherit;
+      transition: background 0.2s;
+    }
+    
+    .vf-message-file:hover {
+      background: rgba(0,0,0,0.1);
+    }
+    
+    .vf-message-file svg {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+    
+    .vf-message-file span {
+      font-size: 14px;
+      font-weight: 500;
+    }
+    
     /* Typing Indicator */
     .vf-typing-container {
       display: flex;
@@ -1289,7 +1325,8 @@ function generateWidgetScript(config: any): string {
         <div class="vf-input-area">
           <div class="vf-input-row">
             \${CONFIG.functions.fileUploadEnabled ? \`
-              <button class="vf-input-attach">
+              <input type="file" id="vf-file-input" accept="image/*,application/*,video/*,audio/*" capture="environment" style="display: none;" />
+              <button class="vf-input-attach" onclick="window.vfAttachFile()">
                 \${icons.paperclip}
               </button>
             \` : ''}
@@ -1461,6 +1498,21 @@ function generateWidgetScript(config: any): string {
       const isAssistant = msg.speaker === 'assistant';
       const buttonStyle = CONFIG.appearance.interactiveButtonStyle || 'solid';
       
+      // Parse message for file URLs
+      let messageContent = msg.text || '';
+      let fileUrl = null;
+      let fileName = null;
+      let isImage = false;
+      
+      // Detect file patterns: [Image: filename]\nurl or [File: filename]\nurl
+      const fileMatch = messageContent.match(/\[(Image|File): ([^\]]+)\]\n(https?:\/\/[^\s]+)/);
+      if (fileMatch) {
+        fileName = fileMatch[2];
+        fileUrl = fileMatch[3];
+        isImage = fileMatch[1] === 'Image' || /\.(jpg|jpeg|png|gif|webp)$/i.test(fileUrl);
+        messageContent = messageContent.replace(/\[(Image|File): [^\]]+\]\n[^\s]+/, '').trim();
+      }
+      
       messageDiv.innerHTML = \`
         \${isAssistant ? \`
           <div class="vf-message-avatar">
@@ -1472,7 +1524,14 @@ function generateWidgetScript(config: any): string {
         \` : ''}
         <div class="vf-message-content">
           <div class="vf-message-bubble">
-            \${msg.text || ''}
+            \${messageContent ? \`<div>\${messageContent}</div>\` : ''}
+            \${fileUrl ? (isImage 
+              ? \`<img src="\${fileUrl}" alt="\${fileName}" class="vf-message-image" />\`
+              : \`<a href="\${fileUrl}" target="_blank" class="vf-message-file" download="\${fileName}">
+                  \${icons.paperclip}
+                  <span>\${fileName}</span>
+                </a>\`
+            ) : ''}
             \${msg.buttons ? \`
               <div class="vf-message-buttons">
                 \${msg.buttons.map((btn, idx) => {
@@ -1540,6 +1599,59 @@ function generateWidgetScript(config: any): string {
       \`;
     }
   }
+  
+  // File Upload Functions
+  async function uploadFile(file) {
+    if (file.size > 10 * 1024 * 1024) {
+      alert('File size must be under 10MB');
+      return null;
+    }
+    
+    try {
+      const fileName = \`\${CONFIG.agentId}/\${Date.now()}-\${file.name}\`;
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const uploadResponse = await fetch(\`\${SUPABASE_URL}/storage/v1/object/widget-assets/\${fileName}\`, {
+        method: 'POST',
+        headers: {
+          'Authorization': \`Bearer \${SUPABASE_ANON_KEY}\`
+        },
+        body: file
+      });
+      
+      if (!uploadResponse.ok) {
+        throw new Error('Upload failed');
+      }
+      
+      const publicUrl = \`\${SUPABASE_URL}/storage/v1/object/public/widget-assets/\${fileName}\`;
+      return { fileName: file.name, publicUrl };
+    } catch (error) {
+      console.error('Upload error:', error);
+      alert('Failed to upload file');
+      return null;
+    }
+  }
+  
+  window.vfAttachFile = function() {
+    const fileInput = document.getElementById('vf-file-input');
+    if (fileInput) {
+      fileInput.onchange = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        
+        const result = await uploadFile(file);
+        if (result) {
+          const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(file.name);
+          const messageText = \`[\${isImage ? 'Image' : 'File'}: \${result.fileName}]\n\${result.publicUrl}\`;
+          sendMessage(messageText);
+        }
+        
+        fileInput.value = '';
+      };
+      fileInput.click();
+    }
+  };
   
   // API Functions
   async function sendMessage(text) {
