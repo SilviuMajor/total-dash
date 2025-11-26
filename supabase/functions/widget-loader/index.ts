@@ -608,7 +608,7 @@ function generateWidgetScript(config: any): string {
     
     .vf-new-chat-button {
       width: 100%;
-      padding: 16px 8px;
+      padding: 16px 8px 16px 16px;
       border: none;
       border-radius: 12px;
       background: \${CONFIG.appearance.primaryColor}25;
@@ -1277,6 +1277,7 @@ function generateWidgetScript(config: any): string {
       messages = conv.messages;
       conversationId = conv.id;
       isInActiveChat = true;
+      currentTab = 'Chats';
     }
   }
   
@@ -1777,6 +1778,11 @@ function generateWidgetScript(config: any): string {
       } else {
         isTyping = false;
         renderPanel();
+      }
+      
+      // Save conversation immediately after bot responses
+      if (conversationId && messages.length > 0) {
+        SessionManager.saveConversation(conversationId, messages);
       }
     } catch (error) {
       console.error('Start chat error:', error);
