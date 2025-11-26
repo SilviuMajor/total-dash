@@ -41,6 +41,21 @@ export function MessageBubble({
 }: MessageBubbleProps) {
   const isUser = speaker === 'user';
   
+  // Parse message for file URLs
+  let messageContent = text || '';
+  let fileUrl = null;
+  let fileName = null;
+  let isImage = false;
+  
+  // Detect file patterns: [Image: filename]\nurl or [File: filename]\nurl
+  const fileMatch = messageContent.match(/\[(Image|File): ([^\]]+)\]\n(https?:\/\/[^\s]+)/);
+  if (fileMatch) {
+    fileName = fileMatch[2];
+    fileUrl = fileMatch[3];
+    isImage = fileMatch[1] === 'Image' || /\.(jpg|jpeg|png|gif|webp)$/i.test(fileUrl);
+    messageContent = messageContent.replace(/\[(Image|File): [^\]]+\]\n[^\s]+/, '').trim();
+  }
+  
   const getBubbleStyle = () => {
     const style = appearance.messageBubbleStyle || 'rounded';
     switch (style) {
@@ -117,8 +132,33 @@ export function MessageBubble({
             fontSize: `${appearance.fontSize || 14}px`
           }}
         >
-          {text && (
-            <p className="leading-relaxed whitespace-pre-wrap">{text}</p>
+          {messageContent && (
+            <p className="leading-relaxed whitespace-pre-wrap">{messageContent}</p>
+          )}
+          
+          {fileUrl && (
+            isImage ? (
+              <img 
+                src={fileUrl} 
+                alt={fileName || 'Image'} 
+                className="max-w-full rounded-lg mt-2 cursor-pointer"
+                onClick={() => window.open(fileUrl, '_blank')}
+              />
+            ) : (
+              <a 
+                href={fileUrl} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                download={fileName}
+                className="flex items-center gap-2 p-3 mt-2 rounded-lg transition-colors"
+                style={{ 
+                  backgroundColor: isUser ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+                }}
+              >
+                <CheckCircle className="h-4 w-4 flex-shrink-0" />
+                <span className="text-sm font-medium">{fileName}</span>
+              </a>
+            )
           )}
           
           {buttons && buttons.length > 0 && (

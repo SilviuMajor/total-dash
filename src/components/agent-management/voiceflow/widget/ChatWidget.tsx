@@ -297,10 +297,10 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
+    if (file.size > 10 * 1024 * 1024) {
       toast({
         title: "Error",
-        description: "File size must be under 5MB",
+        description: "File size must be under 10MB",
         variant: "destructive"
       });
       return;
@@ -318,7 +318,8 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
         .from('widget-assets')
         .getPublicUrl(fileName);
 
-      sendMessage(`[File uploaded: ${file.name}]\n${publicUrl}`);
+      const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(file.name);
+      sendMessage(`[${isImage ? 'Image' : 'File'}: ${file.name}]\n${publicUrl}`);
     } catch (error) {
       console.error('Upload error:', error);
       toast({
@@ -753,7 +754,7 @@ export function ChatWidget({ agent, isTestMode, onClose }: ChatWidgetProps) {
                       type="file"
                       id="file-upload-chats"
                       className="hidden"
-                      accept="image/*,.pdf,.doc,.docx"
+                      accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,video/*,audio/*"
                       onChange={handleFileUpload}
                     />
                     <label htmlFor="file-upload-chats" className="cursor-pointer">
