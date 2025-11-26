@@ -1507,7 +1507,7 @@ function generateWidgetScript(config: any): string {
       let fileName = null;
       let isImage = false;
       
-      // Detect file patterns: [Image: filename]\nurl or [File: filename]\nurl
+      // Detect file patterns: [Image: filename]\\nurl or [File: filename]\\nurl
       const fileMatch = messageContent.match(/\\[(Image|File): ([^\\]]+)\\]\\n(https?:\\/\\/[^\\s]+)/);
       if (fileMatch) {
         fileName = fileMatch[2];
