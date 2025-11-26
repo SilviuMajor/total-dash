@@ -124,6 +124,7 @@ serve(async (req) => {
 
 function generateWidgetScript(config: any): string {
   const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
   const interactUrl = `${supabaseUrl}/functions/v1/voiceflow-interact`;
 
   return `
@@ -136,6 +137,8 @@ function generateWidgetScript(config: any): string {
     // Configuration
     const CONFIG = ${JSON.stringify(config, null, 2)};
     const INTERACT_URL = '${interactUrl}';
+    const SUPABASE_URL = '${supabaseUrl}';
+    const SUPABASE_ANON_KEY = '${supabaseAnonKey}';
     const STORAGE_KEY = 'voiceflow_widget_' + CONFIG.agentId;
   
   // Session Manager
