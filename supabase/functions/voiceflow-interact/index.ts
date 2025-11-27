@@ -44,6 +44,30 @@ serve(async (req) => {
     // Build Voiceflow request based on action type
     let voiceflowRequestBody: any;
 
+    // Handle reset action - clears all Voiceflow variables
+    if (action === 'reset') {
+      console.log('Resetting Voiceflow state for user:', userId);
+      
+      const deleteResponse = await fetch(
+        `https://general-runtime.voiceflow.com/state/user/${userId}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Authorization': apiKey,
+          },
+        }
+      );
+      
+      if (!deleteResponse.ok) {
+        console.warn('Failed to delete Voiceflow state:', await deleteResponse.text());
+      }
+      
+      return new Response(
+        JSON.stringify({ success: true, message: 'State reset complete' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+    }
+
     if (action === 'launch') {
       // Launch action - starts conversation with Voiceflow's opening message
       voiceflowRequestBody = {

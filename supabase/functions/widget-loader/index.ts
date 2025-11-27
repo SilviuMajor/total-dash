@@ -1359,7 +1359,7 @@ function generateWidgetScript(config: any): string {
         <div class="vf-input-area">
           <div class="vf-input-row">
             \${CONFIG.functions.fileUploadEnabled ? \`
-              <input type="file" id="vf-file-input" accept="image/*,application/*,video/*,audio/*" capture="environment" style="display: none;" />
+              <input type="file" id="vf-file-input" accept="image/*,application/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx" style="display: none;" />
               <button class="vf-input-attach" onclick="window.vfAttachFile()">
                 \${icons.paperclip}
               </button>
@@ -1657,24 +1657,22 @@ function generateWidgetScript(config: any): string {
     }
     
     try {
-      const fileName = \`\${CONFIG.agentId}/\${Date.now()}-\${file.name}\`;
       const formData = new FormData();
       formData.append('file', file);
+      formData.append('agentId', CONFIG.agentId);
       
-      const uploadResponse = await fetch(\`\${SUPABASE_URL}/storage/v1/object/widget-assets/\${fileName}\`, {
+      const uploadResponse = await fetch(\`\${SUPABASE_URL}/functions/v1/widget-file-upload\`, {
         method: 'POST',
-        headers: {
-          'Authorization': \`Bearer \${SUPABASE_ANON_KEY}\`
-        },
-        body: file
+        body: formData
       });
       
       if (!uploadResponse.ok) {
-        throw new Error('Upload failed');
+        const error = await uploadResponse.json();
+        throw new Error(error.error || 'Upload failed');
       }
       
-      const publicUrl = \`\${SUPABASE_URL}/storage/v1/object/public/widget-assets/\${fileName}\`;
-      return { fileName: file.name, publicUrl };
+      const result = await uploadResponse.json();
+      return { fileName: result.fileName, publicUrl: result.publicUrl };
     } catch (error) {
       console.error('Upload error:', error);
       alert('Failed to upload file');
@@ -1787,6 +1785,18 @@ function generateWidgetScript(config: any): string {
     renderPanel();
     
     try {
+      // STEP 1: Reset Voiceflow state to clear previous variables
+      await fetch(INTERACT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          agentId: CONFIG.agentId,
+          userId: getVoiceflowUserId(),
+          action: 'reset'
+        })
+      });
+      
+      // STEP 2: Launch conversation with clean slate
       const response = await fetch(INTERACT_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
