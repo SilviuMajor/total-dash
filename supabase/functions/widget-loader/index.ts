@@ -625,6 +625,18 @@ function generateWidgetScript(config: any): string {
       box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
     
+    .vf-new-chat-arrow {
+      width: 20px;
+      height: 20px;
+      stroke: rgba(0,0,0,0.4);
+      flex-shrink: 0;
+      transition: transform 0.2s;
+    }
+    
+    .vf-new-chat-button:hover .vf-new-chat-arrow {
+      transform: translateX(4px);
+    }
+    
     .vf-new-chat-content {
       display: flex;
       align-items: center;
@@ -1431,7 +1443,7 @@ function generateWidgetScript(config: any): string {
               \${icons.plus}
               <span>New Chat</span>
             </div>
-            \${icons.chevronRight}
+            <span class="vf-new-chat-arrow">\${icons.chevronRight}</span>
           </button>
         </div>
         
