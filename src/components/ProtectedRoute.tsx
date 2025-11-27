@@ -19,7 +19,7 @@ export function ProtectedRoute({
 }: ProtectedRouteProps) {
   const { user, profile, loading } = useAuth();
   const { selectedAgentPermissions } = useClientAgentContext();
-  const { userType, isPreviewMode: agencyPreviewMode, previewAgency } = useMultiTenantAuth();
+  const { userType, isPreviewMode: agencyPreviewMode, previewAgency, isClientPreviewMode, previewDepth } = useMultiTenantAuth();
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -40,6 +40,12 @@ export function ProtectedRoute({
     previewAgencyId &&
     previewAgency?.id === previewAgencyId;
 
+  // Super admin in client preview mode (agency_to_client or direct client preview)
+  const isSuperAdminClientPreview = 
+    userType === 'super_admin' && 
+    (previewDepth === 'agency_to_client' || previewDepth === 'client') &&
+    (isClientPreviewMode || (isPreviewMode && previewClientId));
+
   useEffect(() => {
     if (!loading) {
       if (!user) {
@@ -47,10 +53,10 @@ export function ProtectedRoute({
         navigate('/auth');
       } else if (requireAdmin && profile?.role !== 'admin') {
         navigate('/');
-      } else if (requireClient && profile?.role === 'admin' && !isAdminPreview && !isAgencyClientPreview) {
+      } else if (requireClient && profile?.role === 'admin' && !isAdminPreview && !isAgencyClientPreview && !isSuperAdminClientPreview) {
         // Only redirect if NOT in preview mode
         navigate('/admin/clients');
-      } else if (requiredPage && !isAdminPreview && !isAgencyClientPreview) {
+      } else if (requiredPage && !isAdminPreview && !isAgencyClientPreview && !isSuperAdminClientPreview) {
         // Check agent-based permissions for client users
         if (profile?.role === 'client' && selectedAgentPermissions) {
           const hasAccess = selectedAgentPermissions[requiredPage as keyof typeof selectedAgentPermissions];
@@ -79,7 +85,7 @@ export function ProtectedRoute({
         }
       }
     }
-  }, [user, profile, loading, navigate, requireAdmin, requireClient, requiredPage, selectedAgentPermissions, location.pathname, isAdminPreview, isAgencyClientPreview]);
+  }, [user, profile, loading, navigate, requireAdmin, requireClient, requiredPage, selectedAgentPermissions, location.pathname, isAdminPreview, isAgencyClientPreview, isSuperAdminClientPreview]);
 
   if (loading) {
     return (
@@ -89,12 +95,12 @@ export function ProtectedRoute({
     );
   }
 
-  if (!user || (requireAdmin && profile?.role !== 'admin') || (requireClient && profile?.role === 'admin' && !isAdminPreview && !isAgencyClientPreview)) {
+  if (!user || (requireAdmin && profile?.role !== 'admin') || (requireClient && profile?.role === 'admin' && !isAdminPreview && !isAgencyClientPreview && !isSuperAdminClientPreview)) {
     return null;
   }
 
-  // Check page permissions for client users (skip for admin/agency preview)
-  if (requiredPage && profile?.role === 'client' && selectedAgentPermissions && !isAdminPreview && !isAgencyClientPreview) {
+  // Check page permissions for client users (skip for admin/agency/super_admin preview)
+  if (requiredPage && profile?.role === 'client' && selectedAgentPermissions && !isAdminPreview && !isAgencyClientPreview && !isSuperAdminClientPreview) {
     const hasAccess = selectedAgentPermissions[requiredPage as keyof typeof selectedAgentPermissions];
     if (!hasAccess) {
       return null;
