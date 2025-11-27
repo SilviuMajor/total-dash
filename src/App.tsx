@@ -162,46 +162,14 @@ const App = () => (
                       <AgencyClientPreviewBanner />
                       <main className="flex-1 p-8 overflow-y-auto">
                         <Routes>
-                          <Route path="/" element={
-                            <ProtectedRoute requireClient requiredPage="conversations">
-                              <Conversations />
-                            </ProtectedRoute>
-                          } />
-                          <Route path="/transcripts" element={
-                            <ProtectedRoute requireClient requiredPage="transcripts">
-                              <Transcripts />
-                            </ProtectedRoute>
-                          } />
-                          <Route path="/text-transcripts" element={
-                            <ProtectedRoute requireClient requiredPage="transcripts">
-                              <TextTranscripts />
-                            </ProtectedRoute>
-                          } />
-                          <Route path="/analytics" element={
-                            <ProtectedRoute requireClient requiredPage="analytics">
-                              <Analytics />
-                            </ProtectedRoute>
-                          } />
-                          <Route path="/knowledge-base" element={
-                            <ProtectedRoute requireClient requiredPage="knowledge_base">
-                              <KnowledgeBase />
-                            </ProtectedRoute>
-                          } />
-                          <Route path="/agent-settings" element={
-                            <ProtectedRoute requireClient requiredPage="agent_settings">
-                              <AgentSettings />
-                            </ProtectedRoute>
-                          } />
-                          <Route path="/specs" element={
-                            <ProtectedRoute requireClient requiredPage="specs">
-                              <AgentSpecs />
-                            </ProtectedRoute>
-                          } />
-                          <Route path="/guides" element={
-                            <ProtectedRoute requireClient>
-                              <Guides />
-                            </ProtectedRoute>
-                          } />
+                          <Route path="/" element={<Conversations />} />
+                          <Route path="/transcripts" element={<Transcripts />} />
+                          <Route path="/text-transcripts" element={<TextTranscripts />} />
+                          <Route path="/analytics" element={<Analytics />} />
+                          <Route path="/knowledge-base" element={<KnowledgeBase />} />
+                          <Route path="/agent-settings" element={<AgentSettings />} />
+                          <Route path="/specs" element={<AgentSpecs />} />
+                          <Route path="/guides" element={<Guides />} />
                           <Route path="*" element={<NotFound />} />
                         </Routes>
                       </main>
