@@ -157,8 +157,8 @@ serve(async (req) => {
     // Create or get conversation
     let currentConversationId = conversationId;
     
-    // Only create conversation for user interactions (text or button), NOT for launch
-    if (!currentConversationId && (action === 'text' || action === 'button')) {
+    // Create conversation for any action including launch (so welcome messages are stored)
+    if (!currentConversationId) {
       // Create new conversation
       const { data: newConversation, error: convError } = await supabaseClient
         .from('conversations')
