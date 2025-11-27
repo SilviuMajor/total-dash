@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
-import { useLocation } from 'react-router-dom';
+import { useMultiTenantAuth } from './useMultiTenantAuth';
 
 interface Agent {
   id: string;
@@ -38,18 +38,18 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [clientId, setClientId] = useState<string | null>(null);
   const { user, profile } = useAuth();
-  const location = useLocation();
+  const { isClientPreviewMode, previewClient, previewDepth, userType } = useMultiTenantAuth();
 
   useEffect(() => {
-    // Parse URL for preview mode
-    const searchParams = new URLSearchParams(location.search);
-    const isPreviewMode = searchParams.get('preview') === 'true';
-    const previewClientId = searchParams.get('clientId');
+    // Check for any form of client preview (admin or super_admin)
+    const isInClientPreview = isClientPreviewMode || 
+      previewDepth === 'agency_to_client' || 
+      previewDepth === 'client';
 
     if (user && profile) {
-      if (profile.role === 'admin' && isPreviewMode && previewClientId) {
-        // Admin preview mode: use clientId from URL
-        loadClientAgentsForPreview(previewClientId);
+      if (isInClientPreview && previewClient?.id) {
+        // Preview mode (admin or super_admin): use clientId from preview context
+        loadClientAgentsForPreview(previewClient.id);
       } else if (profile.role === 'client') {
         // Normal client mode: load from client_users
         loadClientAgents();
@@ -59,7 +59,7 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
     } else {
       setLoading(false);
     }
-  }, [user, profile, location.search]);
+  }, [user, profile, isClientPreviewMode, previewClient, previewDepth]);
 
   const loadClientAgentsForPreview = async (previewClientId: string) => {
     try {
