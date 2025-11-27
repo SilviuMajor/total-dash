@@ -257,7 +257,7 @@ serve(async (req) => {
           .insert({
             conversation_id: currentConversationId,
             speaker: 'assistant',
-            text: response.text || null,
+            text: response.text || '',
             buttons: response.buttons || null,
             metadata: {
               response_type: response.type,
