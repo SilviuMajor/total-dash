@@ -25,13 +25,14 @@ export function ProtectedRoute({
     isPreviewMode: agencyPreviewMode, 
     previewAgency, 
     isClientPreviewMode, 
-    previewDepth 
+    previewDepth,
+    isProcessingPreviewParams
   } = useMultiTenantAuth();
   const navigate = useNavigate();
   const location = useLocation();
   
-  // Combined loading state - wait for both auth contexts
-  const loading = authLoading || mtLoading;
+  // Combined loading state - wait for both auth contexts and preview param processing
+  const loading = authLoading || mtLoading || isProcessingPreviewParams;
   
   // Admin in client preview mode can access client routes (based on multi-tenant preview depth)
   const isAdminPreview =

@@ -46,6 +46,7 @@ interface MultiTenantAuthContextType {
   previewClient: { id: string; name: string; logo_url: string | null } | null;
   previewClientAgencyId: string | null;
   previewDepth: PreviewDepth;
+  isProcessingPreviewParams: boolean;
 }
 
 const MultiTenantAuthContext = createContext<MultiTenantAuthContextType>({
@@ -62,6 +63,7 @@ const MultiTenantAuthContext = createContext<MultiTenantAuthContextType>({
   previewClient: null,
   previewClientAgencyId: null,
   previewDepth: 'none',
+  isProcessingPreviewParams: false,
 });
 
 export const useMultiTenantAuth = () => useContext(MultiTenantAuthContext);
@@ -73,18 +75,43 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
   const sessionToken = sessionStorage.getItem('preview_token');
   const hasToken = tokenParam || sessionToken;
 
-  // Synchronous initialization of preview depth from sessionStorage
+  // Synchronous initialization of preview depth from URL params OR sessionStorage
   let initialPreviewMode: PreviewDepth = 'none';
-  if (typeof window !== 'undefined') {
-    const storedPreviewMode = sessionStorage.getItem(PREVIEW_MODE_KEY);
-    const storedPreviewAgency = sessionStorage.getItem(PREVIEW_AGENCY_KEY);
-    const storedPreviewClient = sessionStorage.getItem(PREVIEW_CLIENT_KEY);
+  let initialIsClientPreviewMode = false;
+  let initialIsPreviewMode = false;
+  let hasPreviewUrlParams = false;
 
-    if (storedPreviewMode === 'agency' && storedPreviewAgency) {
-      initialPreviewMode = 'agency';
-    } else if (storedPreviewMode === 'client' && storedPreviewClient) {
-      // If a client preview exists and we also have an agency stored, treat as agency_to_client
+  if (typeof window !== 'undefined') {
+    const searchParams = new URLSearchParams(window.location.search);
+    const previewParam = searchParams.get('preview') === 'true';
+    const urlAgencyId = searchParams.get('agencyId');
+    const urlClientId = searchParams.get('clientId');
+
+    // Check URL params FIRST (highest priority for first-time navigation)
+    if (previewParam && urlClientId && urlAgencyId) {
+      hasPreviewUrlParams = true;
+      const storedPreviewAgency = sessionStorage.getItem(PREVIEW_AGENCY_KEY);
       initialPreviewMode = storedPreviewAgency ? 'agency_to_client' : 'client';
+      initialIsClientPreviewMode = true;
+      initialIsPreviewMode = !!storedPreviewAgency;
+    } else if (previewParam && urlAgencyId && !urlClientId) {
+      hasPreviewUrlParams = true;
+      initialPreviewMode = 'agency';
+      initialIsPreviewMode = true;
+    } else {
+      // Fall back to sessionStorage
+      const storedPreviewMode = sessionStorage.getItem(PREVIEW_MODE_KEY);
+      const storedPreviewAgency = sessionStorage.getItem(PREVIEW_AGENCY_KEY);
+      const storedPreviewClient = sessionStorage.getItem(PREVIEW_CLIENT_KEY);
+
+      if (storedPreviewMode === 'agency' && storedPreviewAgency) {
+        initialPreviewMode = 'agency';
+        initialIsPreviewMode = true;
+      } else if (storedPreviewMode === 'client' && storedPreviewClient) {
+        initialPreviewMode = storedPreviewAgency ? 'agency_to_client' : 'client';
+        initialIsClientPreviewMode = true;
+        initialIsPreviewMode = !!storedPreviewAgency;
+      }
     }
   }
 
@@ -93,15 +120,14 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<MultiTenantProfile | null>(null);
   const [userType, setUserType] = useState<UserType>(null);
   const [loading, setLoading] = useState(true);
-  const [isValidatingToken, setIsValidatingToken] = useState(!!hasToken); // Set immediately if token exists
-  const [isPreviewMode, setIsPreviewMode] = useState(initialPreviewMode === 'agency');
+  const [isValidatingToken, setIsValidatingToken] = useState(!!hasToken);
+  const [isPreviewMode, setIsPreviewMode] = useState(initialIsPreviewMode);
   const [previewAgency, setPreviewAgency] = useState<AgencyData | null>(null);
-  const [isClientPreviewMode, setIsClientPreviewMode] = useState(
-    initialPreviewMode === 'client' || initialPreviewMode === 'agency_to_client'
-  );
+  const [isClientPreviewMode, setIsClientPreviewMode] = useState(initialIsClientPreviewMode);
   const [previewClient, setPreviewClient] = useState<{ id: string; name: string; logo_url: string | null } | null>(null);
   const [previewClientAgencyId, setPreviewClientAgencyId] = useState<string | null>(null);
   const [previewDepth, setPreviewDepth] = useState<PreviewDepth>(initialPreviewMode);
+  const [isProcessingPreviewParams, setIsProcessingPreviewParams] = useState(hasPreviewUrlParams);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -276,9 +302,13 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
         setIsPreviewMode(true);
         loadPreviewAgency(storedPreviewAgency);
       }
-    } else {
+    } else if (!isClientPreviewMode && !isPreviewMode) {
+      // Only reset if we're NOT already in preview mode
       setPreviewDepth('none');
     }
+    
+    // Mark preview param processing as complete
+    setIsProcessingPreviewParams(false);
   }, [location.search]); // Run when URL search params change
 
   const loadPreviewAgency = async (agencyId: string) => {
@@ -487,6 +517,7 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
         previewClient,
         previewClientAgencyId,
         previewDepth,
+        isProcessingPreviewParams,
       }}
     >
       {children}
