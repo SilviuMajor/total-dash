@@ -40,6 +40,7 @@ import SlugBasedAuth from "./pages/SlugBasedAuth";
 import Settings from "./pages/Settings";
 import Conversations from "./pages/client/Conversations";
 import Transcripts from "./pages/client/Transcripts";
+import TextTranscripts from "./pages/client/TextTranscripts";
 import Analytics from "./pages/client/Analytics";
 import KnowledgeBase from "./pages/client/KnowledgeBase";
 import AgentSettings from "./pages/client/AgentSettings";
@@ -169,6 +170,11 @@ const App = () => (
                           <Route path="/transcripts" element={
                             <ProtectedRoute requireClient requiredPage="transcripts">
                               <Transcripts />
+                            </ProtectedRoute>
+                          } />
+                          <Route path="/text-transcripts" element={
+                            <ProtectedRoute requireClient requiredPage="transcripts">
+                              <TextTranscripts />
                             </ProtectedRoute>
                           } />
                           <Route path="/analytics" element={

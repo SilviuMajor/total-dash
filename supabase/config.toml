@@ -56,3 +56,6 @@ verify_jwt = true
 
 [functions.widget-file-upload]
 verify_jwt = false
+
+[functions.create-text-transcripts]
+verify_jwt = false
