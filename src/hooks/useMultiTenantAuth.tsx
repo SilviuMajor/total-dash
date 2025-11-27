@@ -73,18 +73,35 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
   const sessionToken = sessionStorage.getItem('preview_token');
   const hasToken = tokenParam || sessionToken;
 
+  // Synchronous initialization of preview depth from sessionStorage
+  let initialPreviewMode: PreviewDepth = 'none';
+  if (typeof window !== 'undefined') {
+    const storedPreviewMode = sessionStorage.getItem(PREVIEW_MODE_KEY);
+    const storedPreviewAgency = sessionStorage.getItem(PREVIEW_AGENCY_KEY);
+    const storedPreviewClient = sessionStorage.getItem(PREVIEW_CLIENT_KEY);
+
+    if (storedPreviewMode === 'agency' && storedPreviewAgency) {
+      initialPreviewMode = 'agency';
+    } else if (storedPreviewMode === 'client' && storedPreviewClient) {
+      // If a client preview exists and we also have an agency stored, treat as agency_to_client
+      initialPreviewMode = storedPreviewAgency ? 'agency_to_client' : 'client';
+    }
+  }
+
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<MultiTenantProfile | null>(null);
   const [userType, setUserType] = useState<UserType>(null);
   const [loading, setLoading] = useState(true);
   const [isValidatingToken, setIsValidatingToken] = useState(!!hasToken); // Set immediately if token exists
-  const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const [isPreviewMode, setIsPreviewMode] = useState(initialPreviewMode === 'agency');
   const [previewAgency, setPreviewAgency] = useState<AgencyData | null>(null);
-  const [isClientPreviewMode, setIsClientPreviewMode] = useState(false);
+  const [isClientPreviewMode, setIsClientPreviewMode] = useState(
+    initialPreviewMode === 'client' || initialPreviewMode === 'agency_to_client'
+  );
   const [previewClient, setPreviewClient] = useState<{ id: string; name: string; logo_url: string | null } | null>(null);
   const [previewClientAgencyId, setPreviewClientAgencyId] = useState<string | null>(null);
-  const [previewDepth, setPreviewDepth] = useState<PreviewDepth>('none');
+  const [previewDepth, setPreviewDepth] = useState<PreviewDepth>(initialPreviewMode);
   const navigate = useNavigate();
   const location = useLocation();
 

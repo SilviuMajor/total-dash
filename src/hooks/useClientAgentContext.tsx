@@ -41,18 +41,24 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
   const { isClientPreviewMode, previewClient, previewDepth, userType } = useMultiTenantAuth();
 
   useEffect(() => {
-    // Check for any form of client preview (admin or super_admin)
-    const isInClientPreview = isClientPreviewMode || 
-      previewDepth === 'agency_to_client' || 
-      previewDepth === 'client';
+    // Check for any form of client preview (admin or super_admin), with sessionStorage fallback
+    const storedPreviewMode = sessionStorage.getItem('preview_mode');
+    const storedPreviewClient = sessionStorage.getItem('preview_client');
+
+    const isInClientPreview =
+      isClientPreviewMode ||
+      previewDepth === 'agency_to_client' ||
+      previewDepth === 'client' ||
+      (storedPreviewMode === 'client' && !!storedPreviewClient);
 
     if (user && profile) {
       if (isInClientPreview) {
-        // Preview mode: wait for previewClient to be loaded before proceeding
-        if (previewClient?.id) {
-          loadClientAgentsForPreview(previewClient.id);
+        // In preview mode, prefer previewClient from context but fall back to sessionStorage
+        const effectiveClientId = previewClient?.id || storedPreviewClient;
+        if (effectiveClientId) {
+          loadClientAgentsForPreview(effectiveClientId);
         }
-        // Don't set loading(false) yet - wait for previewClient to load
+        // Don't set loading(false) yet - wait for preview data to load
         return;
       } else if (profile.role === 'client') {
         // Normal client mode: load from client_users

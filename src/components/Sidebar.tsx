@@ -128,9 +128,22 @@ export function Sidebar() {
   const getNavHref = (basePath: string) => {
     if (previewDepth === 'agency_to_client' || previewDepth === 'client') {
       const params = new URLSearchParams(window.location.search);
-      if (params.has('preview')) {
-        return `${basePath}?${params.toString()}`;
+
+      // If current URL lost preview params, reconstruct them from sessionStorage
+      if (!params.has('preview')) {
+        const storedPreviewMode = sessionStorage.getItem('preview_mode');
+        const storedPreviewClient = sessionStorage.getItem('preview_client');
+        const storedPreviewClientAgency = sessionStorage.getItem('preview_client_agency');
+
+        if (storedPreviewMode === 'client' && storedPreviewClient && storedPreviewClientAgency) {
+          params.set('preview', 'true');
+          params.set('clientId', storedPreviewClient);
+          params.set('agencyId', storedPreviewClientAgency);
+        }
       }
+
+      const query = params.toString();
+      return query ? `${basePath}?${query}` : basePath;
     }
     return basePath;
   };
