@@ -53,3 +53,6 @@ verify_jwt = true
 
 [functions.get-agency-users]
 verify_jwt = true
+
+[functions.widget-file-upload]
+verify_jwt = false
