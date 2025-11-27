@@ -33,22 +33,15 @@ export function ProtectedRoute({
   // Combined loading state - wait for both auth contexts
   const loading = authLoading || mtLoading;
   
-  // Parse URL query parameters for preview mode
-  const searchParams = new URLSearchParams(location.search);
-  const isPreviewMode = searchParams.get('preview') === 'true';
-  const previewClientId = searchParams.get('clientId');
-  const previewAgencyId = searchParams.get('agencyId');
-  
-  // Admin in preview mode can access client routes
-  const isAdminPreview = profile?.role === 'admin' && isPreviewMode && previewClientId;
+  // Admin in client preview mode can access client routes (based on multi-tenant preview depth)
+  const isAdminPreview =
+    profile?.role === 'admin' &&
+    (previewDepth === 'agency_to_client' || previewDepth === 'client');
   
   // Agency in client preview mode can access client routes
-  const isAgencyClientPreview = 
-    userType === 'agency' && 
-    isPreviewMode && 
-    previewClientId && 
-    previewAgencyId &&
-    previewAgency?.id === previewAgencyId;
+  const isAgencyClientPreview =
+    userType === 'agency' &&
+    (previewDepth === 'agency_to_client' || previewDepth === 'client');
 
   // Super admin in ANY preview mode gets full access (simplified check)
   const isSuperAdminInPreview = 
