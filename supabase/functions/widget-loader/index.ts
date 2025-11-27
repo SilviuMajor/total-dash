@@ -1786,7 +1786,7 @@ function generateWidgetScript(config: any): string {
     
     try {
       // STEP 1: Reset Voiceflow state to clear previous variables
-      await fetch(INTERACT_URL, {
+      const resetResponse = await fetch(INTERACT_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1795,6 +1795,11 @@ function generateWidgetScript(config: any): string {
           action: 'reset'
         })
       });
+      
+      // Log reset result but don't block on failure
+      if (!resetResponse.ok) {
+        console.warn('Reset failed, continuing with launch');
+      }
       
       // STEP 2: Launch conversation with clean slate
       const response = await fetch(INTERACT_URL, {
@@ -1809,7 +1814,13 @@ function generateWidgetScript(config: any): string {
         })
       });
       
+      if (!response.ok) {
+        console.error('Launch failed:', response.status);
+        throw new Error('Launch request failed');
+      }
+      
       const data = await response.json();
+      console.log('Launch response:', data);
       
       if (data.conversationId) {
         conversationId = data.conversationId;
