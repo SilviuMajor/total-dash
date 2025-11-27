@@ -182,7 +182,9 @@ function generateWidgetScript(config: any): string {
         id: conversationId,
         messages,
         timestamp: new Date().toISOString(),
-        preview: messages.find(m => m.speaker === 'user')?.text || 'New conversation',
+        preview: messages.length > 0 
+          ? (messages[messages.length - 1].text?.substring(0, 60) || 'New conversation')
+          : 'New conversation',
         messageCount: messages.length
       };
       

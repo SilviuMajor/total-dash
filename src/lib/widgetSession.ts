@@ -63,10 +63,12 @@ export const widgetSessionManager = {
       c => c.id === conversation.id
     );
     
-    const firstUserMsg = conversation.messages.find(m => m.speaker === 'user');
+    const lastMessage = conversation.messages.length > 0 
+      ? conversation.messages[conversation.messages.length - 1] 
+      : null;
     const conversationData: Conversation = {
       id: conversation.id,
-      preview: firstUserMsg?.text?.substring(0, 50) || "New conversation",
+      preview: lastMessage?.text?.substring(0, 60) || "New conversation",
       timestamp: new Date().toISOString(),
       messageCount: conversation.messages.length,
       messages: conversation.messages
