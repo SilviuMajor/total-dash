@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, Plus, X } from "lucide-react";
@@ -29,6 +30,7 @@ export function VoiceflowSettings({ agent, onUpdate }: VoiceflowSettingsProps) {
     name: agent.name,
     api_key: agent.config?.api_key || "",
     project_id: agent.config?.project_id || "",
+    transcript_delay_hours: agent.config?.transcript_delay_hours || 12,
   });
   const [customVariables, setCustomVariables] = useState<Array<{
     voiceflow_name: string;
@@ -74,6 +76,7 @@ export function VoiceflowSettings({ agent, onUpdate }: VoiceflowSettingsProps) {
             ...agent.config,
             api_key: formData.api_key,
             project_id: formData.project_id,
+            transcript_delay_hours: formData.transcript_delay_hours,
             custom_tracked_variables: customVariables.filter(v => 
               v.voiceflow_name.trim() && v.display_name.trim()
             ),
@@ -189,6 +192,45 @@ export function VoiceflowSettings({ agent, onUpdate }: VoiceflowSettingsProps) {
         <Button onClick={handleSave} disabled={loading}>
           {loading ? "Saving..." : "Save Settings"}
         </Button>
+
+        {/* Transcript Settings Section */}
+        <div className="pt-6 border-t border-border">
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold">Transcript Settings</h3>
+              <p className="text-sm text-muted-foreground">
+                Configure when conversations are automatically saved as transcripts
+              </p>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="transcript_delay">Create transcript after</Label>
+              <Select
+                value={formData.transcript_delay_hours.toString()}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, transcript_delay_hours: parseInt(value) })
+                }
+              >
+                <SelectTrigger id="transcript_delay" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">1 hour</SelectItem>
+                  <SelectItem value="2">2 hours</SelectItem>
+                  <SelectItem value="4">4 hours</SelectItem>
+                  <SelectItem value="6">6 hours</SelectItem>
+                  <SelectItem value="8">8 hours</SelectItem>
+                  <SelectItem value="12">12 hours (default)</SelectItem>
+                  <SelectItem value="18">18 hours</SelectItem>
+                  <SelectItem value="24">24 hours</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                A read-only copy of each conversation is saved after this time period.
+              </p>
+            </div>
+          </div>
+        </div>
 
         {/* Key Variables Section */}
         <div className="pt-6 border-t border-border">

@@ -1408,6 +1408,71 @@ export type Database = {
           },
         ]
       }
+      text_transcripts: {
+        Row: {
+          agent_id: string
+          captured_variables: Json | null
+          conversation_ended_at: string | null
+          conversation_started_at: string
+          created_at: string | null
+          duration: number | null
+          id: string
+          message_count: number | null
+          messages: Json
+          note: string | null
+          sentiment: string | null
+          source_conversation_id: string
+          tags: string[] | null
+          user_email: string | null
+          user_name: string | null
+          user_phone: string | null
+        }
+        Insert: {
+          agent_id: string
+          captured_variables?: Json | null
+          conversation_ended_at?: string | null
+          conversation_started_at: string
+          created_at?: string | null
+          duration?: number | null
+          id?: string
+          message_count?: number | null
+          messages?: Json
+          note?: string | null
+          sentiment?: string | null
+          source_conversation_id: string
+          tags?: string[] | null
+          user_email?: string | null
+          user_name?: string | null
+          user_phone?: string | null
+        }
+        Update: {
+          agent_id?: string
+          captured_variables?: Json | null
+          conversation_ended_at?: string | null
+          conversation_started_at?: string
+          created_at?: string | null
+          duration?: number | null
+          id?: string
+          message_count?: number | null
+          messages?: Json
+          note?: string | null
+          sentiment?: string | null
+          source_conversation_id?: string
+          tags?: string[] | null
+          user_email?: string | null
+          user_name?: string | null
+          user_phone?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "text_transcripts_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transcripts: {
         Row: {
           buttons: Json | null

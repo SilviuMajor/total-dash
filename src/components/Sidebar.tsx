@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 const clientNavigation = [
   { name: "Conversations", href: "/", icon: MessageSquare, permissionKey: "conversations", provider: "voiceflow" },
+  { name: "Transcripts", href: "/text-transcripts", icon: FileText, permissionKey: "transcripts", provider: "voiceflow" },
   { name: "Transcripts", href: "/transcripts", icon: MessageSquare, permissionKey: "transcripts", provider: "retell" },
   { name: "Analytics", href: "/analytics", icon: BarChart3, permissionKey: "analytics" },
   { name: "Specifications", href: "/specs", icon: FileText, permissionKey: "specs" },
