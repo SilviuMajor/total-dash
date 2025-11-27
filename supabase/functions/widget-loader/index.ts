@@ -173,7 +173,7 @@ function generateWidgetScript(config: any): string {
       }
     },
     
-    saveConversation(conversationId, messages, voiceflowSessionId = null) {
+    saveConversation(conversationId, messages, voiceflowSessionId = null, hasUserInteraction = false) {
       const session = this.getSession();
       if (!session) return;
       
@@ -188,7 +188,8 @@ function generateWidgetScript(config: any): string {
           ? (messages[messages.length - 1].text?.substring(0, 60) || 'New conversation')
           : 'New conversation',
         messageCount: messages.length,
-        voiceflowSessionId: voiceflowSessionId || existingConv?.voiceflowSessionId || conversationId
+        voiceflowSessionId: voiceflowSessionId || existingConv?.voiceflowSessionId || conversationId,
+        hasUserInteraction: hasUserInteraction || existingConv?.hasUserInteraction || false
       };
       
       if (existingIndex >= 0) {
@@ -217,7 +218,8 @@ function generateWidgetScript(config: any): string {
     
     getConversationHistory() {
       const session = this.getSession();
-      return session?.conversations || [];
+      // Only return conversations where user has interacted
+      return (session?.conversations || []).filter(c => c.hasUserInteraction === true);
     }
   };
   
@@ -1307,6 +1309,10 @@ function generateWidgetScript(config: any): string {
   
   // Render Functions
   function renderPanel() {
+    // Save current input value before re-render
+    const existingInput = document.getElementById('vf-input');
+    const savedInputValue = existingInput ? existingInput.value : '';
+    
     const showHeader = currentTab !== 'Home' || isInActiveChat;
     const showFloatingClose = currentTab === 'Home' && !isInActiveChat;
     const showBackButton = isInActiveChat && currentTab === 'Chats';
@@ -1379,6 +1385,21 @@ function generateWidgetScript(config: any): string {
     \`;
     
     renderContent();
+    
+    // Restore input value and re-attach Enter key listener
+    const newInput = document.getElementById('vf-input');
+    if (newInput) {
+      newInput.value = savedInputValue;
+      newInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') window.vfSendMessage();
+      });
+    }
+    
+    // Re-attach file input listener if present
+    const fileInput = document.getElementById('vf-file-input');
+    if (fileInput) {
+      fileInput.addEventListener('change', handleFileUpload);
+    }
   }
   
   function renderContent() {
@@ -1742,7 +1763,7 @@ function generateWidgetScript(config: any): string {
       }
       
       if (conversationId) {
-        SessionManager.saveConversation(conversationId, messages, currentVoiceflowSessionId);
+        SessionManager.saveConversation(conversationId, messages, currentVoiceflowSessionId, true);
       }
     } catch (error) {
       console.error('Send message error:', error);
@@ -1805,9 +1826,9 @@ function generateWidgetScript(config: any): string {
         renderPanel();
       }
       
-      // Save conversation immediately after bot responses
+      // Save conversation immediately after bot responses (launch only, no user interaction yet)
       if (conversationId && messages.length > 0) {
-        SessionManager.saveConversation(conversationId, messages, currentVoiceflowSessionId);
+        SessionManager.saveConversation(conversationId, messages, currentVoiceflowSessionId, false);
       }
     } catch (error) {
       console.error('Start chat error:', error);
@@ -1873,7 +1894,7 @@ function generateWidgetScript(config: any): string {
       }
       
       if (conversationId) {
-        SessionManager.saveConversation(conversationId, messages, currentVoiceflowSessionId);
+        SessionManager.saveConversation(conversationId, messages, currentVoiceflowSessionId, true);
       }
     } catch (error) {
       console.error('Button click error:', error);
@@ -1938,13 +1959,6 @@ function generateWidgetScript(config: any): string {
     chatPanel.classList.toggle('hidden');
     if (isOpen) renderPanel();
   });
-  
-  const inputEl = document.getElementById('vf-input');
-  if (inputEl) {
-    inputEl.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') window.vfSendMessage();
-    });
-  }
   
   console.log('[VF Widget] Widget loaded successfully');
   }

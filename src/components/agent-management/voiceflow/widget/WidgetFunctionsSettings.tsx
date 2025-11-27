@@ -31,6 +31,7 @@ export function WidgetFunctionsSettings({ agent, onUpdate }: WidgetFunctionsSett
   const [formData, setFormData] = useState({
     functions: {
       notification_sound_enabled: widgetSettings.functions?.notification_sound_enabled !== false,
+      file_upload_enabled: widgetSettings.functions?.file_upload_enabled || false,
       message_text_color: widgetSettings.functions?.message_text_color || "#000000",
       message_background_color: widgetSettings.functions?.message_background_color || "#f3f4f6",
       font_size: widgetSettings.functions?.font_size || "14px",
@@ -158,6 +159,31 @@ export function WidgetFunctionsSettings({ agent, onUpdate }: WidgetFunctionsSett
               />
             </div>
           </div>
+        </div>
+
+        {/* File Upload */}
+        <div className="flex items-center justify-between p-4 rounded-lg border">
+          <div className="space-y-0.5">
+            <Label htmlFor="file_upload" className="text-base">
+              File Upload
+            </Label>
+            <p className="text-sm text-muted-foreground">
+              Allow users to upload files and images in the chat
+            </p>
+          </div>
+          <Switch
+            id="file_upload"
+            checked={formData.functions.file_upload_enabled}
+            onCheckedChange={(checked) => 
+              setFormData(prev => ({
+                ...prev,
+                functions: {
+                  ...prev.functions,
+                  file_upload_enabled: checked
+                }
+              }))
+            }
+          />
         </div>
 
         <Separator />
