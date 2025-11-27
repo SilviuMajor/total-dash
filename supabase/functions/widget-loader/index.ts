@@ -173,11 +173,13 @@ function generateWidgetScript(config: any): string {
       }
     },
     
-    saveConversation(conversationId, messages) {
+    saveConversation(conversationId, messages, voiceflowSessionId = null) {
       const session = this.getSession();
       if (!session) return;
       
       const existingIndex = session.conversations.findIndex(c => c.id === conversationId);
+      const existingConv = existingIndex >= 0 ? session.conversations[existingIndex] : null;
+      
       const conversation = {
         id: conversationId,
         messages,
@@ -185,7 +187,8 @@ function generateWidgetScript(config: any): string {
         preview: messages.length > 0 
           ? (messages[messages.length - 1].text?.substring(0, 60) || 'New conversation')
           : 'New conversation',
-        messageCount: messages.length
+        messageCount: messages.length,
+        voiceflowSessionId: voiceflowSessionId || existingConv?.voiceflowSessionId || conversationId
       };
       
       if (existingIndex >= 0) {
@@ -1220,11 +1223,17 @@ function generateWidgetScript(config: any): string {
   let messages = [];
   let conversationId = null;
   let userId = '';
+  let currentVoiceflowSessionId = null;
   let isTyping = false;
   let currentTab = 'Home';
   let isInActiveChat = false;
   let clickedButtonIds = new Set();
   let clickedButtonSelections = {};
+  
+  // Helper to get the Voiceflow user ID (combined with session ID)
+  function getVoiceflowUserId() {
+    return currentVoiceflowSessionId ? \`\${userId}_\${currentVoiceflowSessionId}\` : userId;
+  }
   
   // Helper function to format time ago
   function formatTimeAgo(date) {
@@ -1290,6 +1299,7 @@ function generateWidgetScript(config: any): string {
     if (conv) {
       messages = conv.messages;
       conversationId = conv.id;
+      currentVoiceflowSessionId = conv.voiceflowSessionId || conv.id;
       isInActiveChat = true;
       currentTab = 'Chats';
     }
@@ -1695,7 +1705,7 @@ function generateWidgetScript(config: any): string {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           agentId: CONFIG.agentId,
-          userId,
+          userId: getVoiceflowUserId(),
           message: text,
           action: 'text',
           conversationId,
@@ -1732,7 +1742,7 @@ function generateWidgetScript(config: any): string {
       }
       
       if (conversationId) {
-        SessionManager.saveConversation(conversationId, messages);
+        SessionManager.saveConversation(conversationId, messages, currentVoiceflowSessionId);
       }
     } catch (error) {
       console.error('Send message error:', error);
@@ -1744,6 +1754,7 @@ function generateWidgetScript(config: any): string {
   async function startNewChat() {
     messages = [];
     conversationId = null;
+    currentVoiceflowSessionId = 'sess_' + Math.random().toString(36).substr(2, 9);
     clickedButtonIds.clear();
     SessionManager.startNewConversation();
     
@@ -1760,7 +1771,7 @@ function generateWidgetScript(config: any): string {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           agentId: CONFIG.agentId,
-          userId,
+          userId: getVoiceflowUserId(),
           action: 'launch',
           conversationId: null,
           isTestMode: false
@@ -1796,7 +1807,7 @@ function generateWidgetScript(config: any): string {
       
       // Save conversation immediately after bot responses
       if (conversationId && messages.length > 0) {
-        SessionManager.saveConversation(conversationId, messages);
+        SessionManager.saveConversation(conversationId, messages, currentVoiceflowSessionId);
       }
     } catch (error) {
       console.error('Start chat error:', error);
@@ -1830,7 +1841,7 @@ function generateWidgetScript(config: any): string {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           agentId: CONFIG.agentId,
-          userId,
+          userId: getVoiceflowUserId(),
           message: JSON.stringify(button.payload),
           action: 'button',
           conversationId,
@@ -1862,7 +1873,7 @@ function generateWidgetScript(config: any): string {
       }
       
       if (conversationId) {
-        SessionManager.saveConversation(conversationId, messages);
+        SessionManager.saveConversation(conversationId, messages, currentVoiceflowSessionId);
       }
     } catch (error) {
       console.error('Button click error:', error);
@@ -1891,6 +1902,7 @@ function generateWidgetScript(config: any): string {
     if (conv) {
       messages = conv.messages;
       conversationId = conv.id;
+      currentVoiceflowSessionId = conv.voiceflowSessionId || conv.id;
       isInActiveChat = true;
       renderPanel();
       scrollToLatestMessage();
