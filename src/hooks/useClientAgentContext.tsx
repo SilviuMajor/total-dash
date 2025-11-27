@@ -47,9 +47,13 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
       previewDepth === 'client';
 
     if (user && profile) {
-      if (isInClientPreview && previewClient?.id) {
-        // Preview mode (admin or super_admin): use clientId from preview context
-        loadClientAgentsForPreview(previewClient.id);
+      if (isInClientPreview) {
+        // Preview mode: wait for previewClient to be loaded before proceeding
+        if (previewClient?.id) {
+          loadClientAgentsForPreview(previewClient.id);
+        }
+        // Don't set loading(false) yet - wait for previewClient to load
+        return;
       } else if (profile.role === 'client') {
         // Normal client mode: load from client_users
         loadClientAgents();
