@@ -6,6 +6,70 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Helper function to create a transcript for a conversation
+async function createTranscriptForConversation(
+  supabaseClient: any,
+  conversation: {
+    id: string;
+    agent_id: string;
+    started_at: string;
+    ended_at: string | null;
+    metadata: Record<string, any>;
+  }
+) {
+  console.log('Creating transcript for conversation:', conversation.id);
+  
+  // Fetch all messages for this conversation
+  const { data: messages, error: messagesError } = await supabaseClient
+    .from('transcripts')
+    .select('speaker, text, timestamp, buttons, metadata')
+    .eq('conversation_id', conversation.id)
+    .order('timestamp', { ascending: true });
+
+  if (messagesError) {
+    console.error('Error fetching messages for transcript:', messagesError);
+    throw messagesError;
+  }
+
+  // Calculate duration
+  let duration = null;
+  if (conversation.ended_at && conversation.started_at) {
+    const start = new Date(conversation.started_at).getTime();
+    const end = new Date(conversation.ended_at).getTime();
+    duration = Math.floor((end - start) / 1000);
+  }
+
+  // Extract variables from metadata
+  const variables = conversation.metadata?.variables || {};
+  const userName = variables.user_name || null;
+  const userEmail = variables.user_email || null;
+  const userPhone = variables.user_phone || null;
+
+  // Create the transcript
+  const { error: insertError } = await supabaseClient
+    .from('text_transcripts')
+    .insert({
+      source_conversation_id: conversation.id,
+      agent_id: conversation.agent_id,
+      user_name: userName,
+      user_email: userEmail,
+      user_phone: userPhone,
+      conversation_started_at: conversation.started_at,
+      conversation_ended_at: conversation.ended_at,
+      duration,
+      message_count: messages?.length || 0,
+      captured_variables: variables,
+      messages: messages || [],
+    });
+
+  if (insertError) {
+    console.error('Error creating transcript:', insertError);
+    throw insertError;
+  }
+
+  console.log('Transcript created successfully for conversation:', conversation.id);
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -132,6 +196,18 @@ serve(async (req) => {
 
     const voiceflowData = await voiceflowResponse.json();
     console.log('Voiceflow response:', voiceflowData);
+
+    // Check for conversation end trace
+    let isConversationEnded = false;
+    if (voiceflowData && Array.isArray(voiceflowData)) {
+      for (const item of voiceflowData) {
+        if (item.type === 'end') {
+          isConversationEnded = true;
+          console.log('Detected conversation end trace from Voiceflow');
+          break;
+        }
+      }
+    }
 
     // Fetch current state to get variables
     let voiceflowVariables: Record<string, any> = {};
@@ -272,11 +348,48 @@ serve(async (req) => {
       }
     }
 
+    // If conversation ended, update it and create transcript
+    if (isConversationEnded && currentConversationId) {
+      const endedAt = new Date().toISOString();
+      console.log('Ending conversation and creating transcript:', currentConversationId);
+      
+      // Update conversation with ended_at
+      const { error: endError } = await supabaseClient
+        .from('conversations')
+        .update({ 
+          ended_at: endedAt,
+          status: 'completed' 
+        })
+        .eq('id', currentConversationId);
+
+      if (endError) {
+        console.error('Error ending conversation:', endError);
+      } else {
+        // Fetch conversation data for transcript creation
+        const { data: convData, error: convFetchError } = await supabaseClient
+          .from('conversations')
+          .select('id, agent_id, started_at, ended_at, metadata')
+          .eq('id', currentConversationId)
+          .single();
+
+        if (convFetchError) {
+          console.error('Error fetching conversation for transcript:', convFetchError);
+        } else if (convData) {
+          try {
+            await createTranscriptForConversation(supabaseClient, convData);
+          } catch (transcriptError) {
+            console.error('Error creating transcript:', transcriptError);
+          }
+        }
+      }
+    }
+
     return new Response(
       JSON.stringify({
         conversationId: currentConversationId,
         botResponses,
         userId,
+        conversationEnded: isConversationEnded,
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
