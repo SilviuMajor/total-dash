@@ -30,7 +30,7 @@ export function VoiceflowSettings({ agent, onUpdate }: VoiceflowSettingsProps) {
     name: agent.name,
     api_key: agent.config?.api_key || "",
     project_id: agent.config?.project_id || "",
-    transcript_delay_hours: agent.config?.transcript_delay_hours || 12,
+    auto_end_hours: agent.config?.auto_end_hours || agent.config?.transcript_delay_hours || 12,
   });
   const [customVariables, setCustomVariables] = useState<Array<{
     voiceflow_name: string;
@@ -76,7 +76,7 @@ export function VoiceflowSettings({ agent, onUpdate }: VoiceflowSettingsProps) {
             ...agent.config,
             api_key: formData.api_key,
             project_id: formData.project_id,
-            transcript_delay_hours: formData.transcript_delay_hours,
+            auto_end_hours: formData.auto_end_hours,
             custom_tracked_variables: customVariables.filter(v => 
               v.voiceflow_name.trim() && v.display_name.trim()
             ),
@@ -193,25 +193,25 @@ export function VoiceflowSettings({ agent, onUpdate }: VoiceflowSettingsProps) {
           {loading ? "Saving..." : "Save Settings"}
         </Button>
 
-        {/* Transcript Settings Section */}
+        {/* Conversation Auto-End Settings Section */}
         <div className="pt-6 border-t border-border">
           <div className="space-y-4">
             <div>
-              <h3 className="text-lg font-semibold">Transcript Settings</h3>
+              <h3 className="text-lg font-semibold">Conversation Auto-End</h3>
               <p className="text-sm text-muted-foreground">
-                Configure when conversations are automatically saved as transcripts
+                Automatically end inactive conversations and create read-only transcripts
               </p>
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="transcript_delay">Create transcript after</Label>
+              <Label htmlFor="auto_end_hours">Auto-end conversation after</Label>
               <Select
-                value={formData.transcript_delay_hours.toString()}
+                value={formData.auto_end_hours.toString()}
                 onValueChange={(value) =>
-                  setFormData({ ...formData, transcript_delay_hours: parseInt(value) })
+                  setFormData({ ...formData, auto_end_hours: parseInt(value) })
                 }
               >
-                <SelectTrigger id="transcript_delay" className="w-full">
+                <SelectTrigger id="auto_end_hours" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -226,7 +226,8 @@ export function VoiceflowSettings({ agent, onUpdate }: VoiceflowSettingsProps) {
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                A read-only copy of each conversation is saved after this time period.
+                Conversations without activity will be automatically ended after this time from when they started.
+                A read-only transcript is created when a conversation ends (either via Voiceflow's end action or auto-end).
               </p>
             </div>
           </div>
