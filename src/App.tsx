@@ -150,7 +150,7 @@ const App = () => (
                 <Route path="/auth" element={<Auth />} />
                 
                 {/* Slug-based client login route */}
-                <Route path="/:agencySlug" element={<SlugBasedAuth />} />
+                <Route path="/login/:agencySlug" element={<SlugBasedAuth />} />
 
               {/* Client Routes - Isolated */}
               <Route path="/*" element={

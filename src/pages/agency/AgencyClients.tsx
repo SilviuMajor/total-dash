@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Eye, Settings, AlertCircle, Building2, LogIn } from "lucide-react";
+import { Plus, Eye, Settings, AlertCircle, Building2, LogIn, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,15 +24,23 @@ export default function AgencyClients() {
   const [clientAgents, setClientAgents] = useState<Record<string, Array<{ name: string; provider: string }>>>({});
   const [clientUsers, setClientUsers] = useState<Record<string, number>>({});
   const [clientLoginUrl, setClientLoginUrl] = useState('/auth');
+  const [clientLoginLoading, setClientLoginLoading] = useState(true);
 
   useEffect(() => {
     loadClients();
     checkLimits();
-    fetchAgencyDomain();
   }, [profile]);
 
+  useEffect(() => {
+    fetchAgencyDomain();
+  }, [agencyId]);
+
   const fetchAgencyDomain = async () => {
-    if (!agencyId) return;
+    setClientLoginLoading(true);
+    if (!agencyId) {
+      setClientLoginLoading(false);
+      return;
+    }
     
     const { data: agency } = await supabase
       .from('agencies')
@@ -45,13 +53,14 @@ export default function AgencyClients() {
       const subdomain = agency.whitelabel_subdomain || 'dashboard';
       setClientLoginUrl(`https://${subdomain}.${agency.whitelabel_domain}/auth`);
     } else if (agency?.slug) {
-      // No whitelabel - use current host with agency slug path
+      // No whitelabel - use /login/:agencySlug pattern
       const baseUrl = window.location.origin;
-      setClientLoginUrl(`${baseUrl}/${agency.slug}`);
+      setClientLoginUrl(`${baseUrl}/login/${agency.slug}`);
     } else {
       // Fallback to default /auth
       setClientLoginUrl('/auth');
     }
+    setClientLoginLoading(false);
   };
 
   const checkLimits = async () => {
@@ -227,8 +236,13 @@ export default function AgencyClients() {
           <Button
             variant="outline"
             onClick={() => window.open(clientLoginUrl, '_blank')}
+            disabled={clientLoginLoading}
           >
-            <LogIn className="mr-2 h-4 w-4" />
+            {clientLoginLoading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <LogIn className="mr-2 h-4 w-4" />
+            )}
             Client Login
           </Button>
           <Dialog open={open} onOpenChange={setOpen}>
