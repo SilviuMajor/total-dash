@@ -13,6 +13,7 @@ import { RetellWidget } from "@/components/agent-management/retell/RetellWidget"
 import { RetellChannels } from "@/components/agent-management/retell/RetellChannels";
 import { SpecsSettings } from "@/components/agent-management/specs/SpecsSettings";
 import { WidgetTestPanel } from "@/components/agent-management/voiceflow/widget/WidgetTestPanel";
+import { ClientAccessToggle } from "@/components/agent-management/ClientAccessToggle";
 import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
 import { useToast } from "@/hooks/use-toast";
 
@@ -168,6 +169,13 @@ export default function AgencyAgentDetails() {
         </TabsList>
 
         <TabsContent value="widget" className="space-y-6">
+          <ClientAccessToggle
+            agent={agent}
+            configKey="client_widget_access_enabled"
+            label="Enable Widget Settings for Clients"
+            description="Allow clients to view and edit widget appearance settings"
+            onUpdate={loadAgentDetails}
+          />
           {renderProviderContent("widget")}
         </TabsContent>
 
@@ -176,6 +184,13 @@ export default function AgencyAgentDetails() {
         </TabsContent>
 
         <TabsContent value="channels" className="space-y-6">
+          <ClientAccessToggle
+            agent={agent}
+            configKey="client_channels_access_enabled"
+            label="Enable Channels for Clients"
+            description="Allow clients to view and manage communication channels"
+            onUpdate={loadAgentDetails}
+          />
           {renderProviderContent("channels")}
         </TabsContent>
 
