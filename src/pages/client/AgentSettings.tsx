@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SupportRequestForm } from "@/components/agent-management/SupportRequestForm";
-import { WidgetAppearanceSettings } from "@/components/agent-management/voiceflow/widget/WidgetAppearanceSettings";
+import { VoiceflowWidget } from "@/components/agent-management/voiceflow/VoiceflowWidget";
 import { VoiceflowChannels } from "@/components/agent-management/voiceflow/VoiceflowChannels";
 import { useClientAgentContext } from "@/hooks/useClientAgentContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -88,7 +88,7 @@ export default function AgentSettings() {
         
         {showWidgetTab && agent && (
           <TabsContent value="widget" className="mt-6">
-            <WidgetAppearanceSettings agent={agent} onUpdate={loadAgent} />
+            <VoiceflowWidget agent={agent} onUpdate={loadAgent} />
           </TabsContent>
         )}
 
