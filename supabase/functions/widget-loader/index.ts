@@ -48,12 +48,19 @@ serve(async (req) => {
     const functions = widgetSettings.functions || {};
 
     // Prepare configuration object
+    const welcomeMessage = widgetSettings.welcome_message || {};
     const config = {
       agentId: agent.id,
       agentName: agent.name,
       title: widgetSettings.title || 'Chat with us',
       description: widgetSettings.description || "We're here to help",
       brandingUrl: widgetSettings.branding_url || '',
+      welcomeMessage: {
+        enabled: welcomeMessage.enabled || false,
+        text: welcomeMessage.text || "👋 Hi there! How can I help you today?",
+        delayMs: welcomeMessage.delay_ms || 1500,
+        autoDismissSeconds: welcomeMessage.auto_dismiss_seconds || 0
+      },
       appearance: {
         logoUrl: appearance.logo_url || '',
         chatIconUrl: appearance.chat_icon_url || '',
@@ -233,6 +240,88 @@ function generateWidgetScript(config: any): string {
   const style = document.createElement('style');
   style.textContent = \`
     * { box-sizing: border-box; }
+    
+    /* Welcome Message Bubble */
+    .vf-welcome-bubble {
+      position: fixed;
+      bottom: 100px;
+      right: 24px;
+      max-width: 280px;
+      padding: 12px 36px 12px 16px;
+      background: \${CONFIG.appearance.primaryColor};
+      color: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      font-family: \${CONFIG.appearance.fontFamily}, sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      z-index: 999997;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      pointer-events: none;
+    }
+    
+    .vf-welcome-bubble.vf-visible {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+    
+    .vf-welcome-bubble.vf-hidden {
+      display: none !important;
+    }
+    
+    /* Speech bubble tail */
+    .vf-welcome-bubble::after {
+      content: '';
+      position: absolute;
+      bottom: -8px;
+      right: 28px;
+      width: 0;
+      height: 0;
+      border-left: 8px solid transparent;
+      border-right: 8px solid transparent;
+      border-top: 8px solid \${CONFIG.appearance.primaryColor};
+    }
+    
+    /* Close button */
+    .vf-welcome-close {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: rgba(255,255,255,0.2);
+      border: none;
+      color: white;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 14px;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+    
+    .vf-welcome-close:hover {
+      background: rgba(255,255,255,0.3);
+    }
+    
+    .vf-welcome-text {
+      display: block;
+    }
+    
+    /* Mobile adjustments for welcome bubble */
+    @media (max-width: 640px) {
+      .vf-welcome-bubble {
+        right: 16px;
+        bottom: 100px;
+        max-width: 260px;
+      }
+    }
     
     /* Chat Icon Button */
     .vf-widget-button {
@@ -1974,12 +2063,86 @@ function generateWidgetScript(config: any): string {
     renderPanel();
   };
   
+  // Welcome Bubble Logic
+  let welcomeBubble = null;
+  let welcomeTimeout = null;
+  let autoDismissTimeout = null;
+  
+  function createWelcomeBubble() {
+    if (!CONFIG.welcomeMessage.enabled) return;
+    
+    const bubble = document.createElement('div');
+    bubble.className = 'vf-welcome-bubble';
+    bubble.innerHTML = \`
+      <button class="vf-welcome-close" aria-label="Dismiss">×</button>
+      <span class="vf-welcome-text">\${CONFIG.welcomeMessage.text}</span>
+    \`;
+    container.appendChild(bubble);
+    welcomeBubble = bubble;
+    
+    // Close button click
+    bubble.querySelector('.vf-welcome-close').addEventListener('click', (e) => {
+      e.stopPropagation();
+      hideWelcomeBubble();
+    });
+    
+    // Text click - open widget to Home tab
+    bubble.querySelector('.vf-welcome-text').addEventListener('click', () => {
+      hideWelcomeBubble();
+      isOpen = true;
+      currentTab = 'Home';
+      chatPanel.classList.remove('hidden');
+      renderPanel();
+    });
+  }
+  
+  function showWelcomeBubble() {
+    if (!CONFIG.welcomeMessage.enabled || !welcomeBubble || isOpen) return;
+    
+    welcomeTimeout = setTimeout(() => {
+      if (!isOpen && welcomeBubble) {
+        welcomeBubble.classList.add('vf-visible');
+        
+        // Auto-dismiss if configured
+        if (CONFIG.welcomeMessage.autoDismissSeconds > 0) {
+          autoDismissTimeout = setTimeout(() => {
+            hideWelcomeBubble();
+          }, CONFIG.welcomeMessage.autoDismissSeconds * 1000);
+        }
+      }
+    }, CONFIG.welcomeMessage.delayMs);
+  }
+  
+  function hideWelcomeBubble() {
+    if (welcomeBubble) {
+      welcomeBubble.classList.remove('vf-visible');
+      welcomeBubble.classList.add('vf-hidden');
+    }
+    if (welcomeTimeout) {
+      clearTimeout(welcomeTimeout);
+      welcomeTimeout = null;
+    }
+    if (autoDismissTimeout) {
+      clearTimeout(autoDismissTimeout);
+      autoDismissTimeout = null;
+    }
+  }
+  
+  // Create welcome bubble
+  createWelcomeBubble();
+  
   // Event listeners
   chatButton.addEventListener('click', () => {
     isOpen = !isOpen;
     chatPanel.classList.toggle('hidden');
-    if (isOpen) renderPanel();
+    if (isOpen) {
+      hideWelcomeBubble();
+      renderPanel();
+    }
   });
+  
+  // Show welcome bubble after delay
+  showWelcomeBubble();
   
   console.log('[VF Widget] Widget loaded successfully');
   }

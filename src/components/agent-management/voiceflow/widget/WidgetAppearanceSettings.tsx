@@ -41,6 +41,12 @@ export function WidgetAppearanceSettings({ agent, onUpdate }: WidgetAppearanceSe
     title: widgetSettings.title || "Chat with us",
     description: widgetSettings.description || "We're here to help",
     branding_url: widgetSettings.branding_url || "",
+    welcome_message: {
+      enabled: widgetSettings.welcome_message?.enabled || false,
+      text: widgetSettings.welcome_message?.text || "👋 Hi there! How can I help you today?",
+      delay_ms: widgetSettings.welcome_message?.delay_ms || 1500,
+      auto_dismiss_seconds: widgetSettings.welcome_message?.auto_dismiss_seconds || 0
+    },
     appearance: {
       logo_url: widgetSettings.appearance?.logo_url || "",
       chat_icon_url: widgetSettings.appearance?.chat_icon_url || "",
@@ -350,6 +356,81 @@ export function WidgetAppearanceSettings({ agent, onUpdate }: WidgetAppearanceSe
                 onChange={(e) => setFormData(prev => ({ ...prev, branding_url: e.target.value }))}
                 placeholder="https://example.com"
               />
+            </div>
+
+            {/* Welcome Message */}
+            <Separator className="my-4" />
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="welcome_message_enabled" className="text-base font-medium">Welcome Message</Label>
+                  <p className="text-sm text-muted-foreground">Show a message bubble above the chat icon</p>
+                </div>
+                <Switch
+                  id="welcome_message_enabled"
+                  checked={formData.welcome_message.enabled}
+                  onCheckedChange={(checked) => setFormData(prev => ({
+                    ...prev,
+                    welcome_message: { ...prev.welcome_message, enabled: checked }
+                  }))}
+                />
+              </div>
+
+              {formData.welcome_message.enabled && (
+                <div className="space-y-4 pl-0">
+                  <div>
+                    <Label htmlFor="welcome_message_text">Message Text</Label>
+                    <Input
+                      id="welcome_message_text"
+                      value={formData.welcome_message.text}
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        welcome_message: { ...prev.welcome_message, text: e.target.value.slice(0, 120) }
+                      }))}
+                      placeholder="👋 Hi there! How can I help you today?"
+                      maxLength={120}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {formData.welcome_message.text.length}/120 characters
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="welcome_message_delay">Show Delay (ms)</Label>
+                      <Input
+                        id="welcome_message_delay"
+                        type="number"
+                        min="0"
+                        max="10000"
+                        step="100"
+                        value={formData.welcome_message.delay_ms}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          welcome_message: { ...prev.welcome_message, delay_ms: parseInt(e.target.value) || 1500 }
+                        }))}
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">Delay before showing</p>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="welcome_message_autodismiss">Auto-dismiss (seconds)</Label>
+                      <Input
+                        id="welcome_message_autodismiss"
+                        type="number"
+                        min="0"
+                        max="60"
+                        value={formData.welcome_message.auto_dismiss_seconds}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          welcome_message: { ...prev.welcome_message, auto_dismiss_seconds: parseInt(e.target.value) || 0 }
+                        }))}
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">0 = manual dismiss only</p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
