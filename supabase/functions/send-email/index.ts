@@ -13,19 +13,52 @@ serve(async (req) => {
   }
 
   try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    
+    // Check authorization - allow both JWT auth and service role calls
+    const authHeader = req.headers.get("authorization");
+    
+    if (!authHeader) {
+      console.error("No authorization header provided");
+      return new Response(
+        JSON.stringify({ error: "Authorization required" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Create admin client for database operations
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+    
+    // Check if this is a service role call (from other edge functions)
+    const isServiceRoleCall = authHeader === `Bearer ${supabaseServiceKey}`;
+    
+    if (!isServiceRoleCall) {
+      // Validate user JWT token
+      const token = authHeader.replace("Bearer ", "");
+      const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+      
+      if (authError || !user) {
+        console.error("Invalid user token:", authError?.message);
+        return new Response(
+          JSON.stringify({ error: "Invalid authentication" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      console.log("Email request from authenticated user:", user.id);
+    } else {
+      console.log("Email request from internal service call");
+    }
+
     const { templateKey, recipientEmail, variables } = await req.json();
 
     if (!templateKey || !recipientEmail) {
       throw new Error("Missing templateKey or recipientEmail");
     }
 
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-    );
-
     // Fetch email template
-    const { data: template, error: templateError } = await supabaseClient
+    const { data: template, error: templateError } = await supabaseAdmin
       .from("email_templates")
       .select("*")
       .eq("template_key", templateKey)
@@ -71,7 +104,7 @@ serve(async (req) => {
 
     // Log the email send to database
     try {
-      await supabaseClient.from('email_send_log').insert({
+      await supabaseAdmin.from('email_send_log').insert({
         template_key: templateKey,
         recipient_email: recipientEmail,
         subject: subject,

@@ -48,7 +48,7 @@ export default function SlugBasedAuth() {
   }
 
   if (notFound) {
-    return <Navigate to="/auth" replace />;
+    return <Navigate to="/client/login" replace />;
   }
 
   // Render Auth page with agency branding context available via sessionStorage

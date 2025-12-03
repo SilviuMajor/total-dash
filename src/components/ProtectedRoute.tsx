@@ -52,8 +52,8 @@ export function ProtectedRoute({
   useEffect(() => {
     if (!loading) {
       if (!user) {
-        // Redirect to unified auth page
-        navigate('/auth');
+        // Redirect to client login page
+        navigate('/client/login');
       } else if (requireAdmin && profile?.role !== 'admin') {
         navigate('/');
       } else if (requireClient && profile?.role === 'admin' && !isAdminPreview && !isAgencyClientPreview && !isSuperAdminInPreview) {
@@ -83,7 +83,7 @@ export function ProtectedRoute({
             }
             
             // No permissions at all
-            navigate('/auth', { replace: true });
+            navigate('/client/login', { replace: true });
           }
         }
       }
