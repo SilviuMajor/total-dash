@@ -497,7 +497,7 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
     } else if (currentPath.startsWith('/agency')) {
       navigate('/agency/login');
     } else {
-      navigate('/auth');
+      navigate('/client/login');
     }
   };
 

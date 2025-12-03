@@ -147,7 +147,7 @@ const App = () => (
                 } />
                 
                 {/* Client Auth Route */}
-                <Route path="/auth" element={<Auth />} />
+                <Route path="/client/login" element={<Auth />} />
                 
                 {/* Slug-based client login route */}
                 <Route path="/login/:agencySlug" element={<SlugBasedAuth />} />

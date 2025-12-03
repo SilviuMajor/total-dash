@@ -23,7 +23,7 @@ export default function AgencyClients() {
   const [limits, setLimits] = useState<any>(null);
   const [clientAgents, setClientAgents] = useState<Record<string, Array<{ name: string; provider: string }>>>({});
   const [clientUsers, setClientUsers] = useState<Record<string, number>>({});
-  const [clientLoginUrl, setClientLoginUrl] = useState('/auth');
+  const [clientLoginUrl, setClientLoginUrl] = useState('/client/login');
   const [clientLoginLoading, setClientLoginLoading] = useState(true);
 
   useEffect(() => {
@@ -51,14 +51,14 @@ export default function AgencyClients() {
     if (agency?.whitelabel_verified && agency?.whitelabel_domain) {
       // Agency has verified whitelabel - use custom domain
       const subdomain = agency.whitelabel_subdomain || 'dashboard';
-      setClientLoginUrl(`https://${subdomain}.${agency.whitelabel_domain}/auth`);
+      setClientLoginUrl(`https://${subdomain}.${agency.whitelabel_domain}/client/login`);
     } else if (agency?.slug) {
       // No whitelabel - use /login/:agencySlug pattern
       const baseUrl = window.location.origin;
       setClientLoginUrl(`${baseUrl}/login/${agency.slug}`);
     } else {
-      // Fallback to default /auth
-      setClientLoginUrl('/auth');
+      // Fallback to default /client/login
+      setClientLoginUrl('/client/login');
     }
     setClientLoginLoading(false);
   };

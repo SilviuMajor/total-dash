@@ -35,7 +35,7 @@ export default function ResetPassword() {
       } else {
         toast.error("Invalid or expired reset link");
         setTimeout(() => {
-          navigate('/auth');
+          navigate('/client/login');
         }, 2000);
       }
       setCheckingToken(false);
@@ -43,6 +43,50 @@ export default function ResetPassword() {
 
     checkToken();
   }, [location, navigate]);
+
+  const determineLoginRedirect = async (userId: string): Promise<string> => {
+    try {
+      // Check if user is an agency user
+      const { data: agencyUser } = await supabase
+        .from('agency_users')
+        .select('agency_id')
+        .eq('user_id', userId)
+        .single();
+
+      if (agencyUser) {
+        return '/agency/login';
+      }
+
+      // Check if user is a client user
+      const { data: clientUser } = await supabase
+        .from('client_users')
+        .select('client_id, clients(agency_id)')
+        .eq('user_id', userId)
+        .single();
+
+      if (clientUser?.clients?.agency_id) {
+        // Get agency info for proper redirect
+        const { data: agency } = await supabase
+          .from('agencies')
+          .select('slug, whitelabel_domain, whitelabel_subdomain, whitelabel_verified')
+          .eq('id', clientUser.clients.agency_id)
+          .single();
+
+        if (agency?.whitelabel_verified && agency?.whitelabel_domain) {
+          const subdomain = agency.whitelabel_subdomain || 'dashboard';
+          return `https://${subdomain}.${agency.whitelabel_domain}/client/login`;
+        } else if (agency?.slug) {
+          return `https://total-dash.com/login/${agency.slug}`;
+        }
+      }
+
+      // Default fallback
+      return '/client/login';
+    } catch (error) {
+      console.error('Error determining redirect:', error);
+      return '/client/login';
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,6 +104,9 @@ export default function ResetPassword() {
     setLoading(true);
 
     try {
+      // Get current user before update
+      const { data: { user } } = await supabase.auth.getUser();
+      
       const { error } = await supabase.auth.updateUser({
         password: newPassword,
       });
@@ -68,12 +115,22 @@ export default function ResetPassword() {
 
       toast.success("Password updated successfully! Please sign in with your new password.");
       
+      // Determine the correct login page based on user type
+      let redirectUrl = '/client/login';
+      if (user?.id) {
+        redirectUrl = await determineLoginRedirect(user.id);
+      }
+      
       // Sign out to clear the recovery session
       await supabase.auth.signOut();
       
       // Redirect to appropriate login page
       setTimeout(() => {
-        navigate('/auth');
+        if (redirectUrl.startsWith('http')) {
+          window.location.href = redirectUrl;
+        } else {
+          navigate(redirectUrl);
+        }
       }, 1500);
     } catch (error: any) {
       toast.error(error.message || "Failed to reset password");
