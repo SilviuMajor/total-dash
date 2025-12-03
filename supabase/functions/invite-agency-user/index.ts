@@ -88,16 +88,19 @@ serve(async (req) => {
 
     console.log('User added to agency');
 
-    // Store password for retrieval
+    // Store password HINT only (first 2 characters) with must_change_password flag
+    const passwordHint = tempPassword.substring(0, 2);
+    
     const { error: passwordError } = await supabase
       .from('user_passwords')
       .insert({
         user_id: authData.user.id,
-        password_text: tempPassword,
+        password_hint: passwordHint,
+        must_change_password: true,
       });
 
     if (passwordError) {
-      console.error('Error storing password:', passwordError);
+      console.error('Error storing password hint:', passwordError);
     }
 
     // Get agency and platform branding

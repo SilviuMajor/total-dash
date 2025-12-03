@@ -19,6 +19,7 @@ import { ClientPreviewBanner } from "./components/ClientPreviewBanner";
 import { AgencyClientPreviewBanner } from "./components/AgencyClientPreviewBanner";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
+import ChangePassword from "./pages/ChangePassword";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AgencyLogin from "./pages/agency/AgencyLogin";
 import Agencies from "./pages/admin/Agencies";
@@ -92,6 +93,7 @@ const App = () => (
               <Routes>
                 {/* Public Routes */}
                 <Route path="/reset-password" element={<ResetPassword />} />
+                <Route path="/change-password" element={<ChangePassword />} />
                 
                 {/* Admin Routes (Super Admin) */}
                 <Route path="/admin/login" element={<AdminLogin />} />

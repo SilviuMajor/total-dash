@@ -156,16 +156,19 @@ serve(async (req) => {
       throw roleError;
     }
 
-    // Store password in user_passwords table
+    // Store password HINT only (first 2 characters) with must_change_password flag
+    const passwordHint = temporaryPassword.substring(0, 2);
+    
     const { error: passwordError } = await supabaseAdmin
       .from('user_passwords')
       .insert({
         user_id: authData.user.id,
-        password_text: temporaryPassword
+        password_hint: passwordHint,
+        must_change_password: true
       });
 
     if (passwordError) {
-      console.error('Password storage error:', passwordError);
+      console.error('Password hint storage error:', passwordError);
     }
 
     console.log('Client user created successfully');

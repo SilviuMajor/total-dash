@@ -9,6 +9,7 @@ import { signIn, signUp } from "@/lib/auth";
 import { useAuth } from "@/hooks/useAuth";
 import { useBranding } from "@/hooks/useBranding";
 import { ForgotPasswordDialog } from "@/components/ForgotPasswordDialog";
+import { supabase } from "@/integrations/supabase/client";
 import logo from "@/assets/fiveleaf-logo.png";
 
 export default function Auth() {
@@ -23,15 +24,33 @@ export default function Auth() {
   const branding = useBranding({ isClientView: true });
 
   useEffect(() => {
-    if (user && profile) {
-      // Redirect based on role
-      if (profile.role === 'admin') {
-        navigate('/admin/clients');
-      } else {
-        // Client users redirect to their dashboard
-        navigate('/');
+    const checkAndRedirect = async () => {
+      if (user && profile) {
+        // Check if user must change password
+        try {
+          const { data } = await supabase.functions.invoke('check-must-change-password', {
+            body: {}
+          });
+          
+          if (data?.mustChangePassword) {
+            navigate('/change-password');
+            return;
+          }
+        } catch (error) {
+          console.error('Error checking password change requirement:', error);
+        }
+        
+        // Redirect based on role
+        if (profile.role === 'admin') {
+          navigate('/admin/clients');
+        } else {
+          // Client users redirect to their dashboard
+          navigate('/');
+        }
       }
-    }
+    };
+    
+    checkAndRedirect();
   }, [user, profile, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {

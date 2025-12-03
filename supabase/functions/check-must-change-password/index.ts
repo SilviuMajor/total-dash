@@ -30,35 +30,28 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    const { userId } = await req.json();
-
-    if (!userId) {
-      throw new Error('Missing userId');
-    }
-
-    // Fetch password hint and must_change_password flag from user_passwords table
+    // Check if user must change password
     const { data, error } = await supabaseAdmin
       .from('user_passwords')
-      .select('password_hint, must_change_password')
-      .eq('user_id', userId)
+      .select('must_change_password')
+      .eq('user_id', user.id)
       .single();
 
     if (error && error.code !== 'PGRST116') {
-      console.error('Error fetching password hint:', error);
+      console.error('Error checking must_change_password:', error);
       throw error;
     }
 
     return new Response(
       JSON.stringify({ 
         success: true,
-        hint: data?.password_hint || null,
         mustChangePassword: data?.must_change_password || false
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
-    console.error('Error in get-user-password:', error);
+    console.error('Error in check-must-change-password:', error);
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
     return new Response(
       JSON.stringify({ 

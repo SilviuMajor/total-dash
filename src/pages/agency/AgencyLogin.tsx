@@ -72,7 +72,18 @@ export default function AgencyLogin() {
         throw new Error("No agency found for this account. Please sign up first.");
       }
 
-      // Step 3: Success - redirect
+      // Step 3: Check if user must change password
+      const { data: passwordData } = await supabase.functions.invoke('check-must-change-password', {
+        body: {}
+      });
+
+      if (passwordData?.mustChangePassword) {
+        toast.success("Please set a new password");
+        navigate("/change-password");
+        return;
+      }
+
+      // Step 4: Success - redirect
       toast.success("Welcome back!");
       navigate("/agency");
       
