@@ -104,15 +104,22 @@ serve(async (req) => {
 
     console.log('Auth password updated successfully');
 
-    // Update password in user_passwords table
+    // Store password HINT only (first 2 characters) in user_passwords table
+    const passwordHint = newPassword.substring(0, 2);
+    
     const { error: dbError } = await supabaseAdmin
       .from('user_passwords')
-      .update({ password_text: newPassword })
-      .eq('user_id', userId);
+      .upsert({
+        user_id: userId,
+        password_hint: passwordHint,
+        must_change_password: false
+      }, {
+        onConflict: 'user_id'
+      });
 
     if (dbError) {
-      console.error('Database password update error:', dbError);
-      throw dbError;
+      console.error('Database password hint update error:', dbError);
+      // Don't throw - auth password was updated successfully
     }
 
     console.log('Password reset completed successfully');

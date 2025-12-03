@@ -32,33 +32,39 @@ serve(async (req) => {
 
     const { userId } = await req.json();
 
-    if (!userId) {
-      throw new Error('Missing userId');
-    }
+    // Default to current user if no userId provided
+    const targetUserId = userId || user.id;
 
-    // Fetch password hint and must_change_password flag from user_passwords table
-    const { data, error } = await supabaseAdmin
+    console.log('Clearing password hint for user:', targetUserId);
+
+    // Clear the password hint and set must_change_password to false
+    const { error } = await supabaseAdmin
       .from('user_passwords')
-      .select('password_hint, must_change_password')
-      .eq('user_id', userId)
-      .single();
+      .upsert({
+        user_id: targetUserId,
+        password_hint: null,
+        must_change_password: false
+      }, {
+        onConflict: 'user_id'
+      });
 
-    if (error && error.code !== 'PGRST116') {
-      console.error('Error fetching password hint:', error);
+    if (error) {
+      console.error('Error clearing password hint:', error);
       throw error;
     }
+
+    console.log('Password hint cleared successfully');
 
     return new Response(
       JSON.stringify({ 
         success: true,
-        hint: data?.password_hint || null,
-        mustChangePassword: data?.must_change_password || false
+        message: 'Password hint cleared successfully'
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
-    console.error('Error in get-user-password:', error);
+    console.error('Error in clear-password-hint:', error);
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
     return new Response(
       JSON.stringify({ 

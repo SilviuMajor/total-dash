@@ -148,12 +148,13 @@ export default function SuperAdminUsers() {
 
       if (superAdminError) throw superAdminError;
 
-      // Store password
+      // Store password hint only (first 2 chars)
       const { error: passwordError } = await supabase
         .from('user_passwords')
         .insert({
           user_id: authData.user.id,
-          password_text: password,
+          password_hint: password.substring(0, 2),
+          must_change_password: true,
         });
 
       if (passwordError) throw passwordError;

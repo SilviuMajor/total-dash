@@ -59,3 +59,18 @@ verify_jwt = false
 
 [functions.create-text-transcripts]
 verify_jwt = false
+
+[functions.get-user-password]
+verify_jwt = true
+
+[functions.reset-user-password]
+verify_jwt = true
+
+[functions.send-password-reset-email]
+verify_jwt = true
+
+[functions.clear-password-hint]
+verify_jwt = true
+
+[functions.check-must-change-password]
+verify_jwt = true
