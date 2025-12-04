@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AgentDetailHeader } from "@/components/agent-management/AgentDetailHeader";
 import { VoiceflowSettings } from "@/components/agent-management/voiceflow/VoiceflowSettings";
+import { VoiceflowClientSettings } from "@/components/agent-management/voiceflow/VoiceflowClientSettings";
 import { VoiceflowKnowledgeBase } from "@/components/agent-management/voiceflow/VoiceflowKnowledgeBase";
 import { VoiceflowWidget } from "@/components/agent-management/voiceflow/VoiceflowWidget";
 import { VoiceflowChannels } from "@/components/agent-management/voiceflow/VoiceflowChannels";
@@ -128,6 +129,8 @@ export default function AgencyAgentDetails() {
         case "channels":
           return <VoiceflowChannels agent={agent} />;
         case "settings":
+          return <VoiceflowClientSettings agent={agent} onUpdate={loadAgentDetails} />;
+        case "config":
           return <VoiceflowSettings agent={agent} onUpdate={loadAgentDetails} />;
         default:
           return null;
@@ -140,7 +143,7 @@ export default function AgencyAgentDetails() {
           return <RetellKnowledgeBase agent={agent} />;
         case "channels":
           return <RetellChannels agent={agent} />;
-        case "settings":
+        case "config":
           return <RetellSettings agent={agent} onUpdate={loadAgentDetails} />;
         default:
           return null;
@@ -165,7 +168,8 @@ export default function AgencyAgentDetails() {
           <TabsTrigger value="knowledge-base">Knowledge Base</TabsTrigger>
           <TabsTrigger value="channels">Channels</TabsTrigger>
           <TabsTrigger value="specs">Specs</TabsTrigger>
-          <TabsTrigger value="settings">Settings</TabsTrigger>
+          {agent.provider === "voiceflow" && <TabsTrigger value="settings">Settings</TabsTrigger>}
+          <TabsTrigger value="config">Config</TabsTrigger>
         </TabsList>
 
         <TabsContent value="widget" className="space-y-6">
@@ -198,8 +202,21 @@ export default function AgencyAgentDetails() {
           <SpecsSettings agent={agent} />
         </TabsContent>
 
-        <TabsContent value="settings" className="space-y-6">
-          {renderProviderContent("settings")}
+        {agent.provider === "voiceflow" && (
+          <TabsContent value="settings" className="space-y-6">
+            <ClientAccessToggle
+              agent={agent}
+              configKey="client_settings_access_enabled"
+              label="Enable Settings for Clients"
+              description="Allow clients to view and edit conversation settings like auto-end time"
+              onUpdate={loadAgentDetails}
+            />
+            {renderProviderContent("settings")}
+          </TabsContent>
+        )}
+
+        <TabsContent value="config" className="space-y-6">
+          {renderProviderContent("config")}
         </TabsContent>
       </Tabs>
     </div>

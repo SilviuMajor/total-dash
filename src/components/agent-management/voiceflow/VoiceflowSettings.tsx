@@ -193,46 +193,6 @@ export function VoiceflowSettings({ agent, onUpdate }: VoiceflowSettingsProps) {
           {loading ? "Saving..." : "Save Settings"}
         </Button>
 
-        {/* Conversation Auto-End Settings Section */}
-        <div className="pt-6 border-t border-border">
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-lg font-semibold">Conversation Auto-End</h3>
-              <p className="text-sm text-muted-foreground">
-                Automatically end inactive conversations and create read-only transcripts
-              </p>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="auto_end_hours">Auto-end conversation after</Label>
-              <Select
-                value={formData.auto_end_hours.toString()}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, auto_end_hours: parseInt(value) })
-                }
-              >
-                <SelectTrigger id="auto_end_hours" className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">1 hour</SelectItem>
-                  <SelectItem value="2">2 hours</SelectItem>
-                  <SelectItem value="4">4 hours</SelectItem>
-                  <SelectItem value="6">6 hours</SelectItem>
-                  <SelectItem value="8">8 hours</SelectItem>
-                  <SelectItem value="12">12 hours (default)</SelectItem>
-                  <SelectItem value="18">18 hours</SelectItem>
-                  <SelectItem value="24">24 hours</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Conversations without activity will be automatically ended after this time from when they started.
-                A read-only transcript is created when a conversation ends (either via Voiceflow's end action or auto-end).
-              </p>
-            </div>
-          </div>
-        </div>
-
         {/* Key Variables Section */}
         <div className="pt-6 border-t border-border">
           <div className="space-y-4">
