@@ -323,6 +323,12 @@ serve(async (req) => {
       if (userTranscriptError) {
         console.error('Error inserting user transcript:', userTranscriptError);
       }
+
+      // Update last_activity_at for inactivity tracking
+      await supabaseClient
+        .from('conversations')
+        .update({ last_activity_at: new Date().toISOString() })
+        .eq('id', currentConversationId);
     }
 
     // Store bot responses in transcripts (only if conversation exists)
@@ -346,6 +352,12 @@ serve(async (req) => {
           console.error('Error inserting bot transcript:', botTranscriptError);
         }
       }
+
+      // Update last_activity_at after bot responses
+      await supabaseClient
+        .from('conversations')
+        .update({ last_activity_at: new Date().toISOString() })
+        .eq('id', currentConversationId);
     }
 
     // If conversation ended, update it and create transcript
