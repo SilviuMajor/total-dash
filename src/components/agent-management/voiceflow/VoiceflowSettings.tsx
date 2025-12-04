@@ -261,40 +261,52 @@ export function VoiceflowSettings({ agent, onUpdate }: VoiceflowSettingsProps) {
               
               <div className="space-y-2">
                 {customVariables.map((variable, index) => (
-                  <div key={index} className="flex gap-2">
-                    <div className="flex-1 space-y-2">
+                  <div key={index} className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-1">
+                      <Label className="whitespace-nowrap text-xs text-muted-foreground">Variable</Label>
                       <Input 
                         value={variable.voiceflow_name}
                         onChange={(e) => updateCustomVariable(index, 'voiceflow_name', e.target.value)}
-                        placeholder="Voiceflow variable name (e.g., phone_number)"
+                        placeholder="e.g., phone_number"
                         className="font-mono text-sm"
                       />
+                    </div>
+                    <div className="flex items-center gap-2 flex-1">
+                      <Label className="whitespace-nowrap text-xs text-muted-foreground">Name</Label>
                       <Input 
                         value={variable.display_name}
                         onChange={(e) => updateCustomVariable(index, 'display_name', e.target.value)}
-                        placeholder="Display name (e.g., Phone Number)"
+                        placeholder="e.g., Phone Number"
                       />
                     </div>
                     <Button 
                       size="icon" 
                       variant="ghost"
                       onClick={() => removeCustomVariable(index)}
-                      className="self-start"
                     >
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
                 ))}
                 
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={addCustomVariable}
-                  className="w-full"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Custom Variable
-                </Button>
+                <div className="flex gap-2 pt-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={addCustomVariable}
+                    className="flex-1"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Variable
+                  </Button>
+                  <Button 
+                    size="sm"
+                    onClick={handleSave}
+                    disabled={loading}
+                  >
+                    {loading ? "Saving..." : "Save Variables"}
+                  </Button>
+                </div>
               </div>
 
               <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-950/20 rounded border border-blue-200 dark:border-blue-800">

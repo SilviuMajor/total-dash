@@ -18,6 +18,7 @@ export function DefaultPermissionsCard({ clientId }: DefaultPermissionsCardProps
     transcripts: true,
     specs: true,
     settings: false,
+    guides: false,
   });
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
@@ -164,6 +165,19 @@ export function DefaultPermissionsCard({ clientId }: DefaultPermissionsCardProps
             />
             <Label htmlFor="settings" className="font-normal cursor-pointer">
               Settings - Manage team and client configuration
+            </Label>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="guides"
+              checked={permissions.guides}
+              onCheckedChange={(checked) =>
+                setPermissions({ ...permissions, guides: checked as boolean })
+              }
+            />
+            <Label htmlFor="guides" className="font-normal cursor-pointer">
+              Guides - View agent guides and documentation
             </Label>
           </div>
         </div>

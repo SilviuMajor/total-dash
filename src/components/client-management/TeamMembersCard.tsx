@@ -50,6 +50,7 @@ interface ClientUser {
     analytics: boolean;
     transcripts: boolean;
     settings: boolean;
+    guides: boolean;
   };
   profiles: {
     email: string;
@@ -79,6 +80,7 @@ export function TeamMembersCard({ clientId }: { clientId: string }) {
     analytics: true,
     transcripts: true,
     settings: false,
+    guides: false,
   });
   const { toast } = useToast();
   const { profile } = useAuth();
@@ -139,6 +141,7 @@ export function TeamMembersCard({ clientId }: { clientId: string }) {
               analytics: boolean;
               transcripts: boolean;
               settings: boolean;
+              guides: boolean;
             }
           };
         })
@@ -645,6 +648,21 @@ export function TeamMembersCard({ clientId }: { clientId: string }) {
                       }
                     />
                     <Label className="font-normal">Settings</Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      checked={selectedUser.page_permissions.guides}
+                      onCheckedChange={(checked) =>
+                        setSelectedUser({
+                          ...selectedUser,
+                          page_permissions: {
+                            ...selectedUser.page_permissions,
+                            guides: checked as boolean,
+                          },
+                        })
+                      }
+                    />
+                    <Label className="font-normal">Guides</Label>
                   </div>
                 </div>
               </div>
