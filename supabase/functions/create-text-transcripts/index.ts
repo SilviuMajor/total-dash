@@ -10,6 +10,7 @@ interface Agent {
   provider: string;
   config: {
     auto_end_hours?: number;
+    auto_end_mode?: 'since_start' | 'since_last_message';
     transcript_delay_hours?: number; // Legacy support
   };
 }
@@ -139,21 +140,26 @@ Deno.serve(async (req) => {
     for (const agent of (agents as Agent[])) {
       // Support both new 'auto_end_hours' and legacy 'transcript_delay_hours'
       const autoEndHours = agent.config?.auto_end_hours || agent.config?.transcript_delay_hours || 12;
+      // Default to 'since_last_message' (inactivity-based)
+      const autoEndMode = agent.config?.auto_end_mode || 'since_last_message';
       const cutoffTime = new Date();
       cutoffTime.setHours(cutoffTime.getHours() - autoEndHours);
 
-      console.log(`Processing agent ${agent.id} with ${autoEndHours}h auto-end delay`);
+      console.log(`Processing agent ${agent.id} with ${autoEndHours}h auto-end delay (mode: ${autoEndMode})`);
 
       // ============================================
       // JOB 1: Auto-end stale conversations
       // ============================================
-      // Find conversations that are still active but started before the cutoff
+      // Find conversations that are still active but exceed the threshold
+      // Use started_at or last_activity_at based on auto_end_mode
+      const timeColumn = autoEndMode === 'since_start' ? 'started_at' : 'last_activity_at';
+      
       const { data: staleConversations, error: staleError } = await supabaseAdmin
         .from('conversations')
         .select('id')
         .eq('agent_id', agent.id)
         .is('ended_at', null)
-        .lt('started_at', cutoffTime.toISOString());
+        .lt(timeColumn, cutoffTime.toISOString());
 
       if (staleError) {
         console.error(`Error fetching stale conversations for agent ${agent.id}:`, staleError);

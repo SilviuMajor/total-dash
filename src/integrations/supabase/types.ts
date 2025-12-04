@@ -1059,6 +1059,7 @@ export type Database = {
           ended_at: string | null
           id: string
           is_widget_test: boolean | null
+          last_activity_at: string | null
           metadata: Json | null
           sentiment: string | null
           started_at: string | null
@@ -1071,6 +1072,7 @@ export type Database = {
           ended_at?: string | null
           id?: string
           is_widget_test?: boolean | null
+          last_activity_at?: string | null
           metadata?: Json | null
           sentiment?: string | null
           started_at?: string | null
@@ -1083,6 +1085,7 @@ export type Database = {
           ended_at?: string | null
           id?: string
           is_widget_test?: boolean | null
+          last_activity_at?: string | null
           metadata?: Json | null
           sentiment?: string | null
           started_at?: string | null
