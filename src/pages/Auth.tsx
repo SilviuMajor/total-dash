@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -8,9 +8,9 @@ import { useToast } from "@/hooks/use-toast";
 import { signIn, signUp } from "@/lib/auth";
 import { useAuth } from "@/hooks/useAuth";
 import { useBranding } from "@/hooks/useBranding";
+import { useFavicon } from "@/hooks/useFavicon";
 import { ForgotPasswordDialog } from "@/components/ForgotPasswordDialog";
 import { supabase } from "@/integrations/supabase/client";
-import logo from "@/assets/fiveleaf-logo.png";
 
 export default function Auth() {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -21,9 +21,39 @@ export default function Auth() {
   const { toast } = useToast();
   const { user, profile } = useAuth();
   const navigate = useNavigate();
-  const branding = useBranding({ isClientView: true });
+  const [searchParams] = useSearchParams();
+  
+  // Check if this is a preview mode view
+  const isPreviewMode = searchParams.get('preview') === 'true';
+  
+  // Get agency context from sessionStorage (set by SlugBasedAuth)
+  const [loginAgencyId, setLoginAgencyId] = useState<string | null>(null);
+  
+  useEffect(() => {
+    const storedContext = sessionStorage.getItem('loginAgencyContext');
+    if (storedContext) {
+      try {
+        const agency = JSON.parse(storedContext);
+        setLoginAgencyId(agency.id);
+      } catch (e) {
+        console.error('Error parsing agency context:', e);
+      }
+    }
+  }, []);
+  
+  // Use branding with agency ID if available
+  const branding = useBranding({ 
+    isClientView: true, 
+    agencyId: loginAgencyId || undefined 
+  });
+  
+  // Apply favicon
+  useFavicon(branding.faviconUrl || '');
 
   useEffect(() => {
+    // Don't redirect in preview mode - allow viewing the login page
+    if (isPreviewMode) return;
+    
     const checkAndRedirect = async () => {
       if (user && profile) {
         // Check if user must change password
@@ -42,7 +72,7 @@ export default function Auth() {
         
         // Redirect based on role
         if (profile.role === 'admin') {
-          navigate('/admin/clients');
+          navigate('/admin/agencies');
         } else {
           // Client users redirect to their dashboard
           navigate('/');
@@ -51,7 +81,7 @@ export default function Auth() {
     };
     
     checkAndRedirect();
-  }, [user, profile, navigate]);
+  }, [user, profile, navigate, isPreviewMode]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,7 +119,14 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/30 p-4">
-      <Card className="w-full max-w-md bg-gradient-card border-border/50">
+      {/* Preview Mode Banner */}
+      {isPreviewMode && (
+        <div className="fixed top-0 left-0 right-0 bg-amber-500 text-amber-950 text-center py-2 text-sm font-medium z-50">
+          Preview Mode — This is how your clients see the login page
+        </div>
+      )}
+      
+      <Card className={`w-full max-w-md bg-gradient-card border-border/50 ${isPreviewMode ? 'mt-8' : ''}`}>
         <CardHeader className="space-y-4 text-center">
           {branding.fullLogoUrl && (
             <div className="flex justify-center">

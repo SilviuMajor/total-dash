@@ -19,7 +19,7 @@ export default function SlugBasedAuth() {
 
       const { data: agency, error } = await supabase
         .from('agencies')
-        .select('id, name, logo_light_url, logo_dark_url, full_logo_light_url, full_logo_dark_url, primary_color, secondary_color, slug')
+        .select('id, name, logo_light_url, logo_dark_url, full_logo_light_url, full_logo_dark_url, favicon_light_url, favicon_dark_url, primary_color, secondary_color, slug')
         .eq('slug', agencySlug)
         .single();
       

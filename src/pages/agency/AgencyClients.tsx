@@ -51,14 +51,14 @@ export default function AgencyClients() {
     if (agency?.whitelabel_verified && agency?.whitelabel_domain) {
       // Agency has verified whitelabel - use custom domain
       const subdomain = agency.whitelabel_subdomain || 'dashboard';
-      setClientLoginUrl(`https://${subdomain}.${agency.whitelabel_domain}/client/login`);
+      setClientLoginUrl(`https://${subdomain}.${agency.whitelabel_domain}/client/login?preview=true`);
     } else if (agency?.slug) {
-      // No whitelabel - use /login/:agencySlug pattern
+      // No whitelabel - use /login/:agencySlug pattern with preview flag
       const baseUrl = window.location.origin;
-      setClientLoginUrl(`${baseUrl}/login/${agency.slug}`);
+      setClientLoginUrl(`${baseUrl}/login/${agency.slug}?preview=true`);
     } else {
       // Fallback to default /client/login
-      setClientLoginUrl('/client/login');
+      setClientLoginUrl('/client/login?preview=true');
     }
     setClientLoginLoading(false);
   };
