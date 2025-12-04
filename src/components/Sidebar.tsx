@@ -19,7 +19,7 @@ const clientNavigation = [
   { name: "Analytics", href: "/analytics", icon: BarChart3, permissionKey: "analytics" },
   { name: "Specifications", href: "/specs", icon: FileText, permissionKey: "specs" },
   { name: "Knowledge Base", href: "/knowledge-base", icon: BookOpen, permissionKey: "knowledge_base" },
-  { name: "Guides", href: "/guides", icon: BookOpen, permissionKey: null },
+  { name: "Guides", href: "/guides", icon: BookOpen, permissionKey: "guides" },
   { name: "Agent Settings", href: "/agent-settings", icon: Bot, permissionKey: "agent_settings" },
 ];
 
