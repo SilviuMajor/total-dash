@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
 import { useToast } from "@/hooks/use-toast";
-import { Save, AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
+import { Save, AlertTriangle, CheckCircle2, XCircle, Eye, Loader2 } from "lucide-react";
 import { AgencyUsersContent } from "@/components/agency-management/AgencyUsersContent";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -25,6 +25,8 @@ export default function AgencySettings() {
   const [showSlugWarning, setShowSlugWarning] = useState(false);
   const [pendingSlug, setPendingSlug] = useState("");
   const [hasWhitelabel, setHasWhitelabel] = useState<boolean>(false);
+  const [clientLoginUrl, setClientLoginUrl] = useState('/client/login');
+  const [clientLoginLoading, setClientLoginLoading] = useState(true);
 
   // Check whitelabel access using database function
   useEffect(() => {
@@ -54,6 +56,36 @@ export default function AgencySettings() {
     };
 
     checkWhitelabelAccess();
+  }, [effectiveAgencyId]);
+
+  // Fetch agency domain for login preview URL
+  useEffect(() => {
+    const fetchAgencyDomain = async () => {
+      setClientLoginLoading(true);
+      if (!effectiveAgencyId) {
+        setClientLoginLoading(false);
+        return;
+      }
+      
+      const { data: agencyData } = await supabase
+        .from('agencies')
+        .select('slug, whitelabel_domain, whitelabel_subdomain, whitelabel_verified')
+        .eq('id', effectiveAgencyId)
+        .single();
+      
+      if (agencyData?.whitelabel_verified && agencyData?.whitelabel_domain) {
+        const subdomain = agencyData.whitelabel_subdomain || 'dashboard';
+        setClientLoginUrl(`https://${subdomain}.${agencyData.whitelabel_domain}/client/login?preview=true`);
+      } else if (agencyData?.slug) {
+        const baseUrl = window.location.origin;
+        setClientLoginUrl(`${baseUrl}/login/${agencyData.slug}?preview=true`);
+      } else {
+        setClientLoginUrl('/client/login?preview=true');
+      }
+      setClientLoginLoading(false);
+    };
+
+    fetchAgencyDomain();
   }, [effectiveAgencyId]);
 
   useEffect(() => {
@@ -263,6 +295,7 @@ export default function AgencySettings() {
               </CardContent>
             </Card>
           ) : (
+            <>
             <Card>
               <CardHeader>
                 <CardTitle>Whitelabel Settings</CardTitle>
@@ -454,6 +487,31 @@ export default function AgencySettings() {
                 </form>
               </CardContent>
             </Card>
+
+            {/* Login Preview Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Login Preview</CardTitle>
+                <CardDescription>
+                  Preview how your clients will see the login page with your branding applied
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button
+                  variant="outline"
+                  onClick={() => window.open(clientLoginUrl, '_blank')}
+                  disabled={clientLoginLoading}
+                >
+                  {clientLoginLoading ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Eye className="mr-2 h-4 w-4" />
+                  )}
+                  Login Preview
+                </Button>
+              </CardContent>
+            </Card>
+            </>
           )}
         </TabsContent>
 

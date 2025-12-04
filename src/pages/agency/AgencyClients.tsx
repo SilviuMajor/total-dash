@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Eye, Settings, AlertCircle, Building2, LogIn, Loader2 } from "lucide-react";
+import { Plus, Eye, Settings, AlertCircle, Building2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,45 +23,11 @@ export default function AgencyClients() {
   const [limits, setLimits] = useState<any>(null);
   const [clientAgents, setClientAgents] = useState<Record<string, Array<{ name: string; provider: string }>>>({});
   const [clientUsers, setClientUsers] = useState<Record<string, number>>({});
-  const [clientLoginUrl, setClientLoginUrl] = useState('/client/login');
-  const [clientLoginLoading, setClientLoginLoading] = useState(true);
 
   useEffect(() => {
     loadClients();
     checkLimits();
   }, [profile]);
-
-  useEffect(() => {
-    fetchAgencyDomain();
-  }, [agencyId]);
-
-  const fetchAgencyDomain = async () => {
-    setClientLoginLoading(true);
-    if (!agencyId) {
-      setClientLoginLoading(false);
-      return;
-    }
-    
-    const { data: agency } = await supabase
-      .from('agencies')
-      .select('slug, whitelabel_domain, whitelabel_subdomain, whitelabel_verified')
-      .eq('id', agencyId)
-      .single();
-    
-    if (agency?.whitelabel_verified && agency?.whitelabel_domain) {
-      // Agency has verified whitelabel - use custom domain
-      const subdomain = agency.whitelabel_subdomain || 'dashboard';
-      setClientLoginUrl(`https://${subdomain}.${agency.whitelabel_domain}/client/login?preview=true`);
-    } else if (agency?.slug) {
-      // No whitelabel - use /login/:agencySlug pattern with preview flag
-      const baseUrl = window.location.origin;
-      setClientLoginUrl(`${baseUrl}/login/${agency.slug}?preview=true`);
-    } else {
-      // Fallback to default /client/login
-      setClientLoginUrl('/client/login?preview=true');
-    }
-    setClientLoginLoading(false);
-  };
 
   const checkLimits = async () => {
     if (!agencyId) return;
@@ -233,18 +199,6 @@ export default function AgencyClients() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={() => window.open(clientLoginUrl, '_blank')}
-            disabled={clientLoginLoading}
-          >
-            {clientLoginLoading ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <LogIn className="mr-2 h-4 w-4" />
-            )}
-            Client Login
-          </Button>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button disabled={!canAddMore || currentClients >= maxClients}>
