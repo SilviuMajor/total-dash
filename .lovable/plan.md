@@ -1,362 +1,197 @@
 
-## Conversations Page Upgrade — Infinite Scroll, Filters, Bulk Actions
+## Scoped Search with Cmd+K — Per User Type
 
-This is a single-file upgrade to `src/pages/client/Conversations.tsx` (693 lines). The center and right panels are untouched. All new logic lives in the left panel.
-
----
-
-### What exists today
-
-- `loadConversations()`: fetches 50 conversations, replaces state entirely
-- Simple search filter (client-side)
-- Real-time subscription: INSERT/DELETE triggers `loadConversations()`, UPDATE patches in-place
-- No pagination, no status filter, no bulk select, no sort control
+This adds a command palette to the app in two new files and modifies two existing ones. No new dependencies, no database changes, no auth logic touched.
 
 ---
 
-### New State Variables
+### Architecture Decision: Shared State
 
+The sidebar button and `CommandSearch` component need shared open/close state. The cleanest approach without adding Zustand state or a full context is a **custom DOM event**: `window.dispatchEvent(new CustomEvent('open-command-search'))`. The `CommandSearch` component listens for this event. This keeps the two components fully decoupled and avoids prop drilling through `App.tsx`.
+
+---
+
+### Files to Create
+
+**`src/components/CommandSearch.tsx`**
+
+A self-contained modal component. Always mounted in the app (placed in `App.tsx`), but only renders visible UI when `open === true`.
+
+**State:**
 ```typescript
-// Infinite scroll
-const [hasMore, setHasMore] = useState(true);
-const [loadingMore, setLoadingMore] = useState(false);
-const cursorRef = useRef<string | null>(null);
-
-// Filters
-const [statusFilter, setStatusFilter] = useState<string>('all');
-const [tagFilters, setTagFilters] = useState<string[]>([]);
-const [sortOrder, setSortOrder] = useState<'desc' | 'asc' | 'duration'>('desc');
-
-// Bulk select
-const [selectedConversationIds, setSelectedConversationIds] = useState<Set<string>>(new Set());
-
-// Sentinel ref for IntersectionObserver
-const sentinelRef = useRef<HTMLDivElement>(null);
-const convListScrollRef = useRef<HTMLDivElement>(null);
+const [open, setOpen] = useState(false);
+const [query, setQuery] = useState('');
+const [results, setResults] = useState<SearchResult[]>([]);
+const [loading, setLoading] = useState(false);
 ```
 
----
-
-### Part 1: Infinite Scroll
-
-**Replace `loadConversations`** with a new signature:
-
+**SearchResult type:**
 ```typescript
-const loadConversations = async (cursor?: string, append = false) => {
-  // Build query with sort + status filter
-  let query = supabase
-    .from('conversations')
-    .select('*')
-    .eq('agent_id', selectedAgentId!)
-    .order('started_at', { ascending: sortOrder === 'asc' })
-    .limit(30);
-
-  if (sortOrder === 'duration') {
-    query = supabase.from('conversations').select('*')
-      .eq('agent_id', selectedAgentId!)
-      .order('duration', { ascending: false })
-      .limit(30);
-  }
-
-  if (cursor && sortOrder !== 'duration') {
-    query = query.lt('started_at', cursor);
-  }
-
-  if (statusFilter !== 'all') {
-    query = query.eq('status', statusFilter);
-  }
-
-  const { data, error } = await query;
-  const rows = (data || []) as Conversation[];
-
-  if (append) {
-    setConversations(prev => [...prev, ...rows]);
-  } else {
-    setConversations(rows);
-  }
-
-  if (rows.length === 30) {
-    cursorRef.current = rows[rows.length - 1].started_at;
-    setHasMore(true);
-  } else {
-    setHasMore(false);
-  }
+type SearchResult = {
+  id: string;
+  category: 'conversation' | 'transcript' | 'client' | 'agent' | 'agency';
+  label: string;
+  sublabel?: string;
+  href: string;
+  icon: LucideIcon;
 };
 ```
 
-**IntersectionObserver** on a `<div ref={sentinelRef} />` placed at the bottom of the conversation list:
-
+**Keyboard listener + custom event listener:**
 ```typescript
 useEffect(() => {
-  if (!sentinelRef.current) return;
-  const observer = new IntersectionObserver(
-    (entries) => {
-      if (entries[0].isIntersecting && hasMore && !loadingMore) {
-        loadMore();
-      }
-    },
-    { threshold: 0.1 }
-  );
-  observer.observe(sentinelRef.current);
-  return () => observer.disconnect();
-}, [hasMore, loadingMore, sentinelRef.current]);
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      e.preventDefault();
+      setOpen(true);
+    }
+  };
+  const handleCustomEvent = () => setOpen(true);
+  document.addEventListener('keydown', handleKeyDown);
+  window.addEventListener('open-command-search', handleCustomEvent);
+  return () => {
+    document.removeEventListener('keydown', handleKeyDown);
+    window.removeEventListener('open-command-search', handleCustomEvent);
+  };
+}, []);
 ```
 
-**loadMore:**
+**User type detection** uses `useMultiTenantAuth()` to get `userType`, `previewDepth`, and `profile.agency.id`. Uses `useClientAgentContext()` to get `selectedAgentId`.
 
-```typescript
-const loadMore = async () => {
-  if (!hasMore || loadingMore || !cursorRef.current) return;
-  setLoadingMore(true);
-  await loadConversations(cursorRef.current, true);
-  setLoadingMore(false);
-};
-```
+**Scoped queries** (debounced 300ms):
 
-**Reset on agent change / filter change:**
+| User type | Query targets |
+|---|---|
+| `super_admin` (no preview) | `agencies` table — ilike name |
+| `agency` or `previewDepth === 'agency'` | `clients` (by agency_id) + `agents` (by agency_id) |
+| `client` or `previewDepth === 'client'/'agency_to_client'` | `conversations` (by agent_id, client-side filter on phone/name/email) + `text_transcripts` (by agent_id, ilike on user_name/user_email) |
 
-```typescript
-useEffect(() => {
-  if (selectedAgentId) {
-    setConversations([]);
-    cursorRef.current = null;
-    setHasMore(true);
-    setSelectedConversationIds(new Set());
-    loadConversations();
-  }
-}, [selectedAgentId, statusFilter, tagFilters, sortOrder]);
-```
+For conversations, fetch the 50 most recent and filter client-side (since JSON path filtering on `metadata->variables->user_name` in Supabase `.or()` is unreliable). For transcripts, use `text_transcripts` table with `.ilike('user_name', ...)` OR `.ilike('user_email', ...)`.
 
-**Real-time INSERT handling** — prepend to top without re-fetching entire list:
+**Recent items** — stored in `sessionStorage` under `search_recent`. On result select: push item to the front (max 5), then navigate with `useNavigate()`.
 
-```typescript
-if (payload.eventType === 'INSERT') {
-  setConversations(prev => [payload.new as Conversation, ...prev]);
-}
-// DELETE: filter out
-// UPDATE: patch in place (unchanged)
-```
+For client conversations, navigate to `/?conversationId=${id}` — the Conversations page already supports query params for pre-selection (or can be trivially handled on load).
 
-**Loading spinner** at bottom of list:
+**Empty state (no query):** show recent items from sessionStorage. If none, show placeholder text contextual to user type.
 
+**Loading state:** a small spinner row below the CommandInput while `loading === true`.
+
+**Dialog structure using existing shadcn components:**
 ```tsx
-{loadingMore && (
-  <div className="flex justify-center py-3">
-    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary" />
-  </div>
-)}
-<div ref={sentinelRef} className="h-1" />
-```
-
----
-
-### Part 2: Status + Tag Filters + Sort
-
-**Status pills** — above the search bar in the left panel header area:
-
-```tsx
-<div className="flex gap-1 flex-wrap">
-  {(['all', 'active', 'owned', 'resolved'] as const).map(s => (
-    <Button
-      key={s}
-      size="sm"
-      variant={statusFilter === s ? 'default' : 'outline'}
-      onClick={() => setStatusFilter(s)}
-      className="h-7 text-xs rounded-full px-3"
-    >
-      {s !== 'all' && <span className={cn("w-1.5 h-1.5 rounded-full mr-1",
-        s === 'active' && 'bg-green-400',
-        s === 'owned' && 'bg-yellow-400',
-        s === 'resolved' && 'bg-blue-400'
-      )} />}
-      {s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
-    </Button>
-  ))}
-</div>
-```
-
-**Tag filter chips** — below status pills, only rendered if `agentConfig?.widget_settings?.functions?.conversation_tags` has enabled entries:
-
-```tsx
-<div className="flex gap-1 flex-wrap">
-  {availableTags.map(tag => (
-    <Badge
-      key={tag.id}
-      variant={tagFilters.includes(tag.label) ? 'default' : 'outline'}
-      className="cursor-pointer text-xs"
-      onClick={() => toggleTagFilter(tag.label)}
-      style={...color styling}
-    >
-      {tag.label}
-    </Badge>
-  ))}
-</div>
-```
-
-`toggleTagFilter`: adds/removes from `tagFilters` array. Tag filtering is applied **client-side** after fetch (since JSON array containment in Supabase requires `@>` operator — client-side is simpler and works fine for 30-item pages).
-
-**Sort dropdown** — using `DropdownMenu` with `ArrowUpDown` icon, placed next to the search input:
-
-```tsx
-<DropdownMenu>
-  <DropdownMenuTrigger asChild>
-    <Button variant="outline" size="sm" className="h-10 px-3">
-      <ArrowUpDown className="h-4 w-4" />
-    </Button>
-  </DropdownMenuTrigger>
-  <DropdownMenuContent>
-    <DropdownMenuItem onClick={() => setSortOrder('desc')}>Newest first</DropdownMenuItem>
-    <DropdownMenuItem onClick={() => setSortOrder('asc')}>Oldest first</DropdownMenuItem>
-    <DropdownMenuItem onClick={() => setSortOrder('duration')}>Longest duration</DropdownMenuItem>
-  </DropdownMenuContent>
-</DropdownMenu>
-```
-
-**Search** stays client-side using `useMemo` on the loaded conversations, with 300ms debounce using `lodash.debounce`.
-
----
-
-### Part 3: Bulk Actions Toolbar
-
-**Selection on each conversation item** — add checkbox to left of content:
-
-```tsx
-<div className="flex items-start gap-2 p-3 ...">
-  <Checkbox
-    checked={selectedConversationIds.has(conv.id)}
-    onCheckedChange={(checked) => {
-      setSelectedConversationIds(prev => {
-        const next = new Set(prev);
-        checked ? next.add(conv.id) : next.delete(conv.id);
-        return next;
-      });
-    }}
-    onClick={(e) => e.stopPropagation()} // prevent row click
+<CommandDialog open={open} onOpenChange={setOpen}>
+  <CommandInput
+    placeholder={getPlaceholder()}
+    value={query}
+    onValueChange={setQuery}
+    autoFocus
   />
-  <div className="flex-1" onClick={() => setSelectedConversation(conv)}>
-    ...existing content...
-  </div>
-</div>
+  <CommandList>
+    {loading && <div className="py-3 text-center text-sm text-muted-foreground">Searching...</div>}
+    {!loading && query && results.length === 0 && (
+      <CommandEmpty>No results for "{query}"</CommandEmpty>
+    )}
+    {/* Recent section when empty */}
+    {!query && recentItems.length > 0 && (
+      <CommandGroup heading="Recent">
+        {recentItems.map(item => <CommandItem .../>)}
+      </CommandGroup>
+    )}
+    {/* Grouped results */}
+    {groupedResults.map(group => (
+      <CommandGroup key={group.category} heading={group.heading}>
+        {group.items.map(item => (
+          <CommandItem key={item.id} onSelect={() => handleSelect(item)}>
+            <item.icon className="mr-2 h-4 w-4" />
+            <span>{item.label}</span>
+            {item.sublabel && (
+              <span className="ml-auto text-xs text-muted-foreground">{item.sublabel}</span>
+            )}
+          </CommandItem>
+        ))}
+      </CommandGroup>
+    ))}
+  </CommandList>
+</CommandDialog>
 ```
 
-**Select All checkbox** in panel header:
-
-```tsx
-<Checkbox
-  checked={filteredConversations.length > 0 && filteredConversations.every(c => selectedConversationIds.has(c.id))}
-  onCheckedChange={(checked) => {
-    if (checked) setSelectedConversationIds(new Set(filteredConversations.map(c => c.id)));
-    else setSelectedConversationIds(new Set());
-  }}
-/>
-```
-
-**Bulk toolbar** — shown when `selectedConversationIds.size > 0`, slides in above the filter bar:
-
-```tsx
-{selectedConversationIds.size > 0 && (
-  <div className="p-2 bg-muted border-b border-border flex items-center gap-2 flex-wrap">
-    <span className="text-sm font-medium">{selectedConversationIds.size} selected</span>
-    <Button variant="ghost" size="sm" onClick={() => setSelectedConversationIds(new Set())}>
-      Clear
-    </Button>
-    
-    {/* Change Status */}
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm">Change Status</Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent>
-        <DropdownMenuItem onClick={() => bulkUpdateStatus('active')}>Active</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => bulkUpdateStatus('owned')}>Owned</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => bulkUpdateStatus('resolved')}>Resolved</DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-    
-    {/* Apply Tag */}
-    <DropdownMenu>...</DropdownMenu>
-    
-    {/* Remove Tag */}
-    <DropdownMenu>...</DropdownMenu>
-  </div>
-)}
-```
-
-**`bulkUpdateStatus`:**
-
-```typescript
-const bulkUpdateStatus = async (newStatus: string) => {
-  const ids = Array.from(selectedConversationIds);
-  await Promise.all(ids.map(id =>
-    supabase.from('conversations').update({ status: newStatus }).eq('id', id)
-  ));
-  toast({ title: "Success", description: `Updated ${ids.length} conversations` });
-  setSelectedConversationIds(new Set());
-  // Optimistic local update
-  setConversations(prev => prev.map(c => ids.includes(c.id) ? { ...c, status: newStatus } : c));
-};
-```
-
-**`bulkApplyTag` / `bulkRemoveTag`:** reads each conversation's current tags from local state and patches:
-
-```typescript
-const bulkApplyTag = async (tagLabel: string) => {
-  const ids = Array.from(selectedConversationIds);
-  await Promise.all(ids.map(id => {
-    const conv = conversations.find(c => c.id === id);
-    const currentTags = conv?.metadata?.tags || [];
-    if (currentTags.includes(tagLabel)) return Promise.resolve();
-    const newTags = [...currentTags, tagLabel];
-    return supabase.from('conversations').update({
-      metadata: { ...conv?.metadata, tags: newTags }
-    }).eq('id', id);
-  }));
-  toast({ title: "Success", description: `Tagged ${ids.length} conversations` });
-  setSelectedConversationIds(new Set());
-  // optimistic update to local state
-};
-```
-
----
-
-### Layout inside the left panel
-
-```
-┌─────────────────────────┐
-│ [Bulk toolbar]           │  ← conditional, bg-muted
-├─────────────────────────┤
-│ [Search input] [Sort ▾]  │
-├─────────────────────────┤
-│ [☐] All  Active  Owned   │  ← status pills + select-all checkbox
-│ [Sales][Support]         │  ← tag chips (if any)
-├─────────────────────────┤
-│ ScrollArea               │
-│  ☐ Conv item             │
-│  ☐ Conv item             │
-│  ...                      │
-│  (loading spinner)        │
-│  <sentinel div />         │
-└─────────────────────────┘
-```
+The `CommandDialog` already wires up Escape and click-outside to `onOpenChange`. Arrow key navigation and Enter to select are built into cmdk.
 
 ---
 
 ### Files to Modify
 
-| File | Change |
-|------|--------|
-| `src/pages/client/Conversations.tsx` | Full rewrite of left panel logic and UI |
+**`src/components/Sidebar.tsx`**
 
-**No other files are touched.** No DB migrations, no edge functions, no new dependencies (lodash.debounce and Checkbox are already installed).
+Add `Search` to the lucide-react imports (already imported in the file).
+
+After the logo `<div>` (line 171, closing `</div>`), add the search trigger button — **before** the Preview Mode banner:
+
+```tsx
+<button
+  onClick={() => window.dispatchEvent(new CustomEvent('open-command-search'))}
+  className="mx-4 mt-2 mb-1 flex items-center justify-between px-3 py-2 w-[calc(100%-2rem)] bg-muted/50 border border-border rounded-lg hover:bg-muted transition-colors"
+>
+  <div className="flex items-center gap-2">
+    <Search className="w-4 h-4 text-muted-foreground" />
+    <span className="text-sm text-muted-foreground">Search...</span>
+  </div>
+  <kbd className="bg-muted border border-border rounded px-1.5 py-0.5 text-xs text-muted-foreground">
+    {isMac ? '⌘K' : 'Ctrl K'}
+  </kbd>
+</button>
+```
+
+Detect Mac with `const isMac = typeof navigator !== 'undefined' && navigator.platform.toUpperCase().includes('MAC')`.
+
+**`src/App.tsx`**
+
+Import `CommandSearch` and render it once inside the provider tree, outside `<Routes>`, after the `<BrandingWrapper>` opening tag:
+
+```tsx
+<BrandingWrapper>
+  <CommandSearch />   {/* ← add here */}
+  <Routes>
+    ...
+  </Routes>
+</BrandingWrapper>
+```
+
+This means the keyboard shortcut and event listener are always active, regardless of which route is displayed.
+
+---
+
+### Navigation on Select
+
+| Category | Navigate to |
+|---|---|
+| `conversation` | `/?conversationId={id}` |
+| `transcript` | `/text-transcripts` (or `/transcripts` for Retell) |
+| `client` | `/agency/clients/{id}` |
+| `agent` | `/agency/agents/{id}` |
+| `agency` | `/admin/agencies/{id}` |
+
+The Conversations page already has a query-param based pre-selection pattern from the infinite scroll work, so `?conversationId=xxx` will just need a small `useEffect` in that page to auto-select on mount.
 
 ---
 
 ### Technical Notes
 
-- Tag filtering is client-side on the 30 loaded items (not a Supabase query filter) — this is intentional and sufficient.
-- Cursor-based pagination using `started_at` works for both `desc` and `asc` ordering. For `duration` sort, cursor is disabled and only the first 30 are shown (same behavior as before).
-- The real-time INSERT now prepends to the list instead of calling `loadConversations()`, which prevents wiping the infinitely-loaded state.
-- `selectedConversationIds` is cleared on agent change, filter change, and after any bulk operation.
-- The `Checkbox` component is already imported in the project (`src/components/ui/checkbox.tsx`).
-- `DropdownMenu` components are already available in the project.
-- `ArrowUpDown` is available from `lucide-react`.
+- `CommandDialog` from `src/components/ui/command.tsx` wraps cmdk's `Command` inside a shadcn `Dialog` — no need to build a custom modal.
+- cmdk handles all keyboard navigation (arrows, Enter, Escape) natively — no extra code needed.
+- Debounce is implemented with a `useRef` timeout, avoiding the need to memoize the lodash function.
+- The `CommandSearch` component is placed inside `ClientAgentProvider` in the tree (via `App.tsx`) so it can safely call `useClientAgentContext()`.
+- No Supabase schema changes needed — all queries use existing tables with existing RLS.
+- `text_transcripts` has `user_name` and `user_email` columns directly — no JSON path needed for transcript search.
+- The `conversations` table search is client-side on 50 rows to avoid Supabase JSON filter complexity.
+
+---
+
+### Summary of Changes
+
+| File | Change |
+|---|---|
+| `src/components/CommandSearch.tsx` | New file — full command palette |
+| `src/components/Sidebar.tsx` | Add search trigger button between logo and preview banner |
+| `src/App.tsx` | Mount `<CommandSearch />` inside providers, outside Routes |
+| `src/pages/client/Conversations.tsx` | Small addition: read `?conversationId` query param on mount to auto-select |
+
