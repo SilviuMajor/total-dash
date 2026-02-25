@@ -1,82 +1,362 @@
 
-## Error Boundaries + Consistent Loading States
+## Conversations Page Upgrade — Infinite Scroll, Filters, Bulk Actions
 
-This is a pure UI/UX quality improvement touching 12 files and creating 6 new ones. No data fetching, auth, or routing logic will be changed.
+This is a single-file upgrade to `src/pages/client/Conversations.tsx` (693 lines). The center and right panels are untouched. All new logic lives in the left panel.
 
 ---
 
-### Files to Create
+### What exists today
 
-**`src/components/ErrorBoundary.tsx`**
-React class component. Catches errors in its subtree and shows a centered "Something went wrong" message with a `variant="outline" size="sm"` Button that calls `window.location.reload()`. No card wrapper, no illustrations.
+- `loadConversations()`: fetches 50 conversations, replaces state entirely
+- Simple search filter (client-side)
+- Real-time subscription: INSERT/DELETE triggers `loadConversations()`, UPDATE patches in-place
+- No pagination, no status filter, no bulk select, no sort control
 
-**`src/components/skeletons/PageSkeleton.tsx`**
-Generic full-page skeleton: title bar (h-8 w-48), subtitle bar (h-4 w-72), then 3 card-shaped rectangles below. Uses `<Skeleton>` from `src/components/ui/skeleton.tsx` with `animate-pulse`.
+---
 
-**`src/components/skeletons/ConversationsSkeleton.tsx`**
-Matches the 3-column layout of the Conversations page:
-- Left col: 6 rows of [circle avatar + two text lines]
-- Center col: 8 message bubble placeholders alternating left/right
-- Right col: 3 label+value field placeholders
+### New State Variables
 
-**`src/components/skeletons/TableSkeleton.tsx`**
-Generic table skeleton: 1 header row with 4 column placeholders + 5 body rows with 4 columns each.
+```typescript
+// Infinite scroll
+const [hasMore, setHasMore] = useState(true);
+const [loadingMore, setLoadingMore] = useState(false);
+const cursorRef = useRef<string | null>(null);
 
-**`src/components/skeletons/AnalyticsSkeleton.tsx`**
-- Tab bar placeholder: row of 3 small rectangles
-- 2×2 grid of 4 card placeholders, each with a title line and a larger chart area rectangle
+// Filters
+const [statusFilter, setStatusFilter] = useState<string>('all');
+const [tagFilters, setTagFilters] = useState<string[]>([]);
+const [sortOrder, setSortOrder] = useState<'desc' | 'asc' | 'duration'>('desc');
 
-**`src/components/skeletons/index.ts`**
-Barrel export for all skeleton components.
+// Bulk select
+const [selectedConversationIds, setSelectedConversationIds] = useState<Set<string>>(new Set());
+
+// Sentinel ref for IntersectionObserver
+const sentinelRef = useRef<HTMLDivElement>(null);
+const convListScrollRef = useRef<HTMLDivElement>(null);
+```
+
+---
+
+### Part 1: Infinite Scroll
+
+**Replace `loadConversations`** with a new signature:
+
+```typescript
+const loadConversations = async (cursor?: string, append = false) => {
+  // Build query with sort + status filter
+  let query = supabase
+    .from('conversations')
+    .select('*')
+    .eq('agent_id', selectedAgentId!)
+    .order('started_at', { ascending: sortOrder === 'asc' })
+    .limit(30);
+
+  if (sortOrder === 'duration') {
+    query = supabase.from('conversations').select('*')
+      .eq('agent_id', selectedAgentId!)
+      .order('duration', { ascending: false })
+      .limit(30);
+  }
+
+  if (cursor && sortOrder !== 'duration') {
+    query = query.lt('started_at', cursor);
+  }
+
+  if (statusFilter !== 'all') {
+    query = query.eq('status', statusFilter);
+  }
+
+  const { data, error } = await query;
+  const rows = (data || []) as Conversation[];
+
+  if (append) {
+    setConversations(prev => [...prev, ...rows]);
+  } else {
+    setConversations(rows);
+  }
+
+  if (rows.length === 30) {
+    cursorRef.current = rows[rows.length - 1].started_at;
+    setHasMore(true);
+  } else {
+    setHasMore(false);
+  }
+};
+```
+
+**IntersectionObserver** on a `<div ref={sentinelRef} />` placed at the bottom of the conversation list:
+
+```typescript
+useEffect(() => {
+  if (!sentinelRef.current) return;
+  const observer = new IntersectionObserver(
+    (entries) => {
+      if (entries[0].isIntersecting && hasMore && !loadingMore) {
+        loadMore();
+      }
+    },
+    { threshold: 0.1 }
+  );
+  observer.observe(sentinelRef.current);
+  return () => observer.disconnect();
+}, [hasMore, loadingMore, sentinelRef.current]);
+```
+
+**loadMore:**
+
+```typescript
+const loadMore = async () => {
+  if (!hasMore || loadingMore || !cursorRef.current) return;
+  setLoadingMore(true);
+  await loadConversations(cursorRef.current, true);
+  setLoadingMore(false);
+};
+```
+
+**Reset on agent change / filter change:**
+
+```typescript
+useEffect(() => {
+  if (selectedAgentId) {
+    setConversations([]);
+    cursorRef.current = null;
+    setHasMore(true);
+    setSelectedConversationIds(new Set());
+    loadConversations();
+  }
+}, [selectedAgentId, statusFilter, tagFilters, sortOrder]);
+```
+
+**Real-time INSERT handling** — prepend to top without re-fetching entire list:
+
+```typescript
+if (payload.eventType === 'INSERT') {
+  setConversations(prev => [payload.new as Conversation, ...prev]);
+}
+// DELETE: filter out
+// UPDATE: patch in place (unchanged)
+```
+
+**Loading spinner** at bottom of list:
+
+```tsx
+{loadingMore && (
+  <div className="flex justify-center py-3">
+    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary" />
+  </div>
+)}
+<div ref={sentinelRef} className="h-1" />
+```
+
+---
+
+### Part 2: Status + Tag Filters + Sort
+
+**Status pills** — above the search bar in the left panel header area:
+
+```tsx
+<div className="flex gap-1 flex-wrap">
+  {(['all', 'active', 'owned', 'resolved'] as const).map(s => (
+    <Button
+      key={s}
+      size="sm"
+      variant={statusFilter === s ? 'default' : 'outline'}
+      onClick={() => setStatusFilter(s)}
+      className="h-7 text-xs rounded-full px-3"
+    >
+      {s !== 'all' && <span className={cn("w-1.5 h-1.5 rounded-full mr-1",
+        s === 'active' && 'bg-green-400',
+        s === 'owned' && 'bg-yellow-400',
+        s === 'resolved' && 'bg-blue-400'
+      )} />}
+      {s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
+    </Button>
+  ))}
+</div>
+```
+
+**Tag filter chips** — below status pills, only rendered if `agentConfig?.widget_settings?.functions?.conversation_tags` has enabled entries:
+
+```tsx
+<div className="flex gap-1 flex-wrap">
+  {availableTags.map(tag => (
+    <Badge
+      key={tag.id}
+      variant={tagFilters.includes(tag.label) ? 'default' : 'outline'}
+      className="cursor-pointer text-xs"
+      onClick={() => toggleTagFilter(tag.label)}
+      style={...color styling}
+    >
+      {tag.label}
+    </Badge>
+  ))}
+</div>
+```
+
+`toggleTagFilter`: adds/removes from `tagFilters` array. Tag filtering is applied **client-side** after fetch (since JSON array containment in Supabase requires `@>` operator — client-side is simpler and works fine for 30-item pages).
+
+**Sort dropdown** — using `DropdownMenu` with `ArrowUpDown` icon, placed next to the search input:
+
+```tsx
+<DropdownMenu>
+  <DropdownMenuTrigger asChild>
+    <Button variant="outline" size="sm" className="h-10 px-3">
+      <ArrowUpDown className="h-4 w-4" />
+    </Button>
+  </DropdownMenuTrigger>
+  <DropdownMenuContent>
+    <DropdownMenuItem onClick={() => setSortOrder('desc')}>Newest first</DropdownMenuItem>
+    <DropdownMenuItem onClick={() => setSortOrder('asc')}>Oldest first</DropdownMenuItem>
+    <DropdownMenuItem onClick={() => setSortOrder('duration')}>Longest duration</DropdownMenuItem>
+  </DropdownMenuContent>
+</DropdownMenu>
+```
+
+**Search** stays client-side using `useMemo` on the loaded conversations, with 300ms debounce using `lodash.debounce`.
+
+---
+
+### Part 3: Bulk Actions Toolbar
+
+**Selection on each conversation item** — add checkbox to left of content:
+
+```tsx
+<div className="flex items-start gap-2 p-3 ...">
+  <Checkbox
+    checked={selectedConversationIds.has(conv.id)}
+    onCheckedChange={(checked) => {
+      setSelectedConversationIds(prev => {
+        const next = new Set(prev);
+        checked ? next.add(conv.id) : next.delete(conv.id);
+        return next;
+      });
+    }}
+    onClick={(e) => e.stopPropagation()} // prevent row click
+  />
+  <div className="flex-1" onClick={() => setSelectedConversation(conv)}>
+    ...existing content...
+  </div>
+</div>
+```
+
+**Select All checkbox** in panel header:
+
+```tsx
+<Checkbox
+  checked={filteredConversations.length > 0 && filteredConversations.every(c => selectedConversationIds.has(c.id))}
+  onCheckedChange={(checked) => {
+    if (checked) setSelectedConversationIds(new Set(filteredConversations.map(c => c.id)));
+    else setSelectedConversationIds(new Set());
+  }}
+/>
+```
+
+**Bulk toolbar** — shown when `selectedConversationIds.size > 0`, slides in above the filter bar:
+
+```tsx
+{selectedConversationIds.size > 0 && (
+  <div className="p-2 bg-muted border-b border-border flex items-center gap-2 flex-wrap">
+    <span className="text-sm font-medium">{selectedConversationIds.size} selected</span>
+    <Button variant="ghost" size="sm" onClick={() => setSelectedConversationIds(new Set())}>
+      Clear
+    </Button>
+    
+    {/* Change Status */}
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="sm">Change Status</Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent>
+        <DropdownMenuItem onClick={() => bulkUpdateStatus('active')}>Active</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => bulkUpdateStatus('owned')}>Owned</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => bulkUpdateStatus('resolved')}>Resolved</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+    
+    {/* Apply Tag */}
+    <DropdownMenu>...</DropdownMenu>
+    
+    {/* Remove Tag */}
+    <DropdownMenu>...</DropdownMenu>
+  </div>
+)}
+```
+
+**`bulkUpdateStatus`:**
+
+```typescript
+const bulkUpdateStatus = async (newStatus: string) => {
+  const ids = Array.from(selectedConversationIds);
+  await Promise.all(ids.map(id =>
+    supabase.from('conversations').update({ status: newStatus }).eq('id', id)
+  ));
+  toast({ title: "Success", description: `Updated ${ids.length} conversations` });
+  setSelectedConversationIds(new Set());
+  // Optimistic local update
+  setConversations(prev => prev.map(c => ids.includes(c.id) ? { ...c, status: newStatus } : c));
+};
+```
+
+**`bulkApplyTag` / `bulkRemoveTag`:** reads each conversation's current tags from local state and patches:
+
+```typescript
+const bulkApplyTag = async (tagLabel: string) => {
+  const ids = Array.from(selectedConversationIds);
+  await Promise.all(ids.map(id => {
+    const conv = conversations.find(c => c.id === id);
+    const currentTags = conv?.metadata?.tags || [];
+    if (currentTags.includes(tagLabel)) return Promise.resolve();
+    const newTags = [...currentTags, tagLabel];
+    return supabase.from('conversations').update({
+      metadata: { ...conv?.metadata, tags: newTags }
+    }).eq('id', id);
+  }));
+  toast({ title: "Success", description: `Tagged ${ids.length} conversations` });
+  setSelectedConversationIds(new Set());
+  // optimistic update to local state
+};
+```
+
+---
+
+### Layout inside the left panel
+
+```
+┌─────────────────────────┐
+│ [Bulk toolbar]           │  ← conditional, bg-muted
+├─────────────────────────┤
+│ [Search input] [Sort ▾]  │
+├─────────────────────────┤
+│ [☐] All  Active  Owned   │  ← status pills + select-all checkbox
+│ [Sales][Support]         │  ← tag chips (if any)
+├─────────────────────────┤
+│ ScrollArea               │
+│  ☐ Conv item             │
+│  ☐ Conv item             │
+│  ...                      │
+│  (loading spinner)        │
+│  <sentinel div />         │
+└─────────────────────────┘
+```
 
 ---
 
 ### Files to Modify
 
-**`src/App.tsx`**
-Import `ErrorBoundary`. Wrap the inner content of each protected route group (the `<div className="flex h-screen...">` inside each guard, not the guard itself):
-- Admin routes inner `<div>` → wrapped in `<ErrorBoundary>`
-- Agency routes inner `<div>` → wrapped in `<ErrorBoundary>`
-- Client routes inner `<div>` → wrapped in `<ErrorBoundary>`
+| File | Change |
+|------|--------|
+| `src/pages/client/Conversations.tsx` | Full rewrite of left panel logic and UI |
 
-Each section gets its own independent boundary.
-
-**`src/components/ProtectedRoute.tsx`**
-Replace the full-screen spinner at line 94-98 with a minimal skeleton: sidebar placeholder (`w-64 h-screen bg-muted animate-pulse`) on the left + a content area placeholder on the right.
-
-**`src/pages/client/Analytics.tsx`**
-Line ~83: replace `<p className="text-muted-foreground">Loading analytics...</p>` with `<AnalyticsSkeleton />`.
-
-**`src/pages/client/Conversations.tsx`**
-The loading state inside the left panel (lines ~401-406) already has a basic pulse. Replace the entire left-panel loading block with `<ConversationsSkeleton />` rendered at the page level (before the 3-column card) when `loading === true`. Also update the empty state message:
-- "No conversations found." → "No conversations yet" with subtitle "Conversations will appear here once your chatbot starts receiving messages."
-
-**`src/pages/agency/AgencyAgents.tsx`**
-The page renders the full layout regardless of `loading`. Add a `loading` early return using `<PageSkeleton />` before the main return. Also add the empty state when `agents.length === 0 && !loading`:
-- "No agents created yet" with subtitle "Create your first AI agent to get started."
-
-**`src/pages/agency/AgencyClients.tsx`**
-Add a `loading` early return using `<TableSkeleton />`.
-
-**`src/pages/agency/AgencyAgentDetails.tsx`**
-Replace the full-screen spinner (line ~109-115) with `<PageSkeleton />`.
-
-**`src/pages/agency/AgencySettings.tsx`**
-Find the loading spinner state (from `loading` flag) and replace with `<PageSkeleton />`.
-
-**`src/pages/admin/Agencies.tsx`**
-Replace the loading state (lines 112-120, which shows a plain text "Loading...") with `<TableSkeleton />`.
-
-**`src/components/analytics/AnalyticsDashboard.tsx`**
-- Line 234: replace `<div>Loading...</div>` with `<AnalyticsSkeleton />`.
-- Lines 248-257: update the empty state text from "No cards yet. Add your first metric card!" to "Your analytics dashboard is empty" with subtitle "Add metric cards to start tracking your agent's performance." Keep the dashed border and the existing "Add Card" button.
+**No other files are touched.** No DB migrations, no edge functions, no new dependencies (lodash.debounce and Checkbox are already installed).
 
 ---
 
 ### Technical Notes
 
-- All skeletons use only `<Skeleton>` from the existing shadcn component — no new dependencies.
-- `animate-pulse` is Tailwind built-in; no extra config needed.
-- The `ErrorBoundary` must be a class component (React requirement for `componentDidCatch` / `getDerivedStateFromError`).
-- No Supabase queries, RLS policies, edge functions, auth logic, or routing will be touched.
-- The `ProtectedRoute` skeleton is intentionally minimal since it only shows for ~200ms on navigation.
+- Tag filtering is client-side on the 30 loaded items (not a Supabase query filter) — this is intentional and sufficient.
+- Cursor-based pagination using `started_at` works for both `desc` and `asc` ordering. For `duration` sort, cursor is disabled and only the first 30 are shown (same behavior as before).
+- The real-time INSERT now prepends to the list instead of calling `loadConversations()`, which prevents wiping the infinitely-loaded state.
+- `selectedConversationIds` is cleared on agent change, filter change, and after any bulk operation.
+- The `Checkbox` component is already imported in the project (`src/components/ui/checkbox.tsx`).
+- `DropdownMenu` components are already available in the project.
+- `ArrowUpDown` is available from `lucide-react`.
