@@ -51,7 +51,15 @@ import AgentSpecs from "./pages/client/AgentSpecs";
 import Guides from "./pages/client/Guides";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30_000,
+      retry: 1,
+      refetchOnWindowFocus: true,
+    },
+  },
+});
 
 const BrandingWrapper = ({ children }: { children: React.ReactNode }) => {
   const { effectiveTheme } = useTheme();
