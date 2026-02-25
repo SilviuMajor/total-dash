@@ -23,18 +23,21 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Construct the expected CNAME target
-    const expectedTarget = Deno.env.get('SUPABASE_URL')?.replace('https://', '') || 'your-project.supabase.co';
+    // The Cloudflare Worker URL that agencies should CNAME to
+    const cloudflareWorkerUrl = Deno.env.get('CLOUDFLARE_WORKER_URL') || '';
     const fullDomain = `${subdomain}.${domain}`;
 
-    console.log(`Verifying DNS for ${fullDomain} -> ${expectedTarget}`);
+    console.log(`Verifying DNS for ${fullDomain}`);
+    if (cloudflareWorkerUrl) {
+      console.log(`Expected CNAME target: ${cloudflareWorkerUrl}`);
+    }
 
     // Perform DNS CNAME lookup
     let verified = false;
     let message = '';
 
     try {
-      // Use DNS API to check CNAME record
+      // Use Google DNS API to check CNAME record
       const dnsResponse = await fetch(`https://dns.google/resolve?name=${fullDomain}&type=CNAME`);
       const dnsData = await dnsResponse.json();
 
@@ -47,15 +50,27 @@ serve(async (req) => {
           const cnameTarget = cnameRecord.data.replace(/\.$/, ''); // Remove trailing dot
           console.log(`Found CNAME: ${cnameTarget}`);
           
-          // For now, we'll mark as verified if a CNAME exists
-          // In production, you'd want to verify it points to your infrastructure
-          verified = true;
-          message = `DNS verified successfully. CNAME points to ${cnameTarget}`;
+          // If we have a Cloudflare Worker URL configured, verify it matches
+          if (cloudflareWorkerUrl) {
+            const normalizedTarget = cnameTarget.toLowerCase();
+            const normalizedExpected = cloudflareWorkerUrl.toLowerCase().replace(/^https?:\/\//, '');
+            
+            if (normalizedTarget === normalizedExpected || normalizedTarget.endsWith(`.${normalizedExpected}`)) {
+              verified = true;
+              message = `DNS verified successfully. CNAME correctly points to ${cnameTarget}`;
+            } else {
+              message = `CNAME record found but points to ${cnameTarget} instead of ${cloudflareWorkerUrl}. Please update your CNAME record.`;
+            }
+          } else {
+            // No Cloudflare Worker URL configured yet, accept any CNAME
+            verified = true;
+            message = `DNS verified successfully. CNAME points to ${cnameTarget}`;
+          }
         } else {
-          message = 'No CNAME record found. Please add a CNAME record pointing to your Lovable instance.';
+          message = 'No CNAME record found. Please add a CNAME record pointing to the provided target.';
         }
       } else {
-        message = 'No DNS records found. Please add a CNAME record.';
+        message = 'No DNS records found for this domain. Please add a CNAME record and wait for DNS propagation (5-10 minutes).';
       }
     } catch (dnsError) {
       console.error('DNS lookup error:', dnsError);
