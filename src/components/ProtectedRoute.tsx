@@ -92,8 +92,17 @@ export function ProtectedRoute({
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="flex h-screen w-full bg-background overflow-hidden">
+        <div className="w-64 h-screen bg-muted animate-pulse shrink-0" />
+        <div className="flex-1 p-8 space-y-4">
+          <div className="h-8 w-48 bg-muted animate-pulse rounded-md" />
+          <div className="h-4 w-72 bg-muted animate-pulse rounded-md" />
+          <div className="grid gap-4 md:grid-cols-3 mt-6">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="h-40 bg-muted animate-pulse rounded-xl" />
+            ))}
+          </div>
+        </div>
       </div>
     );
   }

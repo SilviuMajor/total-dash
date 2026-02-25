@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { AnalyticsSkeleton } from "@/components/skeletons";
 import { useClientAgentContext } from "@/hooks/useClientAgentContext";
 import { NoAgentsAssigned } from "@/components/NoAgentsAssigned";
 import { AnalyticsTabBar } from "@/components/analytics/AnalyticsTabBar";
@@ -96,8 +97,8 @@ export default function Analytics() {
 
   if (tabsLoading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <p className="text-muted-foreground">Loading analytics...</p>
+      <div className="p-2">
+        <AnalyticsSkeleton />
       </div>
     );
   }

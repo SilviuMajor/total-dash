@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { TableSkeleton } from "@/components/skeletons";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -114,8 +115,9 @@ export default function Agencies() {
       <div className="space-y-8">
         <div>
           <h1 className="text-4xl font-bold">Agencies</h1>
-          <p className="text-muted-foreground">Loading...</p>
+          <p className="text-muted-foreground">Manage all agencies on your platform</p>
         </div>
+        <TableSkeleton />
       </div>
     );
   }

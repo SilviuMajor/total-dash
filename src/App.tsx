@@ -11,6 +11,7 @@ import { ThemeProvider, useTheme } from "./hooks/useTheme";
 import { useBranding } from "./hooks/useBranding";
 import { useFavicon } from "./hooks/useFavicon";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AdminProtectedRoute } from "./components/AdminProtectedRoute";
 import { AgencyProtectedRoute } from "./components/AgencyProtectedRoute";
 import { Sidebar } from "./components/Sidebar";
@@ -99,6 +100,7 @@ const App = () => (
                 <Route path="/admin/login" element={<AdminLogin />} />
                 <Route path="/admin/*" element={
                   <AdminProtectedRoute>
+                    <ErrorBoundary>
                     <div className="flex h-screen w-full bg-background overflow-hidden">
                       <Sidebar />
                       <div className="flex-1 flex flex-col overflow-hidden">
@@ -117,6 +119,7 @@ const App = () => (
                         </main>
                       </div>
                     </div>
+                    </ErrorBoundary>
                   </AdminProtectedRoute>
                 } />
 
@@ -125,6 +128,7 @@ const App = () => (
                 <Route path="/agency/subscription-required" element={<SubscriptionRequired />} />
                 <Route path="/agency/*" element={
                   <AgencyProtectedRoute>
+                    <ErrorBoundary>
                     <div className="flex h-screen w-full bg-background overflow-hidden">
                       <Sidebar />
                       <div className="flex-1 flex flex-col overflow-hidden">
@@ -145,6 +149,7 @@ const App = () => (
                         </main>
                       </div>
                     </div>
+                    </ErrorBoundary>
                   </AgencyProtectedRoute>
                 } />
                 
@@ -157,6 +162,7 @@ const App = () => (
               {/* Client Routes - Isolated */}
               <Route path="/*" element={
                 <ProtectedRoute requireClient>
+                  <ErrorBoundary>
                   <div className="flex h-screen w-full bg-background overflow-hidden">
                     <Sidebar />
                     <div className="flex-1 flex flex-col overflow-hidden">
@@ -177,6 +183,7 @@ const App = () => (
                       </main>
                     </div>
                   </div>
+                  </ErrorBoundary>
                 </ProtectedRoute>
               } />
               </Routes>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { AnalyticsSkeleton } from "@/components/skeletons";
 import { supabase } from "@/integrations/supabase/client";
 import GridLayout, { Layout } from "react-grid-layout";
 import { MetricCard, AnalyticsCardData } from "./MetricCard";
@@ -231,7 +232,7 @@ export function AnalyticsDashboard({ tabId, metrics, isEditMode }: AnalyticsDash
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center h-96">Loading...</div>;
+    return <AnalyticsSkeleton />;
   }
 
   return (
@@ -247,7 +248,8 @@ export function AnalyticsDashboard({ tabId, metrics, isEditMode }: AnalyticsDash
 
       {cards.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-96 border-2 border-dashed border-border rounded-lg">
-          <p className="text-muted-foreground mb-4">No cards yet. Add your first metric card!</p>
+          <p className="text-muted-foreground font-medium mb-1">Your analytics dashboard is empty</p>
+          <p className="text-muted-foreground text-sm mb-4">Add metric cards to start tracking your agent's performance.</p>
           {isAdmin && (
             <Button className="gap-2" onClick={() => setShowAddCardModal(true)}>
               <Plus className="h-4 w-4" />

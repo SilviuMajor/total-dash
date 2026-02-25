@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import { ConversationsSkeleton } from "@/components/skeletons";
 import { Phone, Clock, CheckCircle, MessageSquare, ArrowDown } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -399,14 +400,11 @@ export default function Conversations() {
           <ScrollArea className="flex-1">
             <div className="space-y-2 p-2">
               {loading ? (
-                <div className="space-y-2">
-                  {[...Array(5)].map((_, i) => (
-                    <div key={i} className="animate-pulse p-3 rounded-lg bg-muted"></div>
-                  ))}
-                </div>
+                <ConversationsSkeleton />
               ) : filteredConversations.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  No conversations found.
+                <div className="text-center py-12 px-4">
+                  <p className="text-muted-foreground font-medium">No conversations yet</p>
+                  <p className="text-muted-foreground text-sm mt-1">Conversations will appear here once your chatbot starts receiving messages.</p>
                 </div>
               ) : (
                 filteredConversations.map((conv) => (
