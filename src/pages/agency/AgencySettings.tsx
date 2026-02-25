@@ -379,24 +379,32 @@ export default function AgencySettings() {
                   </div>
                   
                   <div className="space-y-4">
+                    <h3 className="text-lg font-semibold border-b pb-2">Custom Domain</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Set up a custom domain so your clients access their dashboard via your own branded URL (e.g., dashboard.youragency.com).
+                    </p>
+
                     <div className="space-y-2">
-                      <Label>Whitelabel Subdomain</Label>
+                      <Label>Subdomain Prefix</Label>
                       <Input
                         value={agency?.whitelabel_subdomain || 'dashboard'}
                         onChange={(e) => setAgency({ ...agency, whitelabel_subdomain: e.target.value })}
                         placeholder="dashboard"
                       />
+                      <p className="text-xs text-muted-foreground">
+                        This is the subdomain your clients will use (e.g., <span className="font-mono">dashboard</span>)
+                      </p>
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Whitelabel Domain</Label>
+                      <Label>Your Domain</Label>
                       <Input
                         value={agency?.whitelabel_domain || ''}
                         onChange={(e) => setAgency({ ...agency, whitelabel_domain: e.target.value })}
                         placeholder="youragency.com"
                       />
                       <p className="text-xs text-muted-foreground">
-                        Full domain: <span className="font-mono">{agency?.whitelabel_subdomain || 'dashboard'}.{agency?.whitelabel_domain || 'youragency.com'}</span>
+                        Full URL: <span className="font-mono font-semibold">{agency?.whitelabel_subdomain || 'dashboard'}.{agency?.whitelabel_domain || 'youragency.com'}</span>
                       </p>
                     </div>
 
@@ -423,16 +431,21 @@ export default function AgencySettings() {
                     {agency?.whitelabel_domain && !agency?.whitelabel_verified && (
                       <div className="space-y-3 p-4 bg-muted rounded-lg">
                         <p className="text-sm font-semibold">DNS Configuration Required:</p>
+                        <p className="text-xs text-muted-foreground">
+                          Add a CNAME record in your domain registrar's DNS settings to point to our platform.
+                        </p>
                         <ol className="text-xs space-y-2 list-decimal list-inside">
-                          <li>Go to your domain registrar's DNS settings</li>
+                          <li>Log into your domain registrar (GoDaddy, Namecheap, Cloudflare, etc.)</li>
+                          <li>Go to DNS settings for <span className="font-mono font-semibold">{agency?.whitelabel_domain}</span></li>
                           <li>Add a CNAME record:
-                            <div className="mt-1 p-2 bg-background rounded font-mono text-xs">
-                              Name: {agency?.whitelabel_subdomain || 'dashboard'}<br/>
-                              Type: CNAME<br/>
-                              Value: your-project.supabase.co
+                            <div className="mt-1 p-3 bg-background rounded font-mono text-xs border">
+                              <div><span className="text-muted-foreground">Type:</span> CNAME</div>
+                              <div><span className="text-muted-foreground">Name:</span> {agency?.whitelabel_subdomain || 'dashboard'}</div>
+                              <div><span className="text-muted-foreground">Target:</span> totaldash-proxy.workers.dev</div>
                             </div>
                           </li>
-                          <li>Click "Verify Domain" below after adding the record</li>
+                          <li>Wait 5-10 minutes for DNS propagation</li>
+                          <li>Click "Verify Domain" below</li>
                         </ol>
                         <Button 
                           type="button" 
@@ -441,7 +454,12 @@ export default function AgencySettings() {
                           variant="outline"
                           className="w-full"
                         >
-                          {verifying ? 'Verifying...' : 'Verify Domain'}
+                          {verifying ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Verifying...
+                            </>
+                          ) : 'Verify Domain'}
                         </Button>
                       </div>
                     )}
