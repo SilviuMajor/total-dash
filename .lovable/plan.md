@@ -1,163 +1,82 @@
 
+## Error Boundaries + Consistent Loading States
 
-## Complete Cloudflare Custom Domain Implementation Plan
-
-### Phase 1: Cloudflare Infrastructure Setup (One-time, you do this)
-
-**1.1 Create Cloudflare Account & Worker**
-- Sign up for free Cloudflare account at cloudflare.com
-- Go to Workers & Pages → Create Worker
-- Name it something like `totaldash-proxy`
-
-**1.2 Worker Code** (I'll provide this):
-```javascript
-export default {
-  async fetch(request) {
-    const url = new URL(request.url);
-    const originalHost = url.hostname; // e.g., dashboard.fiveleaf.co.uk
-    
-    // Rewrite to your actual app
-    url.hostname = 'total-dash.com';
-    
-    // Clone request with new URL and add original host header
-    const modifiedRequest = new Request(url.toString(), {
-      method: request.method,
-      headers: new Headers(request.headers),
-      body: request.body,
-    });
-    
-    // Pass the original domain so your app knows which agency
-    modifiedRequest.headers.set('X-Original-Host', originalHost);
-    modifiedRequest.headers.set('X-Forwarded-Host', originalHost);
-    
-    // Fetch from your actual app
-    const response = await fetch(modifiedRequest);
-    
-    // Return response with CORS headers if needed
-    return response;
-  }
-}
-```
-
-**1.3 Configure Custom Domains for Worker**
-- In Worker settings → Triggers → Custom Domains
-- You'll get a `*.workers.dev` URL (e.g., `totaldash-proxy.yourname.workers.dev`)
-- This is what agencies will CNAME to
+This is a pure UI/UX quality improvement touching 12 files and creating 6 new ones. No data fetching, auth, or routing logic will be changed.
 
 ---
 
-### Phase 2: Update App to Detect Custom Domains
+### Files to Create
 
-**2.1 Update `check-domain-context` edge function:**
-- Check for `X-Original-Host` or `X-Forwarded-Host` headers
-- If present, use that domain instead of the request host
-- Look up agency by `whitelabel_domain` field
+**`src/components/ErrorBoundary.tsx`**
+React class component. Catches errors in its subtree and shows a centered "Something went wrong" message with a `variant="outline" size="sm"` Button that calls `window.location.reload()`. No card wrapper, no illustrations.
 
-**2.2 Update `check-domain-context/index.ts`:**
-```typescript
-// At the start of the function:
-const originalHost = req.headers.get('x-original-host') || 
-                     req.headers.get('x-forwarded-host') || 
-                     domain;
+**`src/components/skeletons/PageSkeleton.tsx`**
+Generic full-page skeleton: title bar (h-8 w-48), subtitle bar (h-4 w-72), then 3 card-shaped rectangles below. Uses `<Skeleton>` from `src/components/ui/skeleton.tsx` with `animate-pulse`.
 
-// Then use originalHost for agency lookup instead of domain
-const { data: whitelabelAgency } = await supabase
-  .from('agencies')
-  .select('*')
-  .eq('whitelabel_domain', originalHost.replace(/^dashboard\./, ''))
-  .eq('whitelabel_verified', true)
-  .single();
-```
+**`src/components/skeletons/ConversationsSkeleton.tsx`**
+Matches the 3-column layout of the Conversations page:
+- Left col: 6 rows of [circle avatar + two text lines]
+- Center col: 8 message bubble placeholders alternating left/right
+- Right col: 3 label+value field placeholders
 
----
+**`src/components/skeletons/TableSkeleton.tsx`**
+Generic table skeleton: 1 header row with 4 column placeholders + 5 body rows with 4 columns each.
 
-### Phase 3: Update Agency Settings UI
+**`src/components/skeletons/AnalyticsSkeleton.tsx`**
+- Tab bar placeholder: row of 3 small rectangles
+- 2×2 grid of 4 card placeholders, each with a title line and a larger chart area rectangle
 
-**3.1 Add "Custom Domain" title to the whitelabel section**
-
-**3.2 Update DNS instructions to show:**
-- The actual Cloudflare Worker URL to CNAME to
-- Clear step-by-step instructions for agencies
-
-**3.3 Update verification to actually check:**
-- That the CNAME points to your Cloudflare Worker
-- That the domain resolves correctly
-
-**3.4 Example UI text:**
-```
-Custom Domain Setup
-
-1. In your domain's DNS settings, add a CNAME record:
-   
-   Type: CNAME
-   Name: dashboard (or your preferred subdomain)
-   Target: totaldash-proxy.yourname.workers.dev
-
-2. Wait 5-10 minutes for DNS propagation
-
-3. Click "Verify Domain" below
-```
+**`src/components/skeletons/index.ts`**
+Barrel export for all skeleton components.
 
 ---
 
-### Phase 4: Database & Config Updates
+### Files to Modify
 
-**4.1 Ensure agencies table has:**
-- `whitelabel_subdomain` - e.g., "dashboard"
-- `whitelabel_domain` - e.g., "fiveleaf.co.uk"  
-- `whitelabel_verified` - boolean
-- `whitelabel_verified_at` - timestamp
+**`src/App.tsx`**
+Import `ErrorBoundary`. Wrap the inner content of each protected route group (the `<div className="flex h-screen...">` inside each guard, not the guard itself):
+- Admin routes inner `<div>` → wrapped in `<ErrorBoundary>`
+- Agency routes inner `<div>` → wrapped in `<ErrorBoundary>`
+- Client routes inner `<div>` → wrapped in `<ErrorBoundary>`
 
-**4.2 Update `verify-whitelabel-domain` function:**
-- Check that CNAME points to your Cloudflare Worker URL
-- Store the worker URL as an env variable/secret
+Each section gets its own independent boundary.
 
----
+**`src/components/ProtectedRoute.tsx`**
+Replace the full-screen spinner at line 94-98 with a minimal skeleton: sidebar placeholder (`w-64 h-screen bg-muted animate-pulse`) on the left + a content area placeholder on the right.
 
-### Phase 5: Client Login Flow
+**`src/pages/client/Analytics.tsx`**
+Line ~83: replace `<p className="text-muted-foreground">Loading analytics...</p>` with `<AnalyticsSkeleton />`.
 
-**5.1 Update login URL generation:**
-- For verified whitelabel agencies: `https://dashboard.fiveleaf.co.uk/client/login`
-- For non-whitelabel: `https://total-dash.com/login/fiveleaf`
+**`src/pages/client/Conversations.tsx`**
+The loading state inside the left panel (lines ~401-406) already has a basic pulse. Replace the entire left-panel loading block with `<ConversationsSkeleton />` rendered at the page level (before the 3-column card) when `loading === true`. Also update the empty state message:
+- "No conversations found." → "No conversations yet" with subtitle "Conversations will appear here once your chatbot starts receiving messages."
 
-**5.2 Update `SlugBasedAuth` and routing:**
-- When accessed via custom domain, detect agency from domain
-- Apply full whitelabel branding
+**`src/pages/agency/AgencyAgents.tsx`**
+The page renders the full layout regardless of `loading`. Add a `loading` early return using `<PageSkeleton />` before the main return. Also add the empty state when `agents.length === 0 && !loading`:
+- "No agents created yet" with subtitle "Create your first AI agent to get started."
 
----
+**`src/pages/agency/AgencyClients.tsx`**
+Add a `loading` early return using `<TableSkeleton />`.
 
-### What Fiveleaf Would Do (Their Side)
+**`src/pages/agency/AgencyAgentDetails.tsx`**
+Replace the full-screen spinner (line ~109-115) with `<PageSkeleton />`.
 
-1. Log into their domain registrar (GoDaddy, Namecheap, Cloudflare, etc.)
-2. Go to DNS settings for fiveleaf.co.uk
-3. Add one record:
-   - **Type:** CNAME
-   - **Name:** dashboard
-   - **Value:** totaldash-proxy.yourname.workers.dev
-4. Wait 5-10 minutes
-5. In your platform, click "Verify Domain"
-6. Done! `dashboard.fiveleaf.co.uk` now works
+**`src/pages/agency/AgencySettings.tsx`**
+Find the loading spinner state (from `loading` flag) and replace with `<PageSkeleton />`.
 
----
+**`src/pages/admin/Agencies.tsx`**
+Replace the loading state (lines 112-120, which shows a plain text "Loading...") with `<TableSkeleton />`.
 
-### Cost & Limitations
-
-| Item | Free Tier Limit |
-|------|----------------|
-| Cloudflare Workers | 100,000 requests/day |
-| Custom domains | Unlimited |
-| SSL certificates | Automatic & free |
-
-For most agencies, 100k requests/day is plenty. If you exceed this, Cloudflare's paid tier is ~$5/month for 10M requests.
+**`src/components/analytics/AnalyticsDashboard.tsx`**
+- Line 234: replace `<div>Loading...</div>` with `<AnalyticsSkeleton />`.
+- Lines 248-257: update the empty state text from "No cards yet. Add your first metric card!" to "Your analytics dashboard is empty" with subtitle "Add metric cards to start tracking your agent's performance." Keep the dashed border and the existing "Add Card" button.
 
 ---
 
-### Files to Create/Modify
+### Technical Notes
 
-| File | Action |
-|------|--------|
-| `supabase/functions/check-domain-context/index.ts` | Add X-Original-Host header detection |
-| `supabase/functions/verify-whitelabel-domain/index.ts` | Update to verify CNAME points to Cloudflare Worker |
-| `src/pages/agency/AgencySettings.tsx` | Add "Custom Domain" title, update instructions |
-| New: Cloudflare Worker code | Provide ready-to-deploy code |
-
+- All skeletons use only `<Skeleton>` from the existing shadcn component — no new dependencies.
+- `animate-pulse` is Tailwind built-in; no extra config needed.
+- The `ErrorBoundary` must be a class component (React requirement for `componentDidCatch` / `getDerivedStateFromError`).
+- No Supabase queries, RLS policies, edge functions, auth logic, or routing will be touched.
+- The `ProtectedRoute` skeleton is intentionally minimal since it only shows for ~200ms on navigation.
