@@ -31,6 +31,17 @@ interface ClientAgentContextType {
 
 const ClientAgentContext = createContext<ClientAgentContextType | undefined>(undefined);
 
+interface AgentAssignmentRow {
+  agent_id: string;
+  sort_order: number;
+  agents: {
+    id: string;
+    name: string;
+    provider: string;
+    status: string;
+  } | null;
+}
+
 export function ClientAgentProvider({ children }: { children: ReactNode }) {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
@@ -93,13 +104,13 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
 
       if (assignmentsError) throw assignmentsError;
 
-      const agentsList = assignments
+      const agentsList = (assignments as AgentAssignmentRow[])
         ?.map(a => ({
-          id: (a.agents as any).id,
-          name: (a.agents as any).name,
-          provider: (a.agents as any).provider,
-          status: (a.agents as any).status,
-          sort_order: a.sort_order
+          id: a.agents?.id ?? '',
+          name: a.agents?.name ?? '',
+          provider: a.agents?.provider ?? '',
+          status: a.agents?.status as Agent['status'],
+          sort_order: a.sort_order ?? 0
         }))
         .filter(a => a.id) || [];
 
@@ -172,13 +183,13 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
       // Map agents with sort order
       const sortOrderMap = new Map(assignments?.map(a => [a.agent_id, a.sort_order]) || []);
       
-      const agentsList = permissionsData
+      const agentsList = (permissionsData as Array<typeof permissionsData[0] & { agents: AgentAssignmentRow['agents'] }>)
         ?.map(p => ({
-          id: (p.agents as any).id,
-          name: (p.agents as any).name,
-          provider: (p.agents as any).provider,
-          status: (p.agents as any).status,
-          sort_order: sortOrderMap.get((p.agents as any).id) || 999,
+          id: p.agents?.id ?? '',
+          name: p.agents?.name ?? '',
+          provider: p.agents?.provider ?? '',
+          status: p.agents?.status as Agent['status'],
+          sort_order: sortOrderMap.get(p.agents?.id ?? '') || 999,
           permissions: p.permissions as unknown as AgentPermissions,
         }))
         .filter(a => a.id)

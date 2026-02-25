@@ -23,10 +23,18 @@ export default function AgencyClients() {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [canAddMore, setCanAddMore] = useState(true);
-  const [limits, setLimits] = useState<any>(null);
+
+  interface SubscriptionLimits {
+    current_clients: number | null;
+    custom_max_clients: number | null;
+    is_custom_limits: boolean | null;
+    subscription_plans: { max_clients: number } | null;
+  }
+
+  const [limits, setLimits] = useState<SubscriptionLimits | null>(null);
 
   const { data: clients = [], isLoading } = useAgencyClients(agencyId);
-  const clientIds = clients.map((c: any) => c.id);
+  const clientIds = clients.map(c => c.id);
   const { data: clientAgents = {} } = useClientAgents(agencyId, clientIds);
   const { data: clientUsers = {} } = useClientUserCounts(clientIds);
 

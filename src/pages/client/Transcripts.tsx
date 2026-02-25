@@ -108,8 +108,6 @@ export default function Transcripts() {
           filter: `agent_id=eq.${selectedAgentId}`
         },
         (payload) => {
-          console.log('Conversation change:', payload);
-          
           if (payload.eventType === 'INSERT' || payload.eventType === 'DELETE') {
             loadConversations();
           } else if (payload.eventType === 'UPDATE') {
@@ -145,7 +143,6 @@ export default function Transcripts() {
           filter: `conversation_id=eq.${selectedConversation.id}`
         },
         (payload) => {
-          console.log('New transcript:', payload);
           setTranscripts(prev => [...prev, payload.new as Transcript]);
           
           setTimeout(() => {

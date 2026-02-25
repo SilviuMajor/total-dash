@@ -51,9 +51,8 @@ export default function Agencies() {
     return null;
   };
 
-  const loadAgencies = async (retrying = false) => {
+      const loadAgencies = async (retrying = false) => {
     try {
-      console.log("Loading agencies via edge function...");
 
       const { data, error } = await supabase.functions.invoke('get-agencies-overview');
 
@@ -63,7 +62,6 @@ export default function Agencies() {
         
         // Retry once on 401 by refreshing session
         if (!retrying && status === 401) {
-          console.log("Got 401, refreshing session and retrying...");
           const { error: refreshError } = await supabase.auth.refreshSession();
           if (refreshError) {
             console.error("Session refresh failed:", refreshError);
@@ -76,7 +74,6 @@ export default function Agencies() {
         throw error;
       }
 
-      console.log("Agencies loaded:", data?.agencies?.length || 0);
       setAgencies(data?.agencies || []);
     } catch (error: any) {
       toast.error("Failed to load agencies");

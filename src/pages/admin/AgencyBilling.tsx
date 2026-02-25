@@ -54,9 +54,8 @@ export default function AgencyBilling() {
     return null;
   };
 
-  const loadBillingData = async (retrying = false) => {
+      const loadBillingData = async (retrying = false) => {
     try {
-      console.log("Loading billing data via edge function...");
 
       const { data, error } = await supabase.functions.invoke('get-billing-data');
 
@@ -66,7 +65,6 @@ export default function AgencyBilling() {
         
         // Retry once on 401 by refreshing session
         if (!retrying && status === 401) {
-          console.log("Got 401, refreshing session and retrying...");
           const { error: refreshError } = await supabase.auth.refreshSession();
           if (refreshError) {
             console.error("Session refresh failed:", refreshError);
@@ -79,9 +77,6 @@ export default function AgencyBilling() {
         throw error;
       }
 
-      console.log(`Loaded ${data?.data?.length || 0} agencies from edge function`);
-      console.log("Sample agency data:", data?.data?.[0]);
-      
       setBillingData(data?.data || []);
     } catch (error) {
       console.error('Error loading billing data:', error);

@@ -133,13 +133,11 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
 
   // Effect 1: Auth initialization - ALWAYS runs, never returns early
   useEffect(() => {
-    console.log('[Auth] Initializing auth listener and session');
     
     // Set up auth state listener FIRST
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log('[Auth] Auth state change:', _event, session?.user?.id);
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -153,7 +151,6 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
 
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('[Auth] Initial session loaded:', session?.user?.id);
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -174,11 +171,9 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
     // Handle token-based preview mode
     if (tokenParam) {
       setIsValidatingToken(true);
-      console.log('[Preview] Token detected:', tokenParam);
       
       const validateToken = async () => {
         try {
-          console.log('[Preview] Validation starting...');
           const { data: authContext, error } = await supabase
             .from('auth_contexts')
             .select('*')
@@ -195,7 +190,6 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
           
           // Check if token has expired
           if (new Date(authContext.expires_at) < new Date()) {
-            console.error('Preview session expired');
             navigate('/admin/agencies', { replace: true });
             setIsValidatingToken(false);
             return;
@@ -205,7 +199,6 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
           if (authContext.context_type === 'agency' && authContext.agency_id) {
             setIsPreviewMode(true);
             setPreviewDepth('agency');
-            console.log('[Preview] States set - isPreviewMode: true, previewDepth: agency');
             
             sessionStorage.setItem(PREVIEW_MODE_KEY, 'agency');
             sessionStorage.setItem(PREVIEW_AGENCY_KEY, authContext.agency_id);
@@ -277,12 +270,10 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
             sessionStorage.removeItem(PREVIEW_MODE_KEY);
             sessionStorage.removeItem(PREVIEW_AGENCY_KEY);
             sessionStorage.removeItem('preview_token');
-            console.error('Preview session expired');
             navigate('/admin/agencies', { replace: true });
           } else {
             setIsPreviewMode(true);
             setPreviewDepth('agency');
-            console.log('[Preview] Restoring from sessionStorage');
             loadPreviewAgency(storedPreviewAgency);
           }
         };

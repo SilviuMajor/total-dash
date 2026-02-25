@@ -43,12 +43,10 @@ export function AgencyUsersContent({ agencyId }: AgencyUsersContentProps) {
   useEffect(() => {
     // Wait for super admin status to be determined before loading
     if (isSuperAdminLoading) {
-      console.log('[AgencyUsersContent] Waiting for super admin status...');
       return;
     }
     
     if (agencyId) {
-      console.log('[AgencyUsersContent] Loading data. isSuperAdmin:', isSuperAdmin, 'isPreviewMode:', isPreviewMode);
       loadUsers();
     }
   }, [agencyId, isSuperAdmin, isSuperAdminLoading, isPreviewMode]);
@@ -62,8 +60,6 @@ export function AgencyUsersContent({ agencyId }: AgencyUsersContentProps) {
 
       // If super admin preview, always use bypass function
       if (isSuperAdminPreview) {
-        console.log('[AgencyUsersContent] Super admin preview: using bypass function');
-        
         const { data: functionData, error: functionError } = await supabase.functions.invoke(
           'get-agency-users',
           { body: { agencyId } }

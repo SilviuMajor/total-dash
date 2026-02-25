@@ -27,7 +27,7 @@ const agencyNavigation = [
   { name: "Clients", href: "/agency/clients", icon: Users, permissionKey: "clients" },
   { name: "Agents", href: "/agency/agents", icon: Bot, permissionKey: "agents" },
   { name: "Subscription", href: "/agency/subscription", icon: CreditCard, permissionKey: "subscription" },
-  { name: "Settings", href: "/agency/settings", icon: Settings as any, permissionKey: "settings" },
+  { name: "Settings", href: "/agency/settings", icon: Settings, permissionKey: "settings" },
 ];
 
 const adminNavigation = [
@@ -46,7 +46,15 @@ export function Sidebar() {
   const location = useLocation();
   const isAdmin = profile?.role === 'admin';
   const isMac = typeof navigator !== 'undefined' && navigator.platform.toUpperCase().includes('MAC');
-  const [clientPermissions, setClientPermissions] = useState<any>(null);
+  interface ClientPermissions {
+    conversations?: boolean;
+    transcripts?: boolean;
+    analytics?: boolean;
+    knowledge_base?: boolean;
+    settings?: boolean;
+    [key: string]: boolean | undefined;
+  }
+  const [clientPermissions, setClientPermissions] = useState<ClientPermissions | null>(null);
   
   // Determine branding context
   const isClientView = isClientPreviewMode;
@@ -69,7 +77,7 @@ export function Sidebar() {
           .single();
         
         if (data?.default_user_permissions) {
-          setClientPermissions(data.default_user_permissions);
+          setClientPermissions(data.default_user_permissions as ClientPermissions);
         }
       };
       loadClientPermissions();
