@@ -4,7 +4,6 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { AuthProvider } from "./hooks/useAuth";
 import { MultiTenantAuthProvider, useMultiTenantAuth } from "./hooks/useMultiTenantAuth";
 import { ClientAgentProvider } from "./hooks/useClientAgentContext";
 import { ThemeProvider, useTheme } from "./hooks/useTheme";
@@ -96,7 +95,6 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <MultiTenantAuthProvider>
-          <AuthProvider>
             <ThemeProvider>
               <ClientAgentProvider>
                 <BrandingWrapper>
@@ -200,7 +198,6 @@ const App = () => (
                 </BrandingWrapper>
               </ClientAgentProvider>
             </ThemeProvider>
-          </AuthProvider>
         </MultiTenantAuthProvider>
       </BrowserRouter>
     </TooltipProvider>

@@ -55,14 +55,6 @@ export function AgencyProtectedRoute({ children }: AgencyProtectedRouteProps) {
 
   // Show loading if validating token, checking subscription, or if token exists but userType not set yet
   if (loading || checkingSubscription || isValidatingToken || (hasToken && !userType)) {
-    console.log('[AgencyProtectedRoute] Loading state:', {
-      loading,
-      checkingSubscription,
-      isValidatingToken,
-      hasToken,
-      userType,
-      isPreviewMode
-    });
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

@@ -19,7 +19,27 @@ export default function AgencySettings() {
   const effectiveIsPreviewMode = userType === 'super_admin' && previewDepth === 'agency';
   const effectiveAgencyId = effectiveIsPreviewMode ? previewAgency?.id : profile?.agency?.id;
   const { toast } = useToast();
-  const [agency, setAgency] = useState<any>(null);
+  interface AgencyRow {
+    id: string;
+    name: string;
+    slug: string;
+    original_slug?: string;
+    support_email: string | null;
+    logo_light_url: string | null;
+    logo_dark_url: string | null;
+    full_logo_light_url: string | null;
+    full_logo_dark_url: string | null;
+    favicon_light_url: string | null;
+    favicon_dark_url: string | null;
+    whitelabel_domain: string | null;
+    whitelabel_subdomain: string | null;
+    whitelabel_verified: boolean | null;
+    whitelabel_verified_at: string | null;
+    primary_color: string | null;
+    secondary_color: string | null;
+  }
+
+  const [agency, setAgency] = useState<AgencyRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [verifying, setVerifying] = useState(false);
@@ -42,18 +62,16 @@ export default function AgencySettings() {
           _agency_id: effectiveAgencyId
         });
 
-        if (error) {
-          console.error('[AgencySettings] Error checking whitelabel access:', error);
-          setHasWhitelabel(false);
-          return;
-        }
-
-        console.log('[AgencySettings] Whitelabel access for agency', effectiveAgencyId, ':', data);
-        setHasWhitelabel(data || false);
-      } catch (err) {
-        console.error('[AgencySettings] Failed to check whitelabel access:', err);
+      if (error) {
         setHasWhitelabel(false);
+        return;
       }
+
+      setHasWhitelabel(data || false);
+    } catch (err) {
+      console.error('[AgencySettings] Failed to check whitelabel access:', err);
+      setHasWhitelabel(false);
+    }
     };
 
     checkWhitelabelAccess();

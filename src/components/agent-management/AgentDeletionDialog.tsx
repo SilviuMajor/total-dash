@@ -43,7 +43,7 @@ export function AgentDeletionDialog({
   };
 
   const handleWarningConfirm = (e: React.MouseEvent) => {
-    e.preventDefault(); // Prevent dialog from closing
+    e.preventDefault();
     setStep("password");
   };
 
@@ -59,7 +59,6 @@ export function AgentDeletionDialog({
 
     setDeleting(true);
     try {
-      // Verify admin password
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
@@ -78,136 +77,85 @@ export function AgentDeletionDialog({
         return;
       }
 
-      console.log("Password verified, starting deletion process for agent:", agentId);
-
       // Delete in order: conversations (which will cascade to transcripts), agent_assignments, then agent
       const { data: conversations } = await supabase
         .from("conversations")
         .select("id")
         .eq("agent_id", agentId);
 
-      console.log("Found conversations to delete:", conversations?.length || 0);
-
       if (conversations && conversations.length > 0) {
         const conversationIds = conversations.map((c) => c.id);
         
-        // Delete transcripts
         const { error: transcriptsError } = await supabase
           .from("transcripts")
           .delete()
           .in("conversation_id", conversationIds);
 
-        if (transcriptsError) {
-          console.error("Error deleting transcripts:", transcriptsError);
-          throw transcriptsError;
-        }
-        console.log("Transcripts deleted");
+        if (transcriptsError) throw transcriptsError;
 
-        // Delete conversations
         const { error: conversationsError } = await supabase
           .from("conversations")
           .delete()
           .eq("agent_id", agentId);
 
-        if (conversationsError) {
-          console.error("Error deleting conversations:", conversationsError);
-          throw conversationsError;
-        }
-        console.log("Conversations deleted");
+        if (conversationsError) throw conversationsError;
       }
 
-      // Delete agent assignments
       const { error: assignmentsError } = await supabase
         .from("agent_assignments")
         .delete()
         .eq("agent_id", agentId);
 
-      if (assignmentsError) {
-        console.error("Error deleting agent assignments:", assignmentsError);
-        throw assignmentsError;
-      }
-      console.log("Agent assignments deleted");
+      if (assignmentsError) throw assignmentsError;
 
-      // Delete client user agent permissions
       const { error: permissionsError } = await supabase
         .from("client_user_agent_permissions")
         .delete()
         .eq("agent_id", agentId);
 
-      if (permissionsError) {
-        console.error("Error deleting agent permissions:", permissionsError);
-        throw permissionsError;
-      }
-      console.log("Agent permissions deleted");
+      if (permissionsError) throw permissionsError;
 
-      // Delete agent update logs
       const { error: logsError } = await supabase
         .from("agent_update_logs")
         .delete()
         .eq("agent_id", agentId);
 
-      if (logsError) {
-        console.error("Error deleting update logs:", logsError);
-        throw logsError;
-      }
-      console.log("Update logs deleted");
+      if (logsError) throw logsError;
 
-      // Delete agent integrations
       const { error: integrationsError } = await supabase
         .from("agent_integrations")
         .delete()
         .eq("agent_id", agentId);
 
-      if (integrationsError) {
-        console.error("Error deleting integrations:", integrationsError);
-        throw integrationsError;
-      }
-      console.log("Integrations deleted");
+      if (integrationsError) throw integrationsError;
 
-      // Delete agent workflows
       const { error: workflowsError } = await supabase
         .from("agent_workflows")
         .delete()
         .eq("agent_id", agentId);
 
-      if (workflowsError) {
-        console.error("Error deleting workflows:", workflowsError);
-        throw workflowsError;
-      }
-      console.log("Workflows deleted");
+      if (workflowsError) throw workflowsError;
 
-      // Delete agent workflow categories
       const { error: categoriesError } = await supabase
         .from("agent_workflow_categories")
         .delete()
         .eq("agent_id", agentId);
 
-      if (categoriesError) {
-        console.error("Error deleting workflow categories:", categoriesError);
-        throw categoriesError;
-      }
-      console.log("Workflow categories deleted");
+      if (categoriesError) throw categoriesError;
 
-      // Delete agent spec sections
       const { error: specsError } = await supabase
         .from("agent_spec_sections")
         .delete()
         .eq("agent_id", agentId);
 
-      if (specsError) {
-        console.error("Error deleting spec sections:", specsError);
-        throw specsError;
-      }
-      console.log("Spec sections deleted");
+      if (specsError) throw specsError;
 
-      // Delete the agent
       const { error: deleteError } = await supabase
         .from("agents")
         .delete()
         .eq("id", agentId);
 
       if (deleteError) throw deleteError;
-      console.log("Agent deleted successfully");
 
       toast({
         title: "Success",
@@ -215,13 +163,12 @@ export function AgentDeletionDialog({
       });
 
       handleClose();
-      console.log("Calling onSuccess callback");
       onSuccess();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error deleting agent:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to delete agent",
+        description: error instanceof Error ? error.message : "Failed to delete agent",
         variant: "destructive",
       });
     } finally {

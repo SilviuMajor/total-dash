@@ -101,7 +101,6 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        console.log('[ClientUsersManagement] No session found');
         return;
       }
     };
@@ -110,11 +109,9 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
     
     // Wait for super admin status to be determined before loading
     if (isSuperAdminLoading) {
-      console.log('[ClientUsersManagement] Waiting for super admin status...');
       return;
     }
     
-    console.log('[ClientUsersManagement] Loading data. isSuperAdmin:', isSuperAdmin, 'isPreviewMode:', isPreviewMode);
     loadUsers();
     loadDepartments();
     loadAgents();
@@ -135,8 +132,6 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
 
       // If super admin preview, always use bypass function
       if (isSuperAdminPreview) {
-        console.log('[ClientUsersManagement] Super admin preview: using bypass function');
-        
         const { data: functionData, error: functionError } = await supabase.functions.invoke(
           'get-client-users',
           { body: { clientId } }
@@ -231,7 +226,6 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
 
   const loadDepartments = async () => {
     try {
-      console.log('[ClientUsersManagement] Loading departments for clientId:', clientId);
       const { data, error } = await supabase
         .from('departments')
         .select('*')
@@ -242,7 +236,6 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
         console.error('[ClientUsersManagement] Error loading departments:', error);
         throw error;
       }
-      console.log('[ClientUsersManagement] Departments loaded:', data?.length);
       setDepartments(data || []);
     } catch (error: any) {
       console.error('[ClientUsersManagement] Error in loadDepartments:', error);
@@ -252,7 +245,6 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
 
   const loadAgents = async () => {
     try {
-      console.log('[ClientUsersManagement] Loading agents for clientId:', clientId);
       const { data, error } = await supabase
         .from('agent_assignments')
         .select(`
@@ -284,7 +276,6 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
         }))
         .filter(a => a.id) || [];
 
-      console.log('[ClientUsersManagement] Agents loaded:', agentsList.length);
       setAgents(agentsList);
 
       // Initialize permissions for new user
