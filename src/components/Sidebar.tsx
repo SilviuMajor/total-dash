@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { MessageSquare, BarChart3, BookOpen, Settings, Users, Bot, Eye, FileText, Home, CreditCard, Building2, DollarSign } from "lucide-react";
+import { MessageSquare, BarChart3, BookOpen, Settings, Users, Bot, Eye, FileText, Home, CreditCard, Building2, DollarSign, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
@@ -45,6 +45,7 @@ export function Sidebar() {
   const { effectiveTheme } = useTheme();
   const location = useLocation();
   const isAdmin = profile?.role === 'admin';
+  const isMac = typeof navigator !== 'undefined' && navigator.platform.toUpperCase().includes('MAC');
   const [clientPermissions, setClientPermissions] = useState<any>(null);
   
   // Determine branding context
@@ -170,6 +171,22 @@ export function Sidebar() {
         )}
       </div>
       
+      {/* Search trigger */}
+      <div className="px-3 py-2 border-b border-border">
+        <button
+          onClick={() => window.dispatchEvent(new CustomEvent('open-command-search'))}
+          className="flex items-center justify-between w-full px-3 py-2 bg-muted/50 border border-border rounded-lg hover:bg-muted transition-colors text-left"
+        >
+          <div className="flex items-center gap-2">
+            <Search className="w-4 h-4 text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">Search...</span>
+          </div>
+          <kbd className="bg-background border border-border rounded px-1.5 py-0.5 text-xs text-muted-foreground font-sans">
+            {isMac ? '⌘K' : 'Ctrl K'}
+          </kbd>
+        </button>
+      </div>
+
       {(mtIsPreviewMode || isClientPreviewMode) && (
         <div className="px-4 py-2 bg-blue-600/10 border-b border-blue-600/20">
           <div className="flex items-center gap-2 text-blue-600 text-sm">
