@@ -1,4 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
+import { PageSkeleton } from "@/components/skeletons";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -104,11 +105,7 @@ export default function AgencyAgentDetails() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
+    return <PageSkeleton />;
   }
 
   if (!agent) {

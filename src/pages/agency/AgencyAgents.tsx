@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { PageSkeleton } from "@/components/skeletons";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -69,6 +70,10 @@ export default function AgencyAgents() {
       setLoading(false);
     }
   };
+
+  if (loading) {
+    return <PageSkeleton />;
+  }
 
   const maxAgents = limits?.is_custom_limits ? limits.custom_max_agents : limits?.subscription_plans?.max_agents;
   const currentAgents = limits?.current_agents || 0;
@@ -141,7 +146,12 @@ export default function AgencyAgents() {
       )}
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {agents.map((agent) => (
+        {agents.length === 0 ? (
+          <div className="col-span-3 text-center py-16">
+            <p className="text-muted-foreground font-medium">No agents created yet</p>
+            <p className="text-muted-foreground text-sm mt-1">Create your first AI agent to get started.</p>
+          </div>
+        ) : agents.map((agent) => (
           <Card key={agent.id}>
             <CardHeader>
               <div className="flex justify-between items-start">

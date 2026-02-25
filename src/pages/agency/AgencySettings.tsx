@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { PageSkeleton } from "@/components/skeletons";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -218,7 +219,7 @@ export default function AgencySettings() {
   };
 
   if (loading) {
-    return <div className="p-8">Loading...</div>;
+    return <PageSkeleton />;
   }
 
   return (

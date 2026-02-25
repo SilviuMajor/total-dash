@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { TableSkeleton } from "@/components/skeletons";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -183,6 +184,10 @@ export default function AgencyClients() {
   const maxClients = limits?.is_custom_limits ? limits.custom_max_clients : limits?.subscription_plans?.max_clients;
   const currentClients = limits?.current_clients || 0;
   const isOverLimit = maxClients !== -1 && currentClients > maxClients;
+
+  if (loading) {
+    return <TableSkeleton />;
+  }
 
   return (
     <div className="space-y-6">
