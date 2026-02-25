@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useMemo, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { ConversationsSkeleton } from "@/components/skeletons";
 import { Phone, Clock, CheckCircle, MessageSquare, ArrowDown, ArrowUpDown, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -91,6 +92,7 @@ export default function Conversations() {
 
   const { selectedAgentId, agents } = useClientAgentContext();
   const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
   const transcriptScrollRef = useRef<HTMLDivElement>(null);
 
   // Debounce search
@@ -107,6 +109,17 @@ export default function Conversations() {
       loadAgentConfig();
     }
   }, [selectedAgentId]);
+
+  // Auto-select conversation from ?conversationId query param (from CommandSearch navigation)
+  useEffect(() => {
+    const convId = searchParams.get('conversationId');
+    if (!convId || conversations.length === 0) return;
+    const match = conversations.find(c => c.id === convId);
+    if (match) {
+      setSelectedConversation(match);
+      setSearchParams({}, { replace: true });
+    }
+  }, [conversations, searchParams]);
 
   // Reset and reload when agent/filters/sort change
   useEffect(() => {

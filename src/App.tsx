@@ -15,6 +15,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AdminProtectedRoute } from "./components/AdminProtectedRoute";
 import { AgencyProtectedRoute } from "./components/AgencyProtectedRoute";
 import { Sidebar } from "./components/Sidebar";
+import { CommandSearch } from "./components/CommandSearch";
 import { AdminPreviewBanner } from "./components/AdminPreviewBanner";
 import { ClientPreviewBanner } from "./components/ClientPreviewBanner";
 import { AgencyClientPreviewBanner } from "./components/AgencyClientPreviewBanner";
@@ -91,6 +92,7 @@ const App = () => (
             <ThemeProvider>
               <ClientAgentProvider>
                 <BrandingWrapper>
+                  <CommandSearch />
               <Routes>
                 {/* Public Routes */}
                 <Route path="/reset-password" element={<ResetPassword />} />
