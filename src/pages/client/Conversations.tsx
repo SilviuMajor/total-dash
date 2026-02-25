@@ -27,6 +27,17 @@ import { formatDistanceToNow, format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import debounce from "lodash.debounce";
+import { useQueryClient } from "@tanstack/react-query";
+import { useConversations } from "@/hooks/queries/useConversations";
+import { useAgentConfig } from "@/hooks/queries/useAgentConfig";
+import {
+  useUpdateConversationNote,
+  useToggleConversationTag,
+  useUpdateConversationStatus,
+  useBulkUpdateStatus,
+  useBulkApplyTag,
+  useBulkRemoveTag,
+} from "@/hooks/queries/useConversationMutations";
 
 interface Conversation {
   id: string;
@@ -62,13 +73,10 @@ interface Transcript {
 const PAGE_SIZE = 30;
 
 export default function Conversations() {
-  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [transcripts, setTranscripts] = useState<Transcript[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [agentConfig, setAgentConfig] = useState<any>(null);
   const [note, setNote] = useState("");
   const [assignedTags, setAssignedTags] = useState<string[]>([]);
   const [savingNote, setSavingNote] = useState(false);
@@ -76,10 +84,6 @@ export default function Conversations() {
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [showJumpToLatest, setShowJumpToLatest] = useState(false);
 
-  // Infinite scroll
-  const [hasMore, setHasMore] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const cursorRef = useRef<string | null>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   // Filters
@@ -94,6 +98,32 @@ export default function Conversations() {
   const { toast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const transcriptScrollRef = useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
+
+  // React Query hooks
+  const {
+    data: conversationsData,
+    isLoading,
+    isFetchingNextPage,
+    fetchNextPage,
+    hasNextPage,
+  } = useConversations(selectedAgentId, { status: statusFilter, sortOrder });
+
+  const { data: agentConfig } = useAgentConfig(selectedAgentId);
+
+  // Mutation hooks
+  const updateNoteMutation = useUpdateConversationNote();
+  const toggleTagMutation = useToggleConversationTag();
+  const updateStatusMutation = useUpdateConversationStatus();
+  const bulkUpdateStatusMutation = useBulkUpdateStatus();
+  const bulkApplyTagMutation = useBulkApplyTag();
+  const bulkRemoveTagMutation = useBulkRemoveTag();
+
+  // Flatten pages
+  const conversations: Conversation[] = useMemo(
+    () => (conversationsData?.pages?.flat() || []) as Conversation[],
+    [conversationsData]
+  );
 
   // Debounce search
   const debouncedSetSearch = useRef(
@@ -104,13 +134,12 @@ export default function Conversations() {
     debouncedSetSearch(searchQuery);
   }, [searchQuery]);
 
+  // Reset selection on filter/agent change
   useEffect(() => {
-    if (selectedAgentId) {
-      loadAgentConfig();
-    }
-  }, [selectedAgentId]);
+    setSelectedConversationIds(new Set());
+  }, [selectedAgentId, statusFilter, tagFilters, sortOrder]);
 
-  // Auto-select conversation from ?conversationId query param (from CommandSearch navigation)
+  // Auto-select conversation from ?conversationId query param
   useEffect(() => {
     const convId = searchParams.get('conversationId');
     if (!convId || conversations.length === 0) return;
@@ -121,104 +150,21 @@ export default function Conversations() {
     }
   }, [conversations, searchParams]);
 
-  // Reset and reload when agent/filters/sort change
-  useEffect(() => {
-    if (!selectedAgentId) return;
-    setConversations([]);
-    cursorRef.current = null;
-    setHasMore(true);
-    setSelectedConversationIds(new Set());
-    setLoading(true);
-    loadConversations(undefined, false);
-  }, [selectedAgentId, statusFilter, tagFilters, sortOrder]);
-
-  const loadAgentConfig = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('agents')
-        .select('config')
-        .eq('id', selectedAgentId!)
-        .single();
-      if (error) throw error;
-      setAgentConfig(data?.config || {});
-    } catch (error) {
-      console.error('Error loading agent config:', error);
-    }
-  };
-
-  const loadConversations = useCallback(async (cursor?: string, append = false) => {
-    if (!selectedAgentId) return;
-    try {
-      let query = supabase
-        .from('conversations')
-        .select('*')
-        .eq('agent_id', selectedAgentId)
-        .limit(PAGE_SIZE);
-
-      if (sortOrder === 'duration') {
-        query = query.order('duration', { ascending: false });
-      } else {
-        query = query.order('started_at', { ascending: sortOrder === 'asc' });
-        if (cursor) {
-          if (sortOrder === 'asc') {
-            query = query.gt('started_at', cursor);
-          } else {
-            query = query.lt('started_at', cursor);
-          }
-        }
-      }
-
-      if (statusFilter !== 'all') {
-        query = query.eq('status', statusFilter);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-
-      const rows = (data || []) as Conversation[];
-
-      if (append) {
-        setConversations(prev => [...prev, ...rows]);
-      } else {
-        setConversations(rows);
-      }
-
-      if (rows.length === PAGE_SIZE) {
-        cursorRef.current = rows[rows.length - 1].started_at;
-        setHasMore(true);
-      } else {
-        cursorRef.current = null;
-        setHasMore(false);
-      }
-    } catch (error) {
-      console.error('Error loading conversations:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedAgentId, statusFilter, sortOrder]);
-
-  const loadMore = useCallback(async () => {
-    if (!hasMore || loadingMore || !cursorRef.current || sortOrder === 'duration') return;
-    setLoadingMore(true);
-    await loadConversations(cursorRef.current, true);
-    setLoadingMore(false);
-  }, [hasMore, loadingMore, sortOrder, loadConversations]);
-
   // IntersectionObserver for infinite scroll
   useEffect(() => {
     const sentinel = sentinelRef.current;
     if (!sentinel) return;
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting) {
-          loadMore();
+        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage();
         }
       },
       { threshold: 0.1 }
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [loadMore]);
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
   useEffect(() => {
     if (selectedConversation?.id) {
@@ -249,15 +195,28 @@ export default function Conversations() {
           filter: `agent_id=eq.${selectedAgentId}`
         },
         (payload) => {
+          const queryKey = ['conversations', selectedAgentId, { status: statusFilter, sortOrder }];
           if (payload.eventType === 'INSERT') {
-            // Prepend new conversation without wiping paginated state
-            setConversations(prev => [payload.new as Conversation, ...prev]);
+            queryClient.setQueryData(queryKey, (old: any) => {
+              if (!old) return old;
+              const firstPage = [payload.new as Conversation, ...(old.pages[0] || [])];
+              return { ...old, pages: [firstPage, ...old.pages.slice(1)] };
+            });
           } else if (payload.eventType === 'DELETE') {
-            setConversations(prev => prev.filter(c => c.id !== (payload.old as any).id));
+            queryClient.setQueryData(queryKey, (old: any) => {
+              if (!old) return old;
+              return { ...old, pages: old.pages.map((page: any[]) => page.filter(c => c.id !== (payload.old as any).id)) };
+            });
           } else if (payload.eventType === 'UPDATE') {
-            setConversations(prev =>
-              prev.map(c => c.id === (payload.new as any).id ? payload.new as Conversation : c)
-            );
+            queryClient.setQueryData(queryKey, (old: any) => {
+              if (!old) return old;
+              return {
+                ...old,
+                pages: old.pages.map((page: any[]) =>
+                  page.map(c => c.id === (payload.new as any).id ? payload.new as Conversation : c)
+                )
+              };
+            });
             if (selectedConversation?.id === (payload.new as any).id) {
               setSelectedConversation(payload.new as Conversation);
             }
@@ -267,7 +226,7 @@ export default function Conversations() {
       .subscribe();
 
     return () => { channel.unsubscribe(); };
-  }, [selectedAgentId, selectedConversation?.id]);
+  }, [selectedAgentId, selectedConversation?.id, statusFilter, sortOrder, queryClient]);
 
   // Real-time subscriptions for transcripts
   useEffect(() => {
@@ -310,17 +269,14 @@ export default function Conversations() {
     if (!selectedConversation) return;
     setSavingNote(true);
     try {
-      const { error } = await supabase
-        .from('conversations')
-        .update({ metadata: { ...selectedConversation.metadata, note } })
-        .eq('id', selectedConversation.id);
-      if (error) throw error;
+      await updateNoteMutation.mutateAsync({
+        id: selectedConversation.id,
+        metadata: selectedConversation.metadata,
+        note,
+      });
       toast({ title: "Success", description: "Note saved successfully" });
       setSelectedConversation(prev => prev ? { ...prev, metadata: { ...prev.metadata, note } } : null);
-      setConversations(prev =>
-        prev.map(c => c.id === selectedConversation.id ? { ...c, metadata: { ...c.metadata, note } } : c)
-      );
-    } catch (error) {
+    } catch {
       toast({ title: "Error", description: "Failed to save note", variant: "destructive" });
     } finally {
       setSavingNote(false);
@@ -334,17 +290,14 @@ export default function Conversations() {
       : [...assignedTags, tagLabel];
     setUpdatingTags(true);
     try {
-      const { error } = await supabase
-        .from('conversations')
-        .update({ metadata: { ...selectedConversation.metadata, tags: newTags } })
-        .eq('id', selectedConversation.id);
-      if (error) throw error;
+      await toggleTagMutation.mutateAsync({
+        id: selectedConversation.id,
+        metadata: selectedConversation.metadata,
+        newTags,
+      });
       setAssignedTags(newTags);
       setSelectedConversation(prev => prev ? { ...prev, metadata: { ...prev.metadata, tags: newTags } } : null);
-      setConversations(prev =>
-        prev.map(c => c.id === selectedConversation.id ? { ...c, metadata: { ...c.metadata, tags: newTags } } : c)
-      );
-    } catch (error) {
+    } catch {
       toast({ title: "Error", description: "Failed to update tags", variant: "destructive" });
     } finally {
       setUpdatingTags(false);
@@ -368,15 +321,10 @@ export default function Conversations() {
     if (!selectedConversation || updatingStatus) return;
     setUpdatingStatus(true);
     try {
-      const { error } = await supabase
-        .from('conversations')
-        .update({ status: newStatus })
-        .eq('id', selectedConversation.id);
-      if (error) throw error;
+      await updateStatusMutation.mutateAsync({ id: selectedConversation.id, status: newStatus });
       toast({ title: "Success", description: `Status updated to ${newStatus}` });
       setSelectedConversation(prev => prev ? { ...prev, status: newStatus } : null);
-      setConversations(prev => prev.map(c => c.id === selectedConversation.id ? { ...c, status: newStatus } : c));
-    } catch (error) {
+    } catch {
       toast({ title: "Error", description: "Failed to update status", variant: "destructive" });
     } finally {
       setUpdatingStatus(false);
@@ -386,45 +334,22 @@ export default function Conversations() {
   // Bulk actions
   const bulkUpdateStatus = async (newStatus: string) => {
     const ids = Array.from(selectedConversationIds);
-    await Promise.all(ids.map(id => supabase.from('conversations').update({ status: newStatus }).eq('id', id)));
+    await bulkUpdateStatusMutation.mutateAsync({ ids, status: newStatus });
     toast({ title: "Success", description: `Updated ${ids.length} conversation${ids.length !== 1 ? 's' : ''}` });
-    setConversations(prev => prev.map(c => ids.includes(c.id) ? { ...c, status: newStatus } : c));
     setSelectedConversationIds(new Set());
   };
 
   const bulkApplyTag = async (tagLabel: string) => {
     const ids = Array.from(selectedConversationIds);
-    await Promise.all(ids.map(id => {
-      const conv = conversations.find(c => c.id === id);
-      const currentTags: string[] = conv?.metadata?.tags || [];
-      if (currentTags.includes(tagLabel)) return Promise.resolve();
-      const newTags = [...currentTags, tagLabel];
-      return supabase.from('conversations').update({ metadata: { ...conv?.metadata, tags: newTags } }).eq('id', id);
-    }));
+    await bulkApplyTagMutation.mutateAsync({ ids, tagLabel, conversations });
     toast({ title: "Success", description: `Tagged ${ids.length} conversation${ids.length !== 1 ? 's' : ''}` });
-    setConversations(prev => prev.map(c => {
-      if (!ids.includes(c.id)) return c;
-      const currentTags: string[] = c.metadata?.tags || [];
-      if (currentTags.includes(tagLabel)) return c;
-      return { ...c, metadata: { ...c.metadata, tags: [...currentTags, tagLabel] } };
-    }));
     setSelectedConversationIds(new Set());
   };
 
   const bulkRemoveTag = async (tagLabel: string) => {
     const ids = Array.from(selectedConversationIds);
-    await Promise.all(ids.map(id => {
-      const conv = conversations.find(c => c.id === id);
-      const currentTags: string[] = conv?.metadata?.tags || [];
-      const newTags = currentTags.filter(t => t !== tagLabel);
-      return supabase.from('conversations').update({ metadata: { ...conv?.metadata, tags: newTags } }).eq('id', id);
-    }));
+    await bulkRemoveTagMutation.mutateAsync({ ids, tagLabel, conversations });
     toast({ title: "Success", description: `Removed tag from ${ids.length} conversation${ids.length !== 1 ? 's' : ''}` });
-    setConversations(prev => prev.map(c => {
-      if (!ids.includes(c.id)) return c;
-      const newTags = (c.metadata?.tags || []).filter((t: string) => t !== tagLabel);
-      return { ...c, metadata: { ...c.metadata, tags: newTags } };
-    }));
     setSelectedConversationIds(new Set());
   };
 
@@ -434,11 +359,7 @@ export default function Conversations() {
     );
   };
 
-  if (agents.length === 0) {
-    return <NoAgentsAssigned />;
-  }
-
-  const availableTags = agentConfig?.widget_settings?.functions?.conversation_tags?.filter((t: any) => t.enabled) || [];
+  const availableTags = (agentConfig as any)?.widget_settings?.functions?.conversation_tags?.filter((t: any) => t.enabled) || [];
 
   // Client-side search + tag filtering
   const filteredConversations = useMemo(() => {
@@ -463,6 +384,10 @@ export default function Conversations() {
     filteredConversations.every(c => selectedConversationIds.has(c.id));
 
   const sortLabel = sortOrder === 'asc' ? 'Oldest first' : sortOrder === 'duration' ? 'Longest' : 'Newest first';
+
+  if (agents.length === 0) {
+    return <NoAgentsAssigned />;
+  }
 
   return (
     <div className="flex flex-col h-full">
@@ -639,7 +564,7 @@ export default function Conversations() {
               {/* Conversation list */}
               <ScrollArea className="flex-1">
                 <div className="space-y-1 p-2">
-                  {loading ? (
+                  {isLoading ? (
                     <ConversationsSkeleton />
                   ) : filteredConversations.length === 0 ? (
                     <div className="text-center py-12 px-4">
@@ -690,7 +615,7 @@ export default function Conversations() {
                               {conv.status === 'owned' ? 'Owned' : conv.status.charAt(0).toUpperCase() + conv.status.slice(1)}
                             </Badge>
                             {conv.metadata?.tags?.map((tag: string) => {
-                              const tagConfig = agentConfig?.widget_settings?.functions?.conversation_tags?.find(
+                              const tagConfig = (agentConfig as any)?.widget_settings?.functions?.conversation_tags?.find(
                                 (t: any) => t.label === tag
                               );
                               return tagConfig ? (
@@ -718,7 +643,7 @@ export default function Conversations() {
                   )}
 
                   {/* Loading more spinner */}
-                  {loadingMore && (
+                  {isFetchingNextPage && (
                     <div className="flex justify-center py-3">
                       <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary" />
                     </div>
@@ -823,7 +748,7 @@ export default function Conversations() {
                                     {selectedConversation.metadata.variables.user_email || 'Not captured yet'}
                                   </span>
                                 </div>
-                                {agentConfig?.custom_tracked_variables?.map((variable: any) => {
+                                {(agentConfig as any)?.custom_tracked_variables?.map((variable: any) => {
                                   const voiceflowName = typeof variable === 'string' ? variable : variable.voiceflow_name;
                                   const displayName = typeof variable === 'string'
                                     ? variable.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())
@@ -878,7 +803,7 @@ export default function Conversations() {
                       <div>
                         <Label className="mb-2 block">Tags</Label>
                         <div className="flex flex-wrap gap-2">
-                          {agentConfig?.widget_settings?.functions?.conversation_tags
+                          {(agentConfig as any)?.widget_settings?.functions?.conversation_tags
                             ?.filter((tag: any) => tag.enabled)
                             .map((tag: any) => {
                               const isAssigned = assignedTags.includes(tag.label);
@@ -903,7 +828,7 @@ export default function Conversations() {
                                 </Button>
                               );
                             })}
-                          {(!agentConfig?.widget_settings?.functions?.conversation_tags?.length) && (
+                          {(!(agentConfig as any)?.widget_settings?.functions?.conversation_tags?.length) && (
                             <p className="text-sm text-muted-foreground">No tags configured</p>
                           )}
                         </div>

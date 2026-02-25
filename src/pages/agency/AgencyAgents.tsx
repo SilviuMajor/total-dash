@@ -8,26 +8,26 @@ import { supabase } from "@/integrations/supabase/client";
 import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit, AlertCircle } from "lucide-react";
+import { useAgencyAgents } from "@/hooks/queries/useAgencyAgents";
 
 export default function AgencyAgents() {
   const { profile, isPreviewMode, previewAgency } = useMultiTenantAuth();
   const agencyId = isPreviewMode ? previewAgency?.id : profile?.agency?.id;
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [agents, setAgents] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [canAddMore, setCanAddMore] = useState(true);
   const [limits, setLimits] = useState<any>(null);
 
+  const { data: agents = [], isLoading } = useAgencyAgents(agencyId);
+
   useEffect(() => {
-    loadAgents();
     checkLimits();
-  }, [profile]);
+  }, [agencyId]);
 
   const checkLimits = async () => {
     if (!agencyId) return;
 
-    const { data, error } = await supabase.rpc('check_agency_limit', {
+    const { data } = await supabase.rpc('check_agency_limit', {
       _agency_id: agencyId,
       _limit_type: 'agents'
     });
@@ -48,30 +48,7 @@ export default function AgencyAgents() {
     setLimits(subData);
   };
 
-  const loadAgents = async () => {
-    if (!agencyId) return;
-
-    try {
-      const { data, error } = await supabase
-        .from('agents')
-        .select('*')
-        .eq('agency_id', agencyId)
-        .order('name');
-
-      if (error) throw error;
-      setAgents(data || []);
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (loading) {
+  if (isLoading) {
     return <PageSkeleton />;
   }
 
@@ -109,15 +86,11 @@ export default function AgencyAgents() {
             <div>
               <p className="font-semibold text-red-500">Over Subscription Limit</p>
               <p className="text-sm text-muted-foreground">
-                You currently have {currentAgents} agents but your plan allows {maxAgents}. 
+                You currently have {currentAgents} agents but your plan allows {maxAgents}.
                 You cannot add new agents until you delete some or upgrade your plan.
               </p>
             </div>
-            <Button
-              variant="outline"
-              className="ml-auto"
-              onClick={() => navigate('/agency/subscription')}
-            >
+            <Button variant="outline" className="ml-auto" onClick={() => navigate('/agency/subscription')}>
               Upgrade
             </Button>
           </CardContent>
@@ -130,15 +103,9 @@ export default function AgencyAgents() {
             <AlertCircle className="h-5 w-5 text-yellow-500" />
             <div>
               <p className="font-semibold">Agent Limit Reached</p>
-              <p className="text-sm text-muted-foreground">
-                Upgrade your subscription to add more agents
-              </p>
+              <p className="text-sm text-muted-foreground">Upgrade your subscription to add more agents</p>
             </div>
-            <Button
-              variant="outline"
-              className="ml-auto"
-              onClick={() => navigate('/agency/subscription')}
-            >
+            <Button variant="outline" className="ml-auto" onClick={() => navigate('/agency/subscription')}>
               Upgrade
             </Button>
           </CardContent>
@@ -151,7 +118,7 @@ export default function AgencyAgents() {
             <p className="text-muted-foreground font-medium">No agents created yet</p>
             <p className="text-muted-foreground text-sm mt-1">Create your first AI agent to get started.</p>
           </div>
-        ) : agents.map((agent) => (
+        ) : agents.map((agent: any) => (
           <Card key={agent.id}>
             <CardHeader>
               <div className="flex justify-between items-start">
@@ -162,11 +129,7 @@ export default function AgencyAgents() {
               </div>
             </CardHeader>
             <CardContent>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => navigate(`/agency/agents/${agent.id}`)}
-              >
+              <Button size="sm" variant="outline" onClick={() => navigate(`/agency/agents/${agent.id}`)}>
                 <Edit className="mr-2 h-4 w-4" />
                 Manage
               </Button>
