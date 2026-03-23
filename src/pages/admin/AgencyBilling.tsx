@@ -256,8 +256,8 @@ export default function AgencyBilling() {
   return (
     <div className="p-6 space-y-8">
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Agency Billing</h1>
-        <p className="text-muted-foreground mt-2">
+        <h1 className="text-lg font-semibold">Agency Billing</h1>
+        <p className="text-sm text-muted-foreground">
           Monitor revenue, subscriptions, and billing metrics across all agencies
         </p>
       </div>

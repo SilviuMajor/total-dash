@@ -166,7 +166,7 @@ export default function AgentSpecs() {
     <div className="p-6 container mx-auto space-y-6">
       <div>
         <div className="flex items-center gap-3 mb-2">
-          <h1 className="text-3xl font-bold">{agent.name}</h1>
+          <h1 className="text-lg font-semibold">{agent.name}</h1>
           <Badge className={getStatusColor(agent.status)}>
             <Activity className="w-3 h-3 mr-1" />
             {getStatusLabel(agent.status)}

@@ -152,8 +152,8 @@ export default function AgencySubscription() {
   return (
     <div className="p-6 space-y-8">
       <div>
-        <h1 className="text-4xl font-bold">Subscription</h1>
-        <p className="text-muted-foreground">Manage your subscription plan</p>
+        <h1 className="text-lg font-semibold">Subscription</h1>
+        <p className="text-sm text-muted-foreground">Manage your subscription plan</p>
       </div>
 
       {subscription && (

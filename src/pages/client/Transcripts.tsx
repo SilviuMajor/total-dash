@@ -343,8 +343,8 @@ export default function Transcripts() {
     <div className="p-6 space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold mb-2">Transcripts</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-lg font-semibold">Transcripts</h1>
+          <p className="text-sm text-muted-foreground">
             Review and manage your call transcripts
           </p>
         </div>

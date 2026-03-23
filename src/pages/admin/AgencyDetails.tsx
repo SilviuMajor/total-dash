@@ -363,8 +363,8 @@ export default function AgencyDetails() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h1 className="text-4xl font-bold">{agency?.name}</h1>
-            <p className="text-muted-foreground">Manage agency details and subscription</p>
+            <h1 className="text-lg font-semibold">{agency?.name}</h1>
+            <p className="text-sm text-muted-foreground">Manage agency details and subscription</p>
           </div>
         </div>
         <Button onClick={handlePreview} variant="outline">

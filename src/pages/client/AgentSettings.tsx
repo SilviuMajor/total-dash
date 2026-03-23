@@ -79,8 +79,8 @@ export default function AgentSettings() {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-4xl font-bold text-foreground">Agent Settings</h1>
-        <p className="text-muted-foreground">Configure and manage your agent</p>
+        <h1 className="text-lg font-semibold">Agent Settings</h1>
+        <p className="text-sm text-muted-foreground">Configure and manage your agent</p>
       </div>
       
       <Tabs defaultValue={getDefaultTab()}>

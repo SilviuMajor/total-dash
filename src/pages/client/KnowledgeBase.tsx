@@ -176,8 +176,8 @@ export default function KnowledgeBase() {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-4xl font-bold text-foreground">Knowledge Base</h1>
-        <p className="text-muted-foreground">View and upload documents for {selectedAgent.name}</p>
+          <h1 className="text-lg font-semibold">Knowledge Base</h1>
+          <p className="text-sm text-muted-foreground">View and upload documents for {selectedAgent.name}</p>
       </div>
 
       <Card className="p-6">

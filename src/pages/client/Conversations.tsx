@@ -394,8 +394,8 @@ export default function Conversations() {
       <div className="flex-shrink-0 mb-6">
         <div className="flex items-center justify-between">
           <div className="flex-1">
-            <h1 className="text-3xl font-bold mb-2">Conversations</h1>
-            <p className="text-muted-foreground">Review and manage your agent conversations</p>
+            <h1 className="text-lg font-semibold">Conversations</h1>
+            <p className="text-sm text-muted-foreground">Review and manage your agent conversations</p>
           </div>
         </div>
       </div>

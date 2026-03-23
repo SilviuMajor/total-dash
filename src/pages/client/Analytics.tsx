@@ -108,8 +108,8 @@ export default function Analytics() {
       <div className="space-y-4 p-6 pb-0">
         <div className="flex items-center justify-between">
           <div className="space-y-1">
-            <h1 className="text-4xl font-bold text-foreground">Analytics</h1>
-            <p className="text-muted-foreground">Deep dive into your AI agent performance metrics.</p>
+            <h1 className="text-lg font-semibold">Analytics</h1>
+            <p className="text-sm text-muted-foreground">Deep dive into your AI agent performance metrics.</p>
           </div>
           <div className="flex items-center gap-3">
             <DateRangeSelector

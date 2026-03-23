@@ -60,7 +60,7 @@ export default function AgencyAgents() {
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-4xl font-bold">Agents</h1>
+          <h1 className="text-lg font-semibold">Agents</h1>
           <p className="text-muted-foreground">
             Manage your AI agents
             {limits && (
