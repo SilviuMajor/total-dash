@@ -57,7 +57,7 @@ export default function AgencyAgents() {
   const isOverLimit = maxAgents !== -1 && currentAgents > maxAgents;
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-4xl font-bold">Agents</h1>

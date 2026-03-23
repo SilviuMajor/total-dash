@@ -66,7 +66,7 @@ export default function Guides() {
   }, [user, selectedAgentId]);
 
   return (
-    <div className="space-y-8">
+    <div className="p-6 space-y-8">
       <div className="flex items-center gap-3">
         <BookOpen className="h-8 w-8 text-primary" />
         <div>

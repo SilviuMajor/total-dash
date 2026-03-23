@@ -114,10 +114,9 @@ export default function AgencyClients() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-4xl font-bold">Clients</h1>
+    <div className="p-6 space-y-6">
+      <div>
+        <h1 className="text-4xl font-bold">Clients</h1>
           <p className="text-muted-foreground">
             Manage your client accounts
             {limits && (
