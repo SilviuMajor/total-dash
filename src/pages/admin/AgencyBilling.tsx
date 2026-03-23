@@ -282,7 +282,7 @@ export default function AgencyBilling() {
         <Card>
           <CardHeader className="pb-3">
             <CardDescription>Revenue (Last 30 Days)</CardDescription>
-            <CardTitle className="text-3xl">{formatCurrency(calculateRevenue(30) * 100)}</CardTitle>
+            <CardTitle className="text-2xl">{formatCurrency(calculateRevenue(30) * 100)}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -295,7 +295,7 @@ export default function AgencyBilling() {
         <Card>
           <CardHeader className="pb-3">
             <CardDescription>Revenue (Last 12 Months)</CardDescription>
-            <CardTitle className="text-3xl">{formatCurrency(calculateRevenue() * 100)}</CardTitle>
+            <CardTitle className="text-2xl">{formatCurrency(calculateRevenue() * 100)}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -308,7 +308,7 @@ export default function AgencyBilling() {
         <Card>
           <CardHeader className="pb-3">
             <CardDescription>Active Subscriptions</CardDescription>
-            <CardTitle className="text-3xl">{getActiveCount()}</CardTitle>
+            <CardTitle className="text-2xl">{getActiveCount()}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -321,7 +321,7 @@ export default function AgencyBilling() {
         <Card>
           <CardHeader className="pb-3">
             <CardDescription>New Trials (Last 30 Days)</CardDescription>
-            <CardTitle className="text-3xl">{getNewTrials()}</CardTitle>
+            <CardTitle className="text-2xl">{getNewTrials()}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -334,7 +334,7 @@ export default function AgencyBilling() {
         <Card>
           <CardHeader className="pb-3">
             <CardDescription>New Signups (Last 30 Days)</CardDescription>
-            <CardTitle className="text-3xl">{getNewSignups()}</CardTitle>
+            <CardTitle className="text-2xl">{getNewSignups()}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -347,7 +347,7 @@ export default function AgencyBilling() {
         <Card>
           <CardHeader className="pb-3">
             <CardDescription>Churned (Last 30 Days)</CardDescription>
-            <CardTitle className="text-3xl">{getChurnedCount()}</CardTitle>
+            <CardTitle className="text-2xl">{getChurnedCount()}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">

@@ -33,8 +33,8 @@ export default function Settings() {
     return (
       <div className="p-6 space-y-8">
         <div>
-          <h1 className="text-4xl font-bold text-foreground mb-2">Settings</h1>
-          <p className="text-muted-foreground">Loading...</p>
+          <h1 className="text-lg font-semibold">Settings</h1>
+          <p className="text-sm text-muted-foreground">Loading...</p>
         </div>
       </div>
     );

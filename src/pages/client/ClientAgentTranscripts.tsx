@@ -59,9 +59,9 @@ export default function ClientAgentTranscripts() {
   return (
     <div className="space-y-8">
       <div className="space-y-3">
-        <h1 className="text-4xl font-bold text-foreground">Transcripts</h1>
+        <h1 className="text-lg font-semibold">Transcripts</h1>
         <div className="flex items-center gap-4">
-          <p className="text-muted-foreground">View and search conversation transcripts.</p>
+          <p className="text-sm text-muted-foreground">View and search conversation transcripts.</p>
           <ClientAgentSelector />
         </div>
       </div>
