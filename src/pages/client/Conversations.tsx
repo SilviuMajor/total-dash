@@ -770,7 +770,7 @@ export default function Conversations() {
                         )}
 
                       <div>
-                        <Label className="mb-2 block">Status</Label>
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Status</p>
                         <Select
                           value={selectedConversation?.status || 'active'}
                           onValueChange={updateStatus}
