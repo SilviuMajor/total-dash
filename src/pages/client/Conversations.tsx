@@ -837,7 +837,7 @@ export default function Conversations() {
                       </div>
 
                       <div>
-                        <Label htmlFor="note" className="mb-2 block">Note</Label>
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Note</p>
                         <Textarea
                           id="note"
                           placeholder="Add a note about this conversation..."
