@@ -110,8 +110,12 @@ export default function AgentSettings() {
           </TabsContent>
         )}
 
-        <TabsContent value="support">
-          <SupportRequestForm />
+        <TabsContent value="support" className="mt-6">
+          <Card>
+            <CardContent className="p-6">
+              <SupportRequestForm />
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
