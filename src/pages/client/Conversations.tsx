@@ -803,7 +803,7 @@ export default function Conversations() {
                       </div>
 
                       <div>
-                        <Label className="mb-2 block">Tags</Label>
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Tags</p>
                         <div className="flex flex-wrap gap-2">
                           {(agentConfig as any)?.widget_settings?.functions?.conversation_tags
                             ?.filter((tag: any) => tag.enabled)
