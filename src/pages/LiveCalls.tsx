@@ -12,8 +12,8 @@ export default function LiveCalls() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-4xl font-bold text-foreground mb-2">Live Calls</h1>
-        <p className="text-muted-foreground">Monitor active calls and handle handover requests in real-time.</p>
+        <h1 className="text-lg font-semibold">Live Calls</h1>
+        <p className="text-sm text-muted-foreground">Monitor active calls and handle handover requests in real-time.</p>
       </div>
 
       <div className="grid gap-6">

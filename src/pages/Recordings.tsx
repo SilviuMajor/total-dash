@@ -16,8 +16,8 @@ export default function Recordings() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-4xl font-bold text-foreground mb-2">Recordings</h1>
-        <p className="text-muted-foreground">Browse and analyze your AI agent call recordings.</p>
+        <h1 className="text-lg font-semibold">Recordings</h1>
+        <p className="text-sm text-muted-foreground">Browse and analyze your AI agent call recordings.</p>
       </div>
 
       <Card className="p-6 bg-gradient-card border-border/50">

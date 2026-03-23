@@ -111,8 +111,8 @@ export default function Agencies() {
     return (
       <div className="space-y-8">
         <div>
-          <h1 className="text-4xl font-bold">Agencies</h1>
-          <p className="text-muted-foreground">Manage all agencies on your platform</p>
+          <h1 className="text-lg font-semibold">Agencies</h1>
+          <p className="text-sm text-muted-foreground">Manage all agencies on your platform</p>
         </div>
         <TableSkeleton />
       </div>
