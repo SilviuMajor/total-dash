@@ -163,8 +163,8 @@ export default function KnowledgeBase() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-4xl font-bold text-foreground">Knowledge Base</h1>
-          <p className="text-muted-foreground">View and manage your agent's knowledge base</p>
+          <h1 className="text-lg font-semibold">Knowledge Base</h1>
+          <p className="text-sm text-muted-foreground">View and manage your agent's knowledge base</p>
         </div>
         <Card className="p-12 text-center">
           <p className="text-muted-foreground">Please select an agent to view its knowledge base</p>
