@@ -184,7 +184,7 @@ export function AnalyticsTabBar({
           <Button
             size="icon"
             variant="ghost"
-            className="h-8 w-8 rounded-full"
+            className="h-8 w-8 ml-1"
             onClick={() => setIsCreating(true)}
           >
             <Plus className="h-4 w-4" />
