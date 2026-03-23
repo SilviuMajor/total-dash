@@ -579,8 +579,10 @@ export default function Conversations() {
                       <div
                         key={conv.id}
                         className={cn(
-                          "flex items-start gap-2 p-3 rounded-lg hover:bg-muted transition-colors",
-                          selectedConversation?.id === conv.id && "bg-muted"
+                          "flex items-start gap-2 px-3 py-2.5 hover:bg-muted/60 transition-colors cursor-pointer border-l-2",
+                          selectedConversation?.id === conv.id
+                            ? "bg-primary/5 border-primary"
+                            : "border-transparent"
                         )}
                       >
                         <Checkbox
@@ -596,25 +598,16 @@ export default function Conversations() {
                           className="mt-0.5 shrink-0"
                         />
                         <div
-                          className="flex-1 min-w-0 cursor-pointer"
+                          className="flex-1 min-w-0"
                           onClick={() => setSelectedConversation(conv)}
                         >
-                          <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                          <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
                             <p className="font-medium text-sm truncate">
                               {conv.metadata?.variables?.user_name || conv.caller_phone || 'Unknown'}
                             </p>
                             {conv.is_widget_test && (
                               <Badge variant="outline" className="text-xs shrink-0">🧪 Test</Badge>
                             )}
-                            <Badge
-                              variant={conv.status === 'active' ? 'default' : 'secondary'}
-                              className={cn(
-                                "text-xs shrink-0",
-                                conv.status === 'owned' && "bg-yellow-500 text-white hover:bg-yellow-600"
-                              )}
-                            >
-                              {conv.status === 'owned' ? 'Owned' : conv.status.charAt(0).toUpperCase() + conv.status.slice(1)}
-                            </Badge>
                             {conv.metadata?.tags?.map((tag: string) => {
                               const tagConfig = (agentConfig as any)?.widget_settings?.functions?.conversation_tags?.find(
                                 (t: any) => t.label === tag
@@ -635,9 +628,17 @@ export default function Conversations() {
                               ) : null;
                             })}
                           </div>
-                          <p className="text-xs text-muted-foreground">
-                            {formatDistanceToNow(new Date(conv.started_at))} ago
-                          </p>
+                          <div className="flex items-center gap-1.5">
+                            <span className={cn(
+                              "w-1.5 h-1.5 rounded-full flex-shrink-0",
+                              conv.status === 'active' && "bg-green-500",
+                              conv.status === 'owned' && "bg-yellow-500",
+                              conv.status === 'resolved' && "bg-blue-500",
+                            )} />
+                            <p className="text-xs text-muted-foreground">
+                              {formatDistanceToNow(new Date(conv.started_at))} ago
+                            </p>
+                          </div>
                         </div>
                       </div>
                     ))
