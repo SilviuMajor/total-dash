@@ -1,15 +1,15 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { TableSkeleton } from "@/components/skeletons";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Eye, Settings, AlertCircle } from "lucide-react";
+import { Plus, Eye, Settings, AlertCircle, Building2, Bot, Users, Search } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAgencyClients, useClientAgents, useClientUserCounts } from "@/hooks/queries/useAgencyClients";
@@ -22,6 +22,7 @@ export default function AgencyClients() {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [canAddMore, setCanAddMore] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
 
   interface SubscriptionLimits {
     current_clients: number | null;
@@ -108,27 +109,32 @@ export default function AgencyClients() {
   const currentClients = limits?.current_clients || 0;
   const isOverLimit = maxClients !== -1 && currentClients > (maxClients ?? Infinity);
 
+  // Summary metrics
+  const totalAgents = Object.values(clientAgents as Record<string, any[]>).reduce((sum, arr) => sum + (arr?.length || 0), 0);
+  const totalUsers = Object.values(clientUsers as Record<string, number>).reduce((sum, n) => sum + (n || 0), 0);
+
+  // Filtered clients
+  const filteredClients = useMemo(() => {
+    if (!searchQuery.trim()) return clients;
+    const q = searchQuery.toLowerCase();
+    return clients.filter((c: any) => c.name.toLowerCase().includes(q));
+  }, [clients, searchQuery]);
+
   if (isLoading) {
     return <TableSkeleton />;
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-5">
+      {/* Header */}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-lg font-semibold">Clients</h1>
-          <p className="text-sm text-muted-foreground">
-            Manage your client accounts
-            {limits && (
-              <span className={`ml-2 ${isOverLimit ? 'text-red-500 font-semibold' : ''}`}>
-                ({currentClients} / {maxClients === -1 ? '∞' : maxClients})
-              </span>
-            )}
-          </p>
+          <p className="text-sm text-muted-foreground">Manage your client accounts</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button disabled={!canAddMore || currentClients >= (maxClients ?? Infinity)}>
+            <Button variant="default" disabled={!canAddMore || currentClients >= (maxClients ?? Infinity)}>
               <Plus className="mr-2 h-4 w-4" />
               Add Client
             </Button>
@@ -152,6 +158,7 @@ export default function AgencyClients() {
         </Dialog>
       </div>
 
+      {/* Limit warnings */}
       {isOverLimit && (
         <Card className="border-red-500 bg-red-500/10">
           <CardContent className="flex items-center gap-3 p-4">
@@ -185,30 +192,82 @@ export default function AgencyClients() {
         </Card>
       )}
 
-      <Card className="overflow-hidden">
-        {/* Table header */}
-        <div className="grid grid-cols-[1fr_auto_auto_auto_auto] items-center px-4 py-2.5 bg-muted/50 border-b border-border">
+      {/* Summary metrics */}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="p-4 bg-card border rounded-lg flex items-center gap-3">
+          <div className="w-9 h-9 rounded-md bg-primary/10 flex items-center justify-center flex-shrink-0">
+            <Building2 className="w-4 h-4 text-primary" />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Total Clients</p>
+            <p className="text-lg font-semibold leading-tight">
+              {currentClients}
+              {maxClients !== undefined && maxClients !== null && (
+                <span className="text-sm font-normal text-muted-foreground"> / {maxClients === -1 ? '∞' : maxClients}</span>
+              )}
+            </p>
+          </div>
+        </div>
+        <div className="p-4 bg-card border rounded-lg flex items-center gap-3">
+          <div className="w-9 h-9 rounded-md bg-primary/10 flex items-center justify-center flex-shrink-0">
+            <Bot className="w-4 h-4 text-primary" />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Total Agents</p>
+            <p className="text-lg font-semibold leading-tight">{totalAgents}</p>
+          </div>
+        </div>
+        <div className="p-4 bg-card border rounded-lg flex items-center gap-3">
+          <div className="w-9 h-9 rounded-md bg-primary/10 flex items-center justify-center flex-shrink-0">
+            <Users className="w-4 h-4 text-primary" />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Total Users</p>
+            <p className="text-lg font-semibold leading-tight">{totalUsers}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Input
+          placeholder="Search clients..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+
+      {/* Table */}
+      <div className="bg-card border rounded-lg overflow-hidden">
+        {/* Header */}
+        <div className="grid grid-cols-[2.5fr_1fr_1fr_1fr_auto] items-center px-4 py-2.5 bg-muted/50 border-b border-border">
           <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Client</span>
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground w-20 text-center">Status</span>
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground w-16 text-center">Agents</span>
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground w-16 text-center">Users</span>
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Agents</span>
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Users</span>
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Status</span>
           <span className="w-36" />
         </div>
 
-        {clients.length === 0 ? (
+        {filteredClients.length === 0 ? (
           <div className="text-center py-16">
-            <p className="text-muted-foreground font-medium">No clients yet</p>
-            <p className="text-muted-foreground text-sm mt-1">Create your first client to get started.</p>
+            <p className="text-muted-foreground font-medium">
+              {searchQuery ? 'No clients match your search' : 'No clients yet'}
+            </p>
+            <p className="text-muted-foreground text-sm mt-1">
+              {searchQuery ? 'Try a different search term.' : 'Create your first client to get started.'}
+            </p>
           </div>
-        ) : clients.map((client: any) => {
+        ) : filteredClients.map((client: any) => {
           const initials = client.name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase();
           const status = client.status?.toLowerCase() || 'active';
           return (
             <div
               key={client.id}
-              className="grid grid-cols-[1fr_auto_auto_auto_auto] items-center px-4 py-3 border-b border-border hover:bg-muted/30 transition-colors last:border-0"
+              className="grid grid-cols-[2.5fr_1fr_1fr_1fr_auto] items-center px-4 py-3 border-b border-border hover:bg-muted/30 transition-colors last:border-0"
             >
-              {/* Name + avatar */}
+              {/* Client */}
               <div className="flex items-center gap-3 min-w-0">
                 {client.logo_url ? (
                   <img src={client.logo_url} alt={client.name} className="w-8 h-8 rounded-md object-cover flex-shrink-0" />
@@ -225,40 +284,36 @@ export default function AgencyClients() {
                 </div>
               </div>
 
-              {/* Status */}
-              <div className="w-20 flex justify-center">
-                {status === 'active' && (
-                  <span className="text-xs px-2 py-0.5 rounded-md bg-green-50 text-green-600 font-medium">Active</span>
-                )}
-                {status === 'inactive' && (
-                  <span className="text-xs px-2 py-0.5 rounded-md bg-muted text-muted-foreground font-medium">Inactive</span>
-                )}
-                {status === 'pending' && (
-                  <span className="text-xs px-2 py-0.5 rounded-md bg-yellow-50 text-yellow-600 font-medium">Pending</span>
-                )}
-                {status === 'suspended' && (
-                  <span className="text-xs px-2 py-0.5 rounded-md bg-red-50 text-red-600 font-medium">Suspended</span>
-                )}
-                {!['active', 'inactive', 'pending', 'suspended'].includes(status) && (
-                  <span className="text-xs px-2 py-0.5 rounded-md bg-muted text-muted-foreground font-medium">{client.status}</span>
-                )}
-              </div>
-
               {/* Agents */}
-              <div className="w-16 text-center">
-                <span className="text-sm font-medium">{(clientAgents as any)[client.id]?.length || 0}</span>
-              </div>
+              <span className="text-sm font-medium">{(clientAgents as any)[client.id]?.length || 0}</span>
 
               {/* Users */}
-              <div className="w-16 text-center">
-                <span className="text-sm font-medium">{(clientUsers as any)[client.id] || 0}</span>
+              <span className="text-sm font-medium">{(clientUsers as any)[client.id] || 0}</span>
+
+              {/* Status */}
+              <div>
+                {status === 'active' && (
+                  <span className="text-xs bg-green-50 text-green-600 px-2.5 py-0.5 rounded-md font-medium">Active</span>
+                )}
+                {status === 'inactive' && (
+                  <span className="text-xs bg-muted text-muted-foreground px-2.5 py-0.5 rounded-md font-medium">Inactive</span>
+                )}
+                {status === 'pending' && (
+                  <span className="text-xs bg-yellow-50 text-yellow-600 px-2.5 py-0.5 rounded-md font-medium">Pending</span>
+                )}
+                {status === 'suspended' && (
+                  <span className="text-xs bg-red-50 text-red-600 px-2.5 py-0.5 rounded-md font-medium">Suspended</span>
+                )}
+                {!['active', 'inactive', 'pending', 'suspended'].includes(status) && (
+                  <span className="text-xs bg-muted text-muted-foreground px-2.5 py-0.5 rounded-md font-medium">{client.status}</span>
+                )}
               </div>
 
               {/* Actions */}
               <div className="w-36 flex items-center justify-end gap-2">
                 <Button
                   size="sm"
-                  variant="ghost"
+                  variant="outline"
                   className="h-7 px-2 text-xs"
                   onClick={() => {
                     const targetAgencyId = agencyId || profile?.agency?.id;
@@ -281,7 +336,7 @@ export default function AgencyClients() {
             </div>
           );
         })}
-      </Card>
+      </div>
     </div>
   );
 }
