@@ -406,7 +406,7 @@ export default function Conversations() {
           <div className="grid grid-cols-[280px_1fr_280px] h-full">
 
             {/* Left Panel: Conversation List */}
-            <div className="col-span-3 flex flex-col border-r border-border h-full overflow-hidden">
+            <div className="flex flex-col border-r border-border h-full overflow-hidden">
 
               {/* Bulk Actions Toolbar */}
               {selectedConversationIds.size > 0 && (
