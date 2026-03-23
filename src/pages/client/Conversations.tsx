@@ -391,21 +391,22 @@ export default function Conversations() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-shrink-0 mb-6">
-        <div className="flex items-center justify-between">
-          <div className="flex-1">
-            <h1 className="text-lg font-semibold">Conversations</h1>
-            <p className="text-sm text-muted-foreground">Review and manage your agent conversations</p>
-          </div>
+      {/* Slim header bar */}
+      <div className="flex items-center justify-between px-5 py-3 border-b bg-card flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <h1 className="text-[15px] font-semibold">Conversations</h1>
+          <span className="text-xs text-muted-foreground px-2 py-0.5 bg-muted rounded border">
+            {filteredConversations.length}
+          </span>
         </div>
       </div>
 
       <div className="flex-1 min-h-0 overflow-hidden">
-        <Card className="h-full overflow-hidden">
-          <div className="grid grid-cols-12 h-full">
+        <Card className="h-full overflow-hidden rounded-none border-0 border-t">
+          <div className="grid grid-cols-[280px_1fr_280px] h-full">
 
             {/* Left Panel: Conversation List */}
-            <div className="col-span-3 flex flex-col border-r border-border h-full overflow-hidden">
+            <div className="flex flex-col border-r border-border h-full overflow-hidden">
 
               {/* Bulk Actions Toolbar */}
               {selectedConversationIds.size > 0 && (
@@ -578,8 +579,10 @@ export default function Conversations() {
                       <div
                         key={conv.id}
                         className={cn(
-                          "flex items-start gap-2 p-3 rounded-lg hover:bg-muted transition-colors",
-                          selectedConversation?.id === conv.id && "bg-muted"
+                          "flex items-start gap-2 px-3 py-2.5 hover:bg-muted/60 transition-colors cursor-pointer border-l-2",
+                          selectedConversation?.id === conv.id
+                            ? "bg-primary/5 border-primary"
+                            : "border-transparent"
                         )}
                       >
                         <Checkbox
@@ -595,25 +598,16 @@ export default function Conversations() {
                           className="mt-0.5 shrink-0"
                         />
                         <div
-                          className="flex-1 min-w-0 cursor-pointer"
+                          className="flex-1 min-w-0"
                           onClick={() => setSelectedConversation(conv)}
                         >
-                          <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                          <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
                             <p className="font-medium text-sm truncate">
                               {conv.metadata?.variables?.user_name || conv.caller_phone || 'Unknown'}
                             </p>
                             {conv.is_widget_test && (
                               <Badge variant="outline" className="text-xs shrink-0">🧪 Test</Badge>
                             )}
-                            <Badge
-                              variant={conv.status === 'active' ? 'default' : 'secondary'}
-                              className={cn(
-                                "text-xs shrink-0",
-                                conv.status === 'owned' && "bg-yellow-500 text-white hover:bg-yellow-600"
-                              )}
-                            >
-                              {conv.status === 'owned' ? 'Owned' : conv.status.charAt(0).toUpperCase() + conv.status.slice(1)}
-                            </Badge>
                             {conv.metadata?.tags?.map((tag: string) => {
                               const tagConfig = (agentConfig as any)?.widget_settings?.functions?.conversation_tags?.find(
                                 (t: any) => t.label === tag
@@ -634,9 +628,17 @@ export default function Conversations() {
                               ) : null;
                             })}
                           </div>
-                          <p className="text-xs text-muted-foreground">
-                            {formatDistanceToNow(new Date(conv.started_at))} ago
-                          </p>
+                          <div className="flex items-center gap-1.5">
+                            <span className={cn(
+                              "w-1.5 h-1.5 rounded-full flex-shrink-0",
+                              conv.status === 'active' && "bg-green-500",
+                              conv.status === 'owned' && "bg-yellow-500",
+                              conv.status === 'resolved' && "bg-blue-500",
+                            )} />
+                            <p className="text-xs text-muted-foreground">
+                              {formatDistanceToNow(new Date(conv.started_at))} ago
+                            </p>
+                          </div>
                         </div>
                       </div>
                     ))
@@ -656,7 +658,7 @@ export default function Conversations() {
             </div>
 
             {/* Middle Panel: Transcript */}
-            <div className="col-span-6 flex flex-col border-r border-border h-full overflow-hidden relative">
+            <div className="flex flex-col border-r border-border h-full overflow-hidden relative bg-muted/30">
               {selectedConversation ? (
                 <>
                   <div className="p-4 border-b border-border">
@@ -725,15 +727,15 @@ export default function Conversations() {
             </div>
 
             {/* Right Panel: Details */}
-            <div className="col-span-3 flex flex-col h-full">
+            <div className="flex flex-col h-full">
               <ScrollArea className="flex-1">
-                <div className="p-6 space-y-4">
+                <div className="p-4 space-y-4">
                   {selectedConversation ? (
                     <>
                       {selectedConversation?.metadata?.variables &&
                         Object.keys(selectedConversation.metadata.variables).length > 0 && (
                           <div>
-                            <Label className="mb-3 block font-semibold">Captured Information</Label>
+                            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Contact / Captured Info</p>
                             <div className="space-y-2 p-3 bg-muted rounded-lg">
                               <div className="space-y-2">
                                 <div className="flex justify-between text-sm">
@@ -768,7 +770,7 @@ export default function Conversations() {
                         )}
 
                       <div>
-                        <Label className="mb-2 block">Status</Label>
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Status</p>
                         <Select
                           value={selectedConversation?.status || 'active'}
                           onValueChange={updateStatus}
@@ -801,7 +803,7 @@ export default function Conversations() {
                       </div>
 
                       <div>
-                        <Label className="mb-2 block">Tags</Label>
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Tags</p>
                         <div className="flex flex-wrap gap-2">
                           {(agentConfig as any)?.widget_settings?.functions?.conversation_tags
                             ?.filter((tag: any) => tag.enabled)
@@ -835,7 +837,7 @@ export default function Conversations() {
                       </div>
 
                       <div>
-                        <Label htmlFor="note" className="mb-2 block">Note</Label>
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Note</p>
                         <Textarea
                           id="note"
                           placeholder="Add a note about this conversation..."
