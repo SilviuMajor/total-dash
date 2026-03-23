@@ -113,7 +113,7 @@ const App = () => (
                       <Sidebar />
                       <div className="flex-1 flex flex-col overflow-hidden">
                         <AdminPreviewBanner />
-                        <main className="flex-1 p-8 overflow-y-auto">
+                        <main className="flex-1 overflow-y-auto">
                           <Routes>
                             <Route path="/" element={<Agencies />} />
                             <Route path="/agencies" element={<Agencies />} />
