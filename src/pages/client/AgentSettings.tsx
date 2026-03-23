@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent } from "@/components/ui/card";
 import { SupportRequestForm } from "@/components/agent-management/SupportRequestForm";
 import { VoiceflowWidget } from "@/components/agent-management/voiceflow/VoiceflowWidget";
 import { VoiceflowChannels } from "@/components/agent-management/voiceflow/VoiceflowChannels";
