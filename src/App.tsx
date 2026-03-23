@@ -142,7 +142,7 @@ const App = () => (
                       <div className="flex-1 flex flex-col overflow-hidden">
                         <AdminPreviewBanner />
                         <ClientPreviewBanner />
-                        <main className="flex-1 p-8 overflow-y-auto">
+                        <main className="flex-1 overflow-y-auto">
                           <Routes>
                             <Route path="/" element={<Navigate to="/agency/clients" replace />} />
                             <Route path="/clients" element={<AgencyClients />} />
