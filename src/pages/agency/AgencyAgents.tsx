@@ -2,12 +2,11 @@ import { useEffect, useState } from "react";
 import { PageSkeleton } from "@/components/skeletons";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, AlertCircle } from "lucide-react";
+import { Plus, AlertCircle } from "lucide-react";
 import { useAgencyAgents } from "@/hooks/queries/useAgencyAgents";
 
 export default function AgencyAgents() {
@@ -61,7 +60,7 @@ export default function AgencyAgents() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-lg font-semibold">Agents</h1>
-          <p className="text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             Manage your AI agents
             {limits && (
               <span className={`ml-2 ${isOverLimit ? 'text-red-500 font-semibold' : ''}`}>
@@ -112,31 +111,68 @@ export default function AgencyAgents() {
         </Card>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <Card className="overflow-hidden">
+        {/* Table header */}
+        <div className="grid grid-cols-[1fr_auto_auto_auto] items-center px-4 py-2.5 bg-muted/50 border-b border-border">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Agent</span>
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground w-24 text-center">Provider</span>
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground w-24 text-center">Status</span>
+          <span className="w-24" />
+        </div>
+
         {agents.length === 0 ? (
-          <div className="col-span-3 text-center py-16">
+          <div className="text-center py-16">
             <p className="text-muted-foreground font-medium">No agents created yet</p>
             <p className="text-muted-foreground text-sm mt-1">Create your first AI agent to get started.</p>
           </div>
-        ) : agents.map((agent: any) => (
-          <Card key={agent.id}>
-            <CardHeader>
-              <div className="flex justify-between items-start">
-                <div>
-                  <CardTitle>{agent.name}</CardTitle>
-                  <Badge className="mt-2">{agent.provider}</Badge>
+        ) : agents.map((agent: any) => {
+          const initials = agent.name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase();
+          return (
+            <div
+              key={agent.id}
+              className="grid grid-cols-[1fr_auto_auto_auto] items-center px-4 py-3 border-b border-border hover:bg-muted/30 transition-colors last:border-0"
+            >
+              {/* Name + avatar */}
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <span className="text-xs font-semibold text-primary">{initials}</span>
                 </div>
+                <p className="text-sm font-medium truncate">{agent.name}</p>
               </div>
-            </CardHeader>
-            <CardContent>
-              <Button size="sm" variant="outline" onClick={() => navigate(`/agency/agents/${agent.id}`)}>
-                <Edit className="mr-2 h-4 w-4" />
-                Manage
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+
+              {/* Provider */}
+              <div className="w-24 flex justify-center">
+                <span className="text-xs px-2 py-0.5 rounded-md bg-muted text-muted-foreground font-medium capitalize">{agent.provider}</span>
+              </div>
+
+              {/* Status */}
+              <div className="w-24 flex justify-center">
+                {agent.status === 'active' && (
+                  <span className="text-xs px-2 py-0.5 rounded-md bg-green-50 text-green-600 font-medium">Active</span>
+                )}
+                {agent.status === 'testing' && (
+                  <span className="text-xs px-2 py-0.5 rounded-md bg-yellow-50 text-yellow-600 font-medium">Testing</span>
+                )}
+                {agent.status === 'in_development' && (
+                  <span className="text-xs px-2 py-0.5 rounded-md bg-muted text-muted-foreground font-medium">Dev</span>
+                )}
+              </div>
+
+              {/* Action */}
+              <div className="w-24 flex justify-end">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 px-2 text-xs"
+                  onClick={() => navigate(`/agency/agents/${agent.id}`)}
+                >
+                  Manage
+                </Button>
+              </div>
+            </div>
+          );
+        })}
+      </Card>
     </div>
   );
 }
