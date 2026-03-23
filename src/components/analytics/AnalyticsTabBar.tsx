@@ -87,7 +87,7 @@ export function AnalyticsTabBar({
 
   return (
     <>
-      <div className="flex items-center gap-1 border-b border-border bg-card/50 px-2 overflow-x-auto">
+      <div className="flex items-center gap-0 border-b border-border px-6 overflow-x-auto">
         {tabs.map(tab => (
           <div
             key={tab.id}
@@ -96,10 +96,10 @@ export function AnalyticsTabBar({
             onDragOver={(e) => handleDragOver(e, tab)}
             onDragEnd={handleDragEnd}
             className={cn(
-              "group relative flex items-center gap-2 px-4 py-2 rounded-t-lg cursor-pointer transition-all min-w-[120px] max-w-[200px]",
+              "group relative flex items-center gap-2 px-4 py-2 cursor-pointer transition-all border-b-2 -mb-px min-w-[100px] max-w-[200px]",
               activeTabId === tab.id
-                ? "bg-background border-t border-x border-border"
-                : "hover:bg-muted/50"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
             )}
             onClick={() => !editingTabId && onTabSelect(tab.id)}
           >
@@ -184,7 +184,7 @@ export function AnalyticsTabBar({
           <Button
             size="icon"
             variant="ghost"
-            className="h-8 w-8 rounded-full"
+            className="h-8 w-8 ml-1"
             onClick={() => setIsCreating(true)}
           >
             <Plus className="h-4 w-4" />
