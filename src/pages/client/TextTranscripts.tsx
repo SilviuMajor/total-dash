@@ -139,7 +139,7 @@ ${transcript.messages.map((msg) => `[${msg.speaker}]: ${msg.text}`).join("\n")}
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="p-6 flex flex-col h-full">
       {/* Header */}
       <div className="border-b border-border bg-background p-6">
         <div className="max-w-7xl mx-auto">

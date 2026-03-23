@@ -92,7 +92,7 @@ export default function AgencyClientDetails() {
   if (!client) return null;
 
   return (
-    <div className="space-y-8">
+    <div className="p-6 space-y-8">
       <div className="flex items-center gap-4">
         <Button
           variant="outline"

@@ -113,7 +113,7 @@ const App = () => (
                       <Sidebar />
                       <div className="flex-1 flex flex-col overflow-hidden">
                         <AdminPreviewBanner />
-                        <main className="flex-1 p-8 overflow-y-auto">
+                        <main className="flex-1 overflow-y-auto">
                           <Routes>
                             <Route path="/" element={<Agencies />} />
                             <Route path="/agencies" element={<Agencies />} />
@@ -142,7 +142,7 @@ const App = () => (
                       <div className="flex-1 flex flex-col overflow-hidden">
                         <AdminPreviewBanner />
                         <ClientPreviewBanner />
-                        <main className="flex-1 p-8 overflow-y-auto">
+                        <main className="flex-1 overflow-y-auto">
                           <Routes>
                             <Route path="/" element={<Navigate to="/agency/clients" replace />} />
                             <Route path="/clients" element={<AgencyClients />} />
@@ -176,7 +176,7 @@ const App = () => (
                     <div className="flex-1 flex flex-col overflow-hidden">
                       <ClientPreviewBanner />
                       <AgencyClientPreviewBanner />
-                      <main className="flex-1 p-8 overflow-y-auto">
+                      <main className="flex-1 overflow-y-auto">
                         <Routes>
                           <Route path="/" element={<Conversations />} />
                           <Route path="/transcripts" element={<Transcripts />} />
