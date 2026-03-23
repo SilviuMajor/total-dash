@@ -70,8 +70,8 @@ export default function Guides() {
       <div className="flex items-center gap-3">
         <BookOpen className="h-8 w-8 text-primary" />
         <div>
-          <h1 className="text-4xl font-bold text-foreground">Guides & Documentation</h1>
-          <p className="text-muted-foreground">Learn how to use your agents effectively</p>
+          <h1 className="text-lg font-semibold">Guides & Documentation</h1>
+          <p className="text-sm text-muted-foreground">Learn how to use your agents effectively</p>
         </div>
       </div>
 

@@ -103,8 +103,8 @@ export default function AgencyClientDetails() {
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div>
-          <h1 className="text-4xl font-bold text-foreground">{client.name}</h1>
-          <p className="text-muted-foreground">Client Management Dashboard</p>
+          <h1 className="text-lg font-semibold">{client.name}</h1>
+          <p className="text-sm text-muted-foreground">Client Management Dashboard</p>
         </div>
       </div>
 

@@ -123,8 +123,8 @@ export default function Agencies() {
     <div className="p-6 space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-4xl font-bold">Agencies</h1>
-          <p className="text-muted-foreground">Manage all agencies on your platform</p>
+          <h1 className="text-lg font-semibold">Agencies</h1>
+          <p className="text-sm text-muted-foreground">Manage all agencies on your platform</p>
         </div>
         <div className="text-sm text-muted-foreground">
           Total: {agencies.length} {agencies.length === 1 ? 'agency' : 'agencies'}

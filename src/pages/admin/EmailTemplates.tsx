@@ -207,8 +207,8 @@ export default function EmailTemplates() {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Email Templates</h1>
-        <p className="text-muted-foreground">Manage system email templates</p>
+        <h1 className="text-lg font-semibold">Email Templates</h1>
+        <p className="text-sm text-muted-foreground">Manage system email templates</p>
       </div>
 
       <Tabs defaultValue="trial">

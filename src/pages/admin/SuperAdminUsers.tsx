@@ -260,8 +260,8 @@ export default function SuperAdminUsers() {
     return (
       <div className="space-y-8">
         <div>
-          <h1 className="text-4xl font-bold text-foreground mb-2">Super Admin Users</h1>
-          <p className="text-muted-foreground">Loading...</p>
+          <h1 className="text-lg font-semibold">Super Admin Users</h1>
+          <p className="text-sm text-muted-foreground">Loading...</p>
         </div>
       </div>
     );
@@ -271,8 +271,8 @@ export default function SuperAdminUsers() {
     <div className="p-6 space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-4xl font-bold text-foreground mb-2">Super Admin Users</h1>
-          <p className="text-muted-foreground">Manage super administrator accounts</p>
+          <h1 className="text-lg font-semibold">Super Admin Users</h1>
+          <p className="text-sm text-muted-foreground">Manage super administrator accounts</p>
         </div>
         <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
           <DialogTrigger asChild>

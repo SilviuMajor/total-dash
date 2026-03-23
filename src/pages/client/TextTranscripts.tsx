@@ -143,7 +143,7 @@ ${transcript.messages.map((msg) => `[${msg.speaker}]: ${msg.text}`).join("\n")}
       {/* Header */}
       <div className="border-b border-border bg-background p-6">
         <div className="max-w-7xl mx-auto">
-          <h1 className="text-2xl font-bold mb-1">Transcripts</h1>
+          <h1 className="text-lg font-semibold">Transcripts</h1>
           <p className="text-sm text-muted-foreground">
             Read-only records of past conversations
           </p>

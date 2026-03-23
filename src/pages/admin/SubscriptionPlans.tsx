@@ -122,8 +122,8 @@ export default function SubscriptionPlans() {
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-4xl font-bold">Subscription Plans</h1>
-          <p className="text-muted-foreground">Manage subscription tiers and pricing</p>
+          <h1 className="text-lg font-semibold">Subscription Plans</h1>
+          <p className="text-sm text-muted-foreground">Manage subscription tiers and pricing</p>
         </div>
       </div>
 
