@@ -505,24 +505,26 @@ export default function Conversations() {
               {/* Status filters + Select All */}
               <div className="px-3 py-2 border-b border-border space-y-2">
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <Checkbox
-                    checked={allSelected}
-                    onCheckedChange={(checked) => {
-                      if (checked) {
-                        setSelectedConversationIds(new Set(filteredConversations.map(c => c.id)));
-                      } else {
-                        setSelectedConversationIds(new Set());
-                      }
-                    }}
-                    className="mr-1"
-                  />
+                  {selectedConversationIds.size > 0 && (
+                    <Checkbox
+                      checked={allSelected}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedConversationIds(new Set(filteredConversations.map(c => c.id)));
+                        } else {
+                          setSelectedConversationIds(new Set());
+                        }
+                      }}
+                      className="mr-1"
+                    />
+                  )}
                   {(['all', 'active', 'owned', 'resolved'] as const).map(s => (
                     <Button
                       key={s}
                       size="sm"
                       variant={statusFilter === s ? 'default' : 'outline'}
                       onClick={() => setStatusFilter(s)}
-                      className="h-7 text-xs rounded-full px-3"
+                      className="h-7 text-xs px-3"
                     >
                       {s !== 'all' && (
                         <span className={cn(
