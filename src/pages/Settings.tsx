@@ -31,7 +31,7 @@ export default function Settings() {
 
   if (!clientId) {
     return (
-      <div className="space-y-8">
+      <div className="p-6 space-y-8">
         <div>
           <h1 className="text-4xl font-bold text-foreground mb-2">Settings</h1>
           <p className="text-muted-foreground">Loading...</p>
