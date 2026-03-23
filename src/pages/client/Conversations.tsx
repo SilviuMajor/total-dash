@@ -727,15 +727,15 @@ export default function Conversations() {
             </div>
 
             {/* Right Panel: Details */}
-            <div className="col-span-3 flex flex-col h-full">
+            <div className="flex flex-col h-full">
               <ScrollArea className="flex-1">
-                <div className="p-6 space-y-4">
+                <div className="p-4 space-y-4">
                   {selectedConversation ? (
                     <>
                       {selectedConversation?.metadata?.variables &&
                         Object.keys(selectedConversation.metadata.variables).length > 0 && (
                           <div>
-                            <Label className="mb-3 block font-semibold">Captured Information</Label>
+                            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Contact / Captured Info</p>
                             <div className="space-y-2 p-3 bg-muted rounded-lg">
                               <div className="space-y-2">
                                 <div className="flex justify-between text-sm">
