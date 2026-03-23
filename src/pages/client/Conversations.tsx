@@ -566,7 +566,7 @@ export default function Conversations() {
 
               {/* Conversation list */}
               <ScrollArea className="flex-1">
-                <div className="space-y-1 p-2">
+                <div className="p-0">
                   {isLoading ? (
                     <ConversationsSkeleton />
                   ) : filteredConversations.length === 0 ? (
@@ -577,28 +577,33 @@ export default function Conversations() {
                       </p>
                     </div>
                   ) : (
-                    filteredConversations.map((conv) => (
-                      <div
-                        key={conv.id}
-                        className={cn(
-                          "flex items-start gap-2 px-3 py-2.5 hover:bg-muted/60 transition-colors cursor-pointer border-l-2",
-                          selectedConversation?.id === conv.id
-                            ? "bg-primary/5 border-primary"
-                            : "border-transparent"
-                        )}
-                      >
-                        <Checkbox
-                          checked={selectedConversationIds.has(conv.id)}
-                          onCheckedChange={(checked) => {
-                            setSelectedConversationIds(prev => {
-                              const next = new Set(prev);
-                              if (checked) next.add(conv.id); else next.delete(conv.id);
-                              return next;
-                            });
-                          }}
-                          onClick={(e) => e.stopPropagation()}
-                          className="mt-0.5 shrink-0"
-                        />
+                    filteredConversations.map((conv) => {
+                      const isChecked = selectedConversationIds.has(conv.id);
+                      return (
+                        <div
+                          key={conv.id}
+                          className={cn(
+                            "group flex items-start gap-2 px-3 py-2.5 hover:bg-muted/60 transition-colors cursor-pointer border-l-2",
+                            selectedConversation?.id === conv.id
+                              ? "bg-primary/5 border-primary"
+                              : "border-transparent"
+                          )}
+                        >
+                          <Checkbox
+                            checked={isChecked}
+                            onCheckedChange={(checked) => {
+                              setSelectedConversationIds(prev => {
+                                const next = new Set(prev);
+                                if (checked) next.add(conv.id); else next.delete(conv.id);
+                                return next;
+                              });
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            className={cn(
+                              "mt-0.5 shrink-0 transition-opacity",
+                              isChecked ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                            )}
+                          />
                         <div
                           className="flex-1 min-w-0"
                           onClick={() => setSelectedConversation(conv)}
