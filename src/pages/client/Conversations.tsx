@@ -648,7 +648,8 @@ export default function Conversations() {
                           </div>
                         </div>
                       </div>
-                    ))
+                      );
+                    })
                   )}
 
                   {/* Loading more spinner */}
