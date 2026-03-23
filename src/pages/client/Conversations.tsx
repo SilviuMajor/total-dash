@@ -391,18 +391,19 @@ export default function Conversations() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-shrink-0 mb-6">
-        <div className="flex items-center justify-between">
-          <div className="flex-1">
-            <h1 className="text-lg font-semibold">Conversations</h1>
-            <p className="text-sm text-muted-foreground">Review and manage your agent conversations</p>
-          </div>
+      {/* Slim header bar */}
+      <div className="flex items-center justify-between px-5 py-3 border-b bg-card flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <h1 className="text-[15px] font-semibold">Conversations</h1>
+          <span className="text-xs text-muted-foreground px-2 py-0.5 bg-muted rounded border">
+            {filteredConversations.length}
+          </span>
         </div>
       </div>
 
       <div className="flex-1 min-h-0 overflow-hidden">
-        <Card className="h-full overflow-hidden">
-          <div className="grid grid-cols-12 h-full">
+        <Card className="h-full overflow-hidden rounded-none border-0 border-t">
+          <div className="grid grid-cols-[280px_1fr_280px] h-full">
 
             {/* Left Panel: Conversation List */}
             <div className="col-span-3 flex flex-col border-r border-border h-full overflow-hidden">
