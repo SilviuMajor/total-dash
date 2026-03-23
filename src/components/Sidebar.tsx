@@ -164,26 +164,20 @@ export function Sidebar() {
   return (
     <div className="flex flex-col w-[220px] h-screen border-r border-border bg-card overflow-hidden flex-shrink-0">
       {/* Logo area */}
-      <div className="flex items-center px-3.5 py-3.5 border-b border-border">
-        {branding.fullLogoUrl ? (
-          <img
-            src={branding.fullLogoUrl}
-            alt={branding.companyName}
-            className="max-h-7 object-contain"
-          />
-        ) : branding.logoUrl ? (
-          <div className="flex items-center gap-2 min-w-0">
+      <div className="flex items-center p-4 border-b border-border">
+        {branding.logoUrl ? (
+          <div className="flex items-center gap-2.5 min-w-0">
             <img
               src={branding.logoUrl}
               alt={branding.companyName}
-              className="w-7 h-7 object-contain flex-shrink-0"
+              className="w-8 h-8 object-contain flex-shrink-0 rounded-lg"
             />
             <span className="text-sm font-semibold truncate">{branding.companyName}</span>
           </div>
         ) : (
-          <div className="flex items-center gap-2 min-w-0">
-            <div className="w-7 h-7 bg-accent rounded-md flex items-center justify-center flex-shrink-0">
-              <span className="text-xs font-bold text-accent-foreground">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+              <span className="text-xs font-bold text-primary">
                 {branding.companyName.substring(0, 2).toUpperCase()}
               </span>
             </div>
@@ -193,10 +187,10 @@ export function Sidebar() {
       </div>
       
       {/* Search trigger */}
-      <div className="px-2.5 py-2 border-b border-border">
+      <div className="px-2.5 py-2.5 border-b border-border">
         <button
           onClick={() => window.dispatchEvent(new CustomEvent('open-command-search'))}
-          className="flex items-center justify-between w-full px-2.5 py-1.5 bg-muted/30 border border-border rounded-md hover:bg-muted transition-colors text-left"
+          className="flex items-center justify-between w-full px-2.5 py-2 bg-muted/30 border border-border rounded-md hover:bg-muted transition-colors text-left"
         >
           <div className="flex items-center gap-2">
             <Search className="w-3.5 h-3.5 text-muted-foreground" />
@@ -218,7 +212,7 @@ export function Sidebar() {
       )}
 
       {(effectiveProfile?.role === 'client' || previewDepth === 'client' || previewDepth === 'agency_to_client') && (
-        <div className="px-2 py-2 border-b border-border">
+        <div className="px-2.5 py-2 border-b border-border">
           <ClientAgentSelector />
         </div>
       )}
@@ -231,14 +225,14 @@ export function Sidebar() {
             end={item.href === "/" || item.href === "/admin"}
             className={({ isActive }) =>
               cn(
-                "flex items-center gap-2.5 px-2 py-1.5 rounded-md text-[13px] font-medium transition-all",
+                "flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm font-medium transition-all",
                 isActive
                   ? "bg-sidebar-accent text-sidebar-accent-foreground"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground"
               )
             }
           >
-            <item.icon className="w-4 h-4 flex-shrink-0" />
+            <item.icon className="w-[18px] h-[18px] flex-shrink-0" />
             {item.name}
           </NavLink>
         ))}

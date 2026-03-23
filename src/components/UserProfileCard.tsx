@@ -247,7 +247,7 @@ export function UserProfileCard({ onSignOut }: UserProfileCardProps) {
       if (!isOpen) resetToMain();
     }}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" className="flex items-center gap-3 w-full justify-start hover:bg-accent/50 px-4 py-3 h-auto min-h-[72px]">
+        <Button variant="ghost" className="flex items-center gap-3 w-full justify-start hover:bg-accent/50 px-3.5 py-3 h-auto min-h-[72px]">
           <div className="flex flex-col items-start flex-1 min-w-0">
             <span className="text-sm font-medium text-foreground truncate max-w-full">
               {firstName && lastName ? `${firstName} ${lastName}` : profile?.email}
