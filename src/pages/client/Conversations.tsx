@@ -25,7 +25,6 @@ import { MessageBubble } from "@/components/MessageBubble";
 import { formatDistanceToNow, format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import debounce from "lodash.debounce";
 import { useQueryClient } from "@tanstack/react-query";
 import { useConversations } from "@/hooks/queries/useConversations";
 import { useAgentConfig } from "@/hooks/queries/useAgentConfig";
