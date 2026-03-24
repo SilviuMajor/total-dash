@@ -594,6 +594,7 @@ export type Database = {
           api_key: string
           config: Json | null
           created_at: string | null
+          data_region: string | null
           id: string
           name: string
           provider: string
@@ -605,6 +606,7 @@ export type Database = {
           api_key: string
           config?: Json | null
           created_at?: string | null
+          data_region?: string | null
           id?: string
           name: string
           provider: string
@@ -616,6 +618,7 @@ export type Database = {
           api_key?: string
           config?: Json | null
           created_at?: string | null
+          data_region?: string | null
           id?: string
           name?: string
           provider?: string
@@ -771,14 +774,63 @@ export type Database = {
           },
         ]
       }
+      client_roles: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          id: string
+          is_admin_tier: boolean | null
+          is_default: boolean | null
+          is_system: boolean | null
+          name: string
+          slug: string
+          sort_order: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          id?: string
+          is_admin_tier?: boolean | null
+          is_default?: boolean | null
+          is_system?: boolean | null
+          name: string
+          slug: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          id?: string
+          is_admin_tier?: boolean | null
+          is_default?: boolean | null
+          is_system?: boolean | null
+          name?: string
+          slug?: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_roles_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_settings: {
         Row: {
+          admin_capabilities: Json | null
           client_id: string
           company_name: string | null
           created_at: string | null
           custom_css: string | null
           custom_guide_sections: Json | null
           default_user_permissions: Json | null
+          hidden_permissions: Json | null
           id: string
           logo_url: string | null
           primary_color: string | null
@@ -787,12 +839,14 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          admin_capabilities?: Json | null
           client_id: string
           company_name?: string | null
           created_at?: string | null
           custom_css?: string | null
           custom_guide_sections?: Json | null
           default_user_permissions?: Json | null
+          hidden_permissions?: Json | null
           id?: string
           logo_url?: string | null
           primary_color?: string | null
@@ -801,12 +855,14 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          admin_capabilities?: Json | null
           client_id?: string
           company_name?: string | null
           created_at?: string | null
           custom_css?: string | null
           custom_guide_sections?: Json | null
           default_user_permissions?: Json | null
+          hidden_permissions?: Json | null
           id?: string
           logo_url?: string | null
           primary_color?: string | null
@@ -922,6 +978,45 @@ export type Database = {
           },
         ]
       }
+      client_user_departments: {
+        Row: {
+          client_user_id: string
+          created_at: string | null
+          department_id: string
+          id: string
+          notifications_enabled: boolean | null
+        }
+        Insert: {
+          client_user_id: string
+          created_at?: string | null
+          department_id: string
+          id?: string
+          notifications_enabled?: boolean | null
+        }
+        Update: {
+          client_user_id?: string
+          created_at?: string | null
+          department_id?: string
+          id?: string
+          notifications_enabled?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_user_departments_client_user_id_fkey"
+            columns: ["client_user_id"]
+            isOneToOne: false
+            referencedRelation: "client_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_user_departments_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_users: {
         Row: {
           avatar_url: string | null
@@ -933,6 +1028,7 @@ export type Database = {
           id: string
           last_name: string | null
           page_permissions: Json | null
+          role_id: string | null
           updated_at: string | null
           user_id: string
         }
@@ -946,6 +1042,7 @@ export type Database = {
           id?: string
           last_name?: string | null
           page_permissions?: Json | null
+          role_id?: string | null
           updated_at?: string | null
           user_id: string
         }
@@ -959,6 +1056,7 @@ export type Database = {
           id?: string
           last_name?: string | null
           page_permissions?: Json | null
+          role_id?: string | null
           updated_at?: string | null
           user_id?: string
         }
@@ -975,6 +1073,13 @@ export type Database = {
             columns: ["department_id"]
             isOneToOne: false
             referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_users_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "client_roles"
             referencedColumns: ["id"]
           },
           {
@@ -1051,45 +1156,179 @@ export type Database = {
           },
         ]
       }
+      conversation_read_status: {
+        Row: {
+          client_user_id: string
+          conversation_id: string
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          last_read_at: string | null
+        }
+        Insert: {
+          client_user_id: string
+          conversation_id: string
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          last_read_at?: string | null
+        }
+        Update: {
+          client_user_id?: string
+          conversation_id?: string
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          last_read_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_read_status_client_user_id_fkey"
+            columns: ["client_user_id"]
+            isOneToOne: false
+            referencedRelation: "client_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversation_read_status_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversation_status_history: {
+        Row: {
+          changed_by_id: string | null
+          changed_by_type: string
+          conversation_id: string
+          created_at: string | null
+          from_status: string | null
+          id: string
+          metadata: Json | null
+          to_status: string
+        }
+        Insert: {
+          changed_by_id?: string | null
+          changed_by_type: string
+          conversation_id: string
+          created_at?: string | null
+          from_status?: string | null
+          id?: string
+          metadata?: Json | null
+          to_status: string
+        }
+        Update: {
+          changed_by_id?: string | null
+          changed_by_type?: string
+          conversation_id?: string
+          created_at?: string | null
+          from_status?: string | null
+          id?: string
+          metadata?: Json | null
+          to_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_status_history_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversation_tags: {
+        Row: {
+          applied_by: string | null
+          conversation_id: string
+          created_at: string | null
+          id: string
+          is_system: boolean | null
+          tag_name: string
+        }
+        Insert: {
+          applied_by?: string | null
+          conversation_id: string
+          created_at?: string | null
+          id?: string
+          is_system?: boolean | null
+          tag_name: string
+        }
+        Update: {
+          applied_by?: string | null
+          conversation_id?: string
+          created_at?: string | null
+          id?: string
+          is_system?: boolean | null
+          tag_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_tags_applied_by_fkey"
+            columns: ["applied_by"]
+            isOneToOne: false
+            referencedRelation: "client_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversation_tags_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversations: {
         Row: {
           agent_id: string
           caller_phone: string | null
+          department_id: string | null
           duration: number | null
           ended_at: string | null
           id: string
           is_widget_test: boolean | null
           last_activity_at: string | null
           metadata: Json | null
+          owner_id: string | null
           sentiment: string | null
           started_at: string | null
           status: string
+          voiceflow_user_id: string | null
         }
         Insert: {
           agent_id: string
           caller_phone?: string | null
+          department_id?: string | null
           duration?: number | null
           ended_at?: string | null
           id?: string
           is_widget_test?: boolean | null
           last_activity_at?: string | null
           metadata?: Json | null
+          owner_id?: string | null
           sentiment?: string | null
           started_at?: string | null
           status?: string
+          voiceflow_user_id?: string | null
         }
         Update: {
           agent_id?: string
           caller_phone?: string | null
+          department_id?: string | null
           duration?: number | null
           ended_at?: string | null
           id?: string
           is_widget_test?: boolean | null
           last_activity_at?: string | null
           metadata?: Json | null
+          owner_id?: string | null
           sentiment?: string | null
           started_at?: string | null
           status?: string
+          voiceflow_user_id?: string | null
         }
         Relationships: [
           {
@@ -1099,34 +1338,75 @@ export type Database = {
             referencedRelation: "agents"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "conversations_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "client_users"
+            referencedColumns: ["id"]
+          },
         ]
       }
       departments: {
         Row: {
           client_id: string
+          code: string | null
           color: string | null
           created_at: string
+          deleted_at: string | null
           description: string | null
+          fallback_out_of_hours: boolean | null
+          fallback_to_global: boolean | null
           id: string
+          is_global: boolean | null
           name: string
+          opening_hours: Json | null
+          opening_hours_type: string | null
+          timeout_seconds: number | null
+          timezone: string | null
           updated_at: string
         }
         Insert: {
           client_id: string
+          code?: string | null
           color?: string | null
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
+          fallback_out_of_hours?: boolean | null
+          fallback_to_global?: boolean | null
           id?: string
+          is_global?: boolean | null
           name: string
+          opening_hours?: Json | null
+          opening_hours_type?: string | null
+          timeout_seconds?: number | null
+          timezone?: string | null
           updated_at?: string
         }
         Update: {
           client_id?: string
+          code?: string | null
           color?: string | null
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
+          fallback_out_of_hours?: boolean | null
+          fallback_to_global?: boolean | null
           id?: string
+          is_global?: boolean | null
           name?: string
+          opening_hours?: Json | null
+          opening_hours_type?: string | null
+          timeout_seconds?: number | null
+          timezone?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1219,6 +1499,101 @@ export type Database = {
           variables?: Json | null
         }
         Relationships: []
+      }
+      handover_sessions: {
+        Row: {
+          accepted_at: string | null
+          client_user_id: string | null
+          completed_at: string | null
+          completion_method: string | null
+          conversation_id: string
+          created_at: string | null
+          department_id: string | null
+          fallback_count: number | null
+          fallback_occurred: boolean | null
+          id: string
+          last_activity_at: string | null
+          original_department_id: string | null
+          requested_at: string | null
+          status: string
+          takeover_type: string
+          timeout_duration: number | null
+          transfer_note: string | null
+          updated_at: string | null
+          voiceflow_user_id: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          client_user_id?: string | null
+          completed_at?: string | null
+          completion_method?: string | null
+          conversation_id: string
+          created_at?: string | null
+          department_id?: string | null
+          fallback_count?: number | null
+          fallback_occurred?: boolean | null
+          id?: string
+          last_activity_at?: string | null
+          original_department_id?: string | null
+          requested_at?: string | null
+          status?: string
+          takeover_type: string
+          timeout_duration?: number | null
+          transfer_note?: string | null
+          updated_at?: string | null
+          voiceflow_user_id: string
+        }
+        Update: {
+          accepted_at?: string | null
+          client_user_id?: string | null
+          completed_at?: string | null
+          completion_method?: string | null
+          conversation_id?: string
+          created_at?: string | null
+          department_id?: string | null
+          fallback_count?: number | null
+          fallback_occurred?: boolean | null
+          id?: string
+          last_activity_at?: string | null
+          original_department_id?: string | null
+          requested_at?: string | null
+          status?: string
+          takeover_type?: string
+          timeout_duration?: number | null
+          transfer_note?: string | null
+          updated_at?: string | null
+          voiceflow_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "handover_sessions_client_user_id_fkey"
+            columns: ["client_user_id"]
+            isOneToOne: false
+            referencedRelation: "client_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "handover_sessions_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "handover_sessions_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "handover_sessions_original_department_id_fkey"
+            columns: ["original_department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       integration_options: {
         Row: {
@@ -1321,6 +1696,58 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      role_permission_templates: {
+        Row: {
+          agent_id: string
+          client_id: string
+          created_at: string | null
+          id: string
+          permissions: Json
+          role_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          agent_id: string
+          client_id: string
+          created_at?: string | null
+          id?: string
+          permissions?: Json
+          role_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          agent_id?: string
+          client_id?: string
+          created_at?: string | null
+          id?: string
+          permissions?: Json
+          role_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_permission_templates_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "role_permission_templates_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "role_permission_templates_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "client_roles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subscription_plans: {
         Row: {
