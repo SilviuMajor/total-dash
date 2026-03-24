@@ -507,11 +507,17 @@ export default function Conversations() {
                     <Button variant="outline" size="sm" className="h-6 text-xs px-2">Status</Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
-                    <DropdownMenuItem onClick={() => bulkUpdateStatus('active')}>
-                      <span className="w-2 h-2 rounded-full bg-green-500 mr-2" />Active
+                    <DropdownMenuItem onClick={() => bulkUpdateStatus('with_ai')}>
+                      <span className="w-2 h-2 rounded-full bg-green-500 mr-2" />With AI
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => bulkUpdateStatus('owned')}>
-                      <span className="w-2 h-2 rounded-full bg-violet-500 mr-2" />Owned
+                    <DropdownMenuItem onClick={() => bulkUpdateStatus('in_handover')}>
+                      <span className="w-2 h-2 rounded-full bg-blue-500 mr-2" />In Handover
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => bulkUpdateStatus('aftercare')}>
+                      <span className="w-2 h-2 rounded-full bg-yellow-500 mr-2" />Aftercare
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => bulkUpdateStatus('needs_review')}>
+                      <span className="w-2 h-2 rounded-full bg-amber-500 mr-2" />Needs Review
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => bulkUpdateStatus('resolved')}>
                       <span className="w-2 h-2 rounded-full bg-gray-400 mr-2" />Resolved
