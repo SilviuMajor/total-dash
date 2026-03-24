@@ -190,7 +190,7 @@ export function Sidebar() {
       )}
 
       {(effectiveProfile?.role === 'client' || previewDepth === 'client' || previewDepth === 'agency_to_client') && (
-        <div className="px-3 py-2 border-b border-border">
+        <div className="px-3 py-1 border-b border-border">
           <ClientAgentSelector compact />
         </div>
       )}

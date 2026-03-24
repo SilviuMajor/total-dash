@@ -71,7 +71,7 @@ export function ClientAgentSelector({ compact = false }: { compact?: boolean }) 
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full h-14 justify-between rounded-md bg-card hover:bg-muted border-border p-2.5"
+          className="w-full h-8 justify-between rounded-md bg-card hover:bg-muted border-border px-2 py-1"
         >
           <div className="flex flex-col items-start flex-1 min-w-0">
             <span className="text-sm font-semibold truncate w-full text-left text-foreground">
