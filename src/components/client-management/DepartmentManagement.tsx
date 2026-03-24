@@ -481,20 +481,16 @@ export function DepartmentManagement({ clientId }: { clientId: string }) {
             {/* Hours & Timeout Tab */}
             <TabsContent value="hours" className="space-y-5 pt-2">
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <Label>Handover acceptance timeout</Label>
-                   <span className="text-sm font-medium text-primary">{timeoutSecs} seconds</span>
-                </div>
-                <Slider
-                  min={30}
-                  max={300}
-                  step={10}
-                  value={[timeoutSecs]}
-                  onValueChange={([val]) => setTimeoutSecs(val)}
-                  className="w-full"
-                />
-                <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                  <span>30s</span><span>300s</span>
+                <Label className="mb-2 block">Handover acceptance timeout (seconds)</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min={30}
+                    value={timeoutSecs}
+                    onChange={e => setTimeoutSecs(Math.max(30, parseInt(e.target.value) || 30))}
+                    className="w-32"
+                  />
+                  <span className="text-sm text-muted-foreground">seconds (minimum 30)</span>
                 </div>
               </div>
 
