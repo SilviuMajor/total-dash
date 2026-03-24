@@ -22,7 +22,7 @@ interface AgentType {
   function_type: string;
 }
 
-export function ClientAgentSelector() {
+export function ClientAgentSelector({ compact = false }: { compact?: boolean }) {
   const [open, setOpen] = useState(false);
   const [agentTypes, setAgentTypes] = useState<AgentType[]>([]);
   const { agents, selectedAgentId, setSelectedAgentId, loading } = useClientAgentContext();
