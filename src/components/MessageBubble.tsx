@@ -7,7 +7,7 @@ interface Button {
 }
 
 interface MessageBubbleProps {
-  speaker: 'user' | 'assistant';
+  speaker: 'user' | 'assistant' | 'client_user' | 'system';
   text?: string;
   buttons?: Button[];
   timestamp: string;
