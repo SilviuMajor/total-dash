@@ -186,6 +186,7 @@ const App = () => (
                           <Route path="/agent-settings" element={<AgentSettings />} />
                           <Route path="/specs" element={<AgentSpecs />} />
                           <Route path="/guides" element={<Guides />} />
+                          <Route path="/settings" element={<Settings />} />
                           <Route path="*" element={<NotFound />} />
                         </Routes>
                       </main>
