@@ -1,4 +1,4 @@
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, Bot } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,51 +14,25 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useClientAgentContext } from "@/hooks/useClientAgentContext";
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-
-interface AgentType {
-  provider: string;
-  function_type: string;
-}
+import { useState } from "react";
 
 export function ClientAgentSelector({ compact = false }: { compact?: boolean }) {
   const [open, setOpen] = useState(false);
-  const [agentTypes, setAgentTypes] = useState<AgentType[]>([]);
   const { agents, selectedAgentId, setSelectedAgentId, loading } = useClientAgentContext();
 
   const selectedAgent = agents.find((agent) => agent.id === selectedAgentId);
 
-  useEffect(() => {
-    loadAgentTypes();
-  }, []);
-
-  const loadAgentTypes = async () => {
-    const { data } = await supabase
-      .from('agent_types')
-      .select('provider, function_type');
-    
-    if (data) {
-      setAgentTypes(data);
-    }
-  };
-
-  const getAgentFunction = (provider: string) => {
-    const agentType = agentTypes.find(type => type.provider === provider);
-    return agentType?.function_type || provider;
-  };
-
   if (loading) {
     return (
-      <div className="px-4 py-2 rounded-lg bg-muted/50 animate-pulse w-48">
-        <div className="h-8 bg-muted rounded"></div>
+      <div className="animate-pulse w-full">
+        <div className="h-9 bg-muted rounded-md"></div>
       </div>
     );
   }
 
   if (agents.length === 0) {
     return (
-      <div className="px-4 py-3 rounded-md bg-muted/50 w-52">
+      <div className="px-2 py-1.5 rounded-md bg-muted/50 w-full">
         <p className="text-xs text-muted-foreground">No agents assigned</p>
       </div>
     );
@@ -71,25 +45,18 @@ export function ClientAgentSelector({ compact = false }: { compact?: boolean }) 
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full h-8 justify-between rounded-md bg-card hover:bg-muted border-border px-2 py-1"
+          className="w-full h-9 justify-between rounded-md bg-card hover:bg-muted border-border px-2.5 py-2"
         >
-          <div className="flex flex-col items-start flex-1 min-w-0">
-            <span className="text-sm font-semibold truncate w-full text-left text-foreground">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <Bot className="w-4 h-4 text-muted-foreground shrink-0" />
+            <span className="text-sm font-medium truncate text-foreground">
               {selectedAgent?.name || "Select agent..."}
             </span>
-            {!compact && selectedAgent && (
-              <span className="text-xs text-muted-foreground truncate w-full text-left">
-                {getAgentFunction(selectedAgent.provider)}
-                {selectedAgent.status && selectedAgent.status !== 'testing' && (
-                  <> • {selectedAgent.status === 'active' ? 'Active' : 'In Development'}</>
-                )}
-              </span>
-            )}
           </div>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-52 p-0 bg-card border-border z-50">
+      <PopoverContent className="w-56 p-0 bg-card border-border z-50">
         <Command className="bg-card">
           <CommandList>
             <CommandEmpty>No agents found.</CommandEmpty>
@@ -106,19 +73,14 @@ export function ClientAgentSelector({ compact = false }: { compact?: boolean }) 
                 >
                   <Check
                     className={cn(
-                      "mr-2 h-4 w-4",
+                      "mr-1.5 h-4 w-4 shrink-0",
                       selectedAgentId === agent.id ? "opacity-100" : "opacity-0"
                     )}
                   />
-                  <div className="flex flex-col">
-                    <span className="font-medium">{agent.name}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {getAgentFunction(agent.provider)}
-                      {agent.status && agent.status !== 'testing' && (
-                        <> • {agent.status === 'active' ? 'Active' : 'In Development'}</>
-                      )}
-                    </span>
-                  </div>
+                  <Bot className="mr-2 h-4 w-4 text-muted-foreground shrink-0" />
+                  <span className={cn("text-sm", selectedAgentId === agent.id && "font-medium")}>
+                    {agent.name}
+                  </span>
                 </CommandItem>
               ))}
             </CommandGroup>
