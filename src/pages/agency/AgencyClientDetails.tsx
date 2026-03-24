@@ -38,6 +38,8 @@ export default function AgencyClientDetails() {
   const { profile, isPreviewMode, previewAgency } = useMultiTenantAuth();
   const [client, setClient] = useState<ClientData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [settingsPageEnabled, setSettingsPageEnabled] = useState(false);
+  const [existingCapabilities, setExistingCapabilities] = useState<Record<string, any>>({});
   const activeTab = tab || "overview";
 
   const agencyId = isPreviewMode ? previewAgency?.id : profile?.agency?.id;
