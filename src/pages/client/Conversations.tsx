@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ConversationsSkeleton } from "@/components/skeletons";
-import { Phone, Clock, CheckCircle, MessageSquare, ArrowDown, ArrowUpDown, X } from "lucide-react";
+import { Phone, Clock, CheckCircle, MessageSquare, ArrowDown, ArrowUpDown, X, Plus, Tag, Users, Building2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -362,7 +362,7 @@ export default function Conversations() {
   const allSelected = filteredConversations.length > 0 &&
     filteredConversations.every(c => selectedConversationIds.has(c.id));
 
-  const sortLabel = sortOrder === 'asc' ? 'Oldest first' : sortOrder === 'duration' ? 'Longest' : 'Newest first';
+  const sortLabel = sortOrder === 'asc' ? 'Oldest' : sortOrder === 'duration' ? 'Longest' : 'Newest';
 
   if (agents.length === 0) {
     return <NoAgentsAssigned />;
@@ -370,481 +370,505 @@ export default function Conversations() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Slim header bar */}
-      <div className="flex items-center justify-between px-5 py-3 border-b bg-card flex-shrink-0">
-        <div className="flex items-center gap-2">
+      {/* ── Unified header ── */}
+      <div className="bg-card flex-shrink-0">
+        {/* Row 1: Title + count */}
+        <div className="px-4 pt-3 pb-0 flex items-center gap-2">
           <h1 className="text-[15px] font-semibold">Conversations</h1>
           <span className="text-xs text-muted-foreground px-2 py-0.5 bg-muted rounded border">
             {filteredConversations.length}
           </span>
         </div>
+
+        {/* Row 2: Status filters + sort */}
+        <div className="px-4 py-2 flex items-center gap-1">
+          {(['all', 'active', 'owned', 'resolved'] as const).map(s => (
+            <Button
+              key={s}
+              size="sm"
+              variant={statusFilter === s ? 'default' : 'ghost'}
+              onClick={() => setStatusFilter(s)}
+              className="h-7 text-xs px-3"
+            >
+              {s !== 'all' && (
+                <span className={cn(
+                  "w-1.5 h-1.5 rounded-full mr-1.5",
+                  s === 'active' && 'bg-green-500',
+                  s === 'owned' && 'bg-violet-500',
+                  s === 'resolved' && 'bg-gray-400'
+                )} />
+              )}
+              {s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
+            </Button>
+          ))}
+          <div className="flex-1" />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-7 px-2.5 gap-1.5 text-xs text-muted-foreground shrink-0">
+                <ArrowUpDown className="h-3 w-3" />
+                {sortLabel}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setSortOrder('desc')}>
+                {sortOrder === 'desc' && <span className="mr-1">✓</span>}Newest first
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortOrder('asc')}>
+                {sortOrder === 'asc' && <span className="mr-1">✓</span>}Oldest first
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortOrder('duration')}>
+                {sortOrder === 'duration' && <span className="mr-1">✓</span>}Longest duration
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        {/* Row 3: Filter chips */}
+        <div className="px-4 pb-2 flex items-center gap-1.5 border-b border-border flex-wrap">
+          {/* Active tag filter chips */}
+          {tagFilters.map(tf => {
+            const tagConfig = availableTags.find((t: any) => t.label === tf);
+            return (
+              <button
+                key={tf}
+                onClick={() => toggleTagFilter(tf)}
+                className="text-xs px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 flex items-center gap-1"
+              >
+                {tf}
+                <X className="w-2.5 h-2.5" />
+              </button>
+            );
+          })}
+          {/* Available tag filter chips (inactive) */}
+          {availableTags.filter((t: any) => !tagFilters.includes(t.label)).map((tag: any) => (
+            <button
+              key={tag.id}
+              onClick={() => toggleTagFilter(tag.label)}
+              className="text-xs px-2 py-0.5 rounded border border-dashed border-border text-muted-foreground flex items-center gap-1 cursor-pointer hover:border-foreground/30"
+              style={{ borderColor: tag.color, color: tag.color }}
+            >
+              {tag.label}
+            </button>
+          ))}
+          {/* Placeholder filter chips */}
+          <button className="text-xs px-2 py-0.5 rounded border border-dashed border-border text-muted-foreground flex items-center gap-1 cursor-pointer hover:border-foreground/30">
+            <Plus className="w-2.5 h-2.5" />
+            Department
+          </button>
+          <button className="text-xs px-2 py-0.5 rounded border border-dashed border-border text-muted-foreground flex items-center gap-1 cursor-pointer hover:border-foreground/30">
+            <Plus className="w-2.5 h-2.5" />
+            Assigned
+          </button>
+        </div>
       </div>
 
+      {/* ── Three-panel workspace ── */}
       <div className="flex-1 min-h-0 overflow-hidden">
-        <Card className="h-full overflow-hidden rounded-none border-0 border-t">
-          <div className="grid grid-cols-[320px_1fr_300px] h-full">
+        <div className="grid grid-cols-[380px_1fr_300px] h-full">
 
-            {/* Left Panel: Conversation List */}
-            <div className="flex flex-col border-r border-border h-full overflow-hidden">
+          {/* LEFT PANEL: Conversation list */}
+          <div className="flex flex-col border-r border-border h-full overflow-hidden">
 
-              {/* Bulk Actions Toolbar */}
-              {selectedConversationIds.size > 0 && (
-                <div className="p-2 bg-muted border-b border-border flex items-center gap-1.5 flex-wrap">
-                  <span className="text-sm font-medium text-foreground mr-1">
-                    {selectedConversationIds.size} selected
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 px-2"
-                    onClick={() => setSelectedConversationIds(new Set())}
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </Button>
+            {/* Bulk Actions Toolbar */}
+            {selectedConversationIds.size > 0 && (
+              <div className="px-3 py-2 bg-muted border-b border-border flex items-center gap-1.5 flex-wrap">
+                <Checkbox
+                  checked={allSelected}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      setSelectedConversationIds(new Set(filteredConversations.map(c => c.id)));
+                    } else {
+                      setSelectedConversationIds(new Set());
+                    }
+                  }}
+                />
+                <span className="text-xs font-medium text-foreground">
+                  {selectedConversationIds.size} selected
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0 ml-auto"
+                  onClick={() => setSelectedConversationIds(new Set())}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
 
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" className="h-7 text-xs px-2">Status</Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      <DropdownMenuItem onClick={() => bulkUpdateStatus('active')}>
-                        <span className="w-2 h-2 rounded-full bg-green-500 mr-2" />Active
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => bulkUpdateStatus('owned')}>
-                        <span className="w-2 h-2 rounded-full bg-yellow-500 mr-2" />Owned
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => bulkUpdateStatus('resolved')}>
-                        <span className="w-2 h-2 rounded-full bg-blue-500 mr-2" />Resolved
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-
-                  {availableTags.length > 0 && (
-                    <>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="sm" className="h-7 text-xs px-2">+ Tag</Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent>
-                          {availableTags.map((tag: any) => (
-                            <DropdownMenuItem key={tag.id} onClick={() => bulkApplyTag(tag.label)}>
-                              <span className="w-2 h-2 rounded-full mr-2 flex-shrink-0" style={{ backgroundColor: tag.color }} />
-                              {tag.label}
-                            </DropdownMenuItem>
-                          ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="sm" className="h-7 text-xs px-2">− Tag</Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent>
-                          {availableTags.map((tag: any) => (
-                            <DropdownMenuItem key={tag.id} onClick={() => bulkRemoveTag(tag.label)}>
-                              <span className="w-2 h-2 rounded-full mr-2 flex-shrink-0" style={{ backgroundColor: tag.color }} />
-                              {tag.label}
-                            </DropdownMenuItem>
-                          ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </>
-                  )}
-                </div>
-              )}
-
-
-              {/* Status filters + Sort */}
-              <div className="px-3 py-2 border-b border-border space-y-2">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  {selectedConversationIds.size > 0 && (
-                    <Checkbox
-                      checked={allSelected}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          setSelectedConversationIds(new Set(filteredConversations.map(c => c.id)));
-                        } else {
-                          setSelectedConversationIds(new Set());
-                        }
-                      }}
-                      className="mr-1"
-                    />
-                  )}
-                  {(['all', 'active', 'owned', 'resolved'] as const).map(s => (
-                    <Button
-                      key={s}
-                      size="sm"
-                      variant={statusFilter === s ? 'default' : 'outline'}
-                      onClick={() => setStatusFilter(s)}
-                      className="h-7 text-xs px-3"
-                    >
-                      {s !== 'all' && (
-                        <span className={cn(
-                          "w-1.5 h-1.5 rounded-full mr-1",
-                          s === 'active' && 'bg-green-400',
-                          s === 'owned' && 'bg-yellow-400',
-                          s === 'resolved' && 'bg-blue-400'
-                        )} />
-                      )}
-                      {s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
-                    </Button>
-                  ))}
-                  <div className="flex-1" />
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" className="h-7 px-2.5 shrink-0" title={sortLabel}>
-                        <ArrowUpDown className="h-3.5 w-3.5" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => setSortOrder('desc')}>
-                        {sortOrder === 'desc' && <span className="mr-1">✓</span>}Newest first
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setSortOrder('asc')}>
-                        {sortOrder === 'asc' && <span className="mr-1">✓</span>}Oldest first
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setSortOrder('duration')}>
-                        {sortOrder === 'duration' && <span className="mr-1">✓</span>}Longest duration
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-6 text-xs px-2">Status</Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={() => bulkUpdateStatus('active')}>
+                      <span className="w-2 h-2 rounded-full bg-green-500 mr-2" />Active
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => bulkUpdateStatus('owned')}>
+                      <span className="w-2 h-2 rounded-full bg-violet-500 mr-2" />Owned
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => bulkUpdateStatus('resolved')}>
+                      <span className="w-2 h-2 rounded-full bg-gray-400 mr-2" />Resolved
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
 
                 {availableTags.length > 0 && (
-                  <div className="flex gap-1 flex-wrap">
-                    {availableTags.map((tag: any) => (
-                      <Badge
-                        key={tag.id}
-                        variant={tagFilters.includes(tag.label) ? 'default' : 'outline'}
-                        className="cursor-pointer text-xs"
-                        onClick={() => toggleTagFilter(tag.label)}
-                        style={tagFilters.includes(tag.label) ? {
-                          backgroundColor: tag.color,
-                          borderColor: tag.color,
-                          color: '#ffffff'
-                        } : {
-                          borderColor: tag.color,
-                          color: tag.color,
-                          backgroundColor: 'transparent'
-                        }}
+                  <>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-6 text-xs px-2">+ Tag</Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        {availableTags.map((tag: any) => (
+                          <DropdownMenuItem key={tag.id} onClick={() => bulkApplyTag(tag.label)}>
+                            <span className="w-2 h-2 rounded-full mr-2 flex-shrink-0" style={{ backgroundColor: tag.color }} />
+                            {tag.label}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-6 text-xs px-2">− Tag</Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        {availableTags.map((tag: any) => (
+                          <DropdownMenuItem key={tag.id} onClick={() => bulkRemoveTag(tag.label)}>
+                            <span className="w-2 h-2 rounded-full mr-2 flex-shrink-0" style={{ backgroundColor: tag.color }} />
+                            {tag.label}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Conversation list */}
+            <ScrollArea className="flex-1">
+              <div>
+                {isLoading ? (
+                  <ConversationsSkeleton />
+                ) : filteredConversations.length === 0 ? (
+                  <div className="text-center py-12 px-4">
+                    <p className="text-muted-foreground font-medium">No conversations yet</p>
+                    <p className="text-muted-foreground text-sm mt-1">
+                      Conversations will appear here once your chatbot starts receiving messages.
+                    </p>
+                  </div>
+                ) : (
+                  filteredConversations.map((conv) => {
+                    const isChecked = selectedConversationIds.has(conv.id);
+                    const isSelected = selectedConversation?.id === conv.id;
+                    const displayName = conv.metadata?.variables?.user_name || conv.caller_phone || 'Unknown';
+
+                    return (
+                      <div
+                        key={conv.id}
+                        onClick={() => setSelectedConversation(conv)}
+                        className={cn(
+                          "group border-l-[3px] px-4 py-3 border-b border-border cursor-pointer transition-colors",
+                          conv.status === 'active' && "border-l-green-500",
+                          conv.status === 'owned' && "border-l-violet-500",
+                          conv.status === 'resolved' && "border-l-gray-400",
+                          (!['active', 'owned', 'resolved'].includes(conv.status)) && "border-l-border",
+                          isSelected ? "bg-primary/5" : "hover:bg-muted/40"
+                        )}
                       >
-                        {tag.label}
-                      </Badge>
-                    ))}
+                        {/* Row 1: Name + time */}
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <Checkbox
+                              checked={isChecked}
+                              onCheckedChange={(checked) => {
+                                setSelectedConversationIds(prev => {
+                                  const next = new Set(prev);
+                                  if (checked) next.add(conv.id); else next.delete(conv.id);
+                                  return next;
+                                });
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              className={cn(
+                                "shrink-0 transition-opacity",
+                                isChecked ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                              )}
+                            />
+                            <span className="text-[13px] font-medium truncate">{displayName}</span>
+                            {conv.is_widget_test && (
+                              <Badge variant="outline" className="text-[10px] shrink-0 px-1 py-0">🧪</Badge>
+                            )}
+                          </div>
+                          <span className="text-[10.5px] text-muted-foreground shrink-0 ml-2">
+                            {formatDistanceToNow(new Date(conv.started_at))} ago
+                          </span>
+                        </div>
+
+                        {/* Row 2: Message preview (time placeholder) */}
+                        <p className="text-xs text-muted-foreground truncate pl-6 mb-1.5">
+                          Started {format(new Date(conv.started_at), 'MMM d, h:mm a')}
+                        </p>
+
+                        {/* Row 3: Status badge + tags */}
+                        <div className="flex items-center gap-1.5 flex-wrap pl-6">
+                          <span className={cn(
+                            "inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold border",
+                            conv.status === 'active' && "bg-green-50 text-green-600 border-green-200",
+                            conv.status === 'owned' && "bg-violet-50 text-violet-600 border-violet-200",
+                            conv.status === 'resolved' && "bg-gray-100 text-gray-500 border-gray-200",
+                            (!['active', 'owned', 'resolved'].includes(conv.status)) && "bg-muted text-muted-foreground border-border"
+                          )}>
+                            {conv.status.charAt(0).toUpperCase() + conv.status.slice(1)}
+                          </span>
+                          {conv.metadata?.tags?.map((tag: string) => {
+                            const tagConfig = (agentConfig as any)?.widget_settings?.functions?.conversation_tags?.find(
+                              (t: any) => t.label === tag
+                            );
+                            return tagConfig ? (
+                              <span
+                                key={tag}
+                                className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium border"
+                                style={{
+                                  backgroundColor: `${tagConfig.color}20`,
+                                  borderColor: tagConfig.color,
+                                  color: tagConfig.color
+                                }}
+                              >
+                                {tag}
+                              </span>
+                            ) : null;
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+
+                {/* Loading more spinner */}
+                {isFetchingNextPage && (
+                  <div className="flex justify-center py-3">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary" />
+                  </div>
+                )}
+
+                {/* Sentinel for IntersectionObserver */}
+                <div ref={sentinelRef} className="h-1" />
+              </div>
+            </ScrollArea>
+          </div>
+
+          {/* MIDDLE PANEL: Transcript */}
+          <div className="flex flex-col border-r border-border h-full overflow-hidden relative bg-muted/30">
+            {selectedConversation ? (
+              <>
+                <div className="px-4 py-3 border-b border-border">
+                  <h3 className="font-semibold text-sm">
+                    {selectedConversation.metadata?.variables?.user_name || selectedConversation.caller_phone || 'Unknown'}
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    Started {format(new Date(selectedConversation.started_at), 'PPp')}
+                  </p>
+                </div>
+                <ScrollArea
+                  className="flex-1 min-h-0"
+                  viewportRef={transcriptScrollRef}
+                  onViewportScroll={handleTranscriptScroll}
+                >
+                  <div className="p-4">
+                    {transcripts.length === 0 ? (
+                      <div className="text-center py-12 text-muted-foreground text-sm">
+                        No transcript available for this conversation.
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {transcripts.map((transcript, index) => {
+                          const speaker = (transcript.speaker.toLowerCase().includes('user') ||
+                            transcript.speaker.toLowerCase().includes('caller')) ? 'user' : 'assistant';
+                          return (
+                            <MessageBubble
+                              key={transcript.id || index}
+                              text={transcript.text}
+                              speaker={speaker}
+                              timestamp={transcript.timestamp}
+                              buttons={transcript.buttons}
+                              appearance={{
+                                primaryColor: '#3b82f6',
+                                secondaryColor: '#ffffff',
+                                textColor: '#1f2937',
+                                messageTextColor: '#1f2937',
+                                messageBgColor: '#f3f4f6',
+                                fontSize: 14,
+                                messageBubbleStyle: 'rounded',
+                              }}
+                            />
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </ScrollArea>
+
+                {showJumpToLatest && (
+                  <Button
+                    className="absolute bottom-4 left-1/2 -translate-x-1/2 shadow-lg z-10"
+                    size="sm"
+                    onClick={jumpToLatest}
+                  >
+                    <ArrowDown className="mr-2 h-4 w-4" />
+                    Jump to latest
+                  </Button>
+                )}
+              </>
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center gap-2 text-center px-6">
+                <MessageSquare className="w-10 h-10 text-muted-foreground/30" />
+                <p className="text-sm font-medium text-muted-foreground">Select a conversation</p>
+                <p className="text-xs text-muted-foreground/60">Click a conversation on the left to view the transcript</p>
+              </div>
+            )}
+          </div>
+
+          {/* RIGHT PANEL: Details */}
+          <div className="flex flex-col h-full">
+            <ScrollArea className="flex-1">
+              <div className="p-4 space-y-4">
+                {selectedConversation ? (
+                  <>
+                    {selectedConversation?.metadata?.variables &&
+                      Object.keys(selectedConversation.metadata.variables).length > 0 && (
+                        <div>
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Contact / Captured Info</p>
+                          <div className="space-y-2 p-3 bg-muted rounded-lg">
+                            <div className="space-y-2">
+                              <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">Name:</span>
+                                <span className={`font-medium ${!selectedConversation.metadata.variables.user_name ? 'text-muted-foreground italic' : ''}`}>
+                                  {selectedConversation.metadata.variables.user_name || 'Not captured yet'}
+                                </span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">Email:</span>
+                                <span className={`font-medium ${!selectedConversation.metadata.variables.user_email ? 'text-muted-foreground italic' : ''}`}>
+                                  {selectedConversation.metadata.variables.user_email || 'Not captured yet'}
+                                </span>
+                              </div>
+                              {(agentConfig as any)?.custom_tracked_variables?.map((variable: any) => {
+                                const voiceflowName = typeof variable === 'string' ? variable : variable.voiceflow_name;
+                                const displayName = typeof variable === 'string'
+                                  ? variable.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())
+                                  : variable.display_name;
+                                return (
+                                  <div key={voiceflowName} className="flex justify-between text-sm">
+                                    <span className="text-muted-foreground">{displayName}:</span>
+                                    <span className={`font-medium ${!selectedConversation.metadata?.variables?.[voiceflowName] ? 'text-muted-foreground italic' : ''}`}>
+                                      {selectedConversation.metadata?.variables?.[voiceflowName] || 'Not captured yet'}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Status</p>
+                      <Select
+                        value={selectedConversation?.status || 'active'}
+                        onValueChange={updateStatus}
+                        disabled={updatingStatus}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="active">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-green-500" />
+                              <span>Active</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="owned">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-violet-500" />
+                              <span>Owned</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="resolved">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-gray-400" />
+                              <span>Resolved</span>
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Tags</p>
+                      <div className="flex flex-wrap gap-2">
+                        {(agentConfig as any)?.widget_settings?.functions?.conversation_tags
+                          ?.filter((tag: any) => tag.enabled)
+                          .map((tag: any) => {
+                            const isAssigned = assignedTags.includes(tag.label);
+                            return (
+                              <Button
+                                key={tag.id}
+                                size="sm"
+                                variant={isAssigned ? "default" : "outline"}
+                                onClick={() => toggleTag(tag.label)}
+                                disabled={updatingTags}
+                                style={isAssigned ? {
+                                  backgroundColor: tag.color,
+                                  borderColor: tag.color,
+                                  color: '#ffffff'
+                                } : {
+                                  borderColor: tag.color,
+                                  color: tag.color,
+                                  backgroundColor: 'transparent'
+                                }}
+                              >
+                                {tag.label}
+                              </Button>
+                            );
+                          })}
+                        {(!(agentConfig as any)?.widget_settings?.functions?.conversation_tags?.length) && (
+                          <p className="text-sm text-muted-foreground">No tags configured</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Note</p>
+                      <Textarea
+                        id="note"
+                        placeholder="Add a note about this conversation..."
+                        className="min-h-[100px]"
+                        value={note}
+                        onChange={(e) => setNote(e.target.value)}
+                      />
+                      <Button
+                        size="sm"
+                        className="mt-2 w-full"
+                        onClick={saveNote}
+                        disabled={savingNote}
+                      >
+                        {savingNote ? "Saving..." : "Save Note"}
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center justify-center gap-2 text-center py-16">
+                    <MessageSquare className="w-8 h-8 text-muted-foreground/30" />
+                    <p className="text-sm font-medium text-muted-foreground">Details will appear here</p>
+                    <p className="text-xs text-muted-foreground/60">Select a conversation to view details</p>
                   </div>
                 )}
               </div>
-
-
-              {/* Conversation list */}
-              <ScrollArea className="flex-1">
-                <div className="p-0">
-                  {isLoading ? (
-                    <ConversationsSkeleton />
-                  ) : filteredConversations.length === 0 ? (
-                    <div className="text-center py-12 px-4">
-                      <p className="text-muted-foreground font-medium">No conversations yet</p>
-                      <p className="text-muted-foreground text-sm mt-1">
-                        Conversations will appear here once your chatbot starts receiving messages.
-                      </p>
-                    </div>
-                  ) : (
-                    filteredConversations.map((conv) => {
-                      const isChecked = selectedConversationIds.has(conv.id);
-                      return (
-                        <div
-                          key={conv.id}
-                          className={cn(
-                            "group flex items-start gap-2 px-3.5 py-2.5 hover:bg-muted/60 transition-colors cursor-pointer border-l-2",
-                            selectedConversation?.id === conv.id
-                              ? "bg-primary/5 border-primary"
-                              : "border-transparent"
-                          )}
-                        >
-                          <Checkbox
-                            checked={isChecked}
-                            onCheckedChange={(checked) => {
-                              setSelectedConversationIds(prev => {
-                                const next = new Set(prev);
-                                if (checked) next.add(conv.id); else next.delete(conv.id);
-                                return next;
-                              });
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                            className={cn(
-                              "mt-0.5 shrink-0 transition-opacity",
-                              isChecked ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-                            )}
-                          />
-                        <div
-                          className="flex-1 min-w-0"
-                          onClick={() => setSelectedConversation(conv)}
-                        >
-                          <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
-                            <p className="font-medium text-sm truncate">
-                              {conv.metadata?.variables?.user_name || conv.caller_phone || 'Unknown'}
-                            </p>
-                            {conv.is_widget_test && (
-                              <Badge variant="outline" className="text-xs shrink-0">🧪 Test</Badge>
-                            )}
-                            {conv.metadata?.tags?.map((tag: string) => {
-                              const tagConfig = (agentConfig as any)?.widget_settings?.functions?.conversation_tags?.find(
-                                (t: any) => t.label === tag
-                              );
-                              return tagConfig ? (
-                                <Badge
-                                  key={tag}
-                                  variant="outline"
-                                  className="text-xs shrink-0"
-                                  style={{
-                                    backgroundColor: `${tagConfig.color}20`,
-                                    borderColor: tagConfig.color,
-                                    color: tagConfig.color
-                                  }}
-                                >
-                                  {tag}
-                                </Badge>
-                              ) : null;
-                            })}
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <span className={cn(
-                              "w-1.5 h-1.5 rounded-full flex-shrink-0",
-                              conv.status === 'active' && "bg-green-500",
-                              conv.status === 'owned' && "bg-yellow-500",
-                              conv.status === 'resolved' && "bg-blue-500",
-                            )} />
-                            <p className="text-xs text-muted-foreground">
-                              {formatDistanceToNow(new Date(conv.started_at))} ago
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                      );
-                    })
-                  )}
-
-                  {/* Loading more spinner */}
-                  {isFetchingNextPage && (
-                    <div className="flex justify-center py-3">
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary" />
-                    </div>
-                  )}
-
-                  {/* Sentinel for IntersectionObserver */}
-                  <div ref={sentinelRef} className="h-1" />
-                </div>
-              </ScrollArea>
-            </div>
-
-            {/* Middle Panel: Transcript */}
-            <div className="flex flex-col border-r border-border h-full overflow-hidden relative bg-muted/30">
-              {selectedConversation ? (
-                <>
-                  <div className="p-4 border-b border-border">
-                    <h3 className="font-semibold text-lg">
-                      {selectedConversation.metadata?.variables?.user_name || selectedConversation.caller_phone || 'Unknown'}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      Started {format(new Date(selectedConversation.started_at), 'PPp')}
-                    </p>
-                  </div>
-                  <ScrollArea
-                    className="flex-1 min-h-0"
-                    viewportRef={transcriptScrollRef}
-                    onViewportScroll={handleTranscriptScroll}
-                  >
-                    <div className="p-4">
-                      {transcripts.length === 0 ? (
-                        <div className="text-center py-12 text-muted-foreground">
-                          No transcript available for this conversation.
-                        </div>
-                      ) : (
-                        <div className="space-y-4">
-                          {transcripts.map((transcript, index) => {
-                            const speaker = (transcript.speaker.toLowerCase().includes('user') ||
-                              transcript.speaker.toLowerCase().includes('caller')) ? 'user' : 'assistant';
-                            return (
-                              <MessageBubble
-                                key={transcript.id || index}
-                                text={transcript.text}
-                                speaker={speaker}
-                                timestamp={transcript.timestamp}
-                                buttons={transcript.buttons}
-                                appearance={{
-                                  primaryColor: '#3b82f6',
-                                  secondaryColor: '#ffffff',
-                                  textColor: '#1f2937',
-                                  messageTextColor: '#1f2937',
-                                  messageBgColor: '#f3f4f6',
-                                  fontSize: 14,
-                                  messageBubbleStyle: 'rounded',
-                                }}
-                              />
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  </ScrollArea>
-
-                  {showJumpToLatest && (
-                    <Button
-                      className="absolute bottom-4 left-1/2 -translate-x-1/2 shadow-lg z-10"
-                      size="sm"
-                      onClick={jumpToLatest}
-                    >
-                      <ArrowDown className="mr-2 h-4 w-4" />
-                      Jump to latest
-                    </Button>
-                  )}
-                </>
-              ) : (
-                <div className="flex-1 flex items-center justify-center text-muted-foreground">
-                  Select a conversation to view details
-                </div>
-              )}
-            </div>
-
-            {/* Right Panel: Details */}
-            <div className="flex flex-col h-full">
-              <ScrollArea className="flex-1">
-                <div className="p-4 space-y-4">
-                  {selectedConversation ? (
-                    <>
-                      {selectedConversation?.metadata?.variables &&
-                        Object.keys(selectedConversation.metadata.variables).length > 0 && (
-                          <div>
-                            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Contact / Captured Info</p>
-                            <div className="space-y-2 p-3 bg-muted rounded-lg">
-                              <div className="space-y-2">
-                                <div className="flex justify-between text-sm">
-                                  <span className="text-muted-foreground">Name:</span>
-                                  <span className={`font-medium ${!selectedConversation.metadata.variables.user_name ? 'text-muted-foreground italic' : ''}`}>
-                                    {selectedConversation.metadata.variables.user_name || 'Not captured yet'}
-                                  </span>
-                                </div>
-                                <div className="flex justify-between text-sm">
-                                  <span className="text-muted-foreground">Email:</span>
-                                  <span className={`font-medium ${!selectedConversation.metadata.variables.user_email ? 'text-muted-foreground italic' : ''}`}>
-                                    {selectedConversation.metadata.variables.user_email || 'Not captured yet'}
-                                  </span>
-                                </div>
-                                {(agentConfig as any)?.custom_tracked_variables?.map((variable: any) => {
-                                  const voiceflowName = typeof variable === 'string' ? variable : variable.voiceflow_name;
-                                  const displayName = typeof variable === 'string'
-                                    ? variable.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())
-                                    : variable.display_name;
-                                  return (
-                                    <div key={voiceflowName} className="flex justify-between text-sm">
-                                      <span className="text-muted-foreground">{displayName}:</span>
-                                      <span className={`font-medium ${!selectedConversation.metadata?.variables?.[voiceflowName] ? 'text-muted-foreground italic' : ''}`}>
-                                        {selectedConversation.metadata?.variables?.[voiceflowName] || 'Not captured yet'}
-                                      </span>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                      <div>
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Status</p>
-                        <Select
-                          value={selectedConversation?.status || 'active'}
-                          onValueChange={updateStatus}
-                          disabled={updatingStatus}
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="active">
-                              <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 rounded-full bg-green-500" />
-                                <span>Active</span>
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="owned">
-                              <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 rounded-full bg-yellow-500" />
-                                <span>Owned</span>
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="resolved">
-                              <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 rounded-full bg-blue-500" />
-                                <span>Resolved</span>
-                              </div>
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div>
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Tags</p>
-                        <div className="flex flex-wrap gap-2">
-                          {(agentConfig as any)?.widget_settings?.functions?.conversation_tags
-                            ?.filter((tag: any) => tag.enabled)
-                            .map((tag: any) => {
-                              const isAssigned = assignedTags.includes(tag.label);
-                              return (
-                                <Button
-                                  key={tag.id}
-                                  size="sm"
-                                  variant={isAssigned ? "default" : "outline"}
-                                  onClick={() => toggleTag(tag.label)}
-                                  disabled={updatingTags}
-                                  style={isAssigned ? {
-                                    backgroundColor: tag.color,
-                                    borderColor: tag.color,
-                                    color: '#ffffff'
-                                  } : {
-                                    borderColor: tag.color,
-                                    color: tag.color,
-                                    backgroundColor: 'transparent'
-                                  }}
-                                >
-                                  {tag.label}
-                                </Button>
-                              );
-                            })}
-                          {(!(agentConfig as any)?.widget_settings?.functions?.conversation_tags?.length) && (
-                            <p className="text-sm text-muted-foreground">No tags configured</p>
-                          )}
-                        </div>
-                      </div>
-
-                      <div>
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Note</p>
-                        <Textarea
-                          id="note"
-                          placeholder="Add a note about this conversation..."
-                          className="min-h-[100px]"
-                          value={note}
-                          onChange={(e) => setNote(e.target.value)}
-                        />
-                        <Button
-                          size="sm"
-                          className="mt-2 w-full"
-                          onClick={saveNote}
-                          disabled={savingNote}
-                        >
-                          {savingNote ? "Saving..." : "Save Note"}
-                        </Button>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="text-center text-muted-foreground text-sm">
-                      Select a conversation to view options
-                    </div>
-                  )}
-                </div>
-              </ScrollArea>
-            </div>
+            </ScrollArea>
           </div>
-        </Card>
+
+        </div>
       </div>
     </div>
   );
