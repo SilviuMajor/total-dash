@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Eye } from "lucide-react";
 import { ClientOverview } from "@/components/client-management/ClientOverview";
@@ -37,6 +38,8 @@ export default function AgencyClientDetails() {
   const { profile, isPreviewMode, previewAgency } = useMultiTenantAuth();
   const [client, setClient] = useState<ClientData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [settingsPageEnabled, setSettingsPageEnabled] = useState(false);
+  const [existingCapabilities, setExistingCapabilities] = useState<Record<string, any>>({});
   const activeTab = tab || "overview";
 
   const agencyId = isPreviewMode ? previewAgency?.id : profile?.agency?.id;
@@ -46,6 +49,12 @@ export default function AgencyClientDetails() {
       loadClientData();
     }
   }, [clientId, agencyId]);
+
+  useEffect(() => {
+    if (client?.id) {
+      loadClientSettings();
+    }
+  }, [client?.id]);
 
   const loadClientData = async () => {
     try {
@@ -74,6 +83,36 @@ export default function AgencyClientDetails() {
       setLoading(false);
     }
   };
+
+  const loadClientSettings = async () => {
+    const { data } = await supabase
+      .from('client_settings')
+      .select('admin_capabilities')
+      .eq('client_id', client!.id)
+      .single();
+    if (data?.admin_capabilities) {
+      const caps = data.admin_capabilities as Record<string, any>;
+      setExistingCapabilities(caps);
+      setSettingsPageEnabled(caps.settings_page_enabled === true);
+    }
+  };
+
+  const handleToggleSettingsPage = async (value: boolean) => {
+    setSettingsPageEnabled(value);
+    const newCaps = { ...existingCapabilities, settings_page_enabled: value };
+    setExistingCapabilities(newCaps);
+    const { error } = await supabase
+      .from('client_settings')
+      .upsert({ client_id: client!.id, admin_capabilities: newCaps }, { onConflict: 'client_id' });
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Saved", description: `Settings page ${value ? "enabled" : "disabled"} for clients` });
+    }
+  };
+
+
+
 
   const handleTabChange = (value: string) => {
     navigate(`/agency/clients/${clientId}/${value}`);
@@ -159,6 +198,15 @@ export default function AgencyClientDetails() {
 
         <TabsContent value="settings">
           <div className="space-y-6">
+            <Card className="p-4 bg-card border-border/50">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">Enable Settings Page for Clients</p>
+                  <p className="text-xs text-muted-foreground">Allow clients to view and manage departments, users, and permissions</p>
+                </div>
+                <Switch checked={settingsPageEnabled} onCheckedChange={handleToggleSettingsPage} />
+              </div>
+            </Card>
             <ClientSettings client={client} onUpdate={loadClientData} />
             <DepartmentManagement clientId={client.id} />
           </div>

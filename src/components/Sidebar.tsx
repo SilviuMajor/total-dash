@@ -21,6 +21,7 @@ const clientNavigation = [
   { name: "Knowledge Base", href: "/knowledge-base", icon: BookOpen, permissionKey: "knowledge_base" },
   { name: "Guides", href: "/guides", icon: BookOpen, permissionKey: "guides" },
   { name: "Agent Settings", href: "/agent-settings", icon: Bot, permissionKey: "agent_settings" },
+  { name: "Settings", href: "/settings", icon: Settings, permissionKey: "settings_page" },
 ];
 
 const agencyNavigation = [
@@ -55,6 +56,7 @@ export function Sidebar() {
     [key: string]: boolean | undefined;
   }
   const [clientPermissions, setClientPermissions] = useState<ClientPermissions | null>(null);
+  const [clientSettingsPageEnabled, setClientSettingsPageEnabled] = useState(false);
   
   // Determine branding context
   const isClientView = isClientPreviewMode;
@@ -72,17 +74,40 @@ export function Sidebar() {
       const loadClientPermissions = async () => {
         const { data } = await supabase
           .from('client_settings')
-          .select('default_user_permissions')
+          .select('default_user_permissions, admin_capabilities')
           .eq('client_id', previewClient.id)
           .single();
         
         if (data?.default_user_permissions) {
           setClientPermissions(data.default_user_permissions as ClientPermissions);
         }
+        // In preview mode, always show the settings page
+        setClientSettingsPageEnabled(true);
       };
       loadClientPermissions();
+    } else if (!isClientPreviewMode && effectiveProfile?.role === 'client') {
+      // Regular client: load capabilities
+      const loadCapabilities = async () => {
+        // Get clientId from client_users
+        const { data: cuData } = await supabase
+          .from('client_users')
+          .select('client_id')
+          .eq('user_id', effectiveProfile.id)
+          .single();
+        if (cuData?.client_id) {
+          const { data: csData } = await supabase
+            .from('client_settings')
+            .select('admin_capabilities')
+            .eq('client_id', cuData.client_id)
+            .single();
+          if (csData?.admin_capabilities) {
+            setClientSettingsPageEnabled((csData.admin_capabilities as any)?.settings_page_enabled === true);
+          }
+        }
+      };
+      loadCapabilities();
     }
-  }, [isClientPreviewMode, previewClient]);
+  }, [isClientPreviewMode, previewClient, effectiveProfile]);
   
   // Determine which navigation to show based on preview depth
   const { previewDepth } = useMultiTenantAuth();
@@ -93,6 +118,8 @@ export function Sidebar() {
     // Client preview mode → show filtered client navigation
     const selectedAgent = agents.find(a => a.id === selectedAgentId);
     navigation = clientNavigation.filter(item => {
+      // settings_page special check — always show in preview mode
+      if (item.permissionKey === 'settings_page') return true;
       if (item.permissionKey && selectedAgent) {
         return selectedAgentPermissions?.[item.permissionKey] === true;
       }
@@ -115,6 +142,9 @@ export function Sidebar() {
   } else {
     // Client navigation with filtering
     navigation = clientNavigation.filter(item => {
+      // settings_page special check
+      if (item.permissionKey === 'settings_page') return clientSettingsPageEnabled;
+      
       // Items with null permissionKey are always visible
       if (item.permissionKey === null) {
         return true;
