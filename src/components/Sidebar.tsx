@@ -162,9 +162,9 @@ export function Sidebar() {
   };
 
   return (
-    <div className="flex flex-col w-[200px] h-screen border-r border-border bg-card overflow-hidden flex-shrink-0">
+    <div className="flex flex-col w-[240px] h-screen border-r border-border bg-card overflow-hidden flex-shrink-0">
       {/* Logo area */}
-      <div className="flex justify-center py-6 border-b border-border">
+      <div className="flex justify-center py-8 border-b border-border">
         {branding.logoUrl ? (
           <img
             src={branding.logoUrl}
@@ -190,7 +190,7 @@ export function Sidebar() {
       )}
 
       {(effectiveProfile?.role === 'client' || previewDepth === 'client' || previewDepth === 'agency_to_client') && (
-        <div className="px-3 py-2 border-b border-border">
+        <div className="px-3 py-1 border-b border-border">
           <ClientAgentSelector compact />
         </div>
       )}
