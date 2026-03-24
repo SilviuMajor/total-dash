@@ -74,17 +74,40 @@ export function Sidebar() {
       const loadClientPermissions = async () => {
         const { data } = await supabase
           .from('client_settings')
-          .select('default_user_permissions')
+          .select('default_user_permissions, admin_capabilities')
           .eq('client_id', previewClient.id)
           .single();
         
         if (data?.default_user_permissions) {
           setClientPermissions(data.default_user_permissions as ClientPermissions);
         }
+        // In preview mode, always show the settings page
+        setClientSettingsPageEnabled(true);
       };
       loadClientPermissions();
+    } else if (!isClientPreviewMode && effectiveProfile?.role === 'client') {
+      // Regular client: load capabilities
+      const loadCapabilities = async () => {
+        // Get clientId from client_users
+        const { data: cuData } = await supabase
+          .from('client_users')
+          .select('client_id')
+          .eq('user_id', effectiveProfile.id)
+          .single();
+        if (cuData?.client_id) {
+          const { data: csData } = await supabase
+            .from('client_settings')
+            .select('admin_capabilities')
+            .eq('client_id', cuData.client_id)
+            .single();
+          if (csData?.admin_capabilities) {
+            setClientSettingsPageEnabled((csData.admin_capabilities as any)?.settings_page_enabled === true);
+          }
+        }
+      };
+      loadCapabilities();
     }
-  }, [isClientPreviewMode, previewClient]);
+  }, [isClientPreviewMode, previewClient, effectiveProfile]);
   
   // Determine which navigation to show based on preview depth
   const { previewDepth } = useMultiTenantAuth();
