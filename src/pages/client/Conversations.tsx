@@ -454,35 +454,8 @@ export default function Conversations() {
                 </div>
               )}
 
-              {/* Search + Sort */}
-              <div className="p-3 border-b border-border flex gap-2">
-                <Input
-                  placeholder="Search conversations..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="flex-1"
-                />
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-10 px-2.5 shrink-0" title={sortLabel}>
-                      <ArrowUpDown className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => setSortOrder('desc')}>
-                      {sortOrder === 'desc' && <span className="mr-1">✓</span>}Newest first
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setSortOrder('asc')}>
-                      {sortOrder === 'asc' && <span className="mr-1">✓</span>}Oldest first
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setSortOrder('duration')}>
-                      {sortOrder === 'duration' && <span className="mr-1">✓</span>}Longest duration
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
 
-              {/* Status filters + Select All */}
+              {/* Status filters + Sort */}
               <div className="px-3 py-2 border-b border-border space-y-2">
                 <div className="flex items-center gap-1.5 flex-wrap">
                   {selectedConversationIds.size > 0 && (
@@ -517,6 +490,25 @@ export default function Conversations() {
                       {s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
                     </Button>
                   ))}
+                  <div className="flex-1" />
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="h-7 px-2.5 shrink-0" title={sortLabel}>
+                        <ArrowUpDown className="h-3.5 w-3.5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => setSortOrder('desc')}>
+                        {sortOrder === 'desc' && <span className="mr-1">✓</span>}Newest first
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setSortOrder('asc')}>
+                        {sortOrder === 'asc' && <span className="mr-1">✓</span>}Oldest first
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setSortOrder('duration')}>
+                        {sortOrder === 'duration' && <span className="mr-1">✓</span>}Longest duration
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
 
                 {availableTags.length > 0 && (
@@ -543,6 +535,7 @@ export default function Conversations() {
                   </div>
                 )}
               </div>
+
 
               {/* Conversation list */}
               <ScrollArea className="flex-1">
