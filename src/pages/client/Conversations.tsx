@@ -216,7 +216,11 @@ export default function Conversations() {
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR') {
+          console.warn('Realtime subscription error, will retry automatically');
+        }
+      });
 
     return () => { channel.unsubscribe(); };
   }, [selectedAgentId, selectedConversation?.id, statusFilter, sortOrder, queryClient]);
