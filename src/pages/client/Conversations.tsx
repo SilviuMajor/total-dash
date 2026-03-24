@@ -74,8 +74,6 @@ const PAGE_SIZE = 30;
 export default function Conversations() {
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [transcripts, setTranscripts] = useState<Transcript[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [note, setNote] = useState("");
   const [assignedTags, setAssignedTags] = useState<string[]>([]);
   const [savingNote, setSavingNote] = useState(false);
@@ -123,15 +121,6 @@ export default function Conversations() {
     () => (conversationsData?.pages?.flat() || []) as Conversation[],
     [conversationsData]
   );
-
-  // Debounce search
-  const debouncedSetSearch = useRef(
-    debounce((val: string) => setDebouncedSearch(val), 300)
-  ).current;
-
-  useEffect(() => {
-    debouncedSetSearch(searchQuery);
-  }, [searchQuery]);
 
   // Reset selection on filter/agent change
   useEffect(() => {
