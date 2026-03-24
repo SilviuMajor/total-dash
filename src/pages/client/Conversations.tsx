@@ -555,7 +555,7 @@ export default function Conversations() {
                         <div
                           key={conv.id}
                           className={cn(
-                            "group flex items-start gap-2 px-3 py-2.5 hover:bg-muted/60 transition-colors cursor-pointer border-l-2",
+                            "group flex items-start gap-2 px-3.5 py-2.5 hover:bg-muted/60 transition-colors cursor-pointer border-l-2",
                             selectedConversation?.id === conv.id
                               ? "bg-primary/5 border-primary"
                               : "border-transparent"
