@@ -225,7 +225,7 @@ export function DepartmentManagement({ clientId }: { clientId: string }) {
         name: name.trim(),
         color,
         description: description.trim() || null,
-        timeout_seconds: timeout,
+        timeout_seconds: timeoutSecs,
         timezone,
         opening_hours_type: openingHoursType,
         opening_hours: buildOpeningHours(),
