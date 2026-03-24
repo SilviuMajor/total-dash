@@ -164,15 +164,15 @@ export function Sidebar() {
   return (
     <div className="flex flex-col w-[200px] h-screen border-r border-border bg-card overflow-hidden flex-shrink-0">
       {/* Logo area */}
-      <div className="flex justify-center py-4 border-b border-border">
+      <div className="flex justify-center py-6 border-b border-border">
         {branding.logoUrl ? (
           <img
             src={branding.logoUrl}
             alt={branding.companyName}
-            className="w-9 h-9 object-contain rounded-lg"
+            className="w-10 h-10 object-contain rounded-lg"
           />
         ) : (
-          <div className="w-9 h-9 bg-primary/10 rounded-lg flex items-center justify-center">
+          <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
             <span className="text-xs font-bold text-primary">
               {branding.companyName.substring(0, 2).toUpperCase()}
             </span>
