@@ -111,7 +111,7 @@ export default function AgencyClientDetails() {
     }
   };
 
-
+  const loadClientData = async () => {
     try {
       const { data, error } = await supabase
         .from('clients')
