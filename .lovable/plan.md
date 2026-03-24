@@ -1,41 +1,46 @@
 
-## Plan: Agent Selector Icon + Padding + Logo Size
+## Plan: Update Conversation Statuses for Handover System
 
-**Files to change:** `src/components/ClientAgentSelector.tsx` and `src/components/Sidebar.tsx`
-
----
-
-### 1. ClientAgentSelector.tsx — Add Bot icon, fix height & padding
-
-**Trigger button:**
-- Import `Bot` from `lucide-react`
-- Add `Bot` icon (w-4 h-4 text-muted-foreground) to the left of the agent name — always visible in the trigger
-- Change button height from `h-8` to match the search bar height. The search bar uses `py-2` inside a container — the button equivalent is `h-9`
-- Change padding from `px-2 py-1` to `px-2.5 py-2` for more breathing room
-- The name text: change from `text-sm font-semibold` to `text-sm font-medium` to be less heavy
-
-**Dropdown items (PopoverContent):**
-- Add `Bot` icon (w-4 h-4 text-muted-foreground) to each `CommandItem`, placed before the agent name
-- Remove the `Check` icon from the left (currently used to show selected) — instead, bold or highlight the selected item's name, OR keep the Check but move it to the right after the name, since the Bot icon now occupies the left slot
-- Actually: keep Check on the left for accessibility, add Bot between Check and name. Layout per item: `[Check] [Bot] [Name]`
-
-**Container in Sidebar** (`px-3 py-1` currently):
-- Change to `px-3 py-1.5` to add a tiny bit more vertical room around the selector
+**Files to change:** `src/pages/client/Conversations.tsx` and `src/components/MessageBubble.tsx`
 
 ---
 
-### 2. Sidebar.tsx — Increase logo size
+### Conversations.tsx — 7 targeted edits
 
-- Change logo image from `w-10 h-10` to `w-12 h-12` (48px)
-- Change initials fallback from `w-10 h-10` to `w-12 h-12`
-- The initials text inside: change from `text-xs` to `text-sm`
-- Logo container padding `py-8` stays the same — the extra 8px of icon height fills nicely
+**1. Interface: Conversation (lines 40–57)**
+Add `owner_id`, `department_id`, `voiceflow_user_id` fields to match the new DB schema.
+
+**2. Interface: Transcript (lines 59–69)**
+Expand `speaker` type from `'user' | 'assistant'` to include `'client_user' | 'system'`. Add `metadata` fields: `client_user_id`, `client_user_name`, `type`.
+
+**3. Status filter pills (line 385)**
+Replace `['all', 'active', 'owned', 'resolved']` with `['all', 'with_ai', 'in_handover', 'aftercare', 'needs_review', 'resolved']`. Update dot colours and label text map.
+
+**4. Conversation card left border (lines 572–575)**
+Replace `active/owned/resolved` classes with `with_ai/in_handover/aftercare/needs_review/resolved` and their new colours.
+
+**5. Conversation card status badge (lines 614–621)**
+Replace old status class mappings with new 5-status mappings + label map.
+
+**6. Right panel status Select (lines 776–804)**
+Replace 3 SelectItems (`active`, `owned`, `resolved`) with 5 new items. Change default value from `'active'` to `'with_ai'`.
+
+**7. Bulk status DropdownMenu (lines 502–510)**
+Replace 3 items with 5 new items matching new statuses/colours.
+
+**8. Transcript speaker detection (lines 685–686)**
+Replace the `toLowerCase().includes()` logic with explicit equality checks: `'user'→user`, `'client_user'→assistant`, `'system'→assistant`, else `assistant`.
 
 ---
 
-### Summary of changes
+### MessageBubble.tsx — 1 edit
 
-| File | Change |
-|---|---|
-| `ClientAgentSelector.tsx` | Add `Bot` icon in trigger + each dropdown item; height `h-9`; padding `px-2.5 py-2` |
-| `Sidebar.tsx` | Logo icon size `w-12 h-12`; agent selector container `px-3 py-1.5` |
+**Interface `MessageBubbleProps` (line 10)**
+Expand `speaker` type from `'user' | 'assistant'` to `'user' | 'assistant' | 'client_user' | 'system'`.
+`isUser` check stays as `speaker === 'user'` — no change needed there.
+
+---
+
+### No changes needed
+- `useConversations.ts` — uses string `eq('status', status)`, works as-is
+- `useConversationMutations.ts` — passes status as string, works as-is
