@@ -349,24 +349,16 @@ export default function Conversations() {
 
   const availableTags = (agentConfig as any)?.widget_settings?.functions?.conversation_tags?.filter((t: any) => t.enabled) || [];
 
-  // Client-side search + tag filtering
+  // Client-side tag filtering only
   const filteredConversations = useMemo(() => {
     let result = conversations;
-    const q = debouncedSearch.toLowerCase();
-    if (q) {
-      result = result.filter(c =>
-        c.caller_phone?.toLowerCase().includes(q) ||
-        c.metadata?.variables?.user_name?.toLowerCase().includes(q) ||
-        c.metadata?.variables?.user_email?.toLowerCase().includes(q)
-      );
-    }
     if (tagFilters.length > 0) {
       result = result.filter(c =>
         tagFilters.some(tag => c.metadata?.tags?.includes(tag))
       );
     }
     return result;
-  }, [conversations, debouncedSearch, tagFilters]);
+  }, [conversations, tagFilters]);
 
   const allSelected = filteredConversations.length > 0 &&
     filteredConversations.every(c => selectedConversationIds.has(c.id));
