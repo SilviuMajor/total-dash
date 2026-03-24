@@ -196,7 +196,7 @@ export function Sidebar() {
       )}
 
       {/* Search trigger */}
-      <div className="px-3 py-1.5 border-b border-border">
+      <div className="px-3 py-1.5">
         <button
           onClick={() => window.dispatchEvent(new CustomEvent('open-command-search'))}
           className="flex items-center justify-between w-full px-2.5 py-2 bg-muted/30 border border-border rounded-md hover:bg-muted transition-colors text-left"
