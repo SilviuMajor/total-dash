@@ -44,6 +44,9 @@ interface Conversation {
   started_at: string;
   duration: number;
   is_widget_test?: boolean;
+  owner_id?: string;
+  department_id?: string;
+  voiceflow_user_id?: string;
   metadata?: {
     variables?: {
       user_name?: string;
@@ -58,12 +61,15 @@ interface Conversation {
 
 interface Transcript {
   id: string;
-  speaker: 'user' | 'assistant';
+  speaker: 'user' | 'assistant' | 'client_user' | 'system';
   text?: string;
   buttons?: Array<{ text: string; payload: any }>;
   timestamp: string;
   metadata?: {
     button_click?: boolean;
+    client_user_id?: string;
+    client_user_name?: string;
+    type?: string;
     [key: string]: any;
   };
 }
