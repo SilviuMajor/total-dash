@@ -162,32 +162,41 @@ export function Sidebar() {
   };
 
   return (
-    <div className="flex flex-col w-[220px] h-screen border-r border-border bg-card overflow-hidden flex-shrink-0">
+    <div className="flex flex-col w-[200px] h-screen border-r border-border bg-card overflow-hidden flex-shrink-0">
       {/* Logo area */}
-      <div className="flex items-center p-4 border-b border-border">
+      <div className="flex justify-center py-4 border-b border-border">
         {branding.logoUrl ? (
-          <div className="flex items-center gap-2.5 min-w-0">
-            <img
-              src={branding.logoUrl}
-              alt={branding.companyName}
-              className="w-8 h-8 object-contain flex-shrink-0 rounded-lg"
-            />
-            <span className="text-sm font-semibold truncate">{branding.companyName}</span>
-          </div>
+          <img
+            src={branding.logoUrl}
+            alt={branding.companyName}
+            className="w-9 h-9 object-contain rounded-lg"
+          />
         ) : (
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
-              <span className="text-xs font-bold text-primary">
-                {branding.companyName.substring(0, 2).toUpperCase()}
-              </span>
-            </div>
-            <span className="text-sm font-semibold truncate">{branding.companyName}</span>
+          <div className="w-9 h-9 bg-primary/10 rounded-lg flex items-center justify-center">
+            <span className="text-xs font-bold text-primary">
+              {branding.companyName.substring(0, 2).toUpperCase()}
+            </span>
           </div>
         )}
       </div>
-      
+
+      {(mtIsPreviewMode || isClientPreviewMode) && (
+        <div className="px-3.5 py-2 bg-blue-600/10 border-b border-blue-600/20">
+          <div className="flex items-center gap-2 text-blue-600 text-sm">
+            <Eye className="w-4 h-4" />
+            <span>Preview Mode</span>
+          </div>
+        </div>
+      )}
+
+      {(effectiveProfile?.role === 'client' || previewDepth === 'client' || previewDepth === 'agency_to_client') && (
+        <div className="px-3 py-2 border-b border-border">
+          <ClientAgentSelector compact />
+        </div>
+      )}
+
       {/* Search trigger */}
-      <div className="px-2.5 py-2.5 border-b border-border">
+      <div className="px-3 py-1.5 border-b border-border">
         <button
           onClick={() => window.dispatchEvent(new CustomEvent('open-command-search'))}
           className="flex items-center justify-between w-full px-2.5 py-2 bg-muted/30 border border-border rounded-md hover:bg-muted transition-colors text-left"
@@ -202,22 +211,7 @@ export function Sidebar() {
         </button>
       </div>
 
-      {(mtIsPreviewMode || isClientPreviewMode) && (
-        <div className="px-3.5 py-2 bg-blue-600/10 border-b border-blue-600/20">
-          <div className="flex items-center gap-2 text-blue-600 text-sm">
-            <Eye className="w-4 h-4" />
-            <span>Preview Mode</span>
-          </div>
-        </div>
-      )}
-
-      {(effectiveProfile?.role === 'client' || previewDepth === 'client' || previewDepth === 'agency_to_client') && (
-        <div className="px-2.5 py-2 border-b border-border">
-          <ClientAgentSelector />
-        </div>
-      )}
-
-      <nav className="flex-1 px-2 py-2 space-y-0.5 overflow-y-auto">
+      <nav className="flex-1 px-2.5 py-2 space-y-0.5 overflow-y-auto">
         {navigation.map((item) => (
           <NavLink
             key={item.name}

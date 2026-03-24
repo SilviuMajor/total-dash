@@ -22,7 +22,7 @@ interface AgentType {
   function_type: string;
 }
 
-export function ClientAgentSelector() {
+export function ClientAgentSelector({ compact = false }: { compact?: boolean }) {
   const [open, setOpen] = useState(false);
   const [agentTypes, setAgentTypes] = useState<AgentType[]>([]);
   const { agents, selectedAgentId, setSelectedAgentId, loading } = useClientAgentContext();
@@ -77,7 +77,7 @@ export function ClientAgentSelector() {
             <span className="text-sm font-semibold truncate w-full text-left text-foreground">
               {selectedAgent?.name || "Select agent..."}
             </span>
-            {selectedAgent && (
+            {!compact && selectedAgent && (
               <span className="text-xs text-muted-foreground truncate w-full text-left">
                 {getAgentFunction(selectedAgent.provider)}
                 {selectedAgent.status && selectedAgent.status !== 'testing' && (
