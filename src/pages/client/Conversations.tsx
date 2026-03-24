@@ -1,9 +1,8 @@
-import { useEffect, useState, useRef, useMemo, useCallback } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ConversationsSkeleton } from "@/components/skeletons";
 import { Phone, Clock, CheckCircle, MessageSquare, ArrowDown, ArrowUpDown, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -26,7 +25,6 @@ import { MessageBubble } from "@/components/MessageBubble";
 import { formatDistanceToNow, format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import debounce from "lodash.debounce";
 import { useQueryClient } from "@tanstack/react-query";
 import { useConversations } from "@/hooks/queries/useConversations";
 import { useAgentConfig } from "@/hooks/queries/useAgentConfig";
@@ -75,8 +73,6 @@ const PAGE_SIZE = 30;
 export default function Conversations() {
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [transcripts, setTranscripts] = useState<Transcript[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [note, setNote] = useState("");
   const [assignedTags, setAssignedTags] = useState<string[]>([]);
   const [savingNote, setSavingNote] = useState(false);
@@ -124,15 +120,6 @@ export default function Conversations() {
     () => (conversationsData?.pages?.flat() || []) as Conversation[],
     [conversationsData]
   );
-
-  // Debounce search
-  const debouncedSetSearch = useRef(
-    debounce((val: string) => setDebouncedSearch(val), 300)
-  ).current;
-
-  useEffect(() => {
-    debouncedSetSearch(searchQuery);
-  }, [searchQuery]);
 
   // Reset selection on filter/agent change
   useEffect(() => {
@@ -361,24 +348,16 @@ export default function Conversations() {
 
   const availableTags = (agentConfig as any)?.widget_settings?.functions?.conversation_tags?.filter((t: any) => t.enabled) || [];
 
-  // Client-side search + tag filtering
+  // Client-side tag filtering only
   const filteredConversations = useMemo(() => {
     let result = conversations;
-    const q = debouncedSearch.toLowerCase();
-    if (q) {
-      result = result.filter(c =>
-        c.caller_phone?.toLowerCase().includes(q) ||
-        c.metadata?.variables?.user_name?.toLowerCase().includes(q) ||
-        c.metadata?.variables?.user_email?.toLowerCase().includes(q)
-      );
-    }
     if (tagFilters.length > 0) {
       result = result.filter(c =>
         tagFilters.some(tag => c.metadata?.tags?.includes(tag))
       );
     }
     return result;
-  }, [conversations, debouncedSearch, tagFilters]);
+  }, [conversations, tagFilters]);
 
   const allSelected = filteredConversations.length > 0 &&
     filteredConversations.every(c => selectedConversationIds.has(c.id));
@@ -403,7 +382,7 @@ export default function Conversations() {
 
       <div className="flex-1 min-h-0 overflow-hidden">
         <Card className="h-full overflow-hidden rounded-none border-0 border-t">
-          <div className="grid grid-cols-[280px_1fr_280px] h-full">
+          <div className="grid grid-cols-[320px_1fr_300px] h-full">
 
             {/* Left Panel: Conversation List */}
             <div className="flex flex-col border-r border-border h-full overflow-hidden">
@@ -474,35 +453,8 @@ export default function Conversations() {
                 </div>
               )}
 
-              {/* Search + Sort */}
-              <div className="p-3 border-b border-border flex gap-2">
-                <Input
-                  placeholder="Search conversations..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="flex-1"
-                />
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-10 px-2.5 shrink-0" title={sortLabel}>
-                      <ArrowUpDown className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => setSortOrder('desc')}>
-                      {sortOrder === 'desc' && <span className="mr-1">✓</span>}Newest first
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setSortOrder('asc')}>
-                      {sortOrder === 'asc' && <span className="mr-1">✓</span>}Oldest first
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setSortOrder('duration')}>
-                      {sortOrder === 'duration' && <span className="mr-1">✓</span>}Longest duration
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
 
-              {/* Status filters + Select All */}
+              {/* Status filters + Sort */}
               <div className="px-3 py-2 border-b border-border space-y-2">
                 <div className="flex items-center gap-1.5 flex-wrap">
                   {selectedConversationIds.size > 0 && (
@@ -537,6 +489,25 @@ export default function Conversations() {
                       {s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
                     </Button>
                   ))}
+                  <div className="flex-1" />
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="h-7 px-2.5 shrink-0" title={sortLabel}>
+                        <ArrowUpDown className="h-3.5 w-3.5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => setSortOrder('desc')}>
+                        {sortOrder === 'desc' && <span className="mr-1">✓</span>}Newest first
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setSortOrder('asc')}>
+                        {sortOrder === 'asc' && <span className="mr-1">✓</span>}Oldest first
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setSortOrder('duration')}>
+                        {sortOrder === 'duration' && <span className="mr-1">✓</span>}Longest duration
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
 
                 {availableTags.length > 0 && (
@@ -564,6 +535,7 @@ export default function Conversations() {
                 )}
               </div>
 
+
               {/* Conversation list */}
               <ScrollArea className="flex-1">
                 <div className="p-0">
@@ -583,7 +555,7 @@ export default function Conversations() {
                         <div
                           key={conv.id}
                           className={cn(
-                            "group flex items-start gap-2 px-3 py-2.5 hover:bg-muted/60 transition-colors cursor-pointer border-l-2",
+                            "group flex items-start gap-2 px-3.5 py-2.5 hover:bg-muted/60 transition-colors cursor-pointer border-l-2",
                             selectedConversation?.id === conv.id
                               ? "bg-primary/5 border-primary"
                               : "border-transparent"
