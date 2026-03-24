@@ -169,11 +169,11 @@ export function Sidebar() {
           <img
             src={branding.logoUrl}
             alt={branding.companyName}
-            className="w-10 h-10 object-contain rounded-lg"
+            className="w-12 h-12 object-contain rounded-lg"
           />
         ) : (
-          <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-            <span className="text-xs font-bold text-primary">
+          <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
+            <span className="text-sm font-bold text-primary">
               {branding.companyName.substring(0, 2).toUpperCase()}
             </span>
           </div>
