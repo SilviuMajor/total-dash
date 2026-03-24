@@ -583,10 +583,12 @@ export default function Conversations() {
                         onClick={() => setSelectedConversation(conv)}
                         className={cn(
                           "group border-l-[3px] px-4 py-3 border-b border-border cursor-pointer transition-colors",
-                          conv.status === 'active' && "border-l-green-500",
-                          conv.status === 'owned' && "border-l-violet-500",
+                          conv.status === 'with_ai' && "border-l-green-500",
+                          conv.status === 'in_handover' && "border-l-blue-500",
+                          conv.status === 'aftercare' && "border-l-yellow-500",
+                          conv.status === 'needs_review' && "border-l-amber-500",
                           conv.status === 'resolved' && "border-l-gray-400",
-                          (!['active', 'owned', 'resolved'].includes(conv.status)) && "border-l-border",
+                          (!['with_ai', 'in_handover', 'aftercare', 'needs_review', 'resolved'].includes(conv.status)) && "border-l-border",
                           isSelected ? "bg-primary/5" : "hover:bg-muted/40"
                         )}
                       >
