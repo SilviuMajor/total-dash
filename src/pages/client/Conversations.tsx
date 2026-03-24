@@ -44,6 +44,9 @@ interface Conversation {
   started_at: string;
   duration: number;
   is_widget_test?: boolean;
+  owner_id?: string;
+  department_id?: string;
+  voiceflow_user_id?: string;
   metadata?: {
     variables?: {
       user_name?: string;
@@ -58,12 +61,15 @@ interface Conversation {
 
 interface Transcript {
   id: string;
-  speaker: 'user' | 'assistant';
+  speaker: 'user' | 'assistant' | 'client_user' | 'system';
   text?: string;
   buttons?: Array<{ text: string; payload: any }>;
   timestamp: string;
   metadata?: {
     button_click?: boolean;
+    client_user_id?: string;
+    client_user_name?: string;
+    type?: string;
     [key: string]: any;
   };
 }
@@ -382,7 +388,7 @@ export default function Conversations() {
 
         {/* Row 2: Status filters + sort */}
         <div className="px-4 py-2 flex items-center gap-1">
-          {(['all', 'active', 'owned', 'resolved'] as const).map(s => (
+          {(['all', 'with_ai', 'in_handover', 'aftercare', 'needs_review', 'resolved'] as const).map(s => (
             <Button
               key={s}
               size="sm"
@@ -393,12 +399,14 @@ export default function Conversations() {
               {s !== 'all' && (
                 <span className={cn(
                   "w-1.5 h-1.5 rounded-full mr-1.5",
-                  s === 'active' && 'bg-green-500',
-                  s === 'owned' && 'bg-violet-500',
+                  s === 'with_ai' && 'bg-green-500',
+                  s === 'in_handover' && 'bg-blue-500',
+                  s === 'aftercare' && 'bg-yellow-500',
+                  s === 'needs_review' && 'bg-amber-500',
                   s === 'resolved' && 'bg-gray-400'
                 )} />
               )}
-              {s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
+              {s === 'all' ? 'All' : s === 'with_ai' ? 'With AI' : s === 'in_handover' ? 'In Handover' : s === 'aftercare' ? 'Aftercare' : s === 'needs_review' ? 'Needs Review' : 'Resolved'}
             </Button>
           ))}
           <div className="flex-1" />
@@ -499,11 +507,17 @@ export default function Conversations() {
                     <Button variant="outline" size="sm" className="h-6 text-xs px-2">Status</Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
-                    <DropdownMenuItem onClick={() => bulkUpdateStatus('active')}>
-                      <span className="w-2 h-2 rounded-full bg-green-500 mr-2" />Active
+                    <DropdownMenuItem onClick={() => bulkUpdateStatus('with_ai')}>
+                      <span className="w-2 h-2 rounded-full bg-green-500 mr-2" />With AI
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => bulkUpdateStatus('owned')}>
-                      <span className="w-2 h-2 rounded-full bg-violet-500 mr-2" />Owned
+                    <DropdownMenuItem onClick={() => bulkUpdateStatus('in_handover')}>
+                      <span className="w-2 h-2 rounded-full bg-blue-500 mr-2" />In Handover
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => bulkUpdateStatus('aftercare')}>
+                      <span className="w-2 h-2 rounded-full bg-yellow-500 mr-2" />Aftercare
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => bulkUpdateStatus('needs_review')}>
+                      <span className="w-2 h-2 rounded-full bg-amber-500 mr-2" />Needs Review
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => bulkUpdateStatus('resolved')}>
                       <span className="w-2 h-2 rounded-full bg-gray-400 mr-2" />Resolved
@@ -569,10 +583,12 @@ export default function Conversations() {
                         onClick={() => setSelectedConversation(conv)}
                         className={cn(
                           "group border-l-[3px] px-4 py-3 border-b border-border cursor-pointer transition-colors",
-                          conv.status === 'active' && "border-l-green-500",
-                          conv.status === 'owned' && "border-l-violet-500",
+                          conv.status === 'with_ai' && "border-l-green-500",
+                          conv.status === 'in_handover' && "border-l-blue-500",
+                          conv.status === 'aftercare' && "border-l-yellow-500",
+                          conv.status === 'needs_review' && "border-l-amber-500",
                           conv.status === 'resolved' && "border-l-gray-400",
-                          (!['active', 'owned', 'resolved'].includes(conv.status)) && "border-l-border",
+                          (!['with_ai', 'in_handover', 'aftercare', 'needs_review', 'resolved'].includes(conv.status)) && "border-l-border",
                           isSelected ? "bg-primary/5" : "hover:bg-muted/40"
                         )}
                       >
@@ -613,12 +629,14 @@ export default function Conversations() {
                         <div className="flex items-center gap-1.5 flex-wrap pl-6">
                           <span className={cn(
                             "inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold border",
-                            conv.status === 'active' && "bg-green-50 text-green-600 border-green-200",
-                            conv.status === 'owned' && "bg-violet-50 text-violet-600 border-violet-200",
+                            conv.status === 'with_ai' && "bg-green-50 text-green-600 border-green-200",
+                            conv.status === 'in_handover' && "bg-blue-50 text-blue-600 border-blue-200",
+                            conv.status === 'aftercare' && "bg-yellow-50 text-yellow-600 border-yellow-200",
+                            conv.status === 'needs_review' && "bg-amber-50 text-amber-600 border-amber-200",
                             conv.status === 'resolved' && "bg-gray-100 text-gray-500 border-gray-200",
-                            (!['active', 'owned', 'resolved'].includes(conv.status)) && "bg-muted text-muted-foreground border-border"
+                            (!['with_ai', 'in_handover', 'aftercare', 'needs_review', 'resolved'].includes(conv.status)) && "bg-muted text-muted-foreground border-border"
                           )}>
-                            {conv.status.charAt(0).toUpperCase() + conv.status.slice(1)}
+                            {conv.status === 'with_ai' ? 'With AI' : conv.status === 'in_handover' ? 'In Handover' : conv.status === 'aftercare' ? 'Aftercare' : conv.status === 'needs_review' ? 'Needs Review' : conv.status === 'resolved' ? 'Resolved' : conv.status.charAt(0).toUpperCase() + conv.status.slice(1)}
                           </span>
                           {conv.metadata?.tags?.map((tag: string) => {
                             const tagConfig = (agentConfig as any)?.widget_settings?.functions?.conversation_tags?.find(
@@ -682,8 +700,10 @@ export default function Conversations() {
                     ) : (
                       <div className="space-y-4">
                         {transcripts.map((transcript, index) => {
-                          const speaker = (transcript.speaker.toLowerCase().includes('user') ||
-                            transcript.speaker.toLowerCase().includes('caller')) ? 'user' : 'assistant';
+                          const speaker = transcript.speaker === 'user' ? 'user'
+                            : transcript.speaker === 'client_user' ? 'assistant'
+                            : transcript.speaker === 'system' ? 'assistant'
+                            : 'assistant';
                           return (
                             <MessageBubble
                               key={transcript.id || index}
@@ -774,7 +794,7 @@ export default function Conversations() {
                     <div>
                       <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Status</p>
                       <Select
-                        value={selectedConversation?.status || 'active'}
+                        value={selectedConversation?.status || 'with_ai'}
                         onValueChange={updateStatus}
                         disabled={updatingStatus}
                       >
@@ -782,16 +802,28 @@ export default function Conversations() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="active">
+                          <SelectItem value="with_ai">
                             <div className="flex items-center gap-2">
                               <div className="w-2 h-2 rounded-full bg-green-500" />
-                              <span>Active</span>
+                              <span>With AI</span>
                             </div>
                           </SelectItem>
-                          <SelectItem value="owned">
+                          <SelectItem value="in_handover">
                             <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 rounded-full bg-violet-500" />
-                              <span>Owned</span>
+                              <div className="w-2 h-2 rounded-full bg-blue-500" />
+                              <span>In Handover</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="aftercare">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-yellow-500" />
+                              <span>Aftercare</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="needs_review">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-amber-500" />
+                              <span>Needs Review</span>
                             </div>
                           </SelectItem>
                           <SelectItem value="resolved">
