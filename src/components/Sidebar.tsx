@@ -164,7 +164,7 @@ export function Sidebar() {
   return (
     <div className="flex flex-col w-[240px] h-screen border-r border-border bg-card overflow-hidden flex-shrink-0">
       {/* Logo area */}
-      <div className="flex justify-center py-6 border-b border-border">
+      <div className="flex justify-center py-8 border-b border-border">
         {branding.logoUrl ? (
           <img
             src={branding.logoUrl}
