@@ -77,7 +77,7 @@ export function ClientAgentSelector({ compact = false }: { compact?: boolean }) 
             <span className="text-sm font-semibold truncate w-full text-left text-foreground">
               {selectedAgent?.name || "Select agent..."}
             </span>
-            {selectedAgent && (
+            {!compact && selectedAgent && (
               <span className="text-xs text-muted-foreground truncate w-full text-left">
                 {getAgentFunction(selectedAgent.provider)}
                 {selectedAgent.status && selectedAgent.status !== 'testing' && (
