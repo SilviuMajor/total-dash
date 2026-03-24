@@ -50,7 +50,68 @@ export default function AgencyClientDetails() {
     }
   }, [clientId, agencyId]);
 
+  useEffect(() => {
+    if (client?.id) {
+      loadClientSettings();
+    }
+  }, [client?.id]);
+
   const loadClientData = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('clients')
+        .select('*')
+        .eq('id', clientId)
+        .eq('agency_id', agencyId)
+        .single();
+
+      if (error) throw error;
+      
+      if (!data) {
+        throw new Error('Client not found or access denied');
+      }
+      
+      setClient(data);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to load client",
+        variant: "destructive",
+      });
+      navigate('/agency/clients');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadClientSettings = async () => {
+    const { data } = await supabase
+      .from('client_settings')
+      .select('admin_capabilities')
+      .eq('client_id', client!.id)
+      .single();
+    if (data?.admin_capabilities) {
+      const caps = data.admin_capabilities as Record<string, any>;
+      setExistingCapabilities(caps);
+      setSettingsPageEnabled(caps.settings_page_enabled === true);
+    }
+  };
+
+  const handleToggleSettingsPage = async (value: boolean) => {
+    setSettingsPageEnabled(value);
+    const newCaps = { ...existingCapabilities, settings_page_enabled: value };
+    setExistingCapabilities(newCaps);
+    const { error } = await supabase
+      .from('client_settings')
+      .upsert({ client_id: client!.id, admin_capabilities: newCaps }, { onConflict: 'client_id' });
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Saved", description: `Settings page ${value ? "enabled" : "disabled"} for clients` });
+    }
+  };
+
+
     try {
       const { data, error } = await supabase
         .from('clients')
