@@ -118,6 +118,8 @@ export function Sidebar() {
     // Client preview mode → show filtered client navigation
     const selectedAgent = agents.find(a => a.id === selectedAgentId);
     navigation = clientNavigation.filter(item => {
+      // settings_page special check — always show in preview mode
+      if (item.permissionKey === 'settings_page') return true;
       if (item.permissionKey && selectedAgent) {
         return selectedAgentPermissions?.[item.permissionKey] === true;
       }
@@ -140,6 +142,9 @@ export function Sidebar() {
   } else {
     // Client navigation with filtering
     navigation = clientNavigation.filter(item => {
+      // settings_page special check
+      if (item.permissionKey === 'settings_page') return clientSettingsPageEnabled;
+      
       // Items with null permissionKey are always visible
       if (item.permissionKey === null) {
         return true;
