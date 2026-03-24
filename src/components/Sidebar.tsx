@@ -56,6 +56,7 @@ export function Sidebar() {
     [key: string]: boolean | undefined;
   }
   const [clientPermissions, setClientPermissions] = useState<ClientPermissions | null>(null);
+  const [clientSettingsPageEnabled, setClientSettingsPageEnabled] = useState(false);
   
   // Determine branding context
   const isClientView = isClientPreviewMode;
