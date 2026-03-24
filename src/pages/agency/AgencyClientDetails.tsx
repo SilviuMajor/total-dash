@@ -198,6 +198,15 @@ export default function AgencyClientDetails() {
 
         <TabsContent value="settings">
           <div className="space-y-6">
+            <Card className="p-4 bg-card border-border/50">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">Enable Settings Page for Clients</p>
+                  <p className="text-xs text-muted-foreground">Allow clients to view and manage departments, users, and permissions</p>
+                </div>
+                <Switch checked={settingsPageEnabled} onCheckedChange={handleToggleSettingsPage} />
+              </div>
+            </Card>
             <ClientSettings client={client} onUpdate={loadClientData} />
             <DepartmentManagement clientId={client.id} />
           </div>
