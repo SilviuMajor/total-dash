@@ -388,7 +388,7 @@ export default function Conversations() {
 
         {/* Row 2: Status filters + sort */}
         <div className="px-4 py-2 flex items-center gap-1">
-          {(['all', 'active', 'owned', 'resolved'] as const).map(s => (
+          {(['all', 'with_ai', 'in_handover', 'aftercare', 'needs_review', 'resolved'] as const).map(s => (
             <Button
               key={s}
               size="sm"
@@ -399,12 +399,14 @@ export default function Conversations() {
               {s !== 'all' && (
                 <span className={cn(
                   "w-1.5 h-1.5 rounded-full mr-1.5",
-                  s === 'active' && 'bg-green-500',
-                  s === 'owned' && 'bg-violet-500',
+                  s === 'with_ai' && 'bg-green-500',
+                  s === 'in_handover' && 'bg-blue-500',
+                  s === 'aftercare' && 'bg-yellow-500',
+                  s === 'needs_review' && 'bg-amber-500',
                   s === 'resolved' && 'bg-gray-400'
                 )} />
               )}
-              {s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
+              {s === 'all' ? 'All' : s === 'with_ai' ? 'With AI' : s === 'in_handover' ? 'In Handover' : s === 'aftercare' ? 'Aftercare' : s === 'needs_review' ? 'Needs Review' : 'Resolved'}
             </Button>
           ))}
           <div className="flex-1" />
