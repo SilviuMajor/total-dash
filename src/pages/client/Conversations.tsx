@@ -383,7 +383,7 @@ export default function Conversations() {
 
       <div className="flex-1 min-h-0 overflow-hidden">
         <Card className="h-full overflow-hidden rounded-none border-0 border-t">
-          <div className="grid grid-cols-[280px_1fr_280px] h-full">
+          <div className="grid grid-cols-[320px_1fr_300px] h-full">
 
             {/* Left Panel: Conversation List */}
             <div className="flex flex-col border-r border-border h-full overflow-hidden">
