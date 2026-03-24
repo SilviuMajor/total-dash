@@ -111,33 +111,8 @@ export default function AgencyClientDetails() {
     }
   };
 
-  const loadClientData = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('clients')
-        .select('*')
-        .eq('id', clientId)
-        .eq('agency_id', agencyId)
-        .single();
 
-      if (error) throw error;
-      
-      if (!data) {
-        throw new Error('Client not found or access denied');
-      }
-      
-      setClient(data);
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to load client",
-        variant: "destructive",
-      });
-      navigate('/agency/clients');
-    } finally {
-      setLoading(false);
-    }
-  };
+
 
   const handleTabChange = (value: string) => {
     navigate(`/agency/clients/${clientId}/${value}`);
