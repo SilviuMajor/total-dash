@@ -629,12 +629,14 @@ export default function Conversations() {
                         <div className="flex items-center gap-1.5 flex-wrap pl-6">
                           <span className={cn(
                             "inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold border",
-                            conv.status === 'active' && "bg-green-50 text-green-600 border-green-200",
-                            conv.status === 'owned' && "bg-violet-50 text-violet-600 border-violet-200",
+                            conv.status === 'with_ai' && "bg-green-50 text-green-600 border-green-200",
+                            conv.status === 'in_handover' && "bg-blue-50 text-blue-600 border-blue-200",
+                            conv.status === 'aftercare' && "bg-yellow-50 text-yellow-600 border-yellow-200",
+                            conv.status === 'needs_review' && "bg-amber-50 text-amber-600 border-amber-200",
                             conv.status === 'resolved' && "bg-gray-100 text-gray-500 border-gray-200",
-                            (!['active', 'owned', 'resolved'].includes(conv.status)) && "bg-muted text-muted-foreground border-border"
+                            (!['with_ai', 'in_handover', 'aftercare', 'needs_review', 'resolved'].includes(conv.status)) && "bg-muted text-muted-foreground border-border"
                           )}>
-                            {conv.status.charAt(0).toUpperCase() + conv.status.slice(1)}
+                            {conv.status === 'with_ai' ? 'With AI' : conv.status === 'in_handover' ? 'In Handover' : conv.status === 'aftercare' ? 'Aftercare' : conv.status === 'needs_review' ? 'Needs Review' : conv.status === 'resolved' ? 'Resolved' : conv.status.charAt(0).toUpperCase() + conv.status.slice(1)}
                           </span>
                           {conv.metadata?.tags?.map((tag: string) => {
                             const tagConfig = (agentConfig as any)?.widget_settings?.functions?.conversation_tags?.find(
