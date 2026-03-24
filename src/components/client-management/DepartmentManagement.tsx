@@ -483,14 +483,14 @@ export function DepartmentManagement({ clientId }: { clientId: string }) {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <Label>Handover acceptance timeout</Label>
-                  <span className="text-sm font-medium text-primary">{timeout} seconds</span>
+                   <span className="text-sm font-medium text-primary">{timeoutSecs} seconds</span>
                 </div>
                 <Slider
                   min={30}
                   max={300}
                   step={10}
-                  value={[timeout]}
-                  onValueChange={([val]) => setTimeout(val)}
+                  value={[timeoutSecs]}
+                  onValueChange={([val]) => setTimeoutSecs(val)}
                   className="w-full"
                 />
                 <div className="flex justify-between text-xs text-muted-foreground mt-1">
