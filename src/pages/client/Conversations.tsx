@@ -700,8 +700,10 @@ export default function Conversations() {
                     ) : (
                       <div className="space-y-4">
                         {transcripts.map((transcript, index) => {
-                          const speaker = (transcript.speaker.toLowerCase().includes('user') ||
-                            transcript.speaker.toLowerCase().includes('caller')) ? 'user' : 'assistant';
+                          const speaker = transcript.speaker === 'user' ? 'user'
+                            : transcript.speaker === 'client_user' ? 'assistant'
+                            : transcript.speaker === 'system' ? 'assistant'
+                            : 'assistant';
                           return (
                             <MessageBubble
                               key={transcript.id || index}
