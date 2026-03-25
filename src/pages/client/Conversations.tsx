@@ -883,44 +883,61 @@ export default function Conversations() {
                         </p>
 
                         {/* Row 3: Status badge + tags */}
-                        <div className="flex items-center gap-1.5 flex-wrap pl-6">
-                          <span className={cn(
-                            "inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold border",
-                            conv.status === 'with_ai' && "bg-green-50 text-green-600 border-green-200",
-                            conv.status === 'in_handover' && "bg-blue-50 text-blue-600 border-blue-200",
-                            conv.status === 'aftercare' && "bg-yellow-50 text-yellow-600 border-yellow-200",
-                            conv.status === 'needs_review' && "bg-amber-50 text-amber-600 border-amber-200",
-                            conv.status === 'resolved' && "bg-gray-100 text-gray-500 border-gray-200",
-                            (!['with_ai', 'in_handover', 'aftercare', 'needs_review', 'resolved'].includes(conv.status)) && "bg-muted text-muted-foreground border-border"
-                          )}>
-                            {conv.status === 'with_ai' ? 'With AI'
-                              : conv.status === 'in_handover' ? 'In Handover'
-                              : conv.status === 'aftercare' ? 'Aftercare'
-                              : conv.status === 'needs_review' ? 'Needs Review'
-                              : conv.status === 'resolved' ? 'Resolved'
-                              : conv.status === 'active' ? 'Active (Legacy)'
-                              : conv.status === 'completed' ? 'Completed'
-                              : conv.status === 'owned' ? 'Owned (Legacy)'
-                              : conv.status.charAt(0).toUpperCase() + conv.status.slice(1)}
-                          </span>
-                          {conv.metadata?.tags?.map((tag: string) => {
-                            const tagConfig = (agentConfig as any)?.widget_settings?.functions?.conversation_tags?.find(
-                              (t: any) => t.label === tag
-                            );
-                            return tagConfig ? (
+                        <div className="flex items-center justify-between pl-6">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className={cn(
+                              "inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold border",
+                              conv.status === 'with_ai' && "bg-green-50 text-green-600 border-green-200",
+                              conv.status === 'in_handover' && "bg-blue-50 text-blue-600 border-blue-200",
+                              conv.status === 'aftercare' && "bg-yellow-50 text-yellow-600 border-yellow-200",
+                              conv.status === 'needs_review' && "bg-amber-50 text-amber-600 border-amber-200",
+                              conv.status === 'resolved' && "bg-gray-100 text-gray-500 border-gray-200",
+                              (!['with_ai', 'in_handover', 'aftercare', 'needs_review', 'resolved'].includes(conv.status)) && "bg-muted text-muted-foreground border-border"
+                            )}>
+                              {conv.status === 'with_ai' ? 'With AI'
+                                : conv.status === 'in_handover' ? 'In Handover'
+                                : conv.status === 'aftercare' ? 'Aftercare'
+                                : conv.status === 'needs_review' ? 'Needs Review'
+                                : conv.status === 'resolved' ? 'Resolved'
+                                : conv.status === 'active' ? 'Active (Legacy)'
+                                : conv.status === 'completed' ? 'Completed'
+                                : conv.status === 'owned' ? 'Owned (Legacy)'
+                                : conv.status.charAt(0).toUpperCase() + conv.status.slice(1)}
+                            </span>
+                            {conv.metadata?.tags?.map((tag: string) => {
+                              const tagConfig = (agentConfig as any)?.widget_settings?.functions?.conversation_tags?.find(
+                                (t: any) => t.label === tag
+                              );
+                              return tagConfig ? (
+                                <span
+                                  key={tag}
+                                  className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium border"
+                                  style={{
+                                    backgroundColor: `${tagConfig.color}20`,
+                                    borderColor: tagConfig.color,
+                                    color: tagConfig.color
+                                  }}
+                                >
+                                  {tag}
+                                </span>
+                              ) : null;
+                            })}
+                          </div>
+                          {conv.department_id && (() => {
+                            const dept = departments.find(d => d.id === conv.department_id);
+                            return dept ? (
                               <span
-                                key={tag}
-                                className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium border"
+                                className="inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-medium border shrink-0 ml-2"
                                 style={{
-                                  backgroundColor: `${tagConfig.color}20`,
-                                  borderColor: tagConfig.color,
-                                  color: tagConfig.color
+                                  backgroundColor: `${dept.color || '#6B7280'}15`,
+                                  borderColor: `${dept.color || '#6B7280'}40`,
+                                  color: dept.color || '#6B7280',
                                 }}
                               >
-                                {tag}
+                                {dept.name}
                               </span>
                             ) : null;
-                          })}
+                          })()}
                         </div>
                       </div>
                     );
