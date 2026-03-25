@@ -961,18 +961,20 @@ export default function Conversations() {
           <div className="flex flex-col border-r border-border h-full overflow-hidden relative bg-muted/30">
             {selectedConversation ? (
               <>
-                <div className="px-4 py-3 border-b border-border">
-                  <h3 className="font-semibold text-sm">
-                    {selectedConversation.metadata?.variables?.user_name || selectedConversation.caller_phone || 'Unknown'}
-                  </h3>
-                  <p className="text-xs text-muted-foreground">
-                    Started {format(new Date(selectedConversation.started_at), 'PPp')}
-                  </p>
+                <div className="px-4 py-3 border-b border-border flex items-start justify-between">
+                  <div>
+                    <h3 className="font-semibold text-sm">
+                      {selectedConversation.metadata?.variables?.user_name || selectedConversation.caller_phone || 'Unknown'}
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      Started {format(new Date(selectedConversation.started_at), 'PPp')}
+                    </p>
+                  </div>
                   {selectedConversation.department_id && (() => {
                     const dept = departments.find(d => d.id === selectedConversation.department_id);
                     return dept ? (
                       <span
-                        className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium border mt-1"
+                        className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-medium border shrink-0"
                         style={{
                           backgroundColor: `${dept.color || '#6B7280'}15`,
                           borderColor: `${dept.color || '#6B7280'}40`,
@@ -1122,25 +1124,6 @@ export default function Conversations() {
                       "p-3",
                       pendingSession && "border-red-300 bg-red-50 dark:bg-red-950/20 dark:border-red-800"
                     )}>
-                      {/* Global department pill */}
-                      {selectedConversation.department_id && (() => {
-                        const dept = departments.find(d => d.id === selectedConversation.department_id);
-                        return dept ? (
-                          <div className="mb-2">
-                            <span
-                              className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold border"
-                              style={{
-                                backgroundColor: `${dept.color || '#6B7280'}15`,
-                                borderColor: `${dept.color || '#6B7280'}40`,
-                                color: dept.color || '#6B7280',
-                              }}
-                            >
-                              {dept.name}
-                            </span>
-                          </div>
-                        ) : null;
-                      })()}
-
                       {/* WITH AI — no pending request */}
                       {selectedConversation.status === 'with_ai' && !pendingSession && (
                         <div className="space-y-2">
