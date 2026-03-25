@@ -948,6 +948,31 @@ function generateWidgetScript(config: any): string {
       color: \${CONFIG.appearance.secondaryColor};
     }
     
+    .vf-message.system {
+      display: flex;
+      justify-content: center;
+      margin: 8px 0;
+    }
+    .vf-message.system .vf-message-content {
+      background: none;
+    }
+    .vf-message.system .vf-message-bubble {
+      background: #f3f4f6;
+      color: #6b7280;
+      font-size: 12px;
+      padding: 4px 14px;
+      border-radius: 20px;
+      border: 1px solid #e5e7eb;
+      max-width: none;
+      text-align: center;
+    }
+    .vf-message.system .vf-message-timestamp {
+      display: none;
+    }
+    .vf-message.system .vf-message-avatar {
+      display: none;
+    }
+    
     .vf-message-timestamp {
       font-size: 11px;
       color: rgba(0,0,0,0.4);
@@ -1320,6 +1345,8 @@ function generateWidgetScript(config: any): string {
   let isInActiveChat = false;
   let clickedButtonIds = new Set();
   let clickedButtonSelections = {};
+  let isInHandover = false;
+  let realtimeSubscription = null;
   
   // Helper to get the Voiceflow user ID (combined with session ID)
   function getVoiceflowUserId() {
@@ -1625,6 +1652,82 @@ function generateWidgetScript(config: any): string {
     }
   }
   
+  function startHandoverRealtime() {
+    if (realtimeSubscription || !conversationId) return;
+    
+    console.log('[VF Widget] Starting handover realtime for:', conversationId);
+    
+    let lastTimestamp = new Date().toISOString();
+    
+    const pollInterval = setInterval(async () => {
+      if (!isInHandover || !conversationId) {
+        clearInterval(pollInterval);
+        realtimeSubscription = null;
+        return;
+      }
+      
+      try {
+        const response = await fetch(
+          SUPABASE_URL + '/rest/v1/transcripts?conversation_id=eq.' + conversationId + '&timestamp=gt.' + encodeURIComponent(lastTimestamp) + '&order=timestamp.asc',
+          {
+            headers: {
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+            }
+          }
+        );
+        
+        if (!response.ok) return;
+        
+        const newTranscripts = await response.json();
+        
+        if (newTranscripts.length > 0) {
+          let hasNewMessages = false;
+          
+          for (const transcript of newTranscripts) {
+            if (transcript.speaker === 'client_user' || transcript.speaker === 'system') {
+              const existingIds = messages.map(m => m.id);
+              if (!existingIds.includes('rt_' + transcript.id)) {
+                const newMsg = {
+                  id: 'rt_' + transcript.id,
+                  speaker: transcript.speaker === 'client_user' ? 'assistant' : 'system',
+                  text: transcript.text || '',
+                  timestamp: transcript.timestamp,
+                  metadata: transcript.metadata
+                };
+                messages.push(newMsg);
+                hasNewMessages = true;
+              }
+            }
+            lastTimestamp = transcript.timestamp;
+          }
+          
+          if (hasNewMessages) {
+            isTyping = false;
+            renderPanel();
+            scrollToLatestMessage();
+            if (conversationId) {
+              SessionManager.saveConversation(conversationId, messages, currentVoiceflowSessionId, true);
+            }
+          }
+        }
+      } catch (e) {
+        console.error('[VF Widget] Handover poll error:', e);
+      }
+    }, 1500);
+    
+    realtimeSubscription = pollInterval;
+  }
+  
+  function stopHandoverRealtime() {
+    if (realtimeSubscription) {
+      console.log('[VF Widget] Stopping handover realtime');
+      clearInterval(realtimeSubscription);
+      realtimeSubscription = null;
+    }
+    isInHandover = false;
+  }
+  
   function renderMessages(container) {
     container.innerHTML = '<div class="vf-messages-container" id="vf-messages"></div>';
     const messagesEl = document.getElementById('vf-messages');
@@ -1633,7 +1736,8 @@ function generateWidgetScript(config: any): string {
       const messageDiv = document.createElement('div');
       messageDiv.className = \`vf-message \${msg.speaker}\`;
       
-      const isAssistant = msg.speaker === 'assistant';
+      const isAssistant = msg.speaker === 'assistant' || msg.speaker === 'system';
+      const isSystem = msg.speaker === 'system';
       const buttonStyle = CONFIG.appearance.interactiveButtonStyle || 'solid';
       
       // Parse message for file URLs
@@ -1652,7 +1756,7 @@ function generateWidgetScript(config: any): string {
       }
       
       messageDiv.innerHTML = \`
-        \${isAssistant ? \`
+        \${isAssistant && !isSystem ? \`
           <div class="vf-message-avatar">
             \${CONFIG.appearance.chatIconUrl 
               ? \`<img src="\${CONFIG.appearance.chatIconUrl}" alt="Bot" />\`
@@ -1827,6 +1931,16 @@ function generateWidgetScript(config: any): string {
         conversationId = data.conversationId;
       }
       
+      // Handle handover state
+      if (data.handoverActive || data.handoverPending) {
+        if (!isInHandover) {
+          isInHandover = true;
+          startHandoverRealtime();
+        }
+        isTyping = false;
+        renderPanel();
+      }
+      
       if (data.botResponses) {
         for (const resp of data.botResponses) {
           await new Promise(resolve => setTimeout(resolve, CONFIG.functions.typingDelayMs));
@@ -1860,6 +1974,7 @@ function generateWidgetScript(config: any): string {
   }
   
   async function startNewChat() {
+    stopHandoverRealtime();
     messages = [];
     conversationId = null;
     currentVoiceflowSessionId = 'sess_' + Math.random().toString(36).substr(2, 9);
@@ -1981,6 +2096,16 @@ function generateWidgetScript(config: any): string {
       });
       
       const data = await response.json();
+      
+      // Handle handover state
+      if (data.handoverActive || data.handoverPending) {
+        if (!isInHandover) {
+          isInHandover = true;
+          startHandoverRealtime();
+        }
+        isTyping = false;
+        renderPanel();
+      }
       
       if (data.botResponses) {
         for (const resp of data.botResponses) {
