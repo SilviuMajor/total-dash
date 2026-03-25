@@ -968,6 +968,21 @@ export default function Conversations() {
                   <p className="text-xs text-muted-foreground">
                     Started {format(new Date(selectedConversation.started_at), 'PPp')}
                   </p>
+                  {selectedConversation.department_id && (() => {
+                    const dept = departments.find(d => d.id === selectedConversation.department_id);
+                    return dept ? (
+                      <span
+                        className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium border mt-1"
+                        style={{
+                          backgroundColor: `${dept.color || '#6B7280'}15`,
+                          borderColor: `${dept.color || '#6B7280'}40`,
+                          color: dept.color || '#6B7280',
+                        }}
+                      >
+                        {dept.name}
+                      </span>
+                    ) : null;
+                  })()}
                 </div>
                 <ScrollArea
                   className="flex-1 min-h-0"
