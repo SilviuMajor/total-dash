@@ -362,23 +362,50 @@ export default function Conversations() {
         setActiveSession(null);
         return;
       }
-      const { data: pending } = await supabase
+
+      const { data: pending, error: pendingError } = await supabase
         .from('handover_sessions')
         .select('*, departments(name, code, color, timeout_seconds)')
         .eq('conversation_id', selectedConversation.id)
         .eq('status', 'pending')
         .maybeSingle();
+
+      if (pendingError) {
+        console.error('[Handover] Error loading pending session:', pendingError);
+      }
+      console.log('[Handover] Pending session for', selectedConversation.id, ':', pending);
       setPendingSession(pending);
 
-      const { data: active } = await supabase
+      const { data: active, error: activeError } = await supabase
         .from('handover_sessions')
         .select('*, departments(name, code, color)')
         .eq('conversation_id', selectedConversation.id)
         .eq('status', 'active')
         .maybeSingle();
+
+      if (activeError) {
+        console.error('[Handover] Error loading active session:', activeError);
+      }
       setActiveSession(active);
     };
     loadSessions();
+
+    // Subscribe to session changes for the selected conversation
+    if (selectedConversation?.id) {
+      const sessionChannel = supabase
+        .channel(`session-${selectedConversation.id}`)
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'handover_sessions',
+          filter: `conversation_id=eq.${selectedConversation.id}`
+        }, () => {
+          loadSessions();
+        })
+        .subscribe();
+
+      return () => { sessionChannel.unsubscribe(); };
+    }
   }, [selectedConversation?.id, selectedConversation?.status]);
 
   const loadTranscripts = async (conversationId: string) => {
