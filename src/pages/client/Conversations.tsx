@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ConversationsSkeleton } from "@/components/skeletons";
-import { Phone, Clock, CheckCircle, MessageSquare, ArrowDown, ArrowUpDown, X, Plus, Tag, Users, Building2 } from "lucide-react";
+import { Phone, Clock, CheckCircle, MessageSquare, ArrowDown, ArrowUpDown, X, Plus, Tag, Users, Building2, Send, UserCheck, PhoneOff, ArrowRightLeft, Lock, Loader2, AlertTriangle, Timer } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useClientAgentContext } from "@/hooks/useClientAgentContext";
 import { NoAgentsAssigned } from "@/components/NoAgentsAssigned";
@@ -36,6 +39,8 @@ import {
   useBulkApplyTag,
   useBulkRemoveTag,
 } from "@/hooks/queries/useConversationMutations";
+import { useAuth } from "@/hooks/useAuth";
+import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
 
 interface Conversation {
   id: string;
@@ -96,11 +101,27 @@ export default function Conversations() {
   // Bulk select
   const [selectedConversationIds, setSelectedConversationIds] = useState<Set<string>>(new Set());
 
-  const { selectedAgentId, agents } = useClientAgentContext();
+  const { selectedAgentId, agents, clientId } = useClientAgentContext();
   const { toast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const transcriptScrollRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
+  const { user, profile } = useAuth();
+  const { isClientPreviewMode, previewClient } = useMultiTenantAuth();
+
+  // Handover state
+  const [chatMessage, setChatMessage] = useState("");
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const [handoverLoading, setHandoverLoading] = useState<string | null>(null);
+  const [endHandoverOpen, setEndHandoverOpen] = useState(false);
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [transferNote, setTransferNote] = useState("");
+  const [transferDeptId, setTransferDeptId] = useState("");
+  const [takeoverConfirmOpen, setTakeoverConfirmOpen] = useState(false);
+  const [departments, setDepartments] = useState<Array<{ id: string; name: string; code: string | null; color: string | null }>>([]);
+  const [pendingSession, setPendingSession] = useState<any>(null);
+  const [activeSession, setActiveSession] = useState<any>(null);
+  const [currentClientUserId, setCurrentClientUserId] = useState<string | null>(null);
 
   // React Query hooks
   const {
@@ -252,6 +273,63 @@ export default function Conversations() {
     return () => { transcriptChannel.unsubscribe(); };
   }, [selectedConversation?.id]);
 
+  // Load current client user ID
+  useEffect(() => {
+    const loadClientUser = async () => {
+      if (!user?.id) return;
+      const { data } = await supabase
+        .from('client_users')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (data) setCurrentClientUserId(data.id);
+    };
+    loadClientUser();
+  }, [user?.id]);
+
+  // Load departments for transfer modal
+  useEffect(() => {
+    const loadDepts = async () => {
+      const effectiveClientId = clientId || (isClientPreviewMode && previewClient?.id ? previewClient.id : null);
+      if (!effectiveClientId) return;
+      const { data } = await supabase
+        .from('departments')
+        .select('id, name, code, color')
+        .eq('client_id', effectiveClientId)
+        .is('deleted_at', null)
+        .order('name');
+      if (data) setDepartments(data);
+    };
+    loadDepts();
+  }, [clientId, isClientPreviewMode, previewClient]);
+
+  // Load handover sessions when conversation selected or status changes
+  useEffect(() => {
+    const loadSessions = async () => {
+      if (!selectedConversation?.id) {
+        setPendingSession(null);
+        setActiveSession(null);
+        return;
+      }
+      const { data: pending } = await supabase
+        .from('handover_sessions')
+        .select('*, departments(name, code, color, timeout_seconds)')
+        .eq('conversation_id', selectedConversation.id)
+        .eq('status', 'pending')
+        .maybeSingle();
+      setPendingSession(pending);
+
+      const { data: active } = await supabase
+        .from('handover_sessions')
+        .select('*, departments(name, code, color)')
+        .eq('conversation_id', selectedConversation.id)
+        .eq('status', 'active')
+        .maybeSingle();
+      setActiveSession(active);
+    };
+    loadSessions();
+  }, [selectedConversation?.id, selectedConversation?.status]);
+
   const loadTranscripts = async (conversationId: string) => {
     try {
       const { data, error } = await supabase
@@ -358,6 +436,87 @@ export default function Conversations() {
     setTagFilters(prev =>
       prev.includes(label) ? prev.filter(t => t !== label) : [...prev, label]
     );
+  };
+
+  // === Handover action helper ===
+  const callHandoverAction = async (actionName: string, extraBody: Record<string, any> = {}) => {
+    setHandoverLoading(actionName);
+    try {
+      const { data, error } = await supabase.functions.invoke('handover-actions', {
+        body: {
+          action: actionName,
+          conversationId: selectedConversation?.id,
+          clientUserId: currentClientUserId,
+          clientUserName: profile?.full_name || (profile as any)?.first_name || 'Agent',
+          ...extraBody,
+        },
+      });
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Action failed');
+      toast({ title: "Success", description: "Action completed" });
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      if (selectedConversation?.id) {
+        loadTranscripts(selectedConversation.id);
+        const { data: p } = await supabase
+          .from('handover_sessions')
+          .select('*, departments(name, code, color, timeout_seconds)')
+          .eq('conversation_id', selectedConversation.id)
+          .eq('status', 'pending')
+          .maybeSingle();
+        setPendingSession(p);
+        const { data: a } = await supabase
+          .from('handover_sessions')
+          .select('*, departments(name, code, color)')
+          .eq('conversation_id', selectedConversation.id)
+          .eq('status', 'active')
+          .maybeSingle();
+        setActiveSession(a);
+        const { data: updated } = await supabase
+          .from('conversations')
+          .select('*')
+          .eq('id', selectedConversation.id)
+          .single();
+        if (updated) setSelectedConversation(updated as Conversation);
+      }
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || 'Failed', variant: "destructive" });
+    } finally {
+      setHandoverLoading(null);
+    }
+  };
+
+  const handleSendChatMessage = async () => {
+    if (!chatMessage.trim() || sendingMessage) return;
+    setSendingMessage(true);
+    try {
+      await callHandoverAction('send_message', { message: chatMessage.trim() });
+      setChatMessage("");
+      setTimeout(() => {
+        if (transcriptScrollRef.current) {
+          transcriptScrollRef.current.scrollTop = transcriptScrollRef.current.scrollHeight;
+        }
+      }, 200);
+    } finally {
+      setSendingMessage(false);
+    }
+  };
+
+  const handleEndHandover = async (resolve: boolean) => {
+    setEndHandoverOpen(false);
+    await callHandoverAction('end_handover', { resolve });
+  };
+
+  const handleTransfer = async () => {
+    if (!transferDeptId || !transferNote.trim()) return;
+    setTransferOpen(false);
+    await callHandoverAction('transfer', { targetDepartmentId: transferDeptId, transferNote: transferNote.trim() });
+    setTransferNote("");
+    setTransferDeptId("");
+  };
+
+  const handleTakeover = async () => {
+    setTakeoverConfirmOpen(false);
+    await callHandoverAction('take_over');
   };
 
   const availableTags = (agentConfig as any)?.widget_settings?.functions?.conversation_tags?.filter((t: any) => t.enabled) || [];
@@ -738,7 +897,7 @@ export default function Conversations() {
 
                 {showJumpToLatest && (
                   <Button
-                    className="absolute bottom-4 left-1/2 -translate-x-1/2 shadow-lg z-10"
+                    className="absolute bottom-16 left-1/2 -translate-x-1/2 shadow-lg z-10"
                     size="sm"
                     onClick={jumpToLatest}
                   >
@@ -746,6 +905,43 @@ export default function Conversations() {
                     Jump to latest
                   </Button>
                 )}
+
+                {/* Chat Input */}
+                <div className="flex-shrink-0 border-t border-border bg-background p-3">
+                  {selectedConversation.status === 'in_handover' && activeSession?.client_user_id === currentClientUserId ? (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={chatMessage}
+                        onChange={(e) => setChatMessage(e.target.value)}
+                        placeholder="Type a message..."
+                        className="flex-1"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            handleSendChatMessage();
+                          }
+                        }}
+                        disabled={sendingMessage}
+                      />
+                      <Button
+                        size="icon"
+                        onClick={handleSendChatMessage}
+                        disabled={sendingMessage || !chatMessage.trim()}
+                      >
+                        {sendingMessage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Lock className="h-4 w-4 shrink-0" />
+                      <span className="text-xs">
+                        {selectedConversation.status === 'in_handover'
+                          ? "Another agent is handling this conversation"
+                          : "Chat input available during active handover only"}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </>
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center gap-2 text-center px-6">
@@ -762,6 +958,163 @@ export default function Conversations() {
               <div className="p-4 space-y-4">
                 {selectedConversation ? (
                   <>
+                    {/* Handover Control Card */}
+                    <Card className="p-3">
+                      {/* WITH AI — no pending request */}
+                      {selectedConversation.status === 'with_ai' && !pendingSession && (
+                        <div className="space-y-2">
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Handover</p>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="w-full"
+                            onClick={() => setTakeoverConfirmOpen(true)}
+                            disabled={handoverLoading === 'take_over'}
+                          >
+                            {handoverLoading === 'take_over' ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <UserCheck className="h-4 w-4 mr-2" />}
+                            Take Over Conversation
+                          </Button>
+                        </div>
+                      )}
+
+                      {/* PENDING — handover request waiting */}
+                      {pendingSession && (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Handover Request</p>
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <Timer className="h-3 w-3" />
+                              {pendingSession.departments?.timeout_seconds || 300}s
+                            </div>
+                          </div>
+                          {pendingSession.departments && (
+                            <div className="flex items-center gap-1.5">
+                              <span
+                                className="inline-block w-2 h-2 rounded-full flex-shrink-0"
+                                style={{ backgroundColor: pendingSession.departments.color || '#3b82f6' }}
+                              />
+                              <span className="text-xs font-medium">{pendingSession.departments.name}</span>
+                            </div>
+                          )}
+                          <p className="text-xs text-muted-foreground">Customer requested a human agent</p>
+                          <Button
+                            size="sm"
+                            className="w-full"
+                            onClick={() => callHandoverAction('accept_handover')}
+                            disabled={handoverLoading === 'accept_handover'}
+                          >
+                            {handoverLoading === 'accept_handover' ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <UserCheck className="h-4 w-4 mr-2" />}
+                            Accept Handover
+                          </Button>
+                        </div>
+                      )}
+
+                      {/* IN HANDOVER — mine */}
+                      {selectedConversation.status === 'in_handover' && activeSession?.client_user_id === currentClientUserId && (
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-blue-500" />
+                            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Active Handover</p>
+                          </div>
+                          <p className="text-xs text-muted-foreground">You are handling this conversation</p>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="flex-1"
+                              onClick={() => setEndHandoverOpen(true)}
+                              disabled={!!handoverLoading}
+                            >
+                              <PhoneOff className="h-3.5 w-3.5 mr-1.5" />
+                              End Handover
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="flex-1"
+                              onClick={() => setTransferOpen(true)}
+                              disabled={!!handoverLoading}
+                            >
+                              <ArrowRightLeft className="h-3.5 w-3.5 mr-1.5" />
+                              Transfer
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* IN HANDOVER — someone else */}
+                      {selectedConversation.status === 'in_handover' && activeSession && activeSession.client_user_id !== currentClientUserId && (
+                        <div className="space-y-1.5">
+                          <div className="flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-blue-500" />
+                            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Active Handover</p>
+                          </div>
+                          <p className="text-xs text-muted-foreground">Being handled by another agent</p>
+                        </div>
+                      )}
+
+                      {/* AFTERCARE */}
+                      {selectedConversation.status === 'aftercare' && (
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-yellow-500" />
+                            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Follow-up Required</p>
+                          </div>
+                          <p className="text-xs text-muted-foreground">Handover ended — not yet resolved</p>
+                          <Button
+                            size="sm"
+                            className="w-full"
+                            onClick={() => callHandoverAction('mark_resolved')}
+                            disabled={handoverLoading === 'mark_resolved'}
+                          >
+                            {handoverLoading === 'mark_resolved' ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle className="h-4 w-4 mr-2" />}
+                            Mark as Resolved
+                          </Button>
+                        </div>
+                      )}
+
+                      {/* NEEDS REVIEW */}
+                      {selectedConversation.status === 'needs_review' && (
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-amber-500" />
+                            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Needs Review</p>
+                          </div>
+                          <p className="text-xs text-muted-foreground">This conversation needs attention</p>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="w-full"
+                            onClick={() => setTakeoverConfirmOpen(true)}
+                            disabled={!!handoverLoading}
+                          >
+                            <UserCheck className="h-4 w-4 mr-2" />
+                            Take Over Conversation
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="w-full"
+                            onClick={() => callHandoverAction('mark_resolved')}
+                            disabled={handoverLoading === 'mark_resolved'}
+                          >
+                            {handoverLoading === 'mark_resolved' ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                            Mark as Resolved
+                          </Button>
+                        </div>
+                      )}
+
+                      {/* RESOLVED */}
+                      {selectedConversation.status === 'resolved' && (
+                        <div className="space-y-1.5">
+                          <div className="flex items-center gap-1.5">
+                            <CheckCircle className="h-4 w-4 text-green-500" />
+                            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Resolved</p>
+                          </div>
+                          <p className="text-xs text-muted-foreground">This conversation has been resolved</p>
+                        </div>
+                      )}
+                    </Card>
+
                     {selectedConversation?.metadata?.variables &&
                       Object.keys(selectedConversation.metadata.variables).length > 0 && (
                         <div>
@@ -910,6 +1263,92 @@ export default function Conversations() {
 
         </div>
       </div>
+
+      {/* End Handover Modal */}
+      <Dialog open={endHandoverOpen} onOpenChange={setEndHandoverOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>End Handover</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">How would you like to end this handover?</p>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setEndHandoverOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => handleEndHandover(false)}>
+              End — Keep in Aftercare
+            </Button>
+            <Button onClick={() => handleEndHandover(true)}>
+              End &amp; Resolve
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Transfer Modal */}
+      <Dialog open={transferOpen} onOpenChange={setTransferOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Transfer Conversation</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Transfer to Department</Label>
+              <Select value={transferDeptId} onValueChange={setTransferDeptId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select department..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {departments
+                    .filter(d => d.id !== activeSession?.department_id)
+                    .map(d => (
+                      <SelectItem key={d.id} value={d.id}>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="inline-block w-2 h-2 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: d.color || '#3b82f6' }}
+                          />
+                          {d.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Transfer Note (required)</Label>
+              <Textarea
+                value={transferNote}
+                onChange={(e) => setTransferNote(e.target.value)}
+                placeholder="Explain why you're transferring this conversation..."
+                className="min-h-[80px]"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTransferOpen(false)}>Cancel</Button>
+            <Button onClick={handleTransfer} disabled={!transferDeptId || !transferNote.trim()}>
+              Transfer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Proactive Takeover Confirmation */}
+      <AlertDialog open={takeoverConfirmOpen} onOpenChange={setTakeoverConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Take Over Conversation</AlertDialogTitle>
+            <AlertDialogDescription>
+              This customer hasn't requested a human agent. Are you sure you want to take over this conversation from the AI?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleTakeover}>
+              Yes, Take Over
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
