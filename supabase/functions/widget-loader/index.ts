@@ -2097,6 +2097,16 @@ function generateWidgetScript(config: any): string {
       
       const data = await response.json();
       
+      // Handle handover state
+      if (data.handoverActive || data.handoverPending) {
+        if (!isInHandover) {
+          isInHandover = true;
+          startHandoverRealtime();
+        }
+        isTyping = false;
+        renderPanel();
+      }
+      
       if (data.botResponses) {
         for (const resp of data.botResponses) {
           await new Promise(resolve => setTimeout(resolve, CONFIG.functions.typingDelayMs));
