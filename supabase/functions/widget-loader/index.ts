@@ -1907,7 +1907,9 @@ function generateWidgetScript(config: any): string {
     messages.push(userMsg);
     const input = document.getElementById('vf-input');
     if (input) input.value = '';
-    isTyping = true;
+    if (!isInHandover) {
+      isTyping = true;
+    }
     renderPanel();
     scrollToLatestMessage();
     
