@@ -537,10 +537,15 @@ export default function Conversations() {
       });
       if (error) throw error;
       if (!data?.success) throw new Error(data?.error || 'Action failed');
-      toast({ title: "Success", description: "Action completed" });
+      if (actionName !== 'send_message') {
+        toast({ title: "Success", description: "Action completed" });
+      }
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
       if (selectedConversation?.id) {
-        loadTranscripts(selectedConversation.id);
+        // Don't reload transcripts for end_handover or send_message — Realtime subscription handles new messages
+        if (actionName !== 'end_handover' && actionName !== 'send_message') {
+          loadTranscripts(selectedConversation.id);
+        }
         const { data: p } = await supabase
           .from('handover_sessions')
           .select('*, departments:department_id(name, code, color, timeout_seconds)')
