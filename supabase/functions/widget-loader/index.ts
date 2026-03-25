@@ -1660,7 +1660,8 @@ function generateWidgetScript(config: any): string {
       const messageDiv = document.createElement('div');
       messageDiv.className = \`vf-message \${msg.speaker}\`;
       
-      const isAssistant = msg.speaker === 'assistant';
+      const isAssistant = msg.speaker === 'assistant' || msg.speaker === 'system';
+      const isSystem = msg.speaker === 'system';
       const buttonStyle = CONFIG.appearance.interactiveButtonStyle || 'solid';
       
       // Parse message for file URLs
