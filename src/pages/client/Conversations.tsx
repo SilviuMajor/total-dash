@@ -122,6 +122,7 @@ export default function Conversations() {
   const [pendingSession, setPendingSession] = useState<any>(null);
   const [activeSession, setActiveSession] = useState<any>(null);
   const [currentClientUserId, setCurrentClientUserId] = useState<string | null>(null);
+  const [pendingConversationIds, setPendingConversationIds] = useState<Set<string>>(new Set());
 
   // React Query hooks
   const {
@@ -312,6 +313,30 @@ export default function Conversations() {
     };
     loadClientUser();
   }, [user?.id, isClientPreviewMode, previewClient]);
+
+  // Load pending handover conversation IDs for pinning
+  useEffect(() => {
+    const loadPendingIds = async () => {
+      if (!selectedAgentId) return;
+      const { data } = await supabase
+        .from('handover_sessions')
+        .select('conversation_id')
+        .eq('status', 'pending');
+      if (data) {
+        setPendingConversationIds(new Set(data.map(d => d.conversation_id)));
+      }
+    };
+    loadPendingIds();
+
+    const channel = supabase
+      .channel('pending-sessions')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'handover_sessions' }, () => {
+        loadPendingIds();
+      })
+      .subscribe();
+
+    return () => { channel.unsubscribe(); };
+  }, [selectedAgentId]);
 
   // Load departments for transfer modal
   useEffect(() => {
@@ -547,7 +572,7 @@ export default function Conversations() {
 
   const availableTags = (agentConfig as any)?.widget_settings?.functions?.conversation_tags?.filter((t: any) => t.enabled) || [];
 
-  // Client-side tag filtering only
+  // Client-side tag filtering + pending pinning
   const filteredConversations = useMemo(() => {
     let result = conversations;
     if (tagFilters.length > 0) {
@@ -555,8 +580,16 @@ export default function Conversations() {
         tagFilters.some(tag => c.metadata?.tags?.includes(tag))
       );
     }
+    // Pin pending handover requests to the top
+    result = [...result].sort((a, b) => {
+      const aPending = pendingConversationIds.has(a.id);
+      const bPending = pendingConversationIds.has(b.id);
+      if (aPending && !bPending) return -1;
+      if (!aPending && bPending) return 1;
+      return 0;
+    });
     return result;
-  }, [conversations, tagFilters]);
+  }, [conversations, tagFilters, pendingConversationIds]);
 
   const allSelected = filteredConversations.length > 0 &&
     filteredConversations.every(c => selectedConversationIds.has(c.id));
@@ -782,7 +815,8 @@ export default function Conversations() {
                           conv.status === 'needs_review' && "border-l-amber-500",
                           conv.status === 'resolved' && "border-l-gray-400",
                           (!['with_ai', 'in_handover', 'aftercare', 'needs_review', 'resolved'].includes(conv.status)) && "border-l-border",
-                          isSelected ? "bg-primary/5" : "hover:bg-muted/40"
+                          pendingConversationIds.has(conv.id) && "bg-red-50 dark:bg-red-950/20 border-l-red-500",
+                          isSelected ? "bg-primary/5" : pendingConversationIds.has(conv.id) ? "" : "hover:bg-muted/40"
                         )}
                       >
                         {/* Row 1: Name + time */}
@@ -807,10 +841,30 @@ export default function Conversations() {
                             {conv.is_widget_test && (
                               <Badge variant="outline" className="text-[10px] shrink-0 px-1 py-0">🧪</Badge>
                             )}
+                            {conv.status === 'needs_review' && (
+                              <AlertTriangle className="w-3 h-3 text-amber-500 shrink-0" />
+                            )}
                           </div>
-                          <span className="text-[10.5px] text-muted-foreground shrink-0 ml-2">
-                            {formatDistanceToNow(new Date(conv.started_at))} ago
-                          </span>
+                          <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                            {conv.department_id && (() => {
+                              const dept = departments.find(d => d.id === conv.department_id);
+                              return dept ? (
+                                <span
+                                  className="inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-semibold border"
+                                  style={{
+                                    backgroundColor: `${dept.color || '#6B7280'}15`,
+                                    borderColor: `${dept.color || '#6B7280'}40`,
+                                    color: dept.color || '#6B7280',
+                                  }}
+                                >
+                                  {dept.name}
+                                </span>
+                              ) : null;
+                            })()}
+                            <span className="text-[10.5px] text-muted-foreground">
+                              {formatDistanceToNow(new Date(conv.started_at))} ago
+                            </span>
+                          </div>
                         </div>
 
                         {/* Row 2: Message preview (time placeholder) */}
@@ -829,7 +883,15 @@ export default function Conversations() {
                             conv.status === 'resolved' && "bg-gray-100 text-gray-500 border-gray-200",
                             (!['with_ai', 'in_handover', 'aftercare', 'needs_review', 'resolved'].includes(conv.status)) && "bg-muted text-muted-foreground border-border"
                           )}>
-                            {conv.status === 'with_ai' ? 'With AI' : conv.status === 'in_handover' ? 'In Handover' : conv.status === 'aftercare' ? 'Aftercare' : conv.status === 'needs_review' ? 'Needs Review' : conv.status === 'resolved' ? 'Resolved' : conv.status.charAt(0).toUpperCase() + conv.status.slice(1)}
+                            {conv.status === 'with_ai' ? 'With AI'
+                              : conv.status === 'in_handover' ? 'In Handover'
+                              : conv.status === 'aftercare' ? 'Aftercare'
+                              : conv.status === 'needs_review' ? 'Needs Review'
+                              : conv.status === 'resolved' ? 'Resolved'
+                              : conv.status === 'active' ? 'Active (Legacy)'
+                              : conv.status === 'completed' ? 'Completed'
+                              : conv.status === 'owned' ? 'Owned (Legacy)'
+                              : conv.status.charAt(0).toUpperCase() + conv.status.slice(1)}
                           </span>
                           {conv.metadata?.tags?.map((tag: string) => {
                             const tagConfig = (agentConfig as any)?.widget_settings?.functions?.conversation_tags?.find(
@@ -895,6 +957,7 @@ export default function Conversations() {
                         {transcripts.map((transcript, index) => {
                           // System messages render as centered indicators
                           if (transcript.speaker === 'system') {
+                            if (!transcript.text?.trim()) return null; // Don't render empty system messages
                             return (
                               <div key={transcript.id || index} className="flex justify-center my-3">
                                 <div className="bg-muted text-muted-foreground text-xs px-3 py-1 rounded-full border border-border">
