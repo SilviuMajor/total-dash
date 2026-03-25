@@ -1974,6 +1974,7 @@ function generateWidgetScript(config: any): string {
   }
   
   async function startNewChat() {
+    stopHandoverRealtime();
     messages = [];
     conversationId = null;
     currentVoiceflowSessionId = 'sess_' + Math.random().toString(36).substr(2, 9);
