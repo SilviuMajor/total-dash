@@ -553,13 +553,14 @@ serve(async (req) => {
               // Tag the conversation
               await supabaseClient
                 .from("conversation_tags")
-                .insert({
-                  conversation_id: currentConversationId,
-                  tag_name: "out_of_hours",
-                  is_system: true,
-                })
-                .onConflict("conversation_id,tag_name")
-                .ignore();
+                .upsert(
+                  {
+                    conversation_id: currentConversationId,
+                    tag_name: "out_of_hours",
+                    is_system: true,
+                  },
+                  { onConflict: "conversation_id,tag_name", ignoreDuplicates: true }
+                );
 
               // Update conversation status
               await supabaseClient
