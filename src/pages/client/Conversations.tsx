@@ -572,7 +572,7 @@ export default function Conversations() {
 
   const availableTags = (agentConfig as any)?.widget_settings?.functions?.conversation_tags?.filter((t: any) => t.enabled) || [];
 
-  // Client-side tag filtering only
+  // Client-side tag filtering + pending pinning
   const filteredConversations = useMemo(() => {
     let result = conversations;
     if (tagFilters.length > 0) {
@@ -580,8 +580,16 @@ export default function Conversations() {
         tagFilters.some(tag => c.metadata?.tags?.includes(tag))
       );
     }
+    // Pin pending handover requests to the top
+    result = [...result].sort((a, b) => {
+      const aPending = pendingConversationIds.has(a.id);
+      const bPending = pendingConversationIds.has(b.id);
+      if (aPending && !bPending) return -1;
+      if (!aPending && bPending) return 1;
+      return 0;
+    });
     return result;
-  }, [conversations, tagFilters]);
+  }, [conversations, tagFilters, pendingConversationIds]);
 
   const allSelected = filteredConversations.length > 0 &&
     filteredConversations.every(c => selectedConversationIds.has(c.id));
