@@ -101,11 +101,27 @@ export default function Conversations() {
   // Bulk select
   const [selectedConversationIds, setSelectedConversationIds] = useState<Set<string>>(new Set());
 
-  const { selectedAgentId, agents } = useClientAgentContext();
+  const { selectedAgentId, agents, clientId } = useClientAgentContext();
   const { toast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const transcriptScrollRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
+  const { user, profile } = useAuth();
+  const { isClientPreviewMode, previewClient } = useMultiTenantAuth();
+
+  // Handover state
+  const [chatMessage, setChatMessage] = useState("");
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const [handoverLoading, setHandoverLoading] = useState<string | null>(null);
+  const [endHandoverOpen, setEndHandoverOpen] = useState(false);
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [transferNote, setTransferNote] = useState("");
+  const [transferDeptId, setTransferDeptId] = useState("");
+  const [takeoverConfirmOpen, setTakeoverConfirmOpen] = useState(false);
+  const [departments, setDepartments] = useState<Array<{ id: string; name: string; code: string | null; color: string | null }>>([]);
+  const [pendingSession, setPendingSession] = useState<any>(null);
+  const [activeSession, setActiveSession] = useState<any>(null);
+  const [currentClientUserId, setCurrentClientUserId] = useState<string | null>(null);
 
   // React Query hooks
   const {
