@@ -1106,8 +1106,7 @@ export default function Conversations() {
                           <p className="text-xs text-muted-foreground">This conversation needs attention</p>
                           <Button
                             size="sm"
-                            variant="outline"
-                            className="w-full"
+                            className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
                             onClick={() => setTakeoverConfirmOpen(true)}
                             disabled={!!handoverLoading}
                           >
