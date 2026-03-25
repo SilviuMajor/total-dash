@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ConversationsSkeleton } from "@/components/skeletons";
-import { Phone, Clock, CheckCircle, MessageSquare, ArrowDown, ArrowUpDown, X, Plus, Tag, Users, Building2 } from "lucide-react";
+import { Phone, Clock, CheckCircle, MessageSquare, ArrowDown, ArrowUpDown, X, Plus, Tag, Users, Building2, Send, UserCheck, PhoneOff, ArrowRightLeft, Lock, Loader2, AlertTriangle, Timer } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useClientAgentContext } from "@/hooks/useClientAgentContext";
 import { NoAgentsAssigned } from "@/components/NoAgentsAssigned";
@@ -36,6 +39,8 @@ import {
   useBulkApplyTag,
   useBulkRemoveTag,
 } from "@/hooks/queries/useConversationMutations";
+import { useAuth } from "@/hooks/useAuth";
+import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
 
 interface Conversation {
   id: string;
