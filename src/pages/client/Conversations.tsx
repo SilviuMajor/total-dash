@@ -365,7 +365,7 @@ export default function Conversations() {
 
       const { data: pending, error: pendingError } = await supabase
         .from('handover_sessions')
-        .select('*, departments(name, code, color, timeout_seconds)')
+        .select('*, departments:department_id(name, code, color, timeout_seconds)')
         .eq('conversation_id', selectedConversation.id)
         .eq('status', 'pending')
         .maybeSingle();
