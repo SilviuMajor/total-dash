@@ -263,15 +263,12 @@ export default function Conversations() {
         },
         (payload) => {
           setTranscripts(prev => [...prev, payload.new as Transcript]);
-          // Auto-scroll to show new message
+          // Auto-scroll after React re-renders the new message
           setTimeout(() => {
             if (transcriptScrollRef.current) {
-              transcriptScrollRef.current.scrollTo({ 
-                top: transcriptScrollRef.current.scrollHeight, 
-                behavior: 'smooth' 
-              });
+              transcriptScrollRef.current.scrollTop = transcriptScrollRef.current.scrollHeight;
             }
-          }, 100);
+          }, 300);
         }
       )
       .subscribe((status) => {
