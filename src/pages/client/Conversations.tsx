@@ -962,7 +962,7 @@ export default function Conversations() {
 
                 {/* Chat Input */}
                 <div className="flex-shrink-0 border-t border-border bg-background p-3">
-                  {selectedConversation.status === 'in_handover' && activeSession?.client_user_id === currentClientUserId ? (
+                  {selectedConversation.status === 'in_handover' && selectedConversation.owner_id === currentClientUserId ? (
                     <div className="flex items-center gap-2">
                       <Input
                         value={chatMessage}
