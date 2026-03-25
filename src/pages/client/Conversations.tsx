@@ -872,26 +872,9 @@ export default function Conversations() {
                               <AlertTriangle className="w-3 h-3 text-amber-500 shrink-0" />
                             )}
                           </div>
-                          <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                            {conv.department_id && (() => {
-                              const dept = departments.find(d => d.id === conv.department_id);
-                              return dept ? (
-                                <span
-                                  className="inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-semibold border"
-                                  style={{
-                                    backgroundColor: `${dept.color || '#6B7280'}15`,
-                                    borderColor: `${dept.color || '#6B7280'}40`,
-                                    color: dept.color || '#6B7280',
-                                  }}
-                                >
-                                  {dept.name}
-                                </span>
-                              ) : null;
-                            })()}
-                            <span className="text-[10.5px] text-muted-foreground">
-                              {formatDistanceToNow(new Date(conv.started_at))} ago
-                            </span>
-                          </div>
+                          <span className="text-[10.5px] text-muted-foreground shrink-0 ml-2">
+                            {formatDistanceToNow(new Date(conv.started_at))} ago
+                          </span>
                         </div>
 
                         {/* Row 2: Message preview (time placeholder) */}
