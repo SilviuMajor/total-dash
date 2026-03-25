@@ -287,6 +287,7 @@ export default function Conversations() {
       
       if (directMatch) {
         setCurrentClientUserId(directMatch.id);
+        console.log('[Handover] Client user ID (direct):', directMatch.id);
         return;
       }
 
@@ -302,6 +303,7 @@ export default function Conversations() {
         
         if (previewUser) {
           setCurrentClientUserId(previewUser.id);
+          console.log('[Handover] Client user ID (preview fallback):', previewUser.id);
           return;
         }
       }
