@@ -18,6 +18,25 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Pencil, Trash2, Plus, Copy, Check, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+const DEPARTMENT_COLORS = [
+  { value: '#3b82f6', label: 'Blue' },
+  { value: '#6366f1', label: 'Indigo' },
+  { value: '#8b5cf6', label: 'Violet' },
+  { value: '#a855f7', label: 'Purple' },
+  { value: '#ec4899', label: 'Pink' },
+  { value: '#ef4444', label: 'Red' },
+  { value: '#f97316', label: 'Orange' },
+  { value: '#f59e0b', label: 'Amber' },
+  { value: '#eab308', label: 'Yellow' },
+  { value: '#84cc16', label: 'Lime' },
+  { value: '#22c55e', label: 'Green' },
+  { value: '#10b981', label: 'Emerald' },
+  { value: '#14b8a6', label: 'Teal' },
+  { value: '#06b6d4', label: 'Cyan' },
+  { value: '#6B7280', label: 'Grey' },
+  { value: '#78716c', label: 'Stone' },
+];
+
 interface Department {
   id: string;
   client_id: string;
@@ -436,14 +455,22 @@ export function DepartmentManagement({ clientId }: { clientId: string }) {
               </div>
 
               <div>
-                <Label htmlFor="dept-color">Colour</Label>
-                <Input
-                  id="dept-color"
-                  type="color"
-                  value={color}
-                  onChange={(e) => setColor(e.target.value)}
-                  className="h-9 mt-1 cursor-pointer w-full"
-                />
+                <Label>Colour</Label>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {DEPARTMENT_COLORS.map((c) => (
+                    <button
+                      key={c.value}
+                      type="button"
+                      onClick={() => setColor(c.value)}
+                      className={cn(
+                        "w-8 h-8 rounded-full border-2 transition-all hover:scale-110",
+                        color === c.value ? "border-foreground ring-2 ring-foreground/20 scale-110" : "border-transparent"
+                      )}
+                      style={{ backgroundColor: c.value }}
+                      title={c.label}
+                    />
+                  ))}
+                </div>
               </div>
 
               <div>
