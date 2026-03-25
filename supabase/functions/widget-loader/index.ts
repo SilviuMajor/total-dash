@@ -948,6 +948,31 @@ function generateWidgetScript(config: any): string {
       color: \${CONFIG.appearance.secondaryColor};
     }
     
+    .vf-message.system {
+      display: flex;
+      justify-content: center;
+      margin: 8px 0;
+    }
+    .vf-message.system .vf-message-content {
+      background: none;
+    }
+    .vf-message.system .vf-message-bubble {
+      background: #f3f4f6;
+      color: #6b7280;
+      font-size: 12px;
+      padding: 4px 14px;
+      border-radius: 20px;
+      border: 1px solid #e5e7eb;
+      max-width: none;
+      text-align: center;
+    }
+    .vf-message.system .vf-message-timestamp {
+      display: none;
+    }
+    .vf-message.system .vf-message-avatar {
+      display: none;
+    }
+    
     .vf-message-timestamp {
       font-size: 11px;
       color: rgba(0,0,0,0.4);
