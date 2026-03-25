@@ -263,15 +263,12 @@ export default function Conversations() {
         },
         (payload) => {
           setTranscripts(prev => [...prev, payload.new as Transcript]);
-          // Auto-scroll to show new message
+          // Auto-scroll after React re-renders the new message
           setTimeout(() => {
             if (transcriptScrollRef.current) {
-              transcriptScrollRef.current.scrollTo({ 
-                top: transcriptScrollRef.current.scrollHeight, 
-                behavior: 'smooth' 
-              });
+              transcriptScrollRef.current.scrollTop = transcriptScrollRef.current.scrollHeight;
             }
-          }, 100);
+          }, 300);
         }
       )
       .subscribe((status) => {
@@ -540,10 +537,15 @@ export default function Conversations() {
       });
       if (error) throw error;
       if (!data?.success) throw new Error(data?.error || 'Action failed');
-      toast({ title: "Success", description: "Action completed" });
+      if (actionName !== 'send_message') {
+        toast({ title: "Success", description: "Action completed" });
+      }
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
       if (selectedConversation?.id) {
-        loadTranscripts(selectedConversation.id);
+        // Don't reload transcripts for end_handover or send_message — Realtime subscription handles new messages
+        if (actionName !== 'end_handover' && actionName !== 'send_message') {
+          loadTranscripts(selectedConversation.id);
+        }
         const { data: p } = await supabase
           .from('handover_sessions')
           .select('*, departments:department_id(name, code, color, timeout_seconds)')
@@ -574,15 +576,25 @@ export default function Conversations() {
 
   const handleSendChatMessage = async () => {
     if (!chatMessage.trim() || sendingMessage) return;
+    const messageText = chatMessage.trim();
+    setChatMessage("");
     setSendingMessage(true);
     try {
-      await callHandoverAction('send_message', { message: chatMessage.trim() });
-      setChatMessage("");
-      setTimeout(() => {
-        if (transcriptScrollRef.current) {
-          transcriptScrollRef.current.scrollTop = transcriptScrollRef.current.scrollHeight;
-        }
-      }, 200);
+      const { data, error } = await supabase.functions.invoke('handover-actions', {
+        body: {
+          action: 'send_message',
+          conversationId: selectedConversation?.id,
+          clientUserId: currentClientUserId,
+          clientUserName: profile?.full_name || (profile as any)?.first_name || 'Agent',
+          message: messageText,
+        },
+      });
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Failed to send');
+      // Don't reload transcripts — the Realtime subscription will pick up the new message
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || 'Failed to send message', variant: "destructive" });
+      setChatMessage(messageText);
     } finally {
       setSendingMessage(false);
     }

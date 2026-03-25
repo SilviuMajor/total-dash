@@ -1685,7 +1685,7 @@ function generateWidgetScript(config: any): string {
           let hasNewMessages = false;
           
           for (const transcript of newTranscripts) {
-            if (transcript.speaker === 'client_user' || transcript.speaker === 'system') {
+            if (transcript.speaker !== 'user') {
               const existingIds = messages.map(m => m.id);
               if (!existingIds.includes('rt_' + transcript.id)) {
                 const newMsg = {
@@ -1697,6 +1697,10 @@ function generateWidgetScript(config: any): string {
                 };
                 messages.push(newMsg);
                 hasNewMessages = true;
+                // Stop polling if handover ended or resume message received
+                if (transcript.metadata && (transcript.metadata.type === 'handover_ended' || transcript.metadata.response_type === 'handover_resume')) {
+                  setTimeout(() => stopHandoverRealtime(), 3000);
+                }
               }
             }
             lastTimestamp = transcript.timestamp;
