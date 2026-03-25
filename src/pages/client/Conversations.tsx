@@ -893,10 +893,38 @@ export default function Conversations() {
                     ) : (
                       <div className="space-y-4">
                         {transcripts.map((transcript, index) => {
-                          const speaker = transcript.speaker === 'user' ? 'user'
-                            : transcript.speaker === 'client_user' ? 'assistant'
-                            : transcript.speaker === 'system' ? 'assistant'
-                            : 'assistant';
+                          // System messages render as centered indicators
+                          if (transcript.speaker === 'system') {
+                            return (
+                              <div key={transcript.id || index} className="flex justify-center my-3">
+                                <div className="bg-muted text-muted-foreground text-xs px-3 py-1 rounded-full border border-border">
+                                  {transcript.text}
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          // Client user messages render with name label and distinct style
+                          if (transcript.speaker === 'client_user') {
+                            const name = transcript.metadata?.client_user_name || 'Agent';
+                            return (
+                              <div key={transcript.id || index} className="flex gap-2 mb-4">
+                                <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 text-[11px] font-bold text-primary">
+                                  {name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
+                                </div>
+                                <div>
+                                  <span className="text-[11px] font-medium text-primary mb-0.5 block">{name}</span>
+                                  <div className="bg-card border border-border px-3 py-2 rounded-xl rounded-tl-sm text-sm max-w-[400px]">
+                                    {transcript.text}
+                                  </div>
+                                  <span className="text-[10px] text-muted-foreground mt-0.5 ml-1">{format(new Date(transcript.timestamp), 'h:mm a')}</span>
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          // User and assistant messages use the existing MessageBubble
+                          const speaker = transcript.speaker === 'user' ? 'user' : 'assistant';
                           return (
                             <MessageBubble
                               key={transcript.id || index}
