@@ -1320,6 +1320,8 @@ function generateWidgetScript(config: any): string {
   let isInActiveChat = false;
   let clickedButtonIds = new Set();
   let clickedButtonSelections = {};
+  let isInHandover = false;
+  let realtimeSubscription = null;
   
   // Helper to get the Voiceflow user ID (combined with session ID)
   function getVoiceflowUserId() {
