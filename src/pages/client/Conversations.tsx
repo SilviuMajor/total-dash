@@ -263,6 +263,15 @@ export default function Conversations() {
         },
         (payload) => {
           setTranscripts(prev => [...prev, payload.new as Transcript]);
+          // Auto-scroll to show new message
+          setTimeout(() => {
+            if (transcriptScrollRef.current) {
+              transcriptScrollRef.current.scrollTo({ 
+                top: transcriptScrollRef.current.scrollHeight, 
+                behavior: 'smooth' 
+              });
+            }
+          }, 100);
         }
       )
       .subscribe((status) => {
