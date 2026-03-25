@@ -273,19 +273,43 @@ export default function Conversations() {
     return () => { transcriptChannel.unsubscribe(); };
   }, [selectedConversation?.id]);
 
-  // Load current client user ID
+  // Load current client user ID (handles both real client and preview mode)
   useEffect(() => {
     const loadClientUser = async () => {
       if (!user?.id) return;
-      const { data } = await supabase
+
+      // First try: direct lookup in client_users
+      const { data: directMatch } = await supabase
         .from('client_users')
         .select('id')
         .eq('user_id', user.id)
         .maybeSingle();
-      if (data) setCurrentClientUserId(data.id);
+      
+      if (directMatch) {
+        setCurrentClientUserId(directMatch.id);
+        return;
+      }
+
+      // Preview mode fallback: find the first client_user for the preview client
+      // This lets agency admins test handover actions when previewing
+      if (isClientPreviewMode && previewClient?.id) {
+        const { data: previewUser } = await supabase
+          .from('client_users')
+          .select('id')
+          .eq('client_id', previewClient.id)
+          .limit(1)
+          .maybeSingle();
+        
+        if (previewUser) {
+          setCurrentClientUserId(previewUser.id);
+          return;
+        }
+      }
+
+      console.warn('No client user ID found for current user');
     };
     loadClientUser();
-  }, [user?.id]);
+  }, [user?.id, isClientPreviewMode, previewClient]);
 
   // Load departments for transfer modal
   useEffect(() => {
@@ -966,8 +990,7 @@ export default function Conversations() {
                           <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Handover</p>
                           <Button
                             size="sm"
-                            variant="outline"
-                            className="w-full"
+                            className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
                             onClick={() => setTakeoverConfirmOpen(true)}
                             disabled={handoverLoading === 'take_over'}
                           >
@@ -1083,8 +1106,7 @@ export default function Conversations() {
                           <p className="text-xs text-muted-foreground">This conversation needs attention</p>
                           <Button
                             size="sm"
-                            variant="outline"
-                            className="w-full"
+                            className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
                             onClick={() => setTakeoverConfirmOpen(true)}
                             disabled={!!handoverLoading}
                           >
