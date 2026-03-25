@@ -453,8 +453,9 @@ async function handleEndHandover(
 
         // Store Voiceflow's resume responses in transcripts
         if (resumeData && Array.isArray(resumeData)) {
+          let resumeMessageStored = false;
           for (const item of resumeData) {
-            if (item.type === "text" && item.payload?.message) {
+            if (item.type === "text" && item.payload?.message && !resumeMessageStored) {
               await supabaseClient.from("transcripts").insert({
                 conversation_id: conversationId,
                 speaker: "assistant",
@@ -464,6 +465,7 @@ async function handleEndHandover(
                   timestamp: new Date().toISOString(),
                 },
               });
+              resumeMessageStored = true;
             }
           }
         }

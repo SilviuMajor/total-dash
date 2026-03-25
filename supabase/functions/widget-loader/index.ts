@@ -2080,7 +2080,9 @@ function generateWidgetScript(config: any): string {
     };
     
     messages.push(userMsg);
-    isTyping = true;
+    if (!isInHandover) {
+      isTyping = true;
+    }
     renderPanel();
     
     try {
