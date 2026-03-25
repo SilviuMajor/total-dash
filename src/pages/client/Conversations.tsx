@@ -576,15 +576,25 @@ export default function Conversations() {
 
   const handleSendChatMessage = async () => {
     if (!chatMessage.trim() || sendingMessage) return;
+    const messageText = chatMessage.trim();
+    setChatMessage("");
     setSendingMessage(true);
     try {
-      await callHandoverAction('send_message', { message: chatMessage.trim() });
-      setChatMessage("");
-      setTimeout(() => {
-        if (transcriptScrollRef.current) {
-          transcriptScrollRef.current.scrollTop = transcriptScrollRef.current.scrollHeight;
-        }
-      }, 200);
+      const { data, error } = await supabase.functions.invoke('handover-actions', {
+        body: {
+          action: 'send_message',
+          conversationId: selectedConversation?.id,
+          clientUserId: currentClientUserId,
+          clientUserName: profile?.full_name || (profile as any)?.first_name || 'Agent',
+          message: messageText,
+        },
+      });
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Failed to send');
+      // Don't reload transcripts — the Realtime subscription will pick up the new message
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || 'Failed to send message', variant: "destructive" });
+      setChatMessage(messageText);
     } finally {
       setSendingMessage(false);
     }
