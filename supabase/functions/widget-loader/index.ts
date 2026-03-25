@@ -1680,7 +1680,7 @@ function generateWidgetScript(config: any): string {
       }
       
       messageDiv.innerHTML = \`
-        \${isAssistant ? \`
+        \${isAssistant && !isSystem ? \`
           <div class="vf-message-avatar">
             \${CONFIG.appearance.chatIconUrl 
               ? \`<img src="\${CONFIG.appearance.chatIconUrl}" alt="Bot" />\`
