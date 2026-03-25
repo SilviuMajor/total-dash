@@ -314,6 +314,30 @@ export default function Conversations() {
     loadClientUser();
   }, [user?.id, isClientPreviewMode, previewClient]);
 
+  // Load pending handover conversation IDs for pinning
+  useEffect(() => {
+    const loadPendingIds = async () => {
+      if (!selectedAgentId) return;
+      const { data } = await supabase
+        .from('handover_sessions')
+        .select('conversation_id')
+        .eq('status', 'pending');
+      if (data) {
+        setPendingConversationIds(new Set(data.map(d => d.conversation_id)));
+      }
+    };
+    loadPendingIds();
+
+    const channel = supabase
+      .channel('pending-sessions')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'handover_sessions' }, () => {
+        loadPendingIds();
+      })
+      .subscribe();
+
+    return () => { channel.unsubscribe(); };
+  }, [selectedAgentId]);
+
   // Load departments for transfer modal
   useEffect(() => {
     const loadDepts = async () => {
