@@ -362,23 +362,50 @@ export default function Conversations() {
         setActiveSession(null);
         return;
       }
-      const { data: pending } = await supabase
+
+      const { data: pending, error: pendingError } = await supabase
         .from('handover_sessions')
         .select('*, departments(name, code, color, timeout_seconds)')
         .eq('conversation_id', selectedConversation.id)
         .eq('status', 'pending')
         .maybeSingle();
+
+      if (pendingError) {
+        console.error('[Handover] Error loading pending session:', pendingError);
+      }
+      console.log('[Handover] Pending session for', selectedConversation.id, ':', pending);
       setPendingSession(pending);
 
-      const { data: active } = await supabase
+      const { data: active, error: activeError } = await supabase
         .from('handover_sessions')
         .select('*, departments(name, code, color)')
         .eq('conversation_id', selectedConversation.id)
         .eq('status', 'active')
         .maybeSingle();
+
+      if (activeError) {
+        console.error('[Handover] Error loading active session:', activeError);
+      }
       setActiveSession(active);
     };
     loadSessions();
+
+    // Subscribe to session changes for the selected conversation
+    if (selectedConversation?.id) {
+      const sessionChannel = supabase
+        .channel(`session-${selectedConversation.id}`)
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'handover_sessions',
+          filter: `conversation_id=eq.${selectedConversation.id}`
+        }, () => {
+          loadSessions();
+        })
+        .subscribe();
+
+      return () => { sessionChannel.unsubscribe(); };
+    }
   }, [selectedConversation?.id, selectedConversation?.status]);
 
   const loadTranscripts = async (conversationId: string) => {
@@ -698,7 +725,7 @@ export default function Conversations() {
 
       {/* ── Three-panel workspace ── */}
       <div className="flex-1 min-h-0 overflow-hidden">
-        <div className="grid grid-cols-[360px_1fr_320px] h-full">
+        <div className="grid grid-cols-[380px_1fr_320px] h-full">
 
           {/* LEFT PANEL: Conversation list */}
           <div className="flex flex-col border-r border-border h-full overflow-hidden">
@@ -845,26 +872,9 @@ export default function Conversations() {
                               <AlertTriangle className="w-3 h-3 text-amber-500 shrink-0" />
                             )}
                           </div>
-                          <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                            {conv.department_id && (() => {
-                              const dept = departments.find(d => d.id === conv.department_id);
-                              return dept ? (
-                                <span
-                                  className="inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-semibold border"
-                                  style={{
-                                    backgroundColor: `${dept.color || '#6B7280'}15`,
-                                    borderColor: `${dept.color || '#6B7280'}40`,
-                                    color: dept.color || '#6B7280',
-                                  }}
-                                >
-                                  {dept.name}
-                                </span>
-                              ) : null;
-                            })()}
-                            <span className="text-[10.5px] text-muted-foreground">
-                              {formatDistanceToNow(new Date(conv.started_at))} ago
-                            </span>
-                          </div>
+                          <span className="text-[10.5px] text-muted-foreground shrink-0 ml-2">
+                            {formatDistanceToNow(new Date(conv.started_at))} ago
+                          </span>
                         </div>
 
                         {/* Row 2: Message preview (time placeholder) */}
@@ -873,44 +883,61 @@ export default function Conversations() {
                         </p>
 
                         {/* Row 3: Status badge + tags */}
-                        <div className="flex items-center gap-1.5 flex-wrap pl-6">
-                          <span className={cn(
-                            "inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold border",
-                            conv.status === 'with_ai' && "bg-green-50 text-green-600 border-green-200",
-                            conv.status === 'in_handover' && "bg-blue-50 text-blue-600 border-blue-200",
-                            conv.status === 'aftercare' && "bg-yellow-50 text-yellow-600 border-yellow-200",
-                            conv.status === 'needs_review' && "bg-amber-50 text-amber-600 border-amber-200",
-                            conv.status === 'resolved' && "bg-gray-100 text-gray-500 border-gray-200",
-                            (!['with_ai', 'in_handover', 'aftercare', 'needs_review', 'resolved'].includes(conv.status)) && "bg-muted text-muted-foreground border-border"
-                          )}>
-                            {conv.status === 'with_ai' ? 'With AI'
-                              : conv.status === 'in_handover' ? 'In Handover'
-                              : conv.status === 'aftercare' ? 'Aftercare'
-                              : conv.status === 'needs_review' ? 'Needs Review'
-                              : conv.status === 'resolved' ? 'Resolved'
-                              : conv.status === 'active' ? 'Active (Legacy)'
-                              : conv.status === 'completed' ? 'Completed'
-                              : conv.status === 'owned' ? 'Owned (Legacy)'
-                              : conv.status.charAt(0).toUpperCase() + conv.status.slice(1)}
-                          </span>
-                          {conv.metadata?.tags?.map((tag: string) => {
-                            const tagConfig = (agentConfig as any)?.widget_settings?.functions?.conversation_tags?.find(
-                              (t: any) => t.label === tag
-                            );
-                            return tagConfig ? (
+                        <div className="flex items-center justify-between pl-6">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className={cn(
+                              "inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold border",
+                              conv.status === 'with_ai' && "bg-green-50 text-green-600 border-green-200",
+                              conv.status === 'in_handover' && "bg-blue-50 text-blue-600 border-blue-200",
+                              conv.status === 'aftercare' && "bg-yellow-50 text-yellow-600 border-yellow-200",
+                              conv.status === 'needs_review' && "bg-amber-50 text-amber-600 border-amber-200",
+                              conv.status === 'resolved' && "bg-gray-100 text-gray-500 border-gray-200",
+                              (!['with_ai', 'in_handover', 'aftercare', 'needs_review', 'resolved'].includes(conv.status)) && "bg-muted text-muted-foreground border-border"
+                            )}>
+                              {conv.status === 'with_ai' ? 'With AI'
+                                : conv.status === 'in_handover' ? 'In Handover'
+                                : conv.status === 'aftercare' ? 'Aftercare'
+                                : conv.status === 'needs_review' ? 'Needs Review'
+                                : conv.status === 'resolved' ? 'Resolved'
+                                : conv.status === 'active' ? 'Active (Legacy)'
+                                : conv.status === 'completed' ? 'Completed'
+                                : conv.status === 'owned' ? 'Owned (Legacy)'
+                                : conv.status.charAt(0).toUpperCase() + conv.status.slice(1)}
+                            </span>
+                            {conv.metadata?.tags?.map((tag: string) => {
+                              const tagConfig = (agentConfig as any)?.widget_settings?.functions?.conversation_tags?.find(
+                                (t: any) => t.label === tag
+                              );
+                              return tagConfig ? (
+                                <span
+                                  key={tag}
+                                  className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium border"
+                                  style={{
+                                    backgroundColor: `${tagConfig.color}20`,
+                                    borderColor: tagConfig.color,
+                                    color: tagConfig.color
+                                  }}
+                                >
+                                  {tag}
+                                </span>
+                              ) : null;
+                            })}
+                          </div>
+                          {conv.department_id && (() => {
+                            const dept = departments.find(d => d.id === conv.department_id);
+                            return dept ? (
                               <span
-                                key={tag}
-                                className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium border"
+                                className="inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-medium border shrink-0 ml-2"
                                 style={{
-                                  backgroundColor: `${tagConfig.color}20`,
-                                  borderColor: tagConfig.color,
-                                  color: tagConfig.color
+                                  backgroundColor: `${dept.color || '#6B7280'}15`,
+                                  borderColor: `${dept.color || '#6B7280'}40`,
+                                  color: dept.color || '#6B7280',
                                 }}
                               >
-                                {tag}
+                                {dept.name}
                               </span>
                             ) : null;
-                          })}
+                          })()}
                         </div>
                       </div>
                     );
@@ -941,6 +968,21 @@ export default function Conversations() {
                   <p className="text-xs text-muted-foreground">
                     Started {format(new Date(selectedConversation.started_at), 'PPp')}
                   </p>
+                  {selectedConversation.department_id && (() => {
+                    const dept = departments.find(d => d.id === selectedConversation.department_id);
+                    return dept ? (
+                      <span
+                        className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium border mt-1"
+                        style={{
+                          backgroundColor: `${dept.color || '#6B7280'}15`,
+                          borderColor: `${dept.color || '#6B7280'}40`,
+                          color: dept.color || '#6B7280',
+                        }}
+                      >
+                        {dept.name}
+                      </span>
+                    ) : null;
+                  })()}
                 </div>
                 <ScrollArea
                   className="flex-1 min-h-0"
@@ -1076,7 +1118,29 @@ export default function Conversations() {
                 {selectedConversation ? (
                   <>
                     {/* Handover Control Card */}
-                    <Card className="p-3">
+                    <Card className={cn(
+                      "p-3",
+                      pendingSession && "border-red-300 bg-red-50 dark:bg-red-950/20 dark:border-red-800"
+                    )}>
+                      {/* Global department pill */}
+                      {selectedConversation.department_id && (() => {
+                        const dept = departments.find(d => d.id === selectedConversation.department_id);
+                        return dept ? (
+                          <div className="mb-2">
+                            <span
+                              className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold border"
+                              style={{
+                                backgroundColor: `${dept.color || '#6B7280'}15`,
+                                borderColor: `${dept.color || '#6B7280'}40`,
+                                color: dept.color || '#6B7280',
+                              }}
+                            >
+                              {dept.name}
+                            </span>
+                          </div>
+                        ) : null;
+                      })()}
+
                       {/* WITH AI — no pending request */}
                       {selectedConversation.status === 'with_ai' && !pendingSession && (
                         <div className="space-y-2">
@@ -1103,19 +1167,10 @@ export default function Conversations() {
                               {pendingSession.departments?.timeout_seconds || 300}s
                             </div>
                           </div>
-                          {pendingSession.departments && (
-                            <div className="flex items-center gap-1.5">
-                              <span
-                                className="inline-block w-2 h-2 rounded-full flex-shrink-0"
-                                style={{ backgroundColor: pendingSession.departments.color || '#3b82f6' }}
-                              />
-                              <span className="text-xs font-medium">{pendingSession.departments.name}</span>
-                            </div>
-                          )}
                           <p className="text-xs text-muted-foreground">Customer requested a human agent</p>
                           <Button
                             size="sm"
-                            className="w-full"
+                            className="w-full bg-red-600 hover:bg-red-700 text-white"
                             onClick={() => callHandoverAction('accept_handover')}
                             disabled={handoverLoading === 'accept_handover'}
                           >
