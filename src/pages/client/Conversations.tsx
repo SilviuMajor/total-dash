@@ -957,6 +957,7 @@ export default function Conversations() {
                         {transcripts.map((transcript, index) => {
                           // System messages render as centered indicators
                           if (transcript.speaker === 'system') {
+                            if (!transcript.text?.trim()) return null; // Don't render empty system messages
                             return (
                               <div key={transcript.id || index} className="flex justify-center my-3">
                                 <div className="bg-muted text-muted-foreground text-xs px-3 py-1 rounded-full border border-border">
