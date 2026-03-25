@@ -1118,7 +1118,29 @@ export default function Conversations() {
                 {selectedConversation ? (
                   <>
                     {/* Handover Control Card */}
-                    <Card className="p-3">
+                    <Card className={cn(
+                      "p-3",
+                      pendingSession && "border-red-300 bg-red-50 dark:bg-red-950/20 dark:border-red-800"
+                    )}>
+                      {/* Global department pill */}
+                      {selectedConversation.department_id && (() => {
+                        const dept = departments.find(d => d.id === selectedConversation.department_id);
+                        return dept ? (
+                          <div className="mb-2">
+                            <span
+                              className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold border"
+                              style={{
+                                backgroundColor: `${dept.color || '#6B7280'}15`,
+                                borderColor: `${dept.color || '#6B7280'}40`,
+                                color: dept.color || '#6B7280',
+                              }}
+                            >
+                              {dept.name}
+                            </span>
+                          </div>
+                        ) : null;
+                      })()}
+
                       {/* WITH AI — no pending request */}
                       {selectedConversation.status === 'with_ai' && !pendingSession && (
                         <div className="space-y-2">
@@ -1145,19 +1167,10 @@ export default function Conversations() {
                               {pendingSession.departments?.timeout_seconds || 300}s
                             </div>
                           </div>
-                          {pendingSession.departments && (
-                            <div className="flex items-center gap-1.5">
-                              <span
-                                className="inline-block w-2 h-2 rounded-full flex-shrink-0"
-                                style={{ backgroundColor: pendingSession.departments.color || '#3b82f6' }}
-                              />
-                              <span className="text-xs font-medium">{pendingSession.departments.name}</span>
-                            </div>
-                          )}
                           <p className="text-xs text-muted-foreground">Customer requested a human agent</p>
                           <Button
                             size="sm"
-                            className="w-full"
+                            className="w-full bg-red-600 hover:bg-red-700 text-white"
                             onClick={() => callHandoverAction('accept_handover')}
                             disabled={handoverLoading === 'accept_handover'}
                           >
