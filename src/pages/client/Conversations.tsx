@@ -365,7 +365,7 @@ export default function Conversations() {
 
       const { data: pending, error: pendingError } = await supabase
         .from('handover_sessions')
-        .select('*, departments(name, code, color, timeout_seconds)')
+        .select('*, departments:department_id(name, code, color, timeout_seconds)')
         .eq('conversation_id', selectedConversation.id)
         .eq('status', 'pending')
         .maybeSingle();
@@ -378,7 +378,7 @@ export default function Conversations() {
 
       const { data: active, error: activeError } = await supabase
         .from('handover_sessions')
-        .select('*, departments(name, code, color)')
+        .select('*, departments:department_id(name, code, color)')
         .eq('conversation_id', selectedConversation.id)
         .eq('status', 'active')
         .maybeSingle();
@@ -537,14 +537,14 @@ export default function Conversations() {
         loadTranscripts(selectedConversation.id);
         const { data: p } = await supabase
           .from('handover_sessions')
-          .select('*, departments(name, code, color, timeout_seconds)')
+          .select('*, departments:department_id(name, code, color, timeout_seconds)')
           .eq('conversation_id', selectedConversation.id)
           .eq('status', 'pending')
           .maybeSingle();
         setPendingSession(p);
         const { data: a } = await supabase
           .from('handover_sessions')
-          .select('*, departments(name, code, color)')
+          .select('*, departments:department_id(name, code, color)')
           .eq('conversation_id', selectedConversation.id)
           .eq('status', 'active')
           .maybeSingle();
