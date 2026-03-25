@@ -74,3 +74,6 @@ verify_jwt = true
 
 [functions.check-must-change-password]
 verify_jwt = true
+
+[functions.handover-actions]
+verify_jwt = true
