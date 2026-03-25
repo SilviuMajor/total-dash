@@ -201,6 +201,18 @@ async function handleTakeOver(
     throw new Error("Conversation is already in handover");
   }
 
+  // Complete any existing pending sessions for this conversation
+  // (e.g., if a proactive takeover happens while a handover request is pending)
+  await supabaseClient
+    .from("handover_sessions")
+    .update({
+      status: "completed",
+      completed_at: new Date().toISOString(),
+      completion_method: "handback",
+    })
+    .eq("conversation_id", conversationId)
+    .in("status", ["pending", "active"]);
+
   // Get the client_id to find the global department
   const { data: assignment } = await supabaseClient
     .from("agent_assignments")
