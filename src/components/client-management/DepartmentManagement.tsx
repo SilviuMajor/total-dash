@@ -455,14 +455,22 @@ export function DepartmentManagement({ clientId }: { clientId: string }) {
               </div>
 
               <div>
-                <Label htmlFor="dept-color">Colour</Label>
-                <Input
-                  id="dept-color"
-                  type="color"
-                  value={color}
-                  onChange={(e) => setColor(e.target.value)}
-                  className="h-9 mt-1 cursor-pointer w-full"
-                />
+                <Label>Colour</Label>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {DEPARTMENT_COLORS.map((c) => (
+                    <button
+                      key={c.value}
+                      type="button"
+                      onClick={() => setColor(c.value)}
+                      className={cn(
+                        "w-8 h-8 rounded-full border-2 transition-all hover:scale-110",
+                        color === c.value ? "border-foreground ring-2 ring-foreground/20 scale-110" : "border-transparent"
+                      )}
+                      style={{ backgroundColor: c.value }}
+                      title={c.label}
+                    />
+                  ))}
+                </div>
               </div>
 
               <div>
