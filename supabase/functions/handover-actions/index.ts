@@ -374,7 +374,7 @@ async function handleEndHandover(
   await supabaseClient.from("transcripts").insert({
     conversation_id: conversationId,
     speaker: "system",
-    text: "",
+    text: "Handover ended",
     metadata: {
       type: "handover_ended",
       resolved: resolve,
