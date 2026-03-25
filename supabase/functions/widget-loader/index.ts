@@ -1652,6 +1652,82 @@ function generateWidgetScript(config: any): string {
     }
   }
   
+  function startHandoverRealtime() {
+    if (realtimeSubscription || !conversationId) return;
+    
+    console.log('[VF Widget] Starting handover realtime for:', conversationId);
+    
+    let lastTimestamp = new Date().toISOString();
+    
+    const pollInterval = setInterval(async () => {
+      if (!isInHandover || !conversationId) {
+        clearInterval(pollInterval);
+        realtimeSubscription = null;
+        return;
+      }
+      
+      try {
+        const response = await fetch(
+          SUPABASE_URL + '/rest/v1/transcripts?conversation_id=eq.' + conversationId + '&timestamp=gt.' + encodeURIComponent(lastTimestamp) + '&order=timestamp.asc',
+          {
+            headers: {
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+            }
+          }
+        );
+        
+        if (!response.ok) return;
+        
+        const newTranscripts = await response.json();
+        
+        if (newTranscripts.length > 0) {
+          let hasNewMessages = false;
+          
+          for (const transcript of newTranscripts) {
+            if (transcript.speaker === 'client_user' || transcript.speaker === 'system') {
+              const existingIds = messages.map(m => m.id);
+              if (!existingIds.includes('rt_' + transcript.id)) {
+                const newMsg = {
+                  id: 'rt_' + transcript.id,
+                  speaker: transcript.speaker === 'client_user' ? 'assistant' : 'system',
+                  text: transcript.text || '',
+                  timestamp: transcript.timestamp,
+                  metadata: transcript.metadata
+                };
+                messages.push(newMsg);
+                hasNewMessages = true;
+              }
+            }
+            lastTimestamp = transcript.timestamp;
+          }
+          
+          if (hasNewMessages) {
+            isTyping = false;
+            renderPanel();
+            scrollToLatestMessage();
+            if (conversationId) {
+              SessionManager.saveConversation(conversationId, messages, currentVoiceflowSessionId, true);
+            }
+          }
+        }
+      } catch (e) {
+        console.error('[VF Widget] Handover poll error:', e);
+      }
+    }, 1500);
+    
+    realtimeSubscription = pollInterval;
+  }
+  
+  function stopHandoverRealtime() {
+    if (realtimeSubscription) {
+      console.log('[VF Widget] Stopping handover realtime');
+      clearInterval(realtimeSubscription);
+      realtimeSubscription = null;
+    }
+    isInHandover = false;
+  }
+  
   function renderMessages(container) {
     container.innerHTML = '<div class="vf-messages-container" id="vf-messages"></div>';
     const messagesEl = document.getElementById('vf-messages');
