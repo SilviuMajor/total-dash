@@ -156,9 +156,9 @@ export default function Conversations() {
     setSelectedConversationIds(new Set());
   }, [selectedAgentId, statusFilter, tagFilters, sortOrder]);
 
-  // Response time tick (updates every 10 seconds)
+  // Response time tick (every second for live updates)
   useEffect(() => {
-    const interval = setInterval(() => setResponseTick(t => t + 1), 10000);
+    const interval = setInterval(() => setResponseTick(t => t + 1), 1000);
     return () => clearInterval(interval);
   }, []);
 
@@ -700,6 +700,14 @@ export default function Conversations() {
   const shouldShowResponsePill = (conversation: any) => {
     if (conversation.status !== 'in_handover') return false;
     if (!conversation.last_customer_message_at) return false;
+    // Check if agent has replied since the customer's last message
+    if (conversation.last_activity_at && conversation.last_customer_message_at) {
+      const customerTime = new Date(conversation.last_customer_message_at).getTime();
+      const activityTime = new Date(conversation.last_activity_at).getTime();
+      // If last_activity_at is more than 2 seconds after last_customer_message_at,
+      // it means someone (likely the agent) has responded
+      if (activityTime - customerTime > 2000) return false;
+    }
     return true;
   };
 
@@ -926,7 +934,7 @@ export default function Conversations() {
                           isSelected ? "bg-primary/5" : pendingConversationIds.has(conv.id) ? "" : "hover:bg-muted/40"
                         )}
                       >
-                        {/* Row 1: Name + time */}
+                        {/* Row 1: Name + department pill */}
                         <div className="flex items-center justify-between mb-1">
                           <div className="flex items-center gap-1.5 min-w-0">
                             <Checkbox
@@ -952,17 +960,29 @@ export default function Conversations() {
                               <AlertTriangle className="w-3 h-3 text-amber-500 shrink-0" />
                             )}
                           </div>
-                          <span className="text-[10.5px] text-muted-foreground shrink-0 ml-2">
-                            {formatDistanceToNow(new Date(conv.started_at))} ago
-                          </span>
+                          {conv.department_id && (() => {
+                            const dept = departments.find(d => d.id === conv.department_id);
+                            return dept ? (
+                              <span
+                                className="inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-medium border shrink-0 ml-2"
+                                style={{
+                                  backgroundColor: `${dept.color || '#6B7280'}15`,
+                                  borderColor: `${dept.color || '#6B7280'}40`,
+                                  color: dept.color || '#6B7280',
+                                }}
+                              >
+                                {dept.name}
+                              </span>
+                            ) : null;
+                          })()}
                         </div>
 
-                        {/* Row 2: Message preview (time placeholder) */}
+                        {/* Row 2: Message preview */}
                         <p className="text-xs text-muted-foreground truncate pl-6 mb-1.5">
                           Started {format(new Date(conv.started_at), 'MMM d, h:mm a')}
                         </p>
 
-                        {/* Row 3: Status badge + tags */}
+                        {/* Row 3: Status badge + tags (left), response time pill (right) */}
                         <div className="flex items-center justify-between pl-6">
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <span className={cn(
@@ -1003,26 +1023,12 @@ export default function Conversations() {
                               ) : null;
                             })}
                           </div>
-                          {conv.department_id && (() => {
-                            const dept = departments.find(d => d.id === conv.department_id);
-                            return dept ? (
-                              <span
-                                className="inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-medium border shrink-0 ml-2"
-                                style={{
-                                  backgroundColor: `${dept.color || '#6B7280'}15`,
-                                  borderColor: `${dept.color || '#6B7280'}40`,
-                                  color: dept.color || '#6B7280',
-                                }}
-                              >
-                                {dept.name}
-                              </span>
-                            ) : null;
-                          })()}
                           {shouldShowResponsePill(conv) && (() => {
                             const waitSec = getWaitSeconds(conv);
                             const { color } = getResponseTimeColor(waitSec);
                             return (
                               <span
+                                className="shrink-0 ml-2"
                                 style={{
                                   fontSize: 10,
                                   fontWeight: 600,
@@ -1086,30 +1092,6 @@ export default function Conversations() {
                     ) : null;
                   })()}
                 </div>
-                {selectedConversation?.status === 'in_handover' && 
-                 selectedConversation?.owner_id === currentClientUserId && 
-                 selectedConversation?.last_customer_message_at && (() => {
-                  const waitSec = getWaitSeconds(selectedConversation);
-                  const { color } = getResponseTimeColor(waitSec);
-                  return (
-                    <div className="mt-2 px-3 py-1.5 rounded-md flex items-center gap-2" style={{
-                      background: `${color}08`,
-                      border: `1px solid ${color}20`,
-                    }}>
-                      <div className="w-2 h-2 rounded-full" style={{ background: color, boxShadow: `0 0 4px ${color}60` }} />
-                      <span className="text-xs text-muted-foreground">
-                        Customer waiting: <strong style={{ color }}>{formatWaitTime(waitSec)}</strong>
-                      </span>
-                    </div>
-                  );
-                })()}
-                {selectedConversation?.status === 'in_handover' && 
-                 selectedConversation?.owner_id === currentClientUserId && 
-                 !selectedConversation?.last_customer_message_at && (
-                  <div className="mt-2 px-3 py-1.5 rounded-md flex items-center gap-2 bg-green-50 border border-green-200">
-                    <span className="text-xs text-green-600 font-medium">✓ No pending customer messages</span>
-                  </div>
-                )}
                 <ScrollArea
                   className="flex-1 min-h-0"
                   viewportRef={transcriptScrollRef}
@@ -1190,6 +1172,24 @@ export default function Conversations() {
                     Jump to latest
                   </Button>
                 )}
+
+                {/* Customer waiting indicator */}
+                {selectedConversation.status === 'in_handover' && 
+                 selectedConversation.owner_id === currentClientUserId && 
+                 shouldShowResponsePill(selectedConversation) && (() => {
+                  const waitSec = getWaitSeconds(selectedConversation);
+                  const { color } = getResponseTimeColor(waitSec);
+                  return (
+                    <div className="flex-shrink-0 px-3 py-1.5 flex items-center gap-2 border-t border-border" style={{
+                      background: `${color}08`,
+                    }}>
+                      <div className="w-2 h-2 rounded-full" style={{ background: color, boxShadow: `0 0 4px ${color}60` }} />
+                      <span className="text-xs text-muted-foreground">
+                        Customer waiting: <strong style={{ color }}>{formatWaitTime(waitSec)}</strong>
+                      </span>
+                    </div>
+                  );
+                })()}
 
                 {/* Chat Input */}
                 <div className="flex-shrink-0 border-t border-border bg-background p-3">
