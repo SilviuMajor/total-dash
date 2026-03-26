@@ -1657,9 +1657,8 @@ function generateWidgetScript(config: any): string {
     
     console.log('[VF Widget] Starting handover realtime for:', conversationId);
     
-    // Start from NOW — connecting message is handled locally via botResponses, no lookback needed
-    let lastTimestamp = new Date().toISOString();
-    let handoverEndDetected = false;
+    // Start from 3 seconds ago to catch the "Connecting you..." system message
+    let lastTimestamp = new Date(Date.now() - 3000).toISOString();
     
     const pollInterval = setInterval(async () => {
       if (!isInHandover || !conversationId) {
@@ -1695,22 +1694,19 @@ function generateWidgetScript(config: any): string {
             // Skip user messages — the widget already shows those locally
             if (transcript.speaker === 'user') continue;
             
-            // During active handover: only show client_user and system messages
-            // After handover ends: also show assistant messages (resume messages from Voiceflow)
+            // Only show client_user and system messages — assistant messages are handled separately
             const showMessage = 
               transcript.speaker === 'client_user' || 
-              transcript.speaker === 'system' ||
-              (handoverEndDetected && transcript.speaker === 'assistant');
+              transcript.speaker === 'system';
             
             if (!showMessage) continue;
+            
+            // Skip pre-handover assistant messages (already shown locally from botResponses)
+            if (transcript.metadata?.response_type === 'pre_handover') continue;
             
             // Deduplicate by transcript ID
             const rtId = 'rt_' + transcript.id;
             if (messages.some(m => m.id === rtId)) continue;
-            
-            // Also deduplicate by text content (prevents showing messages already displayed locally)
-            const textMatch = transcript.text?.trim();
-            if (textMatch && messages.some(m => m.text?.trim() === textMatch && m.speaker !== 'user')) continue;
             
             const newMsg = {
               id: rtId,
@@ -1721,19 +1717,14 @@ function generateWidgetScript(config: any): string {
             };
             
             // Skip truly empty messages (no text AND no buttons)
-            if ((!msg.text || !msg.text.trim()) && (!msg.buttons || !msg.buttons.length)) continue;
+            if ((!newMsg.text || !newMsg.text.trim()) && (!newMsg.buttons || !newMsg.buttons.length)) continue;
             
             messages.push(newMsg);
             hasNewMessages = true;
             
-            // Detect handover end
+            // Detect handover end — stop polling after 5s to catch the system message
             if (transcript.metadata && transcript.metadata.type === 'handover_ended') {
-              handoverEndDetected = true;
-            }
-            
-            // Stop polling after resume message is received
-            if (transcript.metadata && transcript.metadata.response_type === 'handover_resume') {
-              setTimeout(() => stopHandoverRealtime(), 2000);
+              setTimeout(() => stopHandoverRealtime(), 5000);
             }
           }
           
@@ -1762,6 +1753,66 @@ function generateWidgetScript(config: any): string {
     }
     isInHandover = false;
     isTyping = false;
+    
+    // One-time fetch for resume messages (Voiceflow bot responses after handover end)
+    if (conversationId) {
+      setTimeout(async () => {
+        try {
+          const url = SUPABASE_URL + '/rest/v1/transcripts?conversation_id=eq.' + conversationId 
+            + '&speaker=eq.assistant'
+            + '&order=timestamp.desc'
+            + '&limit=5'
+            + '&select=id,speaker,text,buttons,timestamp,metadata';
+          
+          const response = await fetch(url, {
+            headers: {
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+            }
+          });
+          
+          if (response.ok) {
+            const transcripts = await response.json();
+            let hasNew = false;
+            
+            // Process in chronological order (result is desc, reverse it)
+            for (const t of transcripts.reverse()) {
+              if (t.metadata?.response_type === 'handover_resume' || t.metadata?.response_type === 'handover_resume_buttons') {
+                const rtId = 'rt_' + t.id;
+                if (!messages.some(m => m.id === rtId)) {
+                  let parsedButtons = null;
+                  if (t.buttons) {
+                    try {
+                      parsedButtons = typeof t.buttons === 'string' ? JSON.parse(t.buttons) : t.buttons;
+                    } catch(e) { parsedButtons = null; }
+                  }
+                  
+                  messages.push({
+                    id: rtId,
+                    speaker: 'assistant',
+                    text: t.text || '',
+                    buttons: parsedButtons,
+                    timestamp: t.timestamp,
+                  });
+                  hasNew = true;
+                }
+              }
+            }
+            
+            if (hasNew) {
+              renderPanel();
+              scrollToLatestMessage();
+              if (conversationId) {
+                SessionManager.saveConversation(conversationId, messages, currentVoiceflowSessionId, true);
+              }
+            }
+          }
+        } catch (e) {
+          console.error('[VF Widget] Error fetching resume messages:', e);
+        }
+      }, 2000); // Wait 2s for resume messages to be stored
+    }
+    
     renderPanel();
   }
   
