@@ -156,9 +156,9 @@ export default function Conversations() {
     setSelectedConversationIds(new Set());
   }, [selectedAgentId, statusFilter, tagFilters, sortOrder]);
 
-  // Response time tick (updates every 10 seconds)
+  // Response time tick (every second for live updates)
   useEffect(() => {
-    const interval = setInterval(() => setResponseTick(t => t + 1), 10000);
+    const interval = setInterval(() => setResponseTick(t => t + 1), 1000);
     return () => clearInterval(interval);
   }, []);
 
