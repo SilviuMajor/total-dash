@@ -1173,6 +1173,24 @@ export default function Conversations() {
                   </Button>
                 )}
 
+                {/* Customer waiting indicator */}
+                {selectedConversation.status === 'in_handover' && 
+                 selectedConversation.owner_id === currentClientUserId && 
+                 shouldShowResponsePill(selectedConversation) && (() => {
+                  const waitSec = getWaitSeconds(selectedConversation);
+                  const { color } = getResponseTimeColor(waitSec);
+                  return (
+                    <div className="flex-shrink-0 px-3 py-1.5 flex items-center gap-2 border-t border-border" style={{
+                      background: `${color}08`,
+                    }}>
+                      <div className="w-2 h-2 rounded-full" style={{ background: color, boxShadow: `0 0 4px ${color}60` }} />
+                      <span className="text-xs text-muted-foreground">
+                        Customer waiting: <strong style={{ color }}>{formatWaitTime(waitSec)}</strong>
+                      </span>
+                    </div>
+                  );
+                })()}
+
                 {/* Chat Input */}
                 <div className="flex-shrink-0 border-t border-border bg-background p-3">
                   {selectedConversation.status === 'in_handover' && selectedConversation.owner_id === currentClientUserId ? (
