@@ -721,6 +721,17 @@ serve(async (req) => {
         .update({ ended_at: endedAt, status: "resolved" })
         .eq("id", currentConversationId);
 
+      // Store conversation ended system message
+      await supabaseClient.from("transcripts").insert({
+        conversation_id: currentConversationId,
+        speaker: "system",
+        text: "Conversation ended",
+        metadata: {
+          type: "conversation_ended",
+          timestamp: new Date().toISOString(),
+        },
+      });
+
       if (endError) {
         console.error("Error ending conversation:", endError);
       } else {

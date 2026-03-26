@@ -453,34 +453,39 @@ async function handleEndHandover(
 
         // Store Voiceflow's resume responses in transcripts
         if (resumeData && Array.isArray(resumeData)) {
-          // Collect the first text message and any buttons that follow
-          let resumeText = '';
-          let resumeButtons = null;
+          let resumeMessageStored = false;
           
           for (const item of resumeData) {
-            if (item.type === "text" && item.payload?.message && !resumeText) {
-              resumeText = item.payload.message;
+            // Store text message (only first one)
+            if (item.type === "text" && item.payload?.message && !resumeMessageStored) {
+              await supabaseClient.from("transcripts").insert({
+                conversation_id: conversationId,
+                speaker: "assistant",
+                text: item.payload.message,
+                metadata: {
+                  response_type: "handover_resume",
+                  timestamp: new Date().toISOString(),
+                },
+              });
+              resumeMessageStored = true;
             }
+            
+            // Store buttons as a SEPARATE transcript row (matches normal Voiceflow widget behaviour)
             if (item.type === "choice" && item.payload?.buttons) {
-              resumeButtons = item.payload.buttons.map((btn: any) => ({
-                text: btn.name,
-                payload: btn.request
-              }));
+              await supabaseClient.from("transcripts").insert({
+                conversation_id: conversationId,
+                speaker: "assistant",
+                text: "",
+                buttons: item.payload.buttons.map((btn: any) => ({
+                  text: btn.name,
+                  payload: btn.request,
+                })),
+                metadata: {
+                  response_type: "handover_resume_buttons",
+                  timestamp: new Date().toISOString(),
+                },
+              });
             }
-          }
-          
-          // Store as a single transcript with text + buttons combined
-          if (resumeText || resumeButtons) {
-            await supabaseClient.from("transcripts").insert({
-              conversation_id: conversationId,
-              speaker: "assistant",
-              text: resumeText || '',
-              buttons: resumeButtons,
-              metadata: {
-                response_type: "handover_resume",
-                timestamp: new Date().toISOString(),
-              },
-            });
           }
         }
       } catch (e) {
