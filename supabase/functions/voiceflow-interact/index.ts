@@ -246,10 +246,13 @@ serve(async (req) => {
             metadata: { timestamp: new Date().toISOString() },
           });
 
-          // Update last_activity_at
+          // Update last_activity_at and last_customer_message_at
           await supabaseClient
             .from("conversations")
-            .update({ last_activity_at: new Date().toISOString() })
+            .update({ 
+              last_activity_at: new Date().toISOString(),
+              last_customer_message_at: new Date().toISOString(),
+            })
             .eq("id", conversationId);
 
           // Get holding message configuration
