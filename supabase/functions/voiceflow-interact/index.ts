@@ -658,6 +658,23 @@ serve(async (req) => {
             .update({ department_id: department.id, voiceflow_user_id: userId })
             .eq("id", currentConversationId);
 
+          // Store bot responses that came with this handover (e.g. "Let me connect you to our team")
+          if (currentConversationId) {
+            for (const response of botResponses) {
+              if (response.text) {
+                await supabaseClient.from("transcripts").insert({
+                  conversation_id: currentConversationId,
+                  speaker: "assistant",
+                  text: response.text,
+                  metadata: {
+                    response_type: "pre_handover",
+                    timestamp: new Date().toISOString(),
+                  },
+                });
+              }
+            }
+          }
+
           // Store the connecting system message
           const connectingMessage =
             agent.config?.handover_messages?.connecting_message || "Connecting you with our team...";
@@ -669,11 +686,11 @@ serve(async (req) => {
             metadata: { type: "handover_requested", department: department.name, timestamp: new Date().toISOString() },
           });
 
-          // Return handover active flag — connecting message comes through polling
+          // Return handover active flag — connecting message (system type) included so widget renders it as a pill
           return new Response(
             JSON.stringify({
               conversationId: currentConversationId,
-              botResponses,
+              botResponses: [...botResponses, { type: "system", text: connectingMessage }],
               userId,
               handoverActive: true,
               conversationEnded: false,

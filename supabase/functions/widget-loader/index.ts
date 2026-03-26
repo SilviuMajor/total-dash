@@ -1657,9 +1657,8 @@ function generateWidgetScript(config: any): string {
     
     console.log('[VF Widget] Starting handover realtime for:', conversationId);
     
-    // Start from 2 seconds ago to catch the "Connecting you..." system message
-    // that was stored at the same moment polling started
-    let lastTimestamp = new Date(Date.now() - 2000).toISOString();
+    // Start from NOW — connecting message is handled locally via botResponses, no lookback needed
+    let lastTimestamp = new Date().toISOString();
     let handoverEndDetected = false;
     
     const pollInterval = setInterval(async () => {
@@ -1974,13 +1973,13 @@ function generateWidgetScript(config: any): string {
       // Handle handover state
       if (data.handoverActive || data.handoverPending) {
         // Display any bot responses that came with this handover response
-        // (e.g. "Let me connect you to our team" from Voiceflow)
+        // (e.g. "Let me connect you to our team" from Voiceflow, and "Connecting you..." as system pill)
         if (data.botResponses && data.botResponses.length > 0) {
           for (const resp of data.botResponses) {
             if (resp.text) {
               messages.push({
                 id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-                speaker: 'assistant',
+                speaker: resp.type === 'system' ? 'system' : 'assistant',
                 text: resp.text,
                 buttons: resp.buttons || null,
                 timestamp: new Date().toISOString()
@@ -2176,12 +2175,13 @@ function generateWidgetScript(config: any): string {
       // Handle handover state
       if (data.handoverActive || data.handoverPending) {
         // Display Voiceflow bot responses that came before the handover action
+        // (resp.type === 'system' renders as centred pill, others as bot bubble)
         if (data.botResponses && data.botResponses.length > 0) {
           for (const resp of data.botResponses) {
             if (resp.text) {
               messages.push({
                 id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-                speaker: 'assistant',
+                speaker: resp.type === 'system' ? 'system' : 'assistant',
                 text: resp.text,
                 buttons: resp.buttons || null,
                 timestamp: new Date().toISOString()

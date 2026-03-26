@@ -543,7 +543,7 @@ export default function Conversations() {
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
       if (selectedConversation?.id) {
         // Don't reload transcripts for end_handover or send_message — Realtime subscription handles new messages
-        if (actionName !== 'end_handover' && actionName !== 'send_message') {
+        if (actionName !== 'end_handover' && actionName !== 'send_message' && actionName !== 'accept_handover' && actionName !== 'take_over') {
           loadTranscripts(selectedConversation.id);
         }
         const { data: p } = await supabase
