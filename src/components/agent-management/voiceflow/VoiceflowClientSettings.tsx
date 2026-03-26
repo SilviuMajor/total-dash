@@ -43,6 +43,10 @@ export function VoiceflowClientSettings({ agent, onUpdate }: VoiceflowClientSett
             ...agent.config,
             auto_end_hours: autoEndHours,
             auto_end_mode: autoEndMode,
+            response_thresholds: {
+              green_seconds: responseGreenSeconds,
+              amber_seconds: responseAmberSeconds,
+            },
           },
         })
         .eq("id", agent.id);
