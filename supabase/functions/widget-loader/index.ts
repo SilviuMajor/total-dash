@@ -1690,7 +1690,9 @@ function generateWidgetScript(config: any): string {
               if (!existingIds.includes('rt_' + transcript.id)) {
                 const newMsg = {
                   id: 'rt_' + transcript.id,
-                  speaker: transcript.speaker === 'client_user' ? 'assistant' : 'system',
+                   speaker: transcript.speaker === 'client_user' ? 'assistant' 
+                    : transcript.speaker === 'assistant' ? 'assistant' 
+                    : 'system',
                   text: transcript.text || '',
                   timestamp: transcript.timestamp,
                   metadata: transcript.metadata
