@@ -29,31 +29,61 @@ serve(async (req) => {
     // =============================================
     // CHECK 1: Pending sessions past their timeout
     // =============================================
-    const { data: expiredPending, error: pendingError } = await supabaseClient
+    console.log("Checking for expired pending sessions...");
+    
+    const { data: pendingSessions, error: pendingError } = await supabaseClient
       .from("handover_sessions")
-      .select("*, departments:department_id(name, code, fallback_to_global, is_global, client_id), conversations(agent_id, voiceflow_user_id)")
+      .select("*")
       .eq("status", "pending");
 
     if (pendingError) {
       console.error("Error fetching pending sessions:", pendingError);
-      results.errors.push("Failed to fetch pending sessions");
+      results.errors.push("Failed to fetch pending sessions: " + JSON.stringify(pendingError));
     }
 
-    if (expiredPending) {
+    console.log("Found pending sessions:", pendingSessions?.length || 0);
+
+    if (pendingSessions && pendingSessions.length > 0) {
       const now = Date.now();
 
-      for (const session of expiredPending) {
+      for (const session of pendingSessions) {
         const requestedAt = new Date(session.requested_at).getTime();
         const timeoutMs = (session.timeout_duration || 300) * 1000;
+        const elapsed = now - requestedAt;
 
-        if (now - requestedAt < timeoutMs) continue; // Not yet expired
+        console.log("Session", session.id, "- timeout:", session.timeout_duration, "s, elapsed:", Math.floor(elapsed/1000), "s");
 
-        console.log("Pending session expired:", session.id);
+        if (elapsed < timeoutMs) {
+          console.log("Session", session.id, "not yet expired, skipping");
+          continue;
+        }
+
+        console.log("Session", session.id, "EXPIRED - processing timeout");
 
         try {
+          // Load department separately to avoid join issues
+          let dept = null;
+          if (session.department_id) {
+            const { data: deptData } = await supabaseClient
+              .from("departments")
+              .select("name, code, fallback_to_global, is_global, client_id")
+              .eq("id", session.department_id)
+              .single();
+            dept = deptData;
+          }
+
+          // Load conversation separately
+          let conv = null;
+          const { data: convData } = await supabaseClient
+            .from("conversations")
+            .select("agent_id, voiceflow_user_id")
+            .eq("id", session.conversation_id)
+            .single();
+          conv = convData;
+
           // Check if fallback to Global is available
-          const dept = session.departments;
-          const canFallback = dept?.fallback_to_global && !dept?.is_global && session.fallback_count < 1;
+          const canFallback = dept?.fallback_to_global && !dept?.is_global && (session.fallback_count || 0) < 1;
+          console.log("Can fallback:", canFallback, "dept:", dept?.name, "is_global:", dept?.is_global);
 
           if (canFallback) {
             // Fallback to Global department
@@ -172,8 +202,8 @@ serve(async (req) => {
           });
 
           // Resume Voiceflow with timeout path
-          const agentId = session.conversations?.agent_id;
-          const voiceflowUserId = session.conversations?.voiceflow_user_id || session.voiceflow_user_id;
+          const agentId = conv?.agent_id;
+          const voiceflowUserId = conv?.voiceflow_user_id || session.voiceflow_user_id;
 
           if (agentId && voiceflowUserId) {
             const { data: agent } = await supabaseClient
