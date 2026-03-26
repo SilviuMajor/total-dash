@@ -285,7 +285,7 @@ serve(async (req) => {
     // =============================================
     const { data: activeSessions, error: activeError } = await supabaseClient
       .from("handover_sessions")
-      .select("*, conversations(agent_id, voiceflow_user_id, id)")
+      .select("*")
       .eq("status", "active");
 
     if (activeError) {
@@ -296,7 +296,14 @@ serve(async (req) => {
     if (activeSessions) {
       for (const session of activeSessions) {
         try {
-          const agentId = session.conversations?.agent_id;
+          // Load conversation data separately
+          const { data: convData } = await supabaseClient
+            .from("conversations")
+            .select("agent_id, voiceflow_user_id")
+            .eq("id", session.conversation_id)
+            .single();
+          
+          const agentId = convData?.agent_id;
           if (!agentId) continue;
 
           // Load agent config for inactivity settings
