@@ -124,6 +124,7 @@ export default function Conversations() {
   const [activeSession, setActiveSession] = useState<any>(null);
   const [currentClientUserId, setCurrentClientUserId] = useState<string | null>(null);
   const [pendingConversationIds, setPendingConversationIds] = useState<Set<string>>(new Set());
+  const [responseTick, setResponseTick] = useState(0);
 
   // React Query hooks
   const {
