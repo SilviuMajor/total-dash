@@ -2173,8 +2173,7 @@ function generateWidgetScript(config: any): string {
       
       // Handle handover state
       if (data.handoverActive || data.handoverPending) {
-        // Display any bot responses that came with this handover response
-        // (e.g. "Let me connect you to our team" from Voiceflow)
+        // Display Voiceflow bot responses that came before the handover action
         if (data.botResponses && data.botResponses.length > 0) {
           for (const resp of data.botResponses) {
             if (resp.text) {
