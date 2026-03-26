@@ -7,6 +7,8 @@ import { DateRangeSelector } from "@/components/analytics/DateRangeSelector";
 import { AnalyticsDashboard } from "@/components/analytics/AnalyticsDashboard";
 import { HandoverAnalytics } from "@/components/analytics/HandoverAnalytics";
 import { OverviewAnalytics } from "@/components/analytics/OverviewAnalytics";
+import { ConversationsAnalytics } from "@/components/analytics/ConversationsAnalytics";
+import { AgentsAnalytics } from "@/components/analytics/AgentsAnalytics";
 import { useAnalyticsTabs } from "@/hooks/useAnalyticsTabs";
 import { useAnalyticsMetrics, DateRange, getDateRangeFromPreset, DateRangePreset } from "@/hooks/useAnalyticsMetrics";
 import { useAuth } from "@/hooks/useAuth";
@@ -196,10 +198,10 @@ export default function Analytics() {
           <HandoverAnalytics agentId={selectedAgent?.id || ""} dateRange={dateRange} />
         )}
         {fixedTab === 'conversations' && (
-          <p className="p-6 text-muted-foreground">Conversations analytics coming soon</p>
+          <ConversationsAnalytics agentId={selectedAgent?.id || ""} dateRange={dateRange} />
         )}
         {fixedTab === 'agents' && (
-          <p className="p-6 text-muted-foreground">Agent analytics coming soon</p>
+          <AgentsAnalytics agentId={selectedAgent?.id || ""} dateRange={dateRange} />
         )}
         {!fixedTab && activeTabId && (
           <AnalyticsDashboard
