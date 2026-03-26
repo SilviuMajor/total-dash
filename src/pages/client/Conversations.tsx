@@ -678,6 +678,31 @@ export default function Conversations() {
 
   const sortLabel = sortOrder === 'asc' ? 'Oldest' : sortOrder === 'duration' ? 'Longest' : 'Newest';
 
+  const getResponseTimeColor = (seconds: number) => {
+    const greenMax = agentConfig?.response_thresholds?.green_seconds || 60;
+    const amberMax = agentConfig?.response_thresholds?.amber_seconds || 300;
+    if (seconds <= greenMax) return { color: '#22c55e', label: 'green' };
+    if (seconds <= amberMax) return { color: '#f59e0b', label: 'amber' };
+    return { color: '#ef4444', label: 'red' };
+  };
+
+  const formatWaitTime = (seconds: number) => {
+    if (seconds < 60) return `${seconds}s`;
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
+    return `${Math.floor(seconds / 3600)}h`;
+  };
+
+  const getWaitSeconds = (conversation: any) => {
+    if (!conversation.last_customer_message_at) return 0;
+    return Math.floor((Date.now() - new Date(conversation.last_customer_message_at).getTime()) / 1000);
+  };
+
+  const shouldShowResponsePill = (conversation: any) => {
+    if (conversation.status !== 'in_handover') return false;
+    if (!conversation.last_customer_message_at) return false;
+    return true;
+  };
+
   if (agents.length === 0) {
     return <NoAgentsAssigned />;
   }
