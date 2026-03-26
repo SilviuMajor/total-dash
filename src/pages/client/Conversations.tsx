@@ -700,6 +700,14 @@ export default function Conversations() {
   const shouldShowResponsePill = (conversation: any) => {
     if (conversation.status !== 'in_handover') return false;
     if (!conversation.last_customer_message_at) return false;
+    // Check if agent has replied since the customer's last message
+    if (conversation.last_activity_at && conversation.last_customer_message_at) {
+      const customerTime = new Date(conversation.last_customer_message_at).getTime();
+      const activityTime = new Date(conversation.last_activity_at).getTime();
+      // If last_activity_at is more than 2 seconds after last_customer_message_at,
+      // it means someone (likely the agent) has responded
+      if (activityTime - customerTime > 2000) return false;
+    }
     return true;
   };
 
