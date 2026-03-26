@@ -156,6 +156,12 @@ export default function Conversations() {
     setSelectedConversationIds(new Set());
   }, [selectedAgentId, statusFilter, tagFilters, sortOrder]);
 
+  // Response time tick (updates every 10 seconds)
+  useEffect(() => {
+    const interval = setInterval(() => setResponseTick(t => t + 1), 10000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Auto-select conversation from ?conversationId query param
   useEffect(() => {
     const convId = searchParams.get('conversationId');
