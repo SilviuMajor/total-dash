@@ -39,6 +39,7 @@ export default function Analytics() {
   const [dateRange, setDateRange] = useState<DateRange>(getDateRangeFromPreset("week"));
   const [currentPreset, setCurrentPreset] = useState<DateRangePreset>("week");
   const [isEditMode, setIsEditMode] = useState(false);
+  const [isHandoverTab, setIsHandoverTab] = useState(false);
   
   const { metrics, loading: metricsLoading } = useAnalyticsMetrics(selectedAgent?.id || null, dateRange);
 
