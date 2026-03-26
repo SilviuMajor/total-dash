@@ -159,17 +159,35 @@ export default function Analytics() {
         </div>
       </div>
 
-      <AnalyticsTabBar
-        tabs={tabs}
-        activeTabId={activeTabId}
-        onTabSelect={setActiveTabId}
-        onTabCreate={createTab}
-        onTabRename={(id, name) => updateTab(id, { name })}
-        onTabDelete={deleteTab}
-        onTabReorder={reorderTabs}
-      />
+      <div className="border-b border-border flex items-center">
+        <div className="flex-1 min-w-0">
+          <AnalyticsTabBar
+            tabs={tabs}
+            activeTabId={activeTabId}
+            onTabSelect={(id) => { setActiveTabId(id); setIsHandoverTab(false); }}
+            onTabCreate={createTab}
+            onTabRename={(id, name) => updateTab(id, { name })}
+            onTabDelete={deleteTab}
+            onTabReorder={reorderTabs}
+          />
+        </div>
+        <button
+          onClick={() => { setIsHandoverTab(true); setActiveTabId(null); }}
+          className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-all whitespace-nowrap ${
+            isHandoverTab
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Handover
+        </button>
+      </div>
 
-      {activeTabId && (
+      {isHandoverTab ? (
+        <div className="flex-1 overflow-auto">
+          <HandoverAnalytics agentId={selectedAgent?.id || ""} dateRange={dateRange} />
+        </div>
+      ) : activeTabId ? (
         <div className="flex-1 overflow-auto">
           <AnalyticsDashboard
             tabId={activeTabId}
@@ -177,7 +195,7 @@ export default function Analytics() {
             isEditMode={isEditMode}
           />
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
