@@ -686,11 +686,11 @@ serve(async (req) => {
             metadata: { type: "handover_requested", department: department.name, timestamp: new Date().toISOString() },
           });
 
-          // Return handover active flag — connecting message (system type) included so widget renders it as a pill
+          // Return handover active flag — connecting message comes through polling as system transcript
           return new Response(
             JSON.stringify({
               conversationId: currentConversationId,
-              botResponses: [...botResponses, { type: "system", text: connectingMessage }],
+              botResponses,
               userId,
               handoverActive: true,
               conversationEnded: false,
