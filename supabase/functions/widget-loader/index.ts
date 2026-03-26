@@ -1974,13 +1974,13 @@ function generateWidgetScript(config: any): string {
       // Handle handover state
       if (data.handoverActive || data.handoverPending) {
         // Display any bot responses that came with this handover response
-        // (e.g. "Let me connect you to our team" from Voiceflow)
+        // (e.g. "Let me connect you to our team" from Voiceflow, and "Connecting you..." as system pill)
         if (data.botResponses && data.botResponses.length > 0) {
           for (const resp of data.botResponses) {
             if (resp.text) {
               messages.push({
                 id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-                speaker: 'assistant',
+                speaker: resp.type === 'system' ? 'system' : 'assistant',
                 text: resp.text,
                 buttons: resp.buttons || null,
                 timestamp: new Date().toISOString()
