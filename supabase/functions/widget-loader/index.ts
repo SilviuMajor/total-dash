@@ -1724,7 +1724,7 @@ function generateWidgetScript(config: any): string {
             
             // Detect handover end — stop polling after 5s to catch the system message
             if (transcript.metadata && transcript.metadata.type === 'handover_ended') {
-              setTimeout(() => stopHandoverRealtime(), 5000);
+              setTimeout(() => stopHandoverRealtime(), 3000);
             }
           }
           
