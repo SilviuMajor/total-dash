@@ -1941,17 +1941,31 @@ function generateWidgetScript(config: any): string {
       
       // Handle handover state
       if (data.handoverActive || data.handoverPending) {
-        if (!isInHandover) {
-          isInHandover = true;
-          startHandoverRealtime();
+        // First, display any bot responses that came with this handover response
+        if (data.botResponses && data.botResponses.length > 0) {
+          for (const resp of data.botResponses) {
+            if (resp.text) {
+              const botMsg = {
+                id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                speaker: 'assistant',
+                text: resp.text,
+                timestamp: new Date().toISOString()
+              };
+              messages.push(botMsg);
+            }
+          }
         }
         isTyping = false;
         renderPanel();
         scrollToLatestMessage();
+        if (!isInHandover) {
+          isInHandover = true;
+          startHandoverRealtime();
+        }
         if (conversationId) {
           SessionManager.saveConversation(conversationId, messages, currentVoiceflowSessionId, true);
         }
-        return; // Don't process botResponses during handover — polling handles it
+        return;
       }
       
       if (data.botResponses) {
