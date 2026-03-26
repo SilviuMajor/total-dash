@@ -7,6 +7,8 @@ import { DateRangeSelector } from "@/components/analytics/DateRangeSelector";
 import { AnalyticsDashboard } from "@/components/analytics/AnalyticsDashboard";
 import { HandoverAnalytics } from "@/components/analytics/HandoverAnalytics";
 import { OverviewAnalytics } from "@/components/analytics/OverviewAnalytics";
+import { ConversationsAnalytics } from "@/components/analytics/ConversationsAnalytics";
+import { AgentsAnalytics } from "@/components/analytics/AgentsAnalytics";
 import { useAnalyticsTabs } from "@/hooks/useAnalyticsTabs";
 import { useAnalyticsMetrics, DateRange, getDateRangeFromPreset, DateRangePreset } from "@/hooks/useAnalyticsMetrics";
 import { useAuth } from "@/hooks/useAuth";
