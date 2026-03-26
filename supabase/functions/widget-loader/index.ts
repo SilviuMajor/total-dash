@@ -1945,6 +1945,11 @@ function generateWidgetScript(config: any): string {
         }
         isTyping = false;
         renderPanel();
+        scrollToLatestMessage();
+        if (conversationId) {
+          SessionManager.saveConversation(conversationId, messages, currentVoiceflowSessionId, true);
+        }
+        return; // Don't process botResponses during handover — polling handles it
       }
       
       if (data.botResponses) {
@@ -1967,6 +1972,19 @@ function generateWidgetScript(config: any): string {
       } else {
         isTyping = false;
         renderPanel();
+      }
+      
+      // Show conversation ended indicator
+      if (data.conversationEnded) {
+        const endMsg = {
+          id: 'msg_end_' + Date.now(),
+          speaker: 'system',
+          text: 'Conversation ended',
+          timestamp: new Date().toISOString()
+        };
+        messages.push(endMsg);
+        renderPanel();
+        scrollToLatestMessage();
       }
       
       if (conversationId) {
