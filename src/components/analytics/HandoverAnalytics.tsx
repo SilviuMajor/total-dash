@@ -54,8 +54,8 @@ export function HandoverAnalytics({ agentId, dateRange }: HandoverAnalyticsProps
           completion_method, client_user_id, department_id, conversation_id,
           departments:department_id(name, color)
         `)
-        .gte("requested_at", dateRange.start.toISOString())
-        .lte("requested_at", dateRange.end.toISOString());
+        .gte("requested_at", dateRange.from.toISOString())
+        .lte("requested_at", dateRange.to.toISOString());
 
       if (sessError) throw sessError;
 

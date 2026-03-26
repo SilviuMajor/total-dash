@@ -5,6 +5,7 @@ import { NoAgentsAssigned } from "@/components/NoAgentsAssigned";
 import { AnalyticsTabBar } from "@/components/analytics/AnalyticsTabBar";
 import { DateRangeSelector } from "@/components/analytics/DateRangeSelector";
 import { AnalyticsDashboard } from "@/components/analytics/AnalyticsDashboard";
+import { HandoverAnalytics } from "@/components/analytics/HandoverAnalytics";
 import { useAnalyticsTabs } from "@/hooks/useAnalyticsTabs";
 import { useAnalyticsMetrics, DateRange, getDateRangeFromPreset, DateRangePreset } from "@/hooks/useAnalyticsMetrics";
 import { useAuth } from "@/hooks/useAuth";
