@@ -1701,7 +1701,7 @@ function generateWidgetScript(config: any): string {
                 hasNewMessages = true;
                 // Stop polling if handover ended or resume message received
                 if (transcript.metadata && (transcript.metadata.type === 'handover_ended' || transcript.metadata.response_type === 'handover_resume')) {
-                  setTimeout(() => stopHandoverRealtime(), 3000);
+                  setTimeout(() => stopHandoverRealtime(), 8000); // Wait longer to catch resume messages
                 }
               }
             }
