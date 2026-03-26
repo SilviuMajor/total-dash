@@ -447,7 +447,7 @@ serve(async (req) => {
                     variables: {
                       handover_outcome: "inactivity_timeout",
                       handover_agent_name: null,
-                      handover_department: session.departments?.name || "Support",
+                      handover_department: "Support",
                       handover_resolved: false,
                     },
                   }),
