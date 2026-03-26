@@ -419,6 +419,22 @@ export default function Conversations() {
     }
   }, [selectedConversation?.id, selectedConversation?.status]);
 
+  // Periodic handover timer check (runs every 60 seconds while dashboard is open)
+  useEffect(() => {
+    const runTimer = async () => {
+      try {
+        await supabase.functions.invoke('handover-timer', { body: {} });
+      } catch (e) {
+        // Silent — timer errors shouldn't affect the UI
+      }
+    };
+
+    runTimer(); // Run immediately on mount
+    const timerInterval = setInterval(runTimer, 60000); // Then every 60 seconds
+
+    return () => clearInterval(timerInterval);
+  }, []);
+
   const loadTranscripts = async (conversationId: string) => {
     try {
       const { data, error } = await supabase
