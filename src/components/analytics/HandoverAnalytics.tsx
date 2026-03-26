@@ -261,7 +261,7 @@ export function HandoverAnalytics({ agentId, dateRange }: HandoverAnalyticsProps
         <Card className="p-4">
           <p className="text-xs text-muted-foreground font-medium">Timeout Rate</p>
           <p className="text-2xl font-bold mt-1">{metrics.timeoutRate.toFixed(1)}%</p>
-          <p className="text-xs text-muted-foreground">{metrics.timeoutCount} of {metrics.totalHandovers}</p>
+          <p className="text-xs text-muted-foreground">{metrics.timeoutCount} of {metrics.totalHandovers} requests</p>
         </Card>
       </div>
 
