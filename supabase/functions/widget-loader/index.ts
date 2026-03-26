@@ -1657,8 +1657,9 @@ function generateWidgetScript(config: any): string {
     
     console.log('[VF Widget] Starting handover realtime for:', conversationId);
     
-    // Start from NOW — no lookback. Messages before this point are already displayed locally.
-    let lastTimestamp = new Date().toISOString();
+    // Start from 2 seconds ago to catch the "Connecting you..." system message
+    // that was stored at the same moment polling started
+    let lastTimestamp = new Date(Date.now() - 2000).toISOString();
     let handoverEndDetected = false;
     
     const pollInterval = setInterval(async () => {
