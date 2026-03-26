@@ -1657,7 +1657,8 @@ function generateWidgetScript(config: any): string {
     
     console.log('[VF Widget] Starting handover realtime for:', conversationId);
     
-    let lastTimestamp = new Date().toISOString();
+    // Start from 5 seconds ago to catch messages stored just before polling started
+    let lastTimestamp = new Date(Date.now() - 5000).toISOString();
     
     const pollInterval = setInterval(async () => {
       if (!isInHandover || !conversationId) {
