@@ -1657,8 +1657,9 @@ function generateWidgetScript(config: any): string {
     
     console.log('[VF Widget] Starting handover realtime for:', conversationId);
     
-    // Start from 5 seconds ago to catch messages stored just before polling started
-    let lastTimestamp = new Date(Date.now() - 5000).toISOString();
+    // Start from NOW — no lookback. Messages before this point are already displayed locally.
+    let lastTimestamp = new Date().toISOString();
+    let handoverEndDetected = false;
     
     const pollInterval = setInterval(async () => {
       if (!isInHandover || !conversationId) {
@@ -1668,15 +1669,17 @@ function generateWidgetScript(config: any): string {
       }
       
       try {
-        const response = await fetch(
-          SUPABASE_URL + '/rest/v1/transcripts?conversation_id=eq.' + conversationId + '&timestamp=gt.' + encodeURIComponent(lastTimestamp) + '&order=timestamp.asc',
-          {
-            headers: {
-              'apikey': SUPABASE_ANON_KEY,
-              'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
-            }
+        const url = SUPABASE_URL + '/rest/v1/transcripts?conversation_id=eq.' + conversationId 
+          + '&timestamp=gt.' + encodeURIComponent(lastTimestamp) 
+          + '&order=timestamp.asc'
+          + '&select=id,speaker,text,buttons,timestamp,metadata';
+        
+        const response = await fetch(url, {
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
           }
-        );
+        });
         
         if (!response.ok) return;
         
@@ -1686,27 +1689,52 @@ function generateWidgetScript(config: any): string {
           let hasNewMessages = false;
           
           for (const transcript of newTranscripts) {
-            if (transcript.speaker !== 'user') {
-              const existingIds = messages.map(m => m.id);
-              if (!existingIds.includes('rt_' + transcript.id)) {
-                const newMsg = {
-                  id: 'rt_' + transcript.id,
-                   speaker: transcript.speaker === 'client_user' ? 'assistant' 
-                    : transcript.speaker === 'assistant' ? 'assistant' 
-                    : 'system',
-                  text: transcript.text || '',
-                  timestamp: transcript.timestamp,
-                  metadata: transcript.metadata
-                };
-                messages.push(newMsg);
-                hasNewMessages = true;
-                // Stop polling if handover ended or resume message received
-                if (transcript.metadata && (transcript.metadata.type === 'handover_ended' || transcript.metadata.response_type === 'handover_resume')) {
-                  setTimeout(() => stopHandoverRealtime(), 8000); // Wait longer to catch resume messages
-                }
-              }
-            }
+            // Update cursor regardless of whether we display this message
             lastTimestamp = transcript.timestamp;
+            
+            // Skip user messages — the widget already shows those locally
+            if (transcript.speaker === 'user') continue;
+            
+            // During active handover: only show client_user and system messages
+            // After handover ends: also show assistant messages (resume messages from Voiceflow)
+            const showMessage = 
+              transcript.speaker === 'client_user' || 
+              transcript.speaker === 'system' ||
+              (handoverEndDetected && transcript.speaker === 'assistant');
+            
+            if (!showMessage) continue;
+            
+            // Deduplicate by transcript ID
+            const rtId = 'rt_' + transcript.id;
+            if (messages.some(m => m.id === rtId)) continue;
+            
+            // Also deduplicate by text content (prevents showing messages already displayed locally)
+            const textMatch = transcript.text?.trim();
+            if (textMatch && messages.some(m => m.text?.trim() === textMatch && m.speaker !== 'user')) continue;
+            
+            const newMsg = {
+              id: rtId,
+              speaker: transcript.speaker === 'client_user' ? 'assistant' : transcript.speaker,
+              text: transcript.text || '',
+              buttons: transcript.buttons || null,
+              timestamp: transcript.timestamp,
+            };
+            
+            // Don't add empty messages (no text and no buttons)
+            if (!newMsg.text && !newMsg.buttons) continue;
+            
+            messages.push(newMsg);
+            hasNewMessages = true;
+            
+            // Detect handover end
+            if (transcript.metadata && transcript.metadata.type === 'handover_ended') {
+              handoverEndDetected = true;
+            }
+            
+            // Stop polling after resume message is received
+            if (transcript.metadata && transcript.metadata.response_type === 'handover_resume') {
+              setTimeout(() => stopHandoverRealtime(), 2000);
+            }
           }
           
           if (hasNewMessages) {
