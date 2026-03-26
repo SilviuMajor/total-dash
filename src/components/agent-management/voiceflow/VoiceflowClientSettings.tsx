@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,6 +26,12 @@ export function VoiceflowClientSettings({ agent, onUpdate }: VoiceflowClientSett
   const [autoEndMode, setAutoEndMode] = useState<'since_start' | 'since_last_message'>(
     agent.config?.auto_end_mode || 'since_last_message'
   );
+  const [responseGreenSeconds, setResponseGreenSeconds] = useState(
+    agent.config?.response_thresholds?.green_seconds || 60
+  );
+  const [responseAmberSeconds, setResponseAmberSeconds] = useState(
+    agent.config?.response_thresholds?.amber_seconds || 300
+  );
 
   const handleSave = async () => {
     setLoading(true);
@@ -36,6 +43,10 @@ export function VoiceflowClientSettings({ agent, onUpdate }: VoiceflowClientSett
             ...agent.config,
             auto_end_hours: autoEndHours,
             auto_end_mode: autoEndMode,
+            response_thresholds: {
+              green_seconds: responseGreenSeconds,
+              amber_seconds: responseAmberSeconds,
+            },
           },
         })
         .eq("id", agent.id);
@@ -132,6 +143,53 @@ export function VoiceflowClientSettings({ agent, onUpdate }: VoiceflowClientSett
               </p>
             </div>
           </div>
+        </div>
+
+        {/* Response Time Thresholds */}
+        <div className="space-y-4 p-4 border rounded-lg">
+          <div>
+            <Label className="text-sm font-medium">Response Time Indicators</Label>
+            <p className="text-xs text-muted-foreground">Colour thresholds for the waiting time indicator on conversation cards</p>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-sm flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />
+                Green until (seconds)
+              </Label>
+              <Input
+                type="number"
+                min={10}
+                max={600}
+                value={responseGreenSeconds}
+                onChange={(e) => setResponseGreenSeconds(Math.max(10, parseInt(e.target.value) || 10))}
+                className="w-28"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-sm flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-amber-500 inline-block" />
+                Amber until (seconds)
+              </Label>
+              <Input
+                type="number"
+                min={30}
+                max={1800}
+                value={responseAmberSeconds}
+                onChange={(e) => setResponseAmberSeconds(Math.max(30, parseInt(e.target.value) || 30))}
+                className="w-28"
+              />
+            </div>
+            <div className="space-y-1.5 pt-5">
+              <Label className="text-sm flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-red-500 inline-block" />
+                Red after
+              </Label>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Default: Green under {responseGreenSeconds}s, Amber {responseGreenSeconds}s–{responseAmberSeconds}s, Red over {responseAmberSeconds}s
+          </p>
         </div>
 
         <Button onClick={handleSave} disabled={loading}>

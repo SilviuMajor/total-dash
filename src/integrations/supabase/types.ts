@@ -1291,6 +1291,7 @@ export type Database = {
           id: string
           is_widget_test: boolean | null
           last_activity_at: string | null
+          last_customer_message_at: string | null
           metadata: Json | null
           owner_id: string | null
           sentiment: string | null
@@ -1307,6 +1308,7 @@ export type Database = {
           id?: string
           is_widget_test?: boolean | null
           last_activity_at?: string | null
+          last_customer_message_at?: string | null
           metadata?: Json | null
           owner_id?: string | null
           sentiment?: string | null
@@ -1323,6 +1325,7 @@ export type Database = {
           id?: string
           is_widget_test?: boolean | null
           last_activity_at?: string | null
+          last_customer_message_at?: string | null
           metadata?: Json | null
           owner_id?: string | null
           sentiment?: string | null

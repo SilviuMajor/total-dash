@@ -52,6 +52,7 @@ interface Conversation {
   owner_id?: string;
   department_id?: string;
   voiceflow_user_id?: string;
+  last_customer_message_at?: string;
   metadata?: {
     variables?: {
       user_name?: string;
@@ -123,6 +124,7 @@ export default function Conversations() {
   const [activeSession, setActiveSession] = useState<any>(null);
   const [currentClientUserId, setCurrentClientUserId] = useState<string | null>(null);
   const [pendingConversationIds, setPendingConversationIds] = useState<Set<string>>(new Set());
+  const [responseTick, setResponseTick] = useState(0);
 
   // React Query hooks
   const {
@@ -153,6 +155,12 @@ export default function Conversations() {
   useEffect(() => {
     setSelectedConversationIds(new Set());
   }, [selectedAgentId, statusFilter, tagFilters, sortOrder]);
+
+  // Response time tick (updates every 10 seconds)
+  useEffect(() => {
+    const interval = setInterval(() => setResponseTick(t => t + 1), 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Auto-select conversation from ?conversationId query param
   useEffect(() => {
@@ -670,6 +678,31 @@ export default function Conversations() {
 
   const sortLabel = sortOrder === 'asc' ? 'Oldest' : sortOrder === 'duration' ? 'Longest' : 'Newest';
 
+  const getResponseTimeColor = (seconds: number) => {
+    const greenMax = (agentConfig as any)?.response_thresholds?.green_seconds || 60;
+    const amberMax = (agentConfig as any)?.response_thresholds?.amber_seconds || 300;
+    if (seconds <= greenMax) return { color: '#22c55e', label: 'green' };
+    if (seconds <= amberMax) return { color: '#f59e0b', label: 'amber' };
+    return { color: '#ef4444', label: 'red' };
+  };
+
+  const formatWaitTime = (seconds: number) => {
+    if (seconds < 60) return `${seconds}s`;
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
+    return `${Math.floor(seconds / 3600)}h`;
+  };
+
+  const getWaitSeconds = (conversation: any) => {
+    if (!conversation.last_customer_message_at) return 0;
+    return Math.floor((Date.now() - new Date(conversation.last_customer_message_at).getTime()) / 1000);
+  };
+
+  const shouldShowResponsePill = (conversation: any) => {
+    if (conversation.status !== 'in_handover') return false;
+    if (!conversation.last_customer_message_at) return false;
+    return true;
+  };
+
   if (agents.length === 0) {
     return <NoAgentsAssigned />;
   }
@@ -985,6 +1018,26 @@ export default function Conversations() {
                               </span>
                             ) : null;
                           })()}
+                          {shouldShowResponsePill(conv) && (() => {
+                            const waitSec = getWaitSeconds(conv);
+                            const { color } = getResponseTimeColor(waitSec);
+                            return (
+                              <span
+                                style={{
+                                  fontSize: 10,
+                                  fontWeight: 600,
+                                  padding: '2px 7px',
+                                  borderRadius: 10,
+                                  background: `${color}14`,
+                                  color: color,
+                                  border: `1px solid ${color}35`,
+                                  fontVariantNumeric: 'tabular-nums',
+                                }}
+                              >
+                                {formatWaitTime(waitSec)}
+                              </span>
+                            );
+                          })()}
                         </div>
                       </div>
                     );
@@ -1033,6 +1086,30 @@ export default function Conversations() {
                     ) : null;
                   })()}
                 </div>
+                {selectedConversation?.status === 'in_handover' && 
+                 selectedConversation?.owner_id === currentClientUserId && 
+                 selectedConversation?.last_customer_message_at && (() => {
+                  const waitSec = getWaitSeconds(selectedConversation);
+                  const { color } = getResponseTimeColor(waitSec);
+                  return (
+                    <div className="mt-2 px-3 py-1.5 rounded-md flex items-center gap-2" style={{
+                      background: `${color}08`,
+                      border: `1px solid ${color}20`,
+                    }}>
+                      <div className="w-2 h-2 rounded-full" style={{ background: color, boxShadow: `0 0 4px ${color}60` }} />
+                      <span className="text-xs text-muted-foreground">
+                        Customer waiting: <strong style={{ color }}>{formatWaitTime(waitSec)}</strong>
+                      </span>
+                    </div>
+                  );
+                })()}
+                {selectedConversation?.status === 'in_handover' && 
+                 selectedConversation?.owner_id === currentClientUserId && 
+                 !selectedConversation?.last_customer_message_at && (
+                  <div className="mt-2 px-3 py-1.5 rounded-md flex items-center gap-2 bg-green-50 border border-green-200">
+                    <span className="text-xs text-green-600 font-medium">✓ No pending customer messages</span>
+                  </div>
+                )}
                 <ScrollArea
                   className="flex-1 min-h-0"
                   viewportRef={transcriptScrollRef}
