@@ -1110,6 +1110,8 @@ export default function Conversations() {
                     <span className="text-xs text-green-600 font-medium">✓ No pending customer messages</span>
                   </div>
                 )}
+                <ScrollArea
+                  className="flex-1 min-h-0"
                   viewportRef={transcriptScrollRef}
                   onViewportScroll={handleTranscriptScroll}
                 >
