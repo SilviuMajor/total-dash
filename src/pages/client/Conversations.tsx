@@ -1018,6 +1018,26 @@ export default function Conversations() {
                               </span>
                             ) : null;
                           })()}
+                          {shouldShowResponsePill(conv) && (() => {
+                            const waitSec = getWaitSeconds(conv);
+                            const { color } = getResponseTimeColor(waitSec);
+                            return (
+                              <span
+                                style={{
+                                  fontSize: 10,
+                                  fontWeight: 600,
+                                  padding: '2px 7px',
+                                  borderRadius: 10,
+                                  background: `${color}14`,
+                                  color: color,
+                                  border: `1px solid ${color}35`,
+                                  fontVariantNumeric: 'tabular-nums',
+                                }}
+                              >
+                                {formatWaitTime(waitSec)}
+                              </span>
+                            );
+                          })()}
                         </div>
                       </div>
                     );
