@@ -198,10 +198,10 @@ export default function Analytics() {
           <HandoverAnalytics agentId={selectedAgent?.id || ""} dateRange={dateRange} />
         )}
         {fixedTab === 'conversations' && (
-          <p className="p-6 text-muted-foreground">Conversations analytics coming soon</p>
+          <ConversationsAnalytics agentId={selectedAgent?.id || ""} dateRange={dateRange} />
         )}
         {fixedTab === 'agents' && (
-          <p className="p-6 text-muted-foreground">Agent analytics coming soon</p>
+          <AgentsAnalytics agentId={selectedAgent?.id || ""} dateRange={dateRange} />
         )}
         {!fixedTab && activeTabId && (
           <AnalyticsDashboard
