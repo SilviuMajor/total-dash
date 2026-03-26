@@ -1944,17 +1944,18 @@ function generateWidgetScript(config: any): string {
       
       // Handle handover state
       if (data.handoverActive || data.handoverPending) {
-        // First, display any bot responses that came with this handover response
+        // Display any bot responses that came with this handover response
+        // (e.g. "Let me connect you to our team" from Voiceflow)
         if (data.botResponses && data.botResponses.length > 0) {
           for (const resp of data.botResponses) {
             if (resp.text) {
-              const botMsg = {
+              messages.push({
                 id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
                 speaker: 'assistant',
                 text: resp.text,
+                buttons: resp.buttons || null,
                 timestamp: new Date().toISOString()
-              };
-              messages.push(botMsg);
+              });
             }
           }
         }
@@ -2144,17 +2145,18 @@ function generateWidgetScript(config: any): string {
       
       // Handle handover state
       if (data.handoverActive || data.handoverPending) {
-        // First, display any bot responses that came with this handover response
+        // Display any bot responses that came with this handover response
+        // (e.g. "Let me connect you to our team" from Voiceflow)
         if (data.botResponses && data.botResponses.length > 0) {
           for (const resp of data.botResponses) {
             if (resp.text) {
-              const botMsg = {
+              messages.push({
                 id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
                 speaker: 'assistant',
                 text: resp.text,
+                buttons: resp.buttons || null,
                 timestamp: new Date().toISOString()
-              };
-              messages.push(botMsg);
+              });
             }
           }
         }

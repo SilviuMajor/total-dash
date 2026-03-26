@@ -455,6 +455,7 @@ async function handleEndHandover(
         if (resumeData && Array.isArray(resumeData)) {
           let resumeMessageStored = false;
           for (const item of resumeData) {
+            // Store text messages (only first one to prevent flooding)
             if (item.type === "text" && item.payload?.message && !resumeMessageStored) {
               await supabaseClient.from("transcripts").insert({
                 conversation_id: conversationId,
@@ -466,6 +467,22 @@ async function handleEndHandover(
                 },
               });
               resumeMessageStored = true;
+            }
+            // Store choice/button traces so buttons appear in the widget
+            if (item.type === "choice" && item.payload?.buttons) {
+              await supabaseClient.from("transcripts").insert({
+                conversation_id: conversationId,
+                speaker: "assistant",
+                text: "",
+                buttons: item.payload.buttons.map((btn: any) => ({
+                  text: btn.name,
+                  payload: btn.request
+                })),
+                metadata: {
+                  response_type: "handover_resume_buttons",
+                  timestamp: new Date().toISOString(),
+                },
+              });
             }
           }
         }
