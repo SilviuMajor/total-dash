@@ -290,8 +290,45 @@ export default function Conversations() {
         }
       });
 
-    return () => { transcriptChannel.unsubscribe(); };
-  }, [selectedConversation?.id]);
+    const conversationChannel = supabase
+      .channel('conversation-status-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'conversations',
+          filter: `id=eq.${selectedConversation.id}`
+        },
+        async (payload) => {
+          const updated = payload.new as any;
+          setSelectedConversation(prev => prev ? { ...prev, ...updated } : prev);
+          // Refresh handover sessions
+          const { data: pending } = await supabase
+            .from('handover_sessions')
+            .select('*, departments:department_id(name, code, color, timeout_seconds)')
+            .eq('conversation_id', selectedConversation.id)
+            .eq('status', 'pending')
+            .maybeSingle();
+          setPendingSession(pending);
+          const { data: active } = await supabase
+            .from('handover_sessions')
+            .select('*, departments:department_id(name, code, color)')
+            .eq('conversation_id', selectedConversation.id)
+            .eq('status', 'active')
+            .maybeSingle();
+          setActiveSession(active);
+          // Refresh the conversations list
+          queryClient.invalidateQueries({ queryKey: ['conversations'] });
+        }
+      )
+      .subscribe();
+
+    return () => { 
+      transcriptChannel.unsubscribe(); 
+      conversationChannel.unsubscribe();
+    };
+  }, [selectedConversation?.id, queryClient]);
 
   // Load current client user ID (handles both real client and preview mode)
   useEffect(() => {
