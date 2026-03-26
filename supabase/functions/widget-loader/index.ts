@@ -1657,8 +1657,9 @@ function generateWidgetScript(config: any): string {
     
     console.log('[VF Widget] Starting handover realtime for:', conversationId);
     
-    // Start from NOW — no lookback. Messages before this point are already displayed locally.
-    let lastTimestamp = new Date().toISOString();
+    // Start from 2 seconds ago to catch the "Connecting you..." system message
+    // that was stored at the same moment polling started
+    let lastTimestamp = new Date(Date.now() - 2000).toISOString();
     let handoverEndDetected = false;
     
     const pollInterval = setInterval(async () => {
@@ -1720,8 +1721,8 @@ function generateWidgetScript(config: any): string {
               timestamp: transcript.timestamp,
             };
             
-            // Don't add empty messages (no text and no buttons)
-            if (!newMsg.text && !newMsg.buttons) continue;
+            // Skip truly empty messages (no text AND no buttons)
+            if ((!msg.text || !msg.text.trim()) && (!msg.buttons || !msg.buttons.length)) continue;
             
             messages.push(newMsg);
             hasNewMessages = true;
@@ -2024,6 +2025,7 @@ function generateWidgetScript(config: any): string {
       
       // Show conversation ended indicator
       if (data.conversationEnded) {
+        isTyping = false;
         const endMsg = {
           id: 'msg_end_' + Date.now(),
           speaker: 'system',
@@ -2223,6 +2225,7 @@ function generateWidgetScript(config: any): string {
       
       // Show conversation ended indicator
       if (data.conversationEnded) {
+        isTyping = false;
         const endMsg = {
           id: 'msg_end_' + Date.now(),
           speaker: 'system',
