@@ -243,7 +243,7 @@ export function HandoverAnalytics({ agentId, dateRange }: HandoverAnalyticsProps
       {/* Top-level metric cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Card className="p-4">
-          <p className="text-xs text-muted-foreground font-medium">Total Handovers</p>
+          <p className="text-xs text-muted-foreground font-medium">Total Handover Requests</p>
           <p className="text-2xl font-bold mt-1">{metrics.totalHandovers}</p>
         </Card>
         <Card className="p-4">
@@ -261,14 +261,14 @@ export function HandoverAnalytics({ agentId, dateRange }: HandoverAnalyticsProps
         <Card className="p-4">
           <p className="text-xs text-muted-foreground font-medium">Timeout Rate</p>
           <p className="text-2xl font-bold mt-1">{metrics.timeoutRate.toFixed(1)}%</p>
-          <p className="text-xs text-muted-foreground">{metrics.timeoutCount} of {metrics.totalHandovers}</p>
+          <p className="text-xs text-muted-foreground">{metrics.timeoutCount} of {metrics.totalHandovers} requests</p>
         </Card>
       </div>
 
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card className="p-4">
-          <p className="text-sm font-medium mb-3">Handover Volume</p>
+          <p className="text-sm font-medium mb-3">Handover Requests</p>
           {metrics.volumeOverTime.length > 0 ? (
             <ResponsiveContainer width="100%" height={240}>
               <BarChart data={metrics.volumeOverTime}>
