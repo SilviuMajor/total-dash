@@ -268,7 +268,7 @@ export function HandoverAnalytics({ agentId, dateRange }: HandoverAnalyticsProps
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card className="p-4">
-          <p className="text-sm font-medium mb-3">Handover Volume</p>
+          <p className="text-sm font-medium mb-3">Handover Requests</p>
           {metrics.volumeOverTime.length > 0 ? (
             <ResponsiveContainer width="100%" height={240}>
               <BarChart data={metrics.volumeOverTime}>

@@ -6,6 +6,7 @@ import { AnalyticsTabBar } from "@/components/analytics/AnalyticsTabBar";
 import { DateRangeSelector } from "@/components/analytics/DateRangeSelector";
 import { AnalyticsDashboard } from "@/components/analytics/AnalyticsDashboard";
 import { HandoverAnalytics } from "@/components/analytics/HandoverAnalytics";
+import { OverviewAnalytics } from "@/components/analytics/OverviewAnalytics";
 import { useAnalyticsTabs } from "@/hooks/useAnalyticsTabs";
 import { useAnalyticsMetrics, DateRange, getDateRangeFromPreset, DateRangePreset } from "@/hooks/useAnalyticsMetrics";
 import { useAuth } from "@/hooks/useAuth";
@@ -39,7 +40,7 @@ export default function Analytics() {
   const [dateRange, setDateRange] = useState<DateRange>(getDateRangeFromPreset("week"));
   const [currentPreset, setCurrentPreset] = useState<DateRangePreset>("week");
   const [isEditMode, setIsEditMode] = useState(false);
-  const [isHandoverTab, setIsHandoverTab] = useState(false);
+  const [fixedTab, setFixedTab] = useState<'overview' | 'handover' | 'conversations' | 'agents' | null>('overview');
   
   const { metrics, loading: metricsLoading } = useAnalyticsMetrics(selectedAgent?.id || null, dateRange);
 
@@ -120,7 +121,7 @@ export default function Analytics() {
               defaultPreset={currentPreset}
               onPresetChange={handlePresetChange}
             />
-            {isAdmin && (
+            {isAdmin && !fixedTab && (
               <>
                 <Button
                   variant={isEditMode ? "default" : "outline"}
@@ -160,42 +161,54 @@ export default function Analytics() {
       </div>
 
       <div className="border-b border-border flex items-center">
+        {(['overview', 'handover', 'conversations', 'agents'] as const).map(tab => (
+          <button
+            key={tab}
+            onClick={() => { setFixedTab(tab); setActiveTabId(null); }}
+            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-all whitespace-nowrap capitalize ${
+              fixedTab === tab
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {tab}
+          </button>
+        ))}
+        <div className="border-l border-border h-5 mx-1" />
         <div className="flex-1 min-w-0">
           <AnalyticsTabBar
             tabs={tabs}
             activeTabId={activeTabId}
-            onTabSelect={(id) => { setActiveTabId(id); setIsHandoverTab(false); }}
+            onTabSelect={(id) => { setActiveTabId(id); setFixedTab(null); }}
             onTabCreate={createTab}
             onTabRename={(id, name) => updateTab(id, { name })}
             onTabDelete={deleteTab}
             onTabReorder={reorderTabs}
           />
         </div>
-        <button
-          onClick={() => { setIsHandoverTab(true); setActiveTabId(null); }}
-          className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-all whitespace-nowrap ${
-            isHandoverTab
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          Handover
-        </button>
       </div>
 
-      {isHandoverTab ? (
-        <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto">
+        {fixedTab === 'overview' && (
+          <OverviewAnalytics agentId={selectedAgent?.id || ""} dateRange={dateRange} />
+        )}
+        {fixedTab === 'handover' && (
           <HandoverAnalytics agentId={selectedAgent?.id || ""} dateRange={dateRange} />
-        </div>
-      ) : activeTabId ? (
-        <div className="flex-1 overflow-auto">
+        )}
+        {fixedTab === 'conversations' && (
+          <p className="p-6 text-muted-foreground">Conversations analytics coming soon</p>
+        )}
+        {fixedTab === 'agents' && (
+          <p className="p-6 text-muted-foreground">Agent analytics coming soon</p>
+        )}
+        {!fixedTab && activeTabId && (
           <AnalyticsDashboard
             tabId={activeTabId}
             metrics={metrics}
             isEditMode={isEditMode}
           />
-        </div>
-      ) : null}
+        )}
+      </div>
     </div>
   );
 }
