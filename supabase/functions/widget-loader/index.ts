@@ -1657,7 +1657,8 @@ function generateWidgetScript(config: any): string {
     
     console.log('[VF Widget] Starting handover realtime for:', conversationId);
     
-    let lastTimestamp = new Date().toISOString();
+    // Start from 5 seconds ago to catch messages stored just before polling started
+    let lastTimestamp = new Date(Date.now() - 5000).toISOString();
     
     const pollInterval = setInterval(async () => {
       if (!isInHandover || !conversationId) {
@@ -1732,6 +1733,8 @@ function generateWidgetScript(config: any): string {
       realtimeSubscription = null;
     }
     isInHandover = false;
+    isTyping = false;
+    renderPanel();
   }
   
   function renderMessages(container) {
@@ -1941,17 +1944,31 @@ function generateWidgetScript(config: any): string {
       
       // Handle handover state
       if (data.handoverActive || data.handoverPending) {
-        if (!isInHandover) {
-          isInHandover = true;
-          startHandoverRealtime();
+        // First, display any bot responses that came with this handover response
+        if (data.botResponses && data.botResponses.length > 0) {
+          for (const resp of data.botResponses) {
+            if (resp.text) {
+              const botMsg = {
+                id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                speaker: 'assistant',
+                text: resp.text,
+                timestamp: new Date().toISOString()
+              };
+              messages.push(botMsg);
+            }
+          }
         }
         isTyping = false;
         renderPanel();
         scrollToLatestMessage();
+        if (!isInHandover) {
+          isInHandover = true;
+          startHandoverRealtime();
+        }
         if (conversationId) {
           SessionManager.saveConversation(conversationId, messages, currentVoiceflowSessionId, true);
         }
-        return; // Don't process botResponses during handover — polling handles it
+        return;
       }
       
       if (data.botResponses) {
@@ -2127,17 +2144,31 @@ function generateWidgetScript(config: any): string {
       
       // Handle handover state
       if (data.handoverActive || data.handoverPending) {
-        if (!isInHandover) {
-          isInHandover = true;
-          startHandoverRealtime();
+        // First, display any bot responses that came with this handover response
+        if (data.botResponses && data.botResponses.length > 0) {
+          for (const resp of data.botResponses) {
+            if (resp.text) {
+              const botMsg = {
+                id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                speaker: 'assistant',
+                text: resp.text,
+                timestamp: new Date().toISOString()
+              };
+              messages.push(botMsg);
+            }
+          }
         }
         isTyping = false;
         renderPanel();
         scrollToLatestMessage();
+        if (!isInHandover) {
+          isInHandover = true;
+          startHandoverRealtime();
+        }
         if (conversationId) {
           SessionManager.saveConversation(conversationId, messages, currentVoiceflowSessionId, true);
         }
-        return; // Don't process botResponses during handover — polling handles it
+        return;
       }
       
       if (data.botResponses) {
