@@ -669,11 +669,11 @@ serve(async (req) => {
             metadata: { type: "handover_requested", department: department.name, timestamp: new Date().toISOString() },
           });
 
-          // Return handover active flag + the connecting message
+          // Return handover active flag — connecting message comes through polling
           return new Response(
             JSON.stringify({
               conversationId: currentConversationId,
-              botResponses: [...botResponses, { type: "text", text: connectingMessage }],
+              botResponses,
               userId,
               handoverActive: true,
               conversationEnded: false,
