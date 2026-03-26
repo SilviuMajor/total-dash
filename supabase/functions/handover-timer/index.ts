@@ -431,7 +431,7 @@ serve(async (req) => {
             });
 
             // Resume Voiceflow with inactivity_timeout path
-            const voiceflowUserId = session.conversations?.voiceflow_user_id || session.voiceflow_user_id;
+            const voiceflowUserId = convData?.voiceflow_user_id || session.voiceflow_user_id;
             const apiKey = agent?.config?.api_key;
 
             if (apiKey && voiceflowUserId) {
