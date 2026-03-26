@@ -1092,30 +1092,6 @@ export default function Conversations() {
                     ) : null;
                   })()}
                 </div>
-                {selectedConversation?.status === 'in_handover' && 
-                 selectedConversation?.owner_id === currentClientUserId && 
-                 selectedConversation?.last_customer_message_at && (() => {
-                  const waitSec = getWaitSeconds(selectedConversation);
-                  const { color } = getResponseTimeColor(waitSec);
-                  return (
-                    <div className="mt-2 px-3 py-1.5 rounded-md flex items-center gap-2" style={{
-                      background: `${color}08`,
-                      border: `1px solid ${color}20`,
-                    }}>
-                      <div className="w-2 h-2 rounded-full" style={{ background: color, boxShadow: `0 0 4px ${color}60` }} />
-                      <span className="text-xs text-muted-foreground">
-                        Customer waiting: <strong style={{ color }}>{formatWaitTime(waitSec)}</strong>
-                      </span>
-                    </div>
-                  );
-                })()}
-                {selectedConversation?.status === 'in_handover' && 
-                 selectedConversation?.owner_id === currentClientUserId && 
-                 !selectedConversation?.last_customer_message_at && (
-                  <div className="mt-2 px-3 py-1.5 rounded-md flex items-center gap-2 bg-green-50 border border-green-200">
-                    <span className="text-xs text-green-600 font-medium">✓ No pending customer messages</span>
-                  </div>
-                )}
                 <ScrollArea
                   className="flex-1 min-h-0"
                   viewportRef={transcriptScrollRef}
