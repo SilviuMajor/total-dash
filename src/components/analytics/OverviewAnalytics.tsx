@@ -7,17 +7,11 @@ import {
   ResponsiveContainer, PieChart, Pie, Cell, Legend,
 } from "recharts";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { getGranularity, aggregateByGranularity, formatTickLabel, getVolumeChartTitle, formatDuration, shouldShowDayOfWeek, TimeGranularity } from "./analyticsUtils";
 
 interface OverviewAnalyticsProps {
   agentId: string;
   dateRange: DateRange;
-}
-
-function formatDuration(seconds: number): string {
-  if (!seconds || isNaN(seconds)) return "—";
-  if (seconds < 60) return `${Math.round(seconds)}s`;
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${Math.round(seconds % 60)}s`;
-  return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -60,9 +54,11 @@ interface OverviewData {
   avgDuration: number;
   prevAvgDuration: number;
   statusBreakdown: { name: string; value: number; color: string }[];
-  peakHours: { hour: string; count: number }[];
   peakHour: string;
-  volumeOverTime: { date: string; count: number }[];
+  volumeData: { label: string; count: number }[];
+  granularity: TimeGranularity;
+  byDayOfWeek: { day: string; count: number }[];
+  showDow: boolean;
 }
 
 export function OverviewAnalytics({ agentId, dateRange }: OverviewAnalyticsProps) {
@@ -147,27 +143,29 @@ export function OverviewAnalytics({ agentId, dateRange }: OverviewAnalyticsProps
         color: STATUS_COLORS[status] || "#6b7280",
       }));
 
+      // Adaptive volume data
+      const granularity = getGranularity(dateRange);
+      const volumeData = aggregateByGranularity(
+        convs.filter(c => c.started_at).map(c => ({ date: new Date(c.started_at!) })),
+        granularity
+      );
+
+      // Day of week (only show for 7+ day ranges)
+      const showDow = shouldShowDayOfWeek(dateRange);
+      const dowCounts: number[] = [0, 0, 0, 0, 0, 0, 0];
+      if (showDow) {
+        for (const c of convs) {
+          if (c.started_at) dowCounts[new Date(c.started_at).getDay()]++;
+        }
+      }
+      const byDayOfWeek = dowCounts.map((count, i) => ({ day: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][i], count }));
+
+      // Peak hour (always calculate for the KPI card)
       const hourCounts: Record<number, number> = {};
       for (const c of convs) {
-        if (!c.started_at) continue;
-        const hour = new Date(c.started_at).getHours();
-        hourCounts[hour] = (hourCounts[hour] || 0) + 1;
+        if (c.started_at) hourCounts[new Date(c.started_at).getHours()] = (hourCounts[new Date(c.started_at).getHours()] || 0) + 1;
       }
-      const peakHours = Array.from({ length: 24 }, (_, i) => ({
-        hour: `${i.toString().padStart(2, "0")}:00`,
-        count: hourCounts[i] || 0,
-      }));
-      const peakHourEntry = Object.entries(hourCounts).sort(([, a], [, b]) => b - a)[0];
-
-      const dayMap = new Map<string, number>();
-      for (const c of convs) {
-        if (!c.started_at) continue;
-        const day = new Date(c.started_at).toISOString().split("T")[0];
-        dayMap.set(day, (dayMap.get(day) || 0) + 1);
-      }
-      const volumeOverTime = Array.from(dayMap.entries())
-        .map(([date, count]) => ({ date, count }))
-        .sort((a, b) => a.date.localeCompare(b.date));
+      const peakHour = Object.entries(hourCounts).sort(([, a], [, b]) => b - a)[0];
 
       setData({
         totalConvs, prevTotalConvs,
@@ -175,8 +173,9 @@ export function OverviewAnalytics({ agentId, dateRange }: OverviewAnalyticsProps
         handoverRate, handoverCount, prevHandoverCount,
         avgDuration, prevAvgDuration,
         statusBreakdown,
-        peakHours, peakHour: peakHourEntry ? `${peakHourEntry[0].padStart(2, "0")}:00` : "—",
-        volumeOverTime,
+        volumeData, granularity,
+        peakHour: peakHour ? `${peakHour[0].padStart(2, "0")}:00` : "—",
+        byDayOfWeek, showDow,
       });
     } catch (e) {
       console.error("Error loading overview:", e);
@@ -227,57 +226,55 @@ export function OverviewAnalytics({ agentId, dateRange }: OverviewAnalyticsProps
       </div>
 
       {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card className="p-4">
-          <p className="text-sm font-medium mb-3">Conversation Volume</p>
-          {data.volumeOverTime.length > 0 ? (
-            <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={data.volumeOverTime}>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <Card className={`p-4 lg:col-span-2`}>
+          <div className="text-sm font-semibold mb-4">{getVolumeChartTitle(data.granularity)}</div>
+          {data.volumeData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={data.volumeData}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={(d) => new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short" })} />
-                <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip labelFormatter={(d) => new Date(d).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })} />
-                <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                <XAxis dataKey="label" tick={{ fontSize: 11 }} tickFormatter={l => formatTickLabel(l, data.granularity)} />
+                <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                <Tooltip labelFormatter={l => formatTickLabel(l, data.granularity)} />
+                <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Conversations" />
               </BarChart>
             </ResponsiveContainer>
-          ) : (
-            <p className="text-sm text-muted-foreground py-10 text-center">No data for this period</p>
-          )}
+          ) : <div className="h-[280px] flex items-center justify-center text-sm text-muted-foreground">No data for this period</div>}
         </Card>
 
         <Card className="p-4">
-          <p className="text-sm font-medium mb-3">Status Breakdown</p>
+          <div className="text-sm font-semibold mb-4">Status Breakdown</div>
           {data.statusBreakdown.length > 0 ? (
-            <ResponsiveContainer width="100%" height={240}>
+            <ResponsiveContainer width="100%" height={280}>
               <PieChart>
-                <Pie data={data.statusBreakdown} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
+                <Pie data={data.statusBreakdown} cx="50%" cy="50%" innerRadius={55} outerRadius={85} paddingAngle={3} dataKey="value">
                   {data.statusBreakdown.map((entry, i) => (
                     <Cell key={i} fill={entry.color} />
                   ))}
                 </Pie>
                 <Tooltip />
-                <Legend />
+                <Legend wrapperStyle={{ fontSize: 11 }} />
               </PieChart>
             </ResponsiveContainer>
-          ) : (
-            <p className="text-sm text-muted-foreground py-10 text-center">No data</p>
-          )}
+          ) : <div className="h-[280px] flex items-center justify-center text-sm text-muted-foreground">No data</div>}
         </Card>
       </div>
 
-      {/* Peak hours */}
-      <Card className="p-4">
-        <p className="text-sm font-medium mb-3">Activity by Hour</p>
-        <ResponsiveContainer width="100%" height={200}>
-          <BarChart data={data.peakHours}>
-            <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-            <XAxis dataKey="hour" tick={{ fontSize: 10 }} />
-            <YAxis tick={{ fontSize: 11 }} />
-            <Tooltip />
-            <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      </Card>
+      {/* Day of week chart — only shown for 7+ day ranges */}
+      {data.showDow && (
+        <Card className="p-4">
+          <div className="text-sm font-semibold mb-4">Activity by Day of Week</div>
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={data.byDayOfWeek}>
+              <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+              <XAxis dataKey="day" tick={{ fontSize: 11 }} />
+              <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+              <Tooltip />
+              <Bar dataKey="count" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} name="Conversations" />
+            </BarChart>
+          </ResponsiveContainer>
+        </Card>
+      )}
     </div>
   );
 }

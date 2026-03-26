@@ -6,6 +6,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, Legend,
 } from "recharts";
+import { getGranularity, aggregateByGranularity, formatTickLabel, getVolumeChartTitle, formatDuration, TimeGranularity } from "./analyticsUtils";
 
 interface HandoverAnalyticsProps {
   agentId: string;
@@ -22,16 +23,10 @@ interface HandoverMetrics {
   completedCount: number;
   byAgent: { name: string; count: number; avgAcceptTime: number; avgResponseTime: number }[];
   byDepartment: { name: string; color: string; count: number; avgAcceptTime: number }[];
-  volumeOverTime: { date: string; count: number }[];
-  responseTimeTrend: { date: string; avgTime: number }[];
+  volumeData: { label: string; count: number }[];
+  responseTimeTrend: { label: string; avgTime: number }[];
   outcomeBreakdown: { name: string; value: number }[];
-}
-
-function formatDuration(seconds: number): string {
-  if (!seconds || isNaN(seconds)) return "—";
-  if (seconds < 60) return `${Math.round(seconds)}s`;
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${Math.round(seconds % 60)}s`;
-  return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
+  granularity: TimeGranularity;
 }
 
 const OUTCOME_COLORS = ["#22c55e", "#f59e0b", "#ef4444", "#8b5cf6", "#6b7280"];
@@ -132,30 +127,37 @@ export function HandoverAnalytics({ agentId, dateRange }: HandoverAnalyticsProps
         avgAcceptTime: d.acceptTimes.length > 0 ? d.acceptTimes.reduce((a, b) => a + b, 0) / d.acceptTimes.length : 0,
       })).sort((a, b) => b.count - a.count);
 
-      // Volume over time
-      const dayMap = new Map<string, number>();
-      for (const s of filteredSessions) {
-        const day = new Date(s.requested_at!).toISOString().split("T")[0];
-        dayMap.set(day, (dayMap.get(day) || 0) + 1);
-      }
-      const volumeOverTime = Array.from(dayMap.entries())
-        .map(([date, count]) => ({ date, count }))
-        .sort((a, b) => a.date.localeCompare(b.date));
+      // Adaptive volume data
+      const granularity = getGranularity(dateRange);
+      const volumeData = aggregateByGranularity(
+        filteredSessions.map(s => ({ date: new Date(s.requested_at!) })),
+        granularity
+      );
 
-      // Response time trend
-      const trendMap = new Map<string, number[]>();
+      // Response time trend (adaptive)
+      const trendBuckets = new Map<string, number[]>();
       for (const s of accepted) {
-        const day = new Date(s.requested_at!).toISOString().split("T")[0];
+        const d = new Date(s.requested_at!);
+        let key: string;
+        if (granularity === "hourly") key = `${d.getHours().toString().padStart(2, "0")}:00`;
+        else if (granularity === "daily") key = d.toISOString().split("T")[0];
+        else if (granularity === "weekly") {
+          const day = d.getDay();
+          const monday = new Date(d);
+          monday.setDate(d.getDate() - ((day + 6) % 7));
+          key = "w/" + monday.toISOString().split("T")[0];
+        } else key = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, "0")}`;
+
         const acceptTime = (new Date(s.accepted_at!).getTime() - new Date(s.requested_at!).getTime()) / 1000;
         if (acceptTime > 0 && acceptTime < 86400) {
-          const arr = trendMap.get(day) || [];
+          const arr = trendBuckets.get(key) || [];
           arr.push(acceptTime);
-          trendMap.set(day, arr);
+          trendBuckets.set(key, arr);
         }
       }
-      const responseTimeTrend = Array.from(trendMap.entries())
-        .map(([date, times]) => ({ date, avgTime: times.reduce((a, b) => a + b, 0) / times.length }))
-        .sort((a, b) => a.date.localeCompare(b.date));
+      const responseTimeTrend = Array.from(trendBuckets.entries())
+        .map(([label, times]) => ({ label, avgTime: times.reduce((a, b) => a + b, 0) / times.length }))
+        .sort((a, b) => a.label.localeCompare(b.label));
 
       // Outcome breakdown
       const outcomes: Record<string, number> = {};
@@ -213,9 +215,10 @@ export function HandoverAnalytics({ agentId, dateRange }: HandoverAnalyticsProps
         completedCount: completed.length,
         byAgent,
         byDepartment,
-        volumeOverTime,
+        volumeData,
         responseTimeTrend,
         outcomeBreakdown,
+        granularity,
       });
     } catch (e) {
       console.error("Error loading handover metrics:", e);
@@ -268,15 +271,15 @@ export function HandoverAnalytics({ agentId, dateRange }: HandoverAnalyticsProps
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card className="p-4">
-          <p className="text-sm font-medium mb-3">Handover Requests</p>
-          {metrics.volumeOverTime.length > 0 ? (
+          <p className="text-sm font-medium mb-3">{getVolumeChartTitle(metrics.granularity).replace("Volume", "Requests")}</p>
+          {metrics.volumeData.length > 0 ? (
             <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={metrics.volumeOverTime}>
+              <BarChart data={metrics.volumeData}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={(d) => new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short" })} />
-                <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip labelFormatter={(d) => new Date(d).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })} />
-                <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                <XAxis dataKey="label" tick={{ fontSize: 11 }} tickFormatter={l => formatTickLabel(l, metrics.granularity)} />
+                <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                <Tooltip labelFormatter={l => formatTickLabel(l, metrics.granularity)} />
+                <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Requests" />
               </BarChart>
             </ResponsiveContainer>
           ) : (
@@ -290,9 +293,9 @@ export function HandoverAnalytics({ agentId, dateRange }: HandoverAnalyticsProps
             <ResponsiveContainer width="100%" height={240}>
               <LineChart data={metrics.responseTimeTrend}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={(d) => new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short" })} />
+                <XAxis dataKey="label" tick={{ fontSize: 11 }} tickFormatter={l => formatTickLabel(l, metrics.granularity)} />
                 <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => formatDuration(v)} />
-                <Tooltip labelFormatter={(d) => new Date(d).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })} formatter={(v: number) => [formatDuration(v), "Avg Accept Time"]} />
+                <Tooltip labelFormatter={l => formatTickLabel(l, metrics.granularity)} formatter={(v: number) => [formatDuration(v), "Avg Accept Time"]} />
                 <Line type="monotone" dataKey="avgTime" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 3 }} />
               </LineChart>
             </ResponsiveContainer>
