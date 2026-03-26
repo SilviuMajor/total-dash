@@ -3,17 +3,11 @@ import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { DateRange } from "@/hooks/useAnalyticsMetrics";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, AreaChart, Area } from "recharts";
+import { getGranularity, aggregateByGranularity, formatTickLabel, getVolumeChartTitle, formatDuration, shouldShowDayOfWeek, TimeGranularity } from "./analyticsUtils";
 
 interface ConversationsAnalyticsProps {
   agentId: string;
   dateRange: DateRange;
-}
-
-function formatDuration(seconds: number): string {
-  if (!seconds || isNaN(seconds)) return "—";
-  if (seconds < 60) return `${Math.round(seconds)}s`;
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${Math.round(seconds % 60)}s`;
-  return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
 }
 
 const DAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -24,7 +18,9 @@ interface ConvData {
   completionRate: number;
   avgDuration: number;
   avgMessages: number;
-  volumeOverTime: { date: string; count: number }[];
+  volumeData: { label: string; count: number }[];
+  granularity: TimeGranularity;
+  showDow: boolean;
   byDayOfWeek: { day: string; count: number }[];
   durationDist: { range: string; count: number }[];
   endReasonData: { name: string; value: number }[];
@@ -71,20 +67,20 @@ export function ConversationsAnalytics({ agentId, dateRange }: ConversationsAnal
         }
       }
 
-      const dayMap = new Map<string, number>();
-      for (const c of conversations) {
-        if (!c.started_at) continue;
-        const day = new Date(c.started_at).toISOString().split("T")[0];
-        dayMap.set(day, (dayMap.get(day) || 0) + 1);
-      }
-      const volumeOverTime = Array.from(dayMap.entries())
-        .map(([date, count]) => ({ date, count }))
-        .sort((a, b) => a.date.localeCompare(b.date));
+      // Adaptive volume data
+      const granularity = getGranularity(dateRange);
+      const volumeData = aggregateByGranularity(
+        conversations.filter(c => c.started_at).map(c => ({ date: new Date(c.started_at!) })),
+        granularity
+      );
 
+      // Day of week (only for 7+ day ranges)
+      const showDow = shouldShowDayOfWeek(dateRange);
       const dowCounts: number[] = [0, 0, 0, 0, 0, 0, 0];
-      for (const c of conversations) {
-        if (!c.started_at) continue;
-        dowCounts[new Date(c.started_at).getDay()]++;
+      if (showDow) {
+        for (const c of conversations) {
+          if (c.started_at) dowCounts[new Date(c.started_at).getDay()]++;
+        }
       }
       const byDayOfWeek = dowCounts.map((count, i) => ({ day: DAY_SHORT[i], count }));
 
@@ -112,7 +108,7 @@ export function ConversationsAnalytics({ agentId, dateRange }: ConversationsAnal
 
       setData({
         total, completed, completionRate, avgDuration, avgMessages,
-        volumeOverTime, byDayOfWeek, durationDist, endReasonData,
+        volumeData, granularity, showDow, byDayOfWeek, durationDist, endReasonData,
       });
     } catch (e) {
       console.error("Error loading conversation analytics:", e);
@@ -126,6 +122,7 @@ export function ConversationsAnalytics({ agentId, dateRange }: ConversationsAnal
 
   return (
     <div className="p-6 space-y-6">
+      {/* KPI cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="p-4">
           <p className="text-xs text-muted-foreground font-medium">Total Conversations</p>
@@ -147,35 +144,39 @@ export function ConversationsAnalytics({ agentId, dateRange }: ConversationsAnal
         </Card>
       </div>
 
+      {/* Volume + Day of week */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card className="p-4">
-          <p className="text-sm font-medium mb-3">Daily Volume</p>
-          {data.volumeOverTime.length > 0 ? (
+          <p className="text-sm font-medium mb-3">{getVolumeChartTitle(data.granularity)}</p>
+          {data.volumeData.length > 0 ? (
             <ResponsiveContainer width="100%" height={240}>
-              <AreaChart data={data.volumeOverTime}>
+              <AreaChart data={data.volumeData}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={(d) => new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short" })} />
-                <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip labelFormatter={(d) => new Date(d).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })} />
+                <XAxis dataKey="label" tick={{ fontSize: 11 }} tickFormatter={l => formatTickLabel(l, data.granularity)} />
+                <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                <Tooltip labelFormatter={l => formatTickLabel(l, data.granularity)} />
                 <Area type="monotone" dataKey="count" stroke="hsl(var(--primary))" fill="hsl(var(--primary) / 0.15)" strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
           ) : <p className="text-sm text-muted-foreground py-10 text-center">No data</p>}
         </Card>
-        <Card className="p-4">
-          <p className="text-sm font-medium mb-3">By Day of Week</p>
-          <ResponsiveContainer width="100%" height={240}>
-            <BarChart data={data.byDayOfWeek}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-              <XAxis dataKey="day" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip />
-              <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </Card>
+        {data.showDow && (
+          <Card className="p-4">
+            <p className="text-sm font-medium mb-3">By Day of Week</p>
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={data.byDayOfWeek}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                <XAxis dataKey="day" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                <Tooltip />
+                <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </Card>
+        )}
       </div>
 
+      {/* Duration distribution + Status breakdown */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card className="p-4">
           <p className="text-sm font-medium mb-3">Duration Distribution</p>
@@ -183,7 +184,7 @@ export function ConversationsAnalytics({ agentId, dateRange }: ConversationsAnal
             <BarChart data={data.durationDist}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
               <XAxis dataKey="range" tick={{ fontSize: 10 }} />
-              <YAxis tick={{ fontSize: 11 }} />
+              <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
               <Tooltip />
               <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
             </BarChart>
