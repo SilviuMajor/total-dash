@@ -419,19 +419,24 @@ export default function Conversations() {
     }
   }, [selectedConversation?.id, selectedConversation?.status]);
 
-  // Periodic handover timer check (runs every 60 seconds while dashboard is open)
+  // Periodic handover timer check
   useEffect(() => {
     const runTimer = async () => {
       try {
-        await supabase.functions.invoke('handover-timer', { body: {} });
+        console.log('[Timer] Running handover timer check...');
+        const { data, error } = await supabase.functions.invoke('handover-timer', { body: {} });
+        if (error) {
+          console.error('[Timer] Error invoking handover-timer:', error);
+        } else {
+          console.log('[Timer] Result:', data);
+        }
       } catch (e) {
-        // Silent — timer errors shouldn't affect the UI
+        console.error('[Timer] Exception:', e);
       }
     };
 
-    runTimer(); // Run immediately on mount
-    const timerInterval = setInterval(runTimer, 60000); // Then every 60 seconds
-
+    runTimer();
+    const timerInterval = setInterval(runTimer, 30000); // Every 30 seconds for testing
     return () => clearInterval(timerInterval);
   }, []);
 
