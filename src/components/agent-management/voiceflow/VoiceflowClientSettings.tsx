@@ -26,6 +26,12 @@ export function VoiceflowClientSettings({ agent, onUpdate }: VoiceflowClientSett
   const [autoEndMode, setAutoEndMode] = useState<'since_start' | 'since_last_message'>(
     agent.config?.auto_end_mode || 'since_last_message'
   );
+  const [responseGreenSeconds, setResponseGreenSeconds] = useState(
+    agent.config?.response_thresholds?.green_seconds || 60
+  );
+  const [responseAmberSeconds, setResponseAmberSeconds] = useState(
+    agent.config?.response_thresholds?.amber_seconds || 300
+  );
 
   const handleSave = async () => {
     setLoading(true);
