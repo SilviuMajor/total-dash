@@ -1733,6 +1733,8 @@ function generateWidgetScript(config: any): string {
       realtimeSubscription = null;
     }
     isInHandover = false;
+    isTyping = false;
+    renderPanel();
   }
   
   function renderMessages(container) {
