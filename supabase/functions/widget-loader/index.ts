@@ -1810,7 +1810,7 @@ function generateWidgetScript(config: any): string {
         } catch (e) {
           console.error('[VF Widget] Error fetching resume messages:', e);
         }
-      }, 2000); // Wait 2s for resume messages to be stored
+      }, 500); // Fetch resume messages quickly after polling stops
     }
     
     renderPanel();

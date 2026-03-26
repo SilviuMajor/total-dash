@@ -262,7 +262,12 @@ export default function Conversations() {
           filter: `conversation_id=eq.${selectedConversation.id}`
         },
         (payload) => {
-          setTranscripts(prev => [...prev, payload.new as Transcript]);
+          const newTranscript = payload.new as Transcript;
+          setTranscripts(prev => {
+            // Deduplicate — don't add if we already have this transcript ID
+            if (prev.some(t => t.id === newTranscript.id)) return prev;
+            return [...prev, newTranscript];
+          });
           // Auto-scroll after React re-renders the new message
           setTimeout(() => {
             if (transcriptScrollRef.current) {
