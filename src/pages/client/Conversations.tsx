@@ -934,7 +934,7 @@ export default function Conversations() {
                           isSelected ? "bg-primary/5" : pendingConversationIds.has(conv.id) ? "" : "hover:bg-muted/40"
                         )}
                       >
-                        {/* Row 1: Name + time */}
+                        {/* Row 1: Name + department pill */}
                         <div className="flex items-center justify-between mb-1">
                           <div className="flex items-center gap-1.5 min-w-0">
                             <Checkbox
@@ -960,17 +960,29 @@ export default function Conversations() {
                               <AlertTriangle className="w-3 h-3 text-amber-500 shrink-0" />
                             )}
                           </div>
-                          <span className="text-[10.5px] text-muted-foreground shrink-0 ml-2">
-                            {formatDistanceToNow(new Date(conv.started_at))} ago
-                          </span>
+                          {conv.department_id && (() => {
+                            const dept = departments.find(d => d.id === conv.department_id);
+                            return dept ? (
+                              <span
+                                className="inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-medium border shrink-0 ml-2"
+                                style={{
+                                  backgroundColor: `${dept.color || '#6B7280'}15`,
+                                  borderColor: `${dept.color || '#6B7280'}40`,
+                                  color: dept.color || '#6B7280',
+                                }}
+                              >
+                                {dept.name}
+                              </span>
+                            ) : null;
+                          })()}
                         </div>
 
-                        {/* Row 2: Message preview (time placeholder) */}
+                        {/* Row 2: Message preview */}
                         <p className="text-xs text-muted-foreground truncate pl-6 mb-1.5">
                           Started {format(new Date(conv.started_at), 'MMM d, h:mm a')}
                         </p>
 
-                        {/* Row 3: Status badge + tags */}
+                        {/* Row 3: Status badge + tags (left), response time pill (right) */}
                         <div className="flex items-center justify-between pl-6">
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <span className={cn(
@@ -1011,26 +1023,12 @@ export default function Conversations() {
                               ) : null;
                             })}
                           </div>
-                          {conv.department_id && (() => {
-                            const dept = departments.find(d => d.id === conv.department_id);
-                            return dept ? (
-                              <span
-                                className="inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-medium border shrink-0 ml-2"
-                                style={{
-                                  backgroundColor: `${dept.color || '#6B7280'}15`,
-                                  borderColor: `${dept.color || '#6B7280'}40`,
-                                  color: dept.color || '#6B7280',
-                                }}
-                              >
-                                {dept.name}
-                              </span>
-                            ) : null;
-                          })()}
                           {shouldShowResponsePill(conv) && (() => {
                             const waitSec = getWaitSeconds(conv);
                             const { color } = getResponseTimeColor(waitSec);
                             return (
                               <span
+                                className="shrink-0 ml-2"
                                 style={{
                                   fontSize: 10,
                                   fontWeight: 600,
