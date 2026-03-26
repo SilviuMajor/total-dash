@@ -679,8 +679,8 @@ export default function Conversations() {
   const sortLabel = sortOrder === 'asc' ? 'Oldest' : sortOrder === 'duration' ? 'Longest' : 'Newest';
 
   const getResponseTimeColor = (seconds: number) => {
-    const greenMax = agentConfig?.response_thresholds?.green_seconds || 60;
-    const amberMax = agentConfig?.response_thresholds?.amber_seconds || 300;
+    const greenMax = (agentConfig as any)?.response_thresholds?.green_seconds || 60;
+    const amberMax = (agentConfig as any)?.response_thresholds?.amber_seconds || 300;
     if (seconds <= greenMax) return { color: '#22c55e', label: 'green' };
     if (seconds <= amberMax) return { color: '#f59e0b', label: 'amber' };
     return { color: '#ef4444', label: 'red' };
