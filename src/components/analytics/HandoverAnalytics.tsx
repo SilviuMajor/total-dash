@@ -243,7 +243,7 @@ export function HandoverAnalytics({ agentId, dateRange }: HandoverAnalyticsProps
       {/* Top-level metric cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Card className="p-4">
-          <p className="text-xs text-muted-foreground font-medium">Total Handovers</p>
+          <p className="text-xs text-muted-foreground font-medium">Total Handover Requests</p>
           <p className="text-2xl font-bold mt-1">{metrics.totalHandovers}</p>
         </Card>
         <Card className="p-4">
