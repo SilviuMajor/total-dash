@@ -2176,12 +2176,13 @@ function generateWidgetScript(config: any): string {
       // Handle handover state
       if (data.handoverActive || data.handoverPending) {
         // Display Voiceflow bot responses that came before the handover action
+        // (resp.type === 'system' renders as centred pill, others as bot bubble)
         if (data.botResponses && data.botResponses.length > 0) {
           for (const resp of data.botResponses) {
             if (resp.text) {
               messages.push({
                 id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-                speaker: 'assistant',
+                speaker: resp.type === 'system' ? 'system' : 'assistant',
                 text: resp.text,
                 buttons: resp.buttons || null,
                 timestamp: new Date().toISOString()
