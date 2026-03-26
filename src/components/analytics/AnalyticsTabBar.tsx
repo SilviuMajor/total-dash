@@ -87,7 +87,7 @@ export function AnalyticsTabBar({
 
   return (
     <>
-      <div className="flex items-center gap-0 border-b border-border px-6 overflow-x-auto">
+      <div className="flex items-center gap-0 px-6 overflow-x-auto">
         {tabs.map(tab => (
           <div
             key={tab.id}
