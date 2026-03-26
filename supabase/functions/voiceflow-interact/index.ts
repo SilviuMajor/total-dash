@@ -511,7 +511,10 @@ serve(async (req) => {
 
       await supabaseClient
         .from("conversations")
-        .update({ last_activity_at: new Date().toISOString() })
+        .update({ 
+          last_activity_at: new Date().toISOString(),
+          last_customer_message_at: new Date().toISOString(),
+        })
         .eq("id", currentConversationId);
     }
 
