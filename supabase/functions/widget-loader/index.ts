@@ -1721,8 +1721,8 @@ function generateWidgetScript(config: any): string {
               timestamp: transcript.timestamp,
             };
             
-            // Don't add empty messages (no text and no buttons)
-            if (!newMsg.text && !newMsg.buttons) continue;
+            // Skip truly empty messages (no text AND no buttons)
+            if ((!msg.text || !msg.text.trim()) && (!msg.buttons || !msg.buttons.length)) continue;
             
             messages.push(newMsg);
             hasNewMessages = true;
