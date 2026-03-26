@@ -373,7 +373,7 @@ serve(async (req) => {
 
               await supabaseClient.from("transcripts").insert({
                 conversation_id: session.conversation_id,
-                speaker: "system",
+                speaker: "assistant",
                 text: nudgeMessage,
                 metadata: {
                   type: "inactivity_nudge",
