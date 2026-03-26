@@ -1690,7 +1690,9 @@ function generateWidgetScript(config: any): string {
               if (!existingIds.includes('rt_' + transcript.id)) {
                 const newMsg = {
                   id: 'rt_' + transcript.id,
-                  speaker: transcript.speaker === 'client_user' ? 'assistant' : 'system',
+                   speaker: transcript.speaker === 'client_user' ? 'assistant' 
+                    : transcript.speaker === 'assistant' ? 'assistant' 
+                    : 'system',
                   text: transcript.text || '',
                   timestamp: transcript.timestamp,
                   metadata: transcript.metadata
@@ -1699,7 +1701,7 @@ function generateWidgetScript(config: any): string {
                 hasNewMessages = true;
                 // Stop polling if handover ended or resume message received
                 if (transcript.metadata && (transcript.metadata.type === 'handover_ended' || transcript.metadata.response_type === 'handover_resume')) {
-                  setTimeout(() => stopHandoverRealtime(), 3000);
+                  setTimeout(() => stopHandoverRealtime(), 8000); // Wait longer to catch resume messages
                 }
               }
             }
@@ -1945,6 +1947,11 @@ function generateWidgetScript(config: any): string {
         }
         isTyping = false;
         renderPanel();
+        scrollToLatestMessage();
+        if (conversationId) {
+          SessionManager.saveConversation(conversationId, messages, currentVoiceflowSessionId, true);
+        }
+        return; // Don't process botResponses during handover — polling handles it
       }
       
       if (data.botResponses) {
@@ -1967,6 +1974,19 @@ function generateWidgetScript(config: any): string {
       } else {
         isTyping = false;
         renderPanel();
+      }
+      
+      // Show conversation ended indicator
+      if (data.conversationEnded) {
+        const endMsg = {
+          id: 'msg_end_' + Date.now(),
+          speaker: 'system',
+          text: 'Conversation ended',
+          timestamp: new Date().toISOString()
+        };
+        messages.push(endMsg);
+        renderPanel();
+        scrollToLatestMessage();
       }
       
       if (conversationId) {
@@ -2113,6 +2133,11 @@ function generateWidgetScript(config: any): string {
         }
         isTyping = false;
         renderPanel();
+        scrollToLatestMessage();
+        if (conversationId) {
+          SessionManager.saveConversation(conversationId, messages, currentVoiceflowSessionId, true);
+        }
+        return; // Don't process botResponses during handover — polling handles it
       }
       
       if (data.botResponses) {
@@ -2134,6 +2159,19 @@ function generateWidgetScript(config: any): string {
       } else {
         isTyping = false;
         renderPanel();
+      }
+      
+      // Show conversation ended indicator
+      if (data.conversationEnded) {
+        const endMsg = {
+          id: 'msg_end_' + Date.now(),
+          speaker: 'system',
+          text: 'Conversation ended',
+          timestamp: new Date().toISOString()
+        };
+        messages.push(endMsg);
+        renderPanel();
+        scrollToLatestMessage();
       }
       
       if (conversationId) {
