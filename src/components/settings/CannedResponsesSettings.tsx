@@ -64,11 +64,12 @@ export function CannedResponsesSettings() {
   };
 
   const loadResponses = async () => {
+    if (!clientId) return;
     setLoading(true);
     const { data, error } = await supabase
       .from("canned_responses")
       .select("*")
-      .eq("agent_id", selectedAgentId!)
+      .eq("client_id", clientId)
       .order("category")
       .order("sort_order");
     if (!error) setResponses(data || []);
