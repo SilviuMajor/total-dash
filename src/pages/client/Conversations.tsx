@@ -488,6 +488,48 @@ export default function Conversations() {
     return () => { pendingChannel.unsubscribe(); };
   }, []);
 
+  // Sound notification for customer messages in ANY of my active handovers
+  useEffect(() => {
+    if (!currentClientUserId) return;
+
+    const messageChannel = supabase
+      .channel('my-handover-messages')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'transcripts',
+        },
+        async (payload) => {
+          const transcript = payload.new as any;
+          if (transcript.speaker !== 'user') return;
+
+          // Check if this conversation has an active handover owned by me
+          const { data: session } = await supabase
+            .from('handover_sessions')
+            .select('id')
+            .eq('conversation_id', transcript.conversation_id)
+            .eq('status', 'active')
+            .eq('client_user_id', currentClientUserId)
+            .maybeSingle();
+
+          if (session) {
+            const prefs = getSoundPreferences();
+            if (prefs.newMessageEnabled) {
+              playNewMessageSound(prefs.newMessageVolume);
+            }
+            if (prefs.browserNotifications) {
+              sendBrowserNotification("New Customer Message", "A customer sent a message in your handover");
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => { messageChannel.unsubscribe(); };
+  }, [currentClientUserId]);
+
   useEffect(() => {
     const loadDepts = async () => {
       const effectiveClientId = clientId || (isClientPreviewMode && previewClient?.id ? previewClient.id : null);
