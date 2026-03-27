@@ -219,7 +219,7 @@ export default function Conversations() {
       setPersonalEnabled(agentConfig?.canned_responses_personal_enabled !== false);
     };
     loadCanned();
-  }, [selectedAgentId, user?.id]);
+  }, [clientId, selectedAgentId, user?.id]);
 
 
   useEffect(() => {
