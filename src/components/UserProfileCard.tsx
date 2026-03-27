@@ -324,14 +324,16 @@ export function UserProfileCard({ onSignOut }: UserProfileCardProps) {
               <User className="h-4 w-4" />
               <span>Account Details</span>
             </Button>
-            <Button
-              variant="ghost"
-              className="w-full justify-start gap-2 h-auto py-2"
-              onClick={() => setMenuView('notifications')}
-            >
-              <Volume2 className="h-4 w-4" />
-              <span>Notifications</span>
-            </Button>
+            {isOperatingAsClient && (
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-2 h-auto py-2"
+                onClick={() => setMenuView('notifications')}
+              >
+                <Volume2 className="h-4 w-4" />
+                <span>Notifications</span>
+              </Button>
+            )}
             <Separator />
             <Button
               variant="ghost"
