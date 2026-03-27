@@ -99,6 +99,23 @@ export default function AgencyClientDetails() {
       const caps = data.admin_capabilities as Record<string, any>;
       setExistingCapabilities(caps);
       setSettingsPageEnabled(caps.settings_page_enabled === true);
+      setDeptEnabled(caps.client_departments_enabled !== false);
+      setTeamEnabled(caps.client_team_enabled !== false);
+      setPermissionsEnabled(caps.client_permissions_enabled !== false);
+      setCannedEnabled(caps.client_canned_responses_enabled !== false);
+      setGeneralEnabled(caps.client_general_enabled !== false);
+    }
+  };
+
+  const updateCapability = async (key: string, value: boolean, setter: (v: boolean) => void) => {
+    setter(value);
+    const newCaps = { ...existingCapabilities, [key]: value };
+    setExistingCapabilities(newCaps);
+    const { error } = await supabase
+      .from('client_settings')
+      .upsert({ client_id: client!.id, admin_capabilities: newCaps }, { onConflict: 'client_id' });
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     }
   };
 
