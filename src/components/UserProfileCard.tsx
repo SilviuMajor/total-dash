@@ -32,6 +32,13 @@ export function UserProfileCard({ onSignOut }: UserProfileCardProps) {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [menuView, setMenuView] = useState<MenuView>('main');
+  const [soundPrefs, setSoundPrefs] = useState<SoundPreferences>(getSoundPreferences());
+
+  const updateSoundPref = (key: keyof SoundPreferences, value: any) => {
+    const updated = { ...soundPrefs, [key]: value };
+    setSoundPrefs(updated);
+    saveSoundPreferences(updated);
+  };
   
   // Profile fields
   const [firstName, setFirstName] = useState("");
