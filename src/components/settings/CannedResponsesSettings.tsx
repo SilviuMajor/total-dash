@@ -46,8 +46,13 @@ export function CannedResponsesSettings() {
   const [editCategory, setEditCategory] = useState("");
 
   useEffect(() => {
-    if (selectedAgentId) {
+    if (clientId) {
       loadResponses();
+    }
+  }, [clientId]);
+
+  useEffect(() => {
+    if (selectedAgentId) {
       loadSettings();
     }
   }, [selectedAgentId]);
