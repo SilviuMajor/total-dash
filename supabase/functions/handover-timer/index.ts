@@ -267,18 +267,34 @@ serve(async (req) => {
               // Store resume responses
               const resumeData = await resumeResponse.json();
               if (resumeData && Array.isArray(resumeData)) {
+                let resumeTextStored = false;
                 for (const item of resumeData) {
-                  if (item.type === "text" && item.payload?.message) {
+                  if (item.type === "text" && item.payload?.message && !resumeTextStored) {
                     await supabaseClient.from("transcripts").insert({
                       conversation_id: session.conversation_id,
                       speaker: "assistant",
                       text: item.payload.message,
                       metadata: {
-                        response_type: "timeout_resume",
+                        response_type: "handover_resume",
                         timestamp: new Date().toISOString(),
                       },
                     });
-                    break; // Only store first message
+                    resumeTextStored = true;
+                  }
+                  if (item.type === "choice" && item.payload?.buttons) {
+                    await supabaseClient.from("transcripts").insert({
+                      conversation_id: session.conversation_id,
+                      speaker: "assistant",
+                      text: "",
+                      buttons: item.payload.buttons.map((btn: any) => ({
+                        text: btn.name,
+                        payload: btn.request,
+                      })),
+                      metadata: {
+                        response_type: "handover_resume_buttons",
+                        timestamp: new Date().toISOString(),
+                      },
+                    });
                   }
                 }
               }
