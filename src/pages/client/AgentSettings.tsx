@@ -4,7 +4,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { SupportRequestForm } from "@/components/agent-management/SupportRequestForm";
 import { VoiceflowWidget } from "@/components/agent-management/voiceflow/VoiceflowWidget";
 import { VoiceflowChannels } from "@/components/agent-management/voiceflow/VoiceflowChannels";
-import { VoiceflowClientSettings } from "@/components/agent-management/voiceflow/VoiceflowClientSettings";
+import { VoiceflowConversationSettings } from "@/components/agent-management/voiceflow/VoiceflowConversationSettings";
+import { VoiceflowHandoverSettings } from "@/components/agent-management/voiceflow/VoiceflowHandoverSettings";
 import { useClientAgentContext } from "@/hooks/useClientAgentContext";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -54,14 +55,15 @@ export default function AgentSettings() {
 
   const hasWidgetAccess = agent?.config?.client_widget_access_enabled === true;
   const hasChannelsAccess = agent?.config?.client_channels_access_enabled === true;
-  const hasSettingsAccess = agent?.config?.client_settings_access_enabled === true;
+  const hasConversationsAccess = agent?.config?.client_conversations_settings_enabled !== false;
+  const hasHandoverAccess = agent?.config?.client_handover_settings_enabled !== false;
   const isVoiceflow = agent?.provider === "voiceflow";
 
-  // Determine default tab based on available tabs
   const getDefaultTab = () => {
     if (hasWidgetAccess && isVoiceflow) return "widget";
     if (hasChannelsAccess && isVoiceflow) return "channels";
-    if (hasSettingsAccess && isVoiceflow) return "settings";
+    if (hasConversationsAccess && isVoiceflow) return "conversations";
+    if (hasHandoverAccess && isVoiceflow) return "handover";
     return "support";
   };
 
@@ -75,7 +77,8 @@ export default function AgentSettings() {
 
   const showWidgetTab = hasWidgetAccess && isVoiceflow;
   const showChannelsTab = hasChannelsAccess && isVoiceflow;
-  const showSettingsTab = hasSettingsAccess && isVoiceflow;
+  const showConversationsTab = hasConversationsAccess && isVoiceflow;
+  const showHandoverTab = hasHandoverAccess && isVoiceflow;
 
   return (
     <div className="p-6 space-y-6">
@@ -88,7 +91,8 @@ export default function AgentSettings() {
         <TabsList>
           {showWidgetTab && <TabsTrigger value="widget">Widget</TabsTrigger>}
           {showChannelsTab && <TabsTrigger value="channels">Channels</TabsTrigger>}
-          {showSettingsTab && <TabsTrigger value="settings">Settings</TabsTrigger>}
+          {showConversationsTab && <TabsTrigger value="conversations">Conversations</TabsTrigger>}
+          {showHandoverTab && <TabsTrigger value="handover">Handover</TabsTrigger>}
           <TabsTrigger value="support">Support</TabsTrigger>
         </TabsList>
         
@@ -104,9 +108,15 @@ export default function AgentSettings() {
           </TabsContent>
         )}
 
-        {showSettingsTab && agent && (
-          <TabsContent value="settings" className="mt-6">
-            <VoiceflowClientSettings agent={agent} onUpdate={loadAgent} />
+        {showConversationsTab && agent && (
+          <TabsContent value="conversations" className="mt-6">
+            <VoiceflowConversationSettings agent={agent} onUpdate={loadAgent} />
+          </TabsContent>
+        )}
+
+        {showHandoverTab && agent && (
+          <TabsContent value="handover" className="mt-6">
+            <VoiceflowHandoverSettings agent={agent} onUpdate={loadAgent} />
           </TabsContent>
         )}
 
