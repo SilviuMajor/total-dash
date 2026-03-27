@@ -676,28 +676,6 @@ export function UserProfileCard({ onSignOut }: UserProfileCardProps) {
                 </div>
               </div>
             </div>
-            <Separator />
-
-            {/* Browser notifications */}
-            <div className="flex items-center justify-between">
-              <div className="flex-1 min-w-0">
-                <span className="text-sm">Browser notifications</span>
-                <p className="text-xs text-muted-foreground">Show alerts when tab is not focused</p>
-              </div>
-              <Switch
-                checked={soundPrefs.browserNotifications}
-                onCheckedChange={async (v) => {
-                  if (v) {
-                    const granted = await requestNotificationPermission();
-                    if (!granted) {
-                      toast({ title: "Permission denied", description: "Please allow notifications in your browser settings", variant: "destructive" });
-                      return;
-                    }
-                  }
-                  updateSoundPref('browserNotifications', v);
-                }}
-              />
-            </div>
           </div>
         )}
       </PopoverContent>
