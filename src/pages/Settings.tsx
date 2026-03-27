@@ -66,6 +66,7 @@ export default function Settings() {
           <TabsTrigger value="departments">Departments</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="permissions">Permissions</TabsTrigger>
+          <TabsTrigger value="canned-responses">Canned Responses</TabsTrigger>
         </TabsList>
 
         <TabsContent value="departments" className="space-y-6">
