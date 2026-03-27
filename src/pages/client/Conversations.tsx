@@ -175,7 +175,41 @@ export default function Conversations() {
     return () => clearInterval(interval);
   }, []);
 
-  // Auto-select conversation from ?conversationId query param
+  // Load canned responses when agent changes
+  useEffect(() => {
+    const loadCanned = async () => {
+      if (!selectedAgentId) return;
+      
+      // Load org responses
+      const { data: org } = await supabase
+        .from("canned_responses")
+        .select("*")
+        .eq("agent_id", selectedAgentId)
+        .order("category")
+        .order("sort_order");
+      setOrgResponses(org || []);
+      
+      // Load personal responses
+      if (user?.id) {
+        const { data: personal } = await supabase
+          .from("canned_responses")
+          .select("*")
+          .eq("user_id", user.id)
+          .is("agent_id", null)
+          .order("category")
+          .order("sort_order");
+        setPersonalResponses(personal || []);
+      }
+      
+      // Check if personal is enabled
+      const agent = agents.find(a => a.id === selectedAgentId);
+      const agentConfig = (agent as any)?.config;
+      setPersonalEnabled(agentConfig?.canned_responses_personal_enabled !== false);
+    };
+    loadCanned();
+  }, [selectedAgentId, user?.id]);
+
+
   useEffect(() => {
     const convId = searchParams.get('conversationId');
     if (!convId || conversations.length === 0) return;
