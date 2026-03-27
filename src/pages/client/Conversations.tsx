@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ConversationsSkeleton } from "@/components/skeletons";
-import { Phone, Clock, CheckCircle, MessageSquare, ArrowDown, ArrowUpDown, X, Plus, Tag, Users, Building2, Send, UserCheck, PhoneOff, ArrowRightLeft, Lock, Loader2, AlertTriangle, Timer } from "lucide-react";
+import { Phone, Clock, CheckCircle, MessageSquare, ArrowDown, ArrowUpDown, X, Plus, Tag, Users, Building2, Send, UserCheck, PhoneOff, ArrowRightLeft, Lock, Loader2, AlertTriangle, Timer, MessageSquareText, Trash2, FolderOpen } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
