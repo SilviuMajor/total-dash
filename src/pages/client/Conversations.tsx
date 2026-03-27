@@ -128,7 +128,18 @@ export default function Conversations() {
   const [pendingConversationIds, setPendingConversationIds] = useState<Set<string>>(new Set());
   const [responseTick, setResponseTick] = useState(0);
 
-  // React Query hooks
+  // Canned responses state
+  const [showCannedDropdown, setShowCannedDropdown] = useState(false);
+  const [cannedTab, setCannedTab] = useState<'org' | 'personal'>('org');
+  const [orgResponses, setOrgResponses] = useState<any[]>([]);
+  const [personalResponses, setPersonalResponses] = useState<any[]>([]);
+  const [personalEnabled, setPersonalEnabled] = useState(true);
+  const [addingPersonal, setAddingPersonal] = useState(false);
+  const [newPersonalTitle, setNewPersonalTitle] = useState("");
+  const [newPersonalBody, setNewPersonalBody] = useState("");
+  const [newPersonalCategory, setNewPersonalCategory] = useState("General");
+
+
   const {
     data: conversationsData,
     isLoading,
