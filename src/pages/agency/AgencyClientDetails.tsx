@@ -40,6 +40,11 @@ export default function AgencyClientDetails() {
   const [loading, setLoading] = useState(true);
   const [settingsPageEnabled, setSettingsPageEnabled] = useState(false);
   const [existingCapabilities, setExistingCapabilities] = useState<Record<string, any>>({});
+  const [deptEnabled, setDeptEnabled] = useState(true);
+  const [teamEnabled, setTeamEnabled] = useState(true);
+  const [permissionsEnabled, setPermissionsEnabled] = useState(true);
+  const [cannedEnabled, setCannedEnabled] = useState(true);
+  const [generalEnabled, setGeneralEnabled] = useState(true);
   const activeTab = tab || "overview";
 
   const agencyId = isPreviewMode ? previewAgency?.id : profile?.agency?.id;
@@ -94,6 +99,23 @@ export default function AgencyClientDetails() {
       const caps = data.admin_capabilities as Record<string, any>;
       setExistingCapabilities(caps);
       setSettingsPageEnabled(caps.settings_page_enabled === true);
+      setDeptEnabled(caps.client_departments_enabled !== false);
+      setTeamEnabled(caps.client_team_enabled !== false);
+      setPermissionsEnabled(caps.client_permissions_enabled !== false);
+      setCannedEnabled(caps.client_canned_responses_enabled !== false);
+      setGeneralEnabled(caps.client_general_enabled !== false);
+    }
+  };
+
+  const updateCapability = async (key: string, value: boolean, setter: (v: boolean) => void) => {
+    setter(value);
+    const newCaps = { ...existingCapabilities, [key]: value };
+    setExistingCapabilities(newCaps);
+    const { error } = await supabase
+      .from('client_settings')
+      .upsert({ client_id: client!.id, admin_capabilities: newCaps }, { onConflict: 'client_id' });
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     }
   };
 
@@ -201,12 +223,46 @@ export default function AgencyClientDetails() {
             <Card className="p-4 bg-card border-border/50">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium">Enable Settings Page for Clients</p>
-                  <p className="text-xs text-muted-foreground">Allow clients to view and manage departments, users, and permissions</p>
+                  <p className="text-sm font-medium">Enable Company Settings for Clients</p>
+                  <p className="text-xs text-muted-foreground">Master toggle — show/hide the Company Settings page for this client</p>
                 </div>
                 <Switch checked={settingsPageEnabled} onCheckedChange={handleToggleSettingsPage} />
               </div>
             </Card>
+
+            {settingsPageEnabled && (
+              <Card className="p-4 bg-card border-border/50">
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-sm font-medium">Tab Visibility</p>
+                    <p className="text-xs text-muted-foreground">Control which tabs the client can see in their Company Settings page</p>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm">Departments</p>
+                      <Switch checked={deptEnabled} onCheckedChange={(v) => updateCapability('client_departments_enabled', v, setDeptEnabled)} />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm">Team</p>
+                      <Switch checked={teamEnabled} onCheckedChange={(v) => updateCapability('client_team_enabled', v, setTeamEnabled)} />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm">Permissions</p>
+                      <Switch checked={permissionsEnabled} onCheckedChange={(v) => updateCapability('client_permissions_enabled', v, setPermissionsEnabled)} />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm">Canned Responses</p>
+                      <Switch checked={cannedEnabled} onCheckedChange={(v) => updateCapability('client_canned_responses_enabled', v, setCannedEnabled)} />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm">General</p>
+                      <Switch checked={generalEnabled} onCheckedChange={(v) => updateCapability('client_general_enabled', v, setGeneralEnabled)} />
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            )}
+
             <ClientSettings client={client} onUpdate={loadClientData} />
             <DepartmentManagement clientId={client.id} />
           </div>
