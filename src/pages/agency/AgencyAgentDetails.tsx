@@ -204,15 +204,28 @@ export default function AgencyAgentDetails() {
         </TabsContent>
 
         {agent.provider === "voiceflow" && (
-          <TabsContent value="settings" className="space-y-6">
+          <TabsContent value="conversations" className="space-y-6">
             <ClientAccessToggle
               agent={agent}
-              configKey="client_settings_access_enabled"
-              label="Enable Settings for Clients"
-              description="Allow clients to view and edit conversation settings like auto-end time"
+              configKey="client_conversations_settings_enabled"
+              label="Enable Conversation Settings for Clients"
+              description="Allow clients to configure auto-end timers and response time thresholds"
               onUpdate={loadAgentDetails}
             />
-            {renderProviderContent("settings")}
+            {renderProviderContent("conversations")}
+          </TabsContent>
+        )}
+
+        {agent.provider === "voiceflow" && (
+          <TabsContent value="handover" className="space-y-6">
+            <ClientAccessToggle
+              agent={agent}
+              configKey="client_handover_settings_enabled"
+              label="Enable Handover Settings for Clients"
+              description="Allow clients to configure inactivity nudge and timeout settings"
+              onUpdate={loadAgentDetails}
+            />
+            {renderProviderContent("handover")}
           </TabsContent>
         )}
 

@@ -21,7 +21,7 @@ const clientNavigation = [
   { name: "Knowledge Base", href: "/knowledge-base", icon: BookOpen, permissionKey: "knowledge_base" },
   { name: "Guides", href: "/guides", icon: BookOpen, permissionKey: "guides" },
   { name: "Agent Settings", href: "/agent-settings", icon: Bot, permissionKey: "agent_settings" },
-  { name: "Settings", href: "/settings", icon: Settings, permissionKey: "settings_page" },
+  { name: "Company Settings", href: "/settings", icon: Settings, permissionKey: "settings_page" },
 ];
 
 const agencyNavigation = [
