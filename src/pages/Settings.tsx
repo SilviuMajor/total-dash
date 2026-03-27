@@ -80,6 +80,10 @@ export default function Settings() {
         <TabsContent value="permissions" className="space-y-6">
           <DefaultPermissionsCard clientId={clientId} />
         </TabsContent>
+
+        <TabsContent value="canned-responses" className="space-y-6">
+          <CannedResponsesSettings />
+        </TabsContent>
       </Tabs>
     </div>
   );
