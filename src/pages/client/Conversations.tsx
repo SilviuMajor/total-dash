@@ -330,6 +330,20 @@ export default function Conversations() {
             if (prev.some(t => t.id === newTranscript.id)) return prev;
             return [...prev, newTranscript];
           });
+          // Play sound for handover request
+          if (newTranscript.metadata && (newTranscript.metadata as any).type === 'handover_requested') {
+            const prefs = getSoundPreferences();
+            if (prefs.handoverRequestEnabled) {
+              playHandoverRequestSound(prefs.handoverRequestVolume);
+            }
+          }
+          // Play sound for new customer message during handover
+          if (newTranscript.speaker === 'user' && selectedConversation?.status === 'in_handover') {
+            const prefs = getSoundPreferences();
+            if (prefs.newMessageEnabled) {
+              playNewMessageSound(prefs.newMessageVolume);
+            }
+          }
           // Auto-scroll after React re-renders the new message
           setTimeout(() => {
             if (transcriptScrollRef.current) {
