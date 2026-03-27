@@ -11,7 +11,8 @@ import { useToast } from "@/hooks/use-toast";
 import { ChevronDown, ChevronLeft, User, Mail, Lock, Volume2, Sun, Moon } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
-import { getSoundPreferences, saveSoundPreferences, playTestSound, SoundPreferences } from "@/lib/notificationSounds";
+import { getSoundPreferences, saveSoundPreferences, playTestSound, SoundPreferences, HANDOVER_SOUNDS, MESSAGE_SOUNDS, requestNotificationPermission } from "@/lib/notificationSounds";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 
 interface Department {
