@@ -24,7 +24,7 @@ interface UserProfileCardProps {
   onSignOut: () => void;
 }
 
-type MenuView = 'main' | 'account' | 'edit-name' | 'change-email' | 'change-password';
+type MenuView = 'main' | 'account' | 'edit-name' | 'change-email' | 'change-password' | 'notifications';
 
 export function UserProfileCard({ onSignOut }: UserProfileCardProps) {
   const { profile, userType } = useMultiTenantAuth();
