@@ -564,10 +564,8 @@ export function UserProfileCard({ onSignOut }: UserProfileCardProps) {
                       className="flex-1"
                     />
                   </div>
-                  <div className="flex items-center justify-between pt-1">
-                    <div>
-                      <span className="text-xs">My departments only</span>
-                    </div>
+                  <div className="flex items-center justify-between pt-1 border-t mt-1">
+                    <span className="text-xs">My departments only</span>
                     <Switch
                       checked={soundPrefs.myDepartmentsOnly || false}
                       onCheckedChange={(v) => updateSoundPref('myDepartmentsOnly', v)}
