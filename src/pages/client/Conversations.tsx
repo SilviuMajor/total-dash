@@ -43,6 +43,7 @@ import {
 } from "@/hooks/queries/useConversationMutations";
 import { useAuth } from "@/hooks/useAuth";
 import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
+import { getSoundPreferences, playHandoverRequestSound, playNewMessageSound } from "@/lib/notificationSounds";
 
 interface Conversation {
   id: string;
