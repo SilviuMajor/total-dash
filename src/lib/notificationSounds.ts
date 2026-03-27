@@ -174,7 +174,7 @@ export function getSoundPreferences(): SoundPreferences {
         handoverRequestSound: parsed.handoverRequestSound || "triple-beep",
         newMessageEnabled: parsed.newMessageEnabled !== false,
         newMessageVolume: parsed.newMessageVolume ?? 0.3,
-        newMessageSound: parsed.newMessageSound || "pop",
+        newMessageSound: parsed.newMessageSound || "double-pop",
         myDepartmentsOnly: parsed.myDepartmentsOnly || false,
         browserNotifications: parsed.browserNotifications || false,
       };
