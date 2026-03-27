@@ -1317,6 +1317,105 @@ export default function Conversations() {
                 <div className="flex-shrink-0 border-t border-border bg-background p-3">
                   {selectedConversation.status === 'in_handover' && selectedConversation.owner_id === currentClientUserId ? (
                     <div className="flex items-center gap-2">
+                      {/* Canned responses button */}
+                      <Popover open={showCannedDropdown} onOpenChange={setShowCannedDropdown}>
+                        <PopoverTrigger asChild>
+                          <Button size="icon" variant="ghost" className="shrink-0">
+                            <MessageSquareText className="h-4 w-4" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80 p-0 max-h-[400px] overflow-hidden" side="top" align="start">
+                          <Tabs value={cannedTab} onValueChange={v => setCannedTab(v as 'org' | 'personal')}>
+                            <TabsList className="w-full rounded-none border-b">
+                              <TabsTrigger value="org" className="flex-1 text-xs">Organisation</TabsTrigger>
+                              {personalEnabled && <TabsTrigger value="personal" className="flex-1 text-xs">Personal</TabsTrigger>}
+                            </TabsList>
+                            <div className="max-h-[340px] overflow-y-auto">
+                              <TabsContent value="org" className="mt-0">
+                                {orgResponses.length === 0 ? (
+                                  <div className="p-4 text-xs text-center text-muted-foreground">No org responses configured</div>
+                                ) : (
+                                  (() => {
+                                    const cats = [...new Set(orgResponses.map(r => r.category))].sort();
+                                    return cats.map(cat => (
+                                      <div key={cat}>
+                                        <div className="px-3 py-2 text-xs font-medium text-muted-foreground bg-muted/30 flex items-center gap-1.5">
+                                          <FolderOpen className="h-3 w-3" />
+                                          {cat}
+                                        </div>
+                                        {orgResponses.filter(r => r.category === cat).map(r => (
+                                          <button
+                                            key={r.id}
+                                            onClick={() => insertCannedResponse(r.body)}
+                                            className="w-full text-left px-3 py-2 hover:bg-muted/50 transition-colors border-b border-border/50"
+                                          >
+                                            <div className="text-xs font-medium">{r.title}</div>
+                                            <div className="text-xs text-muted-foreground truncate">{r.body}</div>
+                                          </button>
+                                        ))}
+                                      </div>
+                                    ));
+                                  })()
+                                )}
+                              </TabsContent>
+                              
+                              {personalEnabled && (
+                                <TabsContent value="personal" className="mt-0">
+                                  {personalResponses.length === 0 && !addingPersonal ? (
+                                    <div className="p-4 text-xs text-center text-muted-foreground">No personal responses yet</div>
+                                  ) : (
+                                    (() => {
+                                      const cats = [...new Set(personalResponses.map(r => r.category))].sort();
+                                      return cats.map(cat => (
+                                        <div key={cat}>
+                                          <div className="px-3 py-2 text-xs font-medium text-muted-foreground bg-muted/30 flex items-center gap-1.5">
+                                            <FolderOpen className="h-3 w-3" />
+                                            {cat}
+                                          </div>
+                                          {personalResponses.filter(r => r.category === cat).map(r => (
+                                            <div key={r.id} className="flex items-center border-b border-border/50">
+                                              <button
+                                                onClick={() => insertCannedResponse(r.body)}
+                                                className="flex-1 text-left px-3 py-2 hover:bg-muted/50 transition-colors"
+                                              >
+                                                <div className="text-xs font-medium">{r.title}</div>
+                                                <div className="text-xs text-muted-foreground truncate">{r.body}</div>
+                                              </button>
+                                              <Button size="icon" variant="ghost" className="h-6 w-6 mr-1 shrink-0 hover:bg-destructive/10 hover:text-destructive" onClick={() => deletePersonalResponse(r.id)}>
+                                                <Trash2 className="h-3 w-3" />
+                                              </Button>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      ));
+                                    })()
+                                  )}
+                                  
+                                  {/* Add personal response inline */}
+                                  {addingPersonal ? (
+                                    <div className="p-3 space-y-2 border-t">
+                                      <Input className="text-xs h-7" placeholder="Category" value={newPersonalCategory} onChange={e => setNewPersonalCategory(e.target.value)} />
+                                      <Input className="text-xs h-7" placeholder="Title" value={newPersonalTitle} onChange={e => setNewPersonalTitle(e.target.value)} />
+                                      <Textarea className="text-xs min-h-[50px]" placeholder="Message body..." value={newPersonalBody} onChange={e => setNewPersonalBody(e.target.value)} />
+                                      <div className="flex gap-2">
+                                        <Button size="sm" className="text-xs h-7" onClick={addPersonalResponse}>Save</Button>
+                                        <Button size="sm" variant="ghost" className="text-xs h-7" onClick={() => setAddingPersonal(false)}>Cancel</Button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      onClick={() => setAddingPersonal(true)}
+                                      className="w-full px-3 py-2 text-xs text-primary hover:bg-muted/50 flex items-center gap-1 border-t"
+                                    >
+                                      <Plus className="h-3 w-3" /> Add personal response
+                                    </button>
+                                  )}
+                                </TabsContent>
+                              )}
+                            </div>
+                          </Tabs>
+                        </PopoverContent>
+                      </Popover>
                       <Input
                         value={chatMessage}
                         onChange={(e) => setChatMessage(e.target.value)}
