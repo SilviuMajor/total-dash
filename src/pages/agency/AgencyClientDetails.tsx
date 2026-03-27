@@ -6,14 +6,17 @@ import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Eye } from "lucide-react";
+import { ArrowLeft, EyeOff } from "lucide-react";
 import { ClientOverview } from "@/components/client-management/ClientOverview";
-import { ClientUsersManagement } from "@/components/client-management/ClientUsersManagement";
 import { ClientAgentAssignments } from "@/components/client-management/ClientAgentAssignments";
 import { ClientSettings } from "@/components/client-management/ClientSettings";
 import { DepartmentManagement } from "@/components/client-management/DepartmentManagement";
 import { ClientGuidesEditor } from "@/components/client-management/ClientGuidesEditor";
+import { ClientUsersManagement } from "@/components/client-management/ClientUsersManagement";
+import { DefaultPermissionsCard } from "@/components/client-management/DefaultPermissionsCard";
+import { CannedResponsesSettings } from "@/components/settings/CannedResponsesSettings";
 
 interface ClientData {
   id: string;
@@ -31,6 +34,181 @@ interface ClientData {
   agency_id: string;
 }
 
+function CompanySettingsPanel({ clientId }: { clientId: string }) {
+  const { toast } = useToast();
+  const [activeSubTab, setActiveSubTab] = useState("departments");
+  const [capabilities, setCapabilities] = useState<Record<string, any>>({});
+  const [masterEnabled, setMasterEnabled] = useState(true);
+
+  useEffect(() => {
+    loadCapabilities();
+  }, [clientId]);
+
+  const loadCapabilities = async () => {
+    const { data } = await supabase
+      .from('client_settings')
+      .select('admin_capabilities')
+      .eq('client_id', clientId)
+      .single();
+    if (data?.admin_capabilities) {
+      const caps = data.admin_capabilities as Record<string, any>;
+      setCapabilities(caps);
+      setMasterEnabled(caps.settings_page_enabled !== false);
+    }
+  };
+
+  const updateCapability = async (key: string, value: boolean) => {
+    const newCaps = { ...capabilities, [key]: value };
+    setCapabilities(newCaps);
+    if (key === 'settings_page_enabled') setMasterEnabled(value);
+    const { error } = await supabase
+      .from('client_settings')
+      .upsert({ client_id: clientId, admin_capabilities: newCaps }, { onConflict: 'client_id' });
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  };
+
+  const isTabEnabled = (key: string) => capabilities[key] !== false;
+
+  const subTabs = [
+    { id: "departments", label: "Departments", capKey: "client_departments_enabled" },
+    { id: "team", label: "Team", capKey: "client_team_enabled" },
+    { id: "permissions", label: "Permissions", capKey: "client_permissions_enabled" },
+    { id: "canned-responses", label: "Canned Responses", capKey: "client_canned_responses_enabled" },
+    { id: "general", label: "General", capKey: "client_general_enabled" },
+  ];
+
+  return (
+    <div className="space-y-6">
+      {/* Master toggle */}
+      <Card className="p-4 bg-card border-border/50">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 rounded-md bg-primary/10 flex items-center justify-center">
+              <Switch checked={masterEnabled} onCheckedChange={(v) => updateCapability('settings_page_enabled', v)} className="scale-75" />
+            </div>
+            <div>
+              <p className="text-sm font-medium">Company Settings Page Visibility</p>
+              <p className="text-xs text-muted-foreground">Show or hide the entire Company Settings page for this client</p>
+            </div>
+          </div>
+          <Switch checked={masterEnabled} onCheckedChange={(v) => updateCapability('settings_page_enabled', v)} />
+        </div>
+      </Card>
+
+      {/* Sub-tabs mirroring client view */}
+      <Tabs value={activeSubTab} onValueChange={setActiveSubTab} className="space-y-4">
+        <TabsList>
+          {subTabs.map(tab => (
+            <TabsTrigger key={tab.id} value={tab.id} className="relative">
+              {tab.label}
+              {!isTabEnabled(tab.capKey) && (
+                <EyeOff className="h-3 w-3 ml-1 text-muted-foreground" />
+              )}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+
+        <TabsContent value="departments">
+          <Card className="p-4 bg-card border-border/50 mb-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-2 w-2 rounded-full" style={{ backgroundColor: isTabEnabled("client_departments_enabled") ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))' }} />
+                <div>
+                  <Label className="text-sm font-medium">Visible to Client</Label>
+                  <p className="text-xs text-muted-foreground">Allow clients to view and manage departments</p>
+                </div>
+              </div>
+              <Switch
+                checked={isTabEnabled("client_departments_enabled")}
+                onCheckedChange={(v) => updateCapability("client_departments_enabled", v)}
+              />
+            </div>
+          </Card>
+          <DepartmentManagement clientId={clientId} />
+        </TabsContent>
+
+        <TabsContent value="team">
+          <Card className="p-4 bg-card border-border/50 mb-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-2 w-2 rounded-full" style={{ backgroundColor: isTabEnabled("client_team_enabled") ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))' }} />
+                <div>
+                  <Label className="text-sm font-medium">Visible to Client</Label>
+                  <p className="text-xs text-muted-foreground">Allow clients to view and manage team members</p>
+                </div>
+              </div>
+              <Switch
+                checked={isTabEnabled("client_team_enabled")}
+                onCheckedChange={(v) => updateCapability("client_team_enabled", v)}
+              />
+            </div>
+          </Card>
+          <ClientUsersManagement clientId={clientId} />
+        </TabsContent>
+
+        <TabsContent value="permissions">
+          <Card className="p-4 bg-card border-border/50 mb-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-2 w-2 rounded-full" style={{ backgroundColor: isTabEnabled("client_permissions_enabled") ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))' }} />
+                <div>
+                  <Label className="text-sm font-medium">Visible to Client</Label>
+                  <p className="text-xs text-muted-foreground">Allow clients to view and manage permissions</p>
+                </div>
+              </div>
+              <Switch
+                checked={isTabEnabled("client_permissions_enabled")}
+                onCheckedChange={(v) => updateCapability("client_permissions_enabled", v)}
+              />
+            </div>
+          </Card>
+          <DefaultPermissionsCard clientId={clientId} />
+        </TabsContent>
+
+        <TabsContent value="canned-responses">
+          <Card className="p-4 bg-card border-border/50 mb-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-2 w-2 rounded-full" style={{ backgroundColor: isTabEnabled("client_canned_responses_enabled") ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))' }} />
+                <div>
+                  <Label className="text-sm font-medium">Visible to Client</Label>
+                  <p className="text-xs text-muted-foreground">Allow clients to view and manage canned responses</p>
+                </div>
+              </div>
+              <Switch
+                checked={isTabEnabled("client_canned_responses_enabled")}
+                onCheckedChange={(v) => updateCapability("client_canned_responses_enabled", v)}
+              />
+            </div>
+          </Card>
+          <CannedResponsesSettings />
+        </TabsContent>
+
+        <TabsContent value="general">
+          <Card className="p-4 bg-card border-border/50 mb-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-2 w-2 rounded-full" style={{ backgroundColor: isTabEnabled("client_general_enabled") ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))' }} />
+                <div>
+                  <Label className="text-sm font-medium">Visible to Client</Label>
+                  <p className="text-xs text-muted-foreground">Allow clients to view company information</p>
+                </div>
+              </div>
+              <Switch
+                checked={isTabEnabled("client_general_enabled")}
+                onCheckedChange={(v) => updateCapability("client_general_enabled", v)}
+              />
+            </div>
+          </Card>
+          <ClientSettings client={{ id: clientId } as any} onUpdate={() => {}} />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
 export default function AgencyClientDetails() {
   const { clientId, tab } = useParams();
   const navigate = useNavigate();
@@ -38,13 +216,6 @@ export default function AgencyClientDetails() {
   const { profile, isPreviewMode, previewAgency } = useMultiTenantAuth();
   const [client, setClient] = useState<ClientData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [settingsPageEnabled, setSettingsPageEnabled] = useState(false);
-  const [existingCapabilities, setExistingCapabilities] = useState<Record<string, any>>({});
-  const [deptEnabled, setDeptEnabled] = useState(true);
-  const [teamEnabled, setTeamEnabled] = useState(true);
-  const [permissionsEnabled, setPermissionsEnabled] = useState(true);
-  const [cannedEnabled, setCannedEnabled] = useState(true);
-  const [generalEnabled, setGeneralEnabled] = useState(true);
   const activeTab = tab || "overview";
 
   const agencyId = isPreviewMode ? previewAgency?.id : profile?.agency?.id;
@@ -54,12 +225,6 @@ export default function AgencyClientDetails() {
       loadClientData();
     }
   }, [clientId, agencyId]);
-
-  useEffect(() => {
-    if (client?.id) {
-      loadClientSettings();
-    }
-  }, [client?.id]);
 
   const loadClientData = async () => {
     try {
@@ -88,53 +253,6 @@ export default function AgencyClientDetails() {
       setLoading(false);
     }
   };
-
-  const loadClientSettings = async () => {
-    const { data } = await supabase
-      .from('client_settings')
-      .select('admin_capabilities')
-      .eq('client_id', client!.id)
-      .single();
-    if (data?.admin_capabilities) {
-      const caps = data.admin_capabilities as Record<string, any>;
-      setExistingCapabilities(caps);
-      setSettingsPageEnabled(caps.settings_page_enabled === true);
-      setDeptEnabled(caps.client_departments_enabled !== false);
-      setTeamEnabled(caps.client_team_enabled !== false);
-      setPermissionsEnabled(caps.client_permissions_enabled !== false);
-      setCannedEnabled(caps.client_canned_responses_enabled !== false);
-      setGeneralEnabled(caps.client_general_enabled !== false);
-    }
-  };
-
-  const updateCapability = async (key: string, value: boolean, setter: (v: boolean) => void) => {
-    setter(value);
-    const newCaps = { ...existingCapabilities, [key]: value };
-    setExistingCapabilities(newCaps);
-    const { error } = await supabase
-      .from('client_settings')
-      .upsert({ client_id: client!.id, admin_capabilities: newCaps }, { onConflict: 'client_id' });
-    if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    }
-  };
-
-  const handleToggleSettingsPage = async (value: boolean) => {
-    setSettingsPageEnabled(value);
-    const newCaps = { ...existingCapabilities, settings_page_enabled: value };
-    setExistingCapabilities(newCaps);
-    const { error } = await supabase
-      .from('client_settings')
-      .upsert({ client_id: client!.id, admin_capabilities: newCaps }, { onConflict: 'client_id' });
-    if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: "Saved", description: `Settings page ${value ? "enabled" : "disabled"} for clients` });
-    }
-  };
-
-
-
 
   const handleTabChange = (value: string) => {
     navigate(`/agency/clients/${clientId}/${value}`);
@@ -172,100 +290,25 @@ export default function AgencyClientDetails() {
       <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
         <TabsList className="bg-muted">
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="agents">Agents</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
           <TabsTrigger value="guides">Guides</TabsTrigger>
-          <TabsTrigger value="settings">Settings</TabsTrigger>
+          <TabsTrigger value="company-settings">Company Settings</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview">
           <ClientOverview client={client} onUpdate={loadClientData} />
         </TabsContent>
 
-        <TabsContent value="users">
-          <ClientUsersManagement clientId={client.id} />
-        </TabsContent>
-
         <TabsContent value="agents">
           <ClientAgentAssignments clientId={client.id} />
-        </TabsContent>
-
-        <TabsContent value="analytics">
-          <Card className="p-6 bg-gradient-card border-border/50">
-            <div className="space-y-4">
-              <div>
-                <h3 className="text-lg font-semibold text-foreground mb-2">Client Analytics</h3>
-                <p className="text-muted-foreground">
-                  View detailed analytics for this client's agents
-                </p>
-              </div>
-              <Button
-                onClick={() => {
-                  const targetAgencyId = agencyId || profile?.agency?.id;
-                  window.open(`/analytics?preview=true&clientId=${client.id}&agencyId=${targetAgencyId}`, '_blank');
-                }}
-                className="bg-foreground text-background hover:bg-foreground/90"
-              >
-                <Eye className="mr-2 h-4 w-4" />
-                Open Analytics Dashboard
-              </Button>
-            </div>
-          </Card>
         </TabsContent>
 
         <TabsContent value="guides">
           <ClientGuidesEditor clientId={client.id} />
         </TabsContent>
 
-        <TabsContent value="settings">
-          <div className="space-y-6">
-            <Card className="p-4 bg-card border-border/50">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">Enable Company Settings for Clients</p>
-                  <p className="text-xs text-muted-foreground">Master toggle — show/hide the Company Settings page for this client</p>
-                </div>
-                <Switch checked={settingsPageEnabled} onCheckedChange={handleToggleSettingsPage} />
-              </div>
-            </Card>
-
-            {settingsPageEnabled && (
-              <Card className="p-4 bg-card border-border/50">
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-sm font-medium">Tab Visibility</p>
-                    <p className="text-xs text-muted-foreground">Control which tabs the client can see in their Company Settings page</p>
-                  </div>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm">Departments</p>
-                      <Switch checked={deptEnabled} onCheckedChange={(v) => updateCapability('client_departments_enabled', v, setDeptEnabled)} />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm">Team</p>
-                      <Switch checked={teamEnabled} onCheckedChange={(v) => updateCapability('client_team_enabled', v, setTeamEnabled)} />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm">Permissions</p>
-                      <Switch checked={permissionsEnabled} onCheckedChange={(v) => updateCapability('client_permissions_enabled', v, setPermissionsEnabled)} />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm">Canned Responses</p>
-                      <Switch checked={cannedEnabled} onCheckedChange={(v) => updateCapability('client_canned_responses_enabled', v, setCannedEnabled)} />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm">General</p>
-                      <Switch checked={generalEnabled} onCheckedChange={(v) => updateCapability('client_general_enabled', v, setGeneralEnabled)} />
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            )}
-
-            <ClientSettings client={client} onUpdate={loadClientData} />
-            <DepartmentManagement clientId={client.id} />
-          </div>
+        <TabsContent value="company-settings">
+          <CompanySettingsPanel clientId={client.id} />
         </TabsContent>
       </Tabs>
     </div>
