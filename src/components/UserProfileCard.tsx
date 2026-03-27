@@ -28,7 +28,7 @@ interface UserProfileCardProps {
 type MenuView = 'main' | 'account' | 'edit-name' | 'change-email' | 'change-password' | 'notifications';
 
 export function UserProfileCard({ onSignOut }: UserProfileCardProps) {
-  const { profile, userType } = useMultiTenantAuth();
+  const { profile, userType, isClientPreviewMode, previewDepth } = useMultiTenantAuth();
   const { effectiveTheme, setTheme, isLoading: themeLoading } = useTheme();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
