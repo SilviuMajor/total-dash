@@ -462,7 +462,30 @@ export default function Conversations() {
     return () => { channel.unsubscribe(); };
   }, [selectedAgentId]);
 
-  // Load departments for transfer modal
+  // Play sound for NEW pending handover sessions across all conversations
+  useEffect(() => {
+    const pendingChannel = supabase
+      .channel('new-handover-requests')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'handover_sessions',
+          filter: 'status=eq.pending'
+        },
+        () => {
+          const prefs = getSoundPreferences();
+          if (prefs.handoverRequestEnabled) {
+            playHandoverRequestSound(prefs.handoverRequestVolume);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => { pendingChannel.unsubscribe(); };
+  }, []);
+
   useEffect(() => {
     const loadDepts = async () => {
       const effectiveClientId = clientId || (isClientPreviewMode && previewClient?.id ? previewClient.id : null);
