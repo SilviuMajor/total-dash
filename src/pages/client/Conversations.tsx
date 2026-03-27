@@ -139,6 +139,12 @@ export default function Conversations() {
   const [newPersonalBody, setNewPersonalBody] = useState("");
   const [newPersonalCategory, setNewPersonalCategory] = useState("General");
 
+  // AI enhance state
+  const [aiEnhanceOpen, setAiEnhanceOpen] = useState(false);
+  const [aiEnhancing, setAiEnhancing] = useState(false);
+  const [aiEnhancedText, setAiEnhancedText] = useState("");
+  const [aiEnhanceMode, setAiEnhanceMode] = useState<string | null>(null);
+
 
   const {
     data: conversationsData,
