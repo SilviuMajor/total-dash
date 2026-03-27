@@ -327,11 +327,10 @@ export function UserProfileCard({ onSignOut }: UserProfileCardProps) {
             <Button
               variant="ghost"
               className="w-full justify-start gap-2 h-auto py-2"
-              disabled
+              onClick={() => setMenuView('notifications')}
             >
-              <Bell className="h-4 w-4" />
-              <span className="flex-1 text-left">Notifications</span>
-              <Badge variant="outline" className="text-xs">Coming Soon</Badge>
+              <Volume2 className="h-4 w-4" />
+              <span>Notifications</span>
             </Button>
             <Separator />
             <Button
