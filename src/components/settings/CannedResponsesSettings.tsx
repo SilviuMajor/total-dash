@@ -26,7 +26,7 @@ interface CannedResponse {
 
 export function CannedResponsesSettings() {
   const { toast } = useToast();
-  const { agents, selectedAgentId } = useClientAgentContext();
+  const { agents, selectedAgentId, clientId } = useClientAgentContext();
   const selectedAgent = agents.find(a => a.id === selectedAgentId);
 
   const [responses, setResponses] = useState<CannedResponse[]>([]);
