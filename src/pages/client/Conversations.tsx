@@ -692,6 +692,44 @@ export default function Conversations() {
     }
   };
 
+  const insertCannedResponse = (body: string) => {
+    const agentName = profile?.full_name || (profile as any)?.first_name || 'Agent';
+    const deptName = activeSession?.departments?.name || pendingSession?.departments?.name || 'Support';
+    
+    const resolved = body
+      .replace(/\{\{agent_name\}\}/g, agentName)
+      .replace(/\{\{department\}\}/g, deptName);
+    
+    setChatMessage(resolved);
+    setShowCannedDropdown(false);
+  };
+
+  const addPersonalResponse = async () => {
+    if (!newPersonalTitle.trim() || !newPersonalBody.trim() || !user?.id) return;
+    await supabase.from("canned_responses").insert({
+      user_id: user.id,
+      category: newPersonalCategory.trim() || "General",
+      title: newPersonalTitle.trim(),
+      body: newPersonalBody.trim(),
+      sort_order: personalResponses.length,
+    });
+    setNewPersonalTitle(""); setNewPersonalBody(""); setNewPersonalCategory("General");
+    setAddingPersonal(false);
+    const { data } = await supabase
+      .from("canned_responses")
+      .select("*")
+      .eq("user_id", user.id)
+      .is("agent_id", null)
+      .order("category")
+      .order("sort_order");
+    setPersonalResponses(data || []);
+  };
+
+  const deletePersonalResponse = async (id: string) => {
+    await supabase.from("canned_responses").delete().eq("id", id);
+    setPersonalResponses(prev => prev.filter(r => r.id !== id));
+  };
+
   const handleSendChatMessage = async () => {
     if (!chatMessage.trim() || sendingMessage) return;
     const messageText = chatMessage.trim();
