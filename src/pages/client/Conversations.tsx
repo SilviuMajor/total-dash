@@ -146,6 +146,11 @@ export default function Conversations() {
   const [aiEnhancedText, setAiEnhancedText] = useState("");
   const [aiEnhanceMode, setAiEnhanceMode] = useState<string | null>(null);
 
+  const selectedConversationRef = useRef(selectedConversation);
+
+  useEffect(() => {
+    selectedConversationRef.current = selectedConversation;
+  }, [selectedConversation]);
 
   const {
     data: conversationsData,
