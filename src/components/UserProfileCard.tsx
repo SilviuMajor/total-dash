@@ -520,28 +520,48 @@ export function UserProfileCard({ onSignOut }: UserProfileCardProps) {
             {/* Handover request sound */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-sm">New handover request</span>
+                <span className="text-sm">Handover requests</span>
                 <Switch
                   checked={soundPrefs.handoverRequestEnabled}
                   onCheckedChange={(v) => updateSoundPref('handoverRequestEnabled', v)}
                 />
               </div>
               {soundPrefs.handoverRequestEnabled && (
-                <div className="flex items-center gap-2">
-                  <Volume2 className="h-3.5 w-3.5 text-muted-foreground" />
-                  <Slider
-                    value={[soundPrefs.handoverRequestVolume * 100]}
-                    onValueChange={(v) => updateSoundPref('handoverRequestVolume', v[0] / 100)}
-                    max={100}
-                    step={5}
-                    className="flex-1"
-                  />
-                  <button
-                    onClick={() => playTestSound("handover", soundPrefs.handoverRequestVolume)}
-                    className="text-xs text-primary hover:underline shrink-0"
-                  >
-                    Test
-                  </button>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Select
+                      value={soundPrefs.handoverRequestSound}
+                      onValueChange={(v) => {
+                        updateSoundPref('handoverRequestSound', v);
+                        playTestSound("handover", soundPrefs.handoverRequestVolume, v);
+                      }}
+                    >
+                      <SelectTrigger className="h-8 text-xs flex-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {HANDOVER_SOUNDS.map(s => (
+                          <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <button
+                      onClick={() => playTestSound("handover", soundPrefs.handoverRequestVolume)}
+                      className="text-xs text-primary hover:underline shrink-0"
+                    >
+                      Test
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Volume2 className="h-3.5 w-3.5 text-muted-foreground" />
+                    <Slider
+                      value={[soundPrefs.handoverRequestVolume * 100]}
+                      onValueChange={(v) => updateSoundPref('handoverRequestVolume', v[0] / 100)}
+                      max={100}
+                      step={5}
+                      className="flex-1"
+                    />
+                  </div>
                 </div>
               )}
             </div>
@@ -549,30 +569,87 @@ export function UserProfileCard({ onSignOut }: UserProfileCardProps) {
             {/* New message sound */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-sm">New customer message</span>
+                <span className="text-sm">Customer messages</span>
                 <Switch
                   checked={soundPrefs.newMessageEnabled}
                   onCheckedChange={(v) => updateSoundPref('newMessageEnabled', v)}
                 />
               </div>
               {soundPrefs.newMessageEnabled && (
-                <div className="flex items-center gap-2">
-                  <Volume2 className="h-3.5 w-3.5 text-muted-foreground" />
-                  <Slider
-                    value={[soundPrefs.newMessageVolume * 100]}
-                    onValueChange={(v) => updateSoundPref('newMessageVolume', v[0] / 100)}
-                    max={100}
-                    step={5}
-                    className="flex-1"
-                  />
-                  <button
-                    onClick={() => playTestSound("message", soundPrefs.newMessageVolume)}
-                    className="text-xs text-primary hover:underline shrink-0"
-                  >
-                    Test
-                  </button>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Select
+                      value={soundPrefs.newMessageSound}
+                      onValueChange={(v) => {
+                        updateSoundPref('newMessageSound', v);
+                        playTestSound("message", soundPrefs.newMessageVolume, v);
+                      }}
+                    >
+                      <SelectTrigger className="h-8 text-xs flex-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {MESSAGE_SOUNDS.map(s => (
+                          <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <button
+                      onClick={() => playTestSound("message", soundPrefs.newMessageVolume)}
+                      className="text-xs text-primary hover:underline shrink-0"
+                    >
+                      Test
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Volume2 className="h-3.5 w-3.5 text-muted-foreground" />
+                    <Slider
+                      value={[soundPrefs.newMessageVolume * 100]}
+                      onValueChange={(v) => updateSoundPref('newMessageVolume', v[0] / 100)}
+                      max={100}
+                      step={5}
+                      className="flex-1"
+                    />
+                  </div>
                 </div>
               )}
+            </div>
+
+            <Separator />
+
+            {/* Department filter */}
+            <div className="flex items-center justify-between">
+              <div className="flex-1 min-w-0">
+                <span className="text-sm">My departments only</span>
+                <p className="text-xs text-muted-foreground">Only notify for your assigned departments</p>
+              </div>
+              <Switch
+                checked={soundPrefs.myDepartmentsOnly}
+                onCheckedChange={(v) => updateSoundPref('myDepartmentsOnly', v)}
+              />
+            </div>
+
+            <Separator />
+
+            {/* Browser notifications */}
+            <div className="flex items-center justify-between">
+              <div className="flex-1 min-w-0">
+                <span className="text-sm">Browser notifications</span>
+                <p className="text-xs text-muted-foreground">Show alerts when tab is not focused</p>
+              </div>
+              <Switch
+                checked={soundPrefs.browserNotifications}
+                onCheckedChange={async (v) => {
+                  if (v) {
+                    const granted = await requestNotificationPermission();
+                    if (!granted) {
+                      toast({ title: "Permission denied", description: "Please allow notifications in your browser settings", variant: "destructive" });
+                      return;
+                    }
+                  }
+                  updateSoundPref('browserNotifications', v);
+                }}
+              />
             </div>
           </div>
         )}
