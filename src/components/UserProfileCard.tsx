@@ -503,6 +503,79 @@ export function UserProfileCard({ onSignOut }: UserProfileCardProps) {
             </Button>
           </div>
         )}
+
+        {/* Notifications View */}
+        {menuView === 'notifications' && (
+          <div className="p-4 space-y-4">
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-2 h-auto py-2 -mt-2 mb-2"
+              onClick={() => setMenuView('main')}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              <span>Back</span>
+            </Button>
+            <p className="text-sm font-medium">Notification Sounds</p>
+
+            {/* Handover request sound */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm">New handover request</span>
+                <Switch
+                  checked={soundPrefs.handoverRequestEnabled}
+                  onCheckedChange={(v) => updateSoundPref('handoverRequestEnabled', v)}
+                />
+              </div>
+              {soundPrefs.handoverRequestEnabled && (
+                <div className="flex items-center gap-2">
+                  <Volume2 className="h-3.5 w-3.5 text-muted-foreground" />
+                  <Slider
+                    value={[soundPrefs.handoverRequestVolume * 100]}
+                    onValueChange={(v) => updateSoundPref('handoverRequestVolume', v[0] / 100)}
+                    max={100}
+                    step={5}
+                    className="flex-1"
+                  />
+                  <button
+                    onClick={() => playTestSound("handover", soundPrefs.handoverRequestVolume)}
+                    className="text-xs text-primary hover:underline shrink-0"
+                  >
+                    Test
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* New message sound */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm">New customer message</span>
+                <Switch
+                  checked={soundPrefs.newMessageEnabled}
+                  onCheckedChange={(v) => updateSoundPref('newMessageEnabled', v)}
+                />
+              </div>
+              {soundPrefs.newMessageEnabled && (
+                <div className="flex items-center gap-2">
+                  <Volume2 className="h-3.5 w-3.5 text-muted-foreground" />
+                  <Slider
+                    value={[soundPrefs.newMessageVolume * 100]}
+                    onValueChange={(v) => updateSoundPref('newMessageVolume', v[0] / 100)}
+                    max={100}
+                    step={5}
+                    className="flex-1"
+                  />
+                  <button
+                    onClick={() => playTestSound("message", soundPrefs.newMessageVolume)}
+                    className="text-xs text-primary hover:underline shrink-0"
+                  >
+                    Test
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </PopoverContent>
     </Popover>
   );
