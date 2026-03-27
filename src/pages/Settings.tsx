@@ -8,7 +8,7 @@ import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
 import { useClientAgentContext } from "@/hooks/useClientAgentContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CannedResponsesSettings } from "@/components/settings/CannedResponsesSettings";
+
 
 export default function Settings() {
   const { user } = useAuth();
