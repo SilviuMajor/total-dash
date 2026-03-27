@@ -43,6 +43,7 @@ import {
 } from "@/hooks/queries/useConversationMutations";
 import { useAuth } from "@/hooks/useAuth";
 import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
+import { getSoundPreferences, playHandoverRequestSound, playNewMessageSound } from "@/lib/notificationSounds";
 
 interface Conversation {
   id: string;
@@ -329,6 +330,20 @@ export default function Conversations() {
             if (prev.some(t => t.id === newTranscript.id)) return prev;
             return [...prev, newTranscript];
           });
+          // Play sound for handover request
+          if (newTranscript.metadata && (newTranscript.metadata as any).type === 'handover_requested') {
+            const prefs = getSoundPreferences();
+            if (prefs.handoverRequestEnabled) {
+              playHandoverRequestSound(prefs.handoverRequestVolume);
+            }
+          }
+          // Play sound for new customer message during handover
+          if (newTranscript.speaker === 'user' && selectedConversation?.status === 'in_handover') {
+            const prefs = getSoundPreferences();
+            if (prefs.newMessageEnabled) {
+              playNewMessageSound(prefs.newMessageVolume);
+            }
+          }
           // Auto-scroll after React re-renders the new message
           setTimeout(() => {
             if (transcriptScrollRef.current) {
@@ -447,7 +462,30 @@ export default function Conversations() {
     return () => { channel.unsubscribe(); };
   }, [selectedAgentId]);
 
-  // Load departments for transfer modal
+  // Play sound for NEW pending handover sessions across all conversations
+  useEffect(() => {
+    const pendingChannel = supabase
+      .channel('new-handover-requests')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'handover_sessions',
+          filter: 'status=eq.pending'
+        },
+        () => {
+          const prefs = getSoundPreferences();
+          if (prefs.handoverRequestEnabled) {
+            playHandoverRequestSound(prefs.handoverRequestVolume);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => { pendingChannel.unsubscribe(); };
+  }, []);
+
   useEffect(() => {
     const loadDepts = async () => {
       const effectiveClientId = clientId || (isClientPreviewMode && previewClient?.id ? previewClient.id : null);

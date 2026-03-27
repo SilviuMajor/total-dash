@@ -8,7 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronDown, ChevronLeft, User, Mail, Lock, Bell, Sun, Moon } from "lucide-react";
+import { ChevronDown, ChevronLeft, User, Mail, Lock, Volume2, Sun, Moon } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
+import { getSoundPreferences, saveSoundPreferences, playTestSound, SoundPreferences } from "@/lib/notificationSounds";
 import { Separator } from "@/components/ui/separator";
 
 interface Department {
@@ -21,7 +24,7 @@ interface UserProfileCardProps {
   onSignOut: () => void;
 }
 
-type MenuView = 'main' | 'account' | 'edit-name' | 'change-email' | 'change-password';
+type MenuView = 'main' | 'account' | 'edit-name' | 'change-email' | 'change-password' | 'notifications';
 
 export function UserProfileCard({ onSignOut }: UserProfileCardProps) {
   const { profile, userType } = useMultiTenantAuth();
@@ -29,6 +32,13 @@ export function UserProfileCard({ onSignOut }: UserProfileCardProps) {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [menuView, setMenuView] = useState<MenuView>('main');
+  const [soundPrefs, setSoundPrefs] = useState<SoundPreferences>(getSoundPreferences());
+
+  const updateSoundPref = (key: keyof SoundPreferences, value: any) => {
+    const updated = { ...soundPrefs, [key]: value };
+    setSoundPrefs(updated);
+    saveSoundPreferences(updated);
+  };
   
   // Profile fields
   const [firstName, setFirstName] = useState("");
@@ -317,11 +327,10 @@ export function UserProfileCard({ onSignOut }: UserProfileCardProps) {
             <Button
               variant="ghost"
               className="w-full justify-start gap-2 h-auto py-2"
-              disabled
+              onClick={() => setMenuView('notifications')}
             >
-              <Bell className="h-4 w-4" />
-              <span className="flex-1 text-left">Notifications</span>
-              <Badge variant="outline" className="text-xs">Coming Soon</Badge>
+              <Volume2 className="h-4 w-4" />
+              <span>Notifications</span>
             </Button>
             <Separator />
             <Button
@@ -492,6 +501,79 @@ export function UserProfileCard({ onSignOut }: UserProfileCardProps) {
             <Button onClick={handleChangePassword} className="w-full">
               Change Password
             </Button>
+          </div>
+        )}
+
+        {/* Notifications View */}
+        {menuView === 'notifications' && (
+          <div className="p-4 space-y-4">
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-2 h-auto py-2 -mt-2 mb-2"
+              onClick={() => setMenuView('main')}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              <span>Back</span>
+            </Button>
+            <p className="text-sm font-medium">Notification Sounds</p>
+
+            {/* Handover request sound */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm">New handover request</span>
+                <Switch
+                  checked={soundPrefs.handoverRequestEnabled}
+                  onCheckedChange={(v) => updateSoundPref('handoverRequestEnabled', v)}
+                />
+              </div>
+              {soundPrefs.handoverRequestEnabled && (
+                <div className="flex items-center gap-2">
+                  <Volume2 className="h-3.5 w-3.5 text-muted-foreground" />
+                  <Slider
+                    value={[soundPrefs.handoverRequestVolume * 100]}
+                    onValueChange={(v) => updateSoundPref('handoverRequestVolume', v[0] / 100)}
+                    max={100}
+                    step={5}
+                    className="flex-1"
+                  />
+                  <button
+                    onClick={() => playTestSound("handover", soundPrefs.handoverRequestVolume)}
+                    className="text-xs text-primary hover:underline shrink-0"
+                  >
+                    Test
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* New message sound */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm">New customer message</span>
+                <Switch
+                  checked={soundPrefs.newMessageEnabled}
+                  onCheckedChange={(v) => updateSoundPref('newMessageEnabled', v)}
+                />
+              </div>
+              {soundPrefs.newMessageEnabled && (
+                <div className="flex items-center gap-2">
+                  <Volume2 className="h-3.5 w-3.5 text-muted-foreground" />
+                  <Slider
+                    value={[soundPrefs.newMessageVolume * 100]}
+                    onValueChange={(v) => updateSoundPref('newMessageVolume', v[0] / 100)}
+                    max={100}
+                    step={5}
+                    className="flex-1"
+                  />
+                  <button
+                    onClick={() => playTestSound("message", soundPrefs.newMessageVolume)}
+                    className="text-xs text-primary hover:underline shrink-0"
+                  >
+                    Test
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </PopoverContent>
