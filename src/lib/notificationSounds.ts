@@ -171,7 +171,7 @@ export function getSoundPreferences(): SoundPreferences {
       return {
         handoverRequestEnabled: parsed.handoverRequestEnabled !== false,
         handoverRequestVolume: parsed.handoverRequestVolume ?? 0.5,
-        handoverRequestSound: parsed.handoverRequestSound || "chime",
+        handoverRequestSound: parsed.handoverRequestSound || "triple-beep",
         newMessageEnabled: parsed.newMessageEnabled !== false,
         newMessageVolume: parsed.newMessageVolume ?? 0.3,
         newMessageSound: parsed.newMessageSound || "pop",
