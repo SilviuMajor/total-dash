@@ -26,7 +26,7 @@ interface CannedResponse {
 
 export function CannedResponsesSettings() {
   const { toast } = useToast();
-  const { agents, selectedAgentId } = useClientAgentContext();
+  const { agents, selectedAgentId, clientId } = useClientAgentContext();
   const selectedAgent = agents.find(a => a.id === selectedAgentId);
 
   const [responses, setResponses] = useState<CannedResponse[]>([]);
@@ -46,8 +46,13 @@ export function CannedResponsesSettings() {
   const [editCategory, setEditCategory] = useState("");
 
   useEffect(() => {
-    if (selectedAgentId) {
+    if (clientId) {
       loadResponses();
+    }
+  }, [clientId]);
+
+  useEffect(() => {
+    if (selectedAgentId) {
       loadSettings();
     }
   }, [selectedAgentId]);
@@ -59,11 +64,12 @@ export function CannedResponsesSettings() {
   };
 
   const loadResponses = async () => {
+    if (!clientId) return;
     setLoading(true);
     const { data, error } = await supabase
       .from("canned_responses")
       .select("*")
-      .eq("agent_id", selectedAgentId!)
+      .eq("client_id", clientId)
       .order("category")
       .order("sort_order");
     if (!error) setResponses(data || []);
@@ -83,9 +89,9 @@ export function CannedResponsesSettings() {
   };
 
   const addResponse = async () => {
-    if (!newTitle.trim() || !newBody.trim() || !selectedAgentId) return;
+    if (!newTitle.trim() || !newBody.trim() || !clientId) return;
     const { error } = await supabase.from("canned_responses").insert({
-      agent_id: selectedAgentId,
+      client_id: clientId,
       category: newCategory.trim() || "General",
       title: newTitle.trim(),
       body: newBody.trim(),
@@ -133,7 +139,7 @@ export function CannedResponsesSettings() {
   const categories = [...new Set(responses.map(r => r.category))].sort();
   const existingCategories = categories.length > 0 ? categories : ["General"];
 
-  if (!selectedAgentId) return <div className="text-sm text-muted-foreground">Select an agent first.</div>;
+  if (!clientId) return <div className="text-sm text-muted-foreground">No client context available.</div>;
 
   return (
     <div className="space-y-6">
