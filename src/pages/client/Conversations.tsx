@@ -190,13 +190,13 @@ export default function Conversations() {
   // Load canned responses when agent changes
   useEffect(() => {
     const loadCanned = async () => {
-      if (!selectedAgentId) return;
+      if (!clientId) return;
       
       // Load org responses
       const { data: org } = await supabase
         .from("canned_responses")
         .select("*")
-        .eq("agent_id", selectedAgentId)
+        .eq("client_id", clientId)
         .order("category")
         .order("sort_order");
       setOrgResponses(org || []);

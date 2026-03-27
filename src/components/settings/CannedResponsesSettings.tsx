@@ -139,7 +139,7 @@ export function CannedResponsesSettings() {
   const categories = [...new Set(responses.map(r => r.category))].sort();
   const existingCategories = categories.length > 0 ? categories : ["General"];
 
-  if (!selectedAgentId) return <div className="text-sm text-muted-foreground">Select an agent first.</div>;
+  if (!clientId) return <div className="text-sm text-muted-foreground">No client context available.</div>;
 
   return (
     <div className="space-y-6">
