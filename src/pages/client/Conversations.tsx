@@ -736,7 +736,39 @@ export default function Conversations() {
     setPersonalResponses(prev => prev.filter(r => r.id !== id));
   };
 
-  const handleSendChatMessage = async () => {
+  const handleAiEnhance = async (mode: string) => {
+    if (!chatMessage.trim()) return;
+    setAiEnhancing(true);
+    setAiEnhanceMode(mode);
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-enhance', {
+        body: { message: chatMessage.trim(), mode },
+      });
+      if (error) throw error;
+      if (data?.enhanced) {
+        setAiEnhancedText(data.enhanced);
+      }
+    } catch (e) {
+      console.error('AI enhance error:', e);
+      toast({ title: "Error", description: "Failed to enhance message", variant: "destructive" });
+    } finally {
+      setAiEnhancing(false);
+    }
+  };
+
+  const acceptEnhanced = () => {
+    setChatMessage(aiEnhancedText);
+    setAiEnhancedText("");
+    setAiEnhanceMode(null);
+    setAiEnhanceOpen(false);
+  };
+
+  const dismissEnhanced = () => {
+    setAiEnhancedText("");
+    setAiEnhanceMode(null);
+  };
+
+
     if (!chatMessage.trim() || sendingMessage) return;
     const messageText = chatMessage.trim();
     setChatMessage("");
