@@ -89,9 +89,9 @@ export function CannedResponsesSettings() {
   };
 
   const addResponse = async () => {
-    if (!newTitle.trim() || !newBody.trim() || !selectedAgentId) return;
+    if (!newTitle.trim() || !newBody.trim() || !clientId) return;
     const { error } = await supabase.from("canned_responses").insert({
-      agent_id: selectedAgentId,
+      client_id: clientId,
       category: newCategory.trim() || "General",
       title: newTitle.trim(),
       body: newBody.trim(),
