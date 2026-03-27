@@ -126,8 +126,10 @@ export default function AgencyAgentDetails() {
           return <VoiceflowKnowledgeBase agent={agent} />;
         case "channels":
           return <VoiceflowChannels agent={agent} />;
-        case "settings":
-          return <VoiceflowClientSettings agent={agent} onUpdate={loadAgentDetails} />;
+        case "conversations":
+          return <VoiceflowConversationSettings agent={agent} onUpdate={loadAgentDetails} />;
+        case "handover":
+          return <VoiceflowHandoverSettings agent={agent} onUpdate={loadAgentDetails} />;
         case "config":
           return <VoiceflowSettings agent={agent} onUpdate={loadAgentDetails} />;
         default:
