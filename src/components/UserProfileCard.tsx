@@ -8,7 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronDown, ChevronLeft, User, Mail, Lock, Bell, Sun, Moon } from "lucide-react";
+import { ChevronDown, ChevronLeft, User, Mail, Lock, Volume2, Sun, Moon } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
+import { getSoundPreferences, saveSoundPreferences, playTestSound, SoundPreferences } from "@/lib/notificationSounds";
 import { Separator } from "@/components/ui/separator";
 
 interface Department {
