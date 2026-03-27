@@ -343,10 +343,13 @@ export default function Conversations() {
             }
           }
           // Play sound for new customer message during handover
-          if (newTranscript.speaker === 'user' && selectedConversation?.status === 'in_handover') {
+          if (newTranscript.speaker === 'user' && selectedConversationRef.current?.status === 'in_handover') {
             const prefs = getSoundPreferences();
             if (prefs.newMessageEnabled) {
               playNewMessageSound(prefs.newMessageVolume);
+            }
+            if (prefs.browserNotifications) {
+              sendBrowserNotification("New Message", "A customer sent a message during handover");
             }
           }
           // Auto-scroll after React re-renders the new message
