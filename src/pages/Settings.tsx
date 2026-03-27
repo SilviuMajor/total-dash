@@ -8,6 +8,7 @@ import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
 import { useClientAgentContext } from "@/hooks/useClientAgentContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CannedResponsesSettings } from "@/components/settings/CannedResponsesSettings";
 
 export default function Settings() {
   const { user } = useAuth();
@@ -65,6 +66,7 @@ export default function Settings() {
           <TabsTrigger value="departments">Departments</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="permissions">Permissions</TabsTrigger>
+          <TabsTrigger value="canned-responses">Canned Responses</TabsTrigger>
         </TabsList>
 
         <TabsContent value="departments" className="space-y-6">
@@ -77,6 +79,10 @@ export default function Settings() {
 
         <TabsContent value="permissions" className="space-y-6">
           <DefaultPermissionsCard clientId={clientId} />
+        </TabsContent>
+
+        <TabsContent value="canned-responses" className="space-y-6">
+          <CannedResponsesSettings />
         </TabsContent>
       </Tabs>
     </div>

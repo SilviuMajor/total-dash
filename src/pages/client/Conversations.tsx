@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ConversationsSkeleton } from "@/components/skeletons";
-import { Phone, Clock, CheckCircle, MessageSquare, ArrowDown, ArrowUpDown, X, Plus, Tag, Users, Building2, Send, UserCheck, PhoneOff, ArrowRightLeft, Lock, Loader2, AlertTriangle, Timer } from "lucide-react";
+import { Phone, Clock, CheckCircle, MessageSquare, ArrowDown, ArrowUpDown, X, Plus, Tag, Users, Building2, Send, UserCheck, PhoneOff, ArrowRightLeft, Lock, Loader2, AlertTriangle, Timer, MessageSquareText, Trash2, FolderOpen } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
@@ -126,7 +128,18 @@ export default function Conversations() {
   const [pendingConversationIds, setPendingConversationIds] = useState<Set<string>>(new Set());
   const [responseTick, setResponseTick] = useState(0);
 
-  // React Query hooks
+  // Canned responses state
+  const [showCannedDropdown, setShowCannedDropdown] = useState(false);
+  const [cannedTab, setCannedTab] = useState<'org' | 'personal'>('org');
+  const [orgResponses, setOrgResponses] = useState<any[]>([]);
+  const [personalResponses, setPersonalResponses] = useState<any[]>([]);
+  const [personalEnabled, setPersonalEnabled] = useState(true);
+  const [addingPersonal, setAddingPersonal] = useState(false);
+  const [newPersonalTitle, setNewPersonalTitle] = useState("");
+  const [newPersonalBody, setNewPersonalBody] = useState("");
+  const [newPersonalCategory, setNewPersonalCategory] = useState("General");
+
+
   const {
     data: conversationsData,
     isLoading,
@@ -162,7 +175,41 @@ export default function Conversations() {
     return () => clearInterval(interval);
   }, []);
 
-  // Auto-select conversation from ?conversationId query param
+  // Load canned responses when agent changes
+  useEffect(() => {
+    const loadCanned = async () => {
+      if (!selectedAgentId) return;
+      
+      // Load org responses
+      const { data: org } = await supabase
+        .from("canned_responses")
+        .select("*")
+        .eq("agent_id", selectedAgentId)
+        .order("category")
+        .order("sort_order");
+      setOrgResponses(org || []);
+      
+      // Load personal responses
+      if (user?.id) {
+        const { data: personal } = await supabase
+          .from("canned_responses")
+          .select("*")
+          .eq("user_id", user.id)
+          .is("agent_id", null)
+          .order("category")
+          .order("sort_order");
+        setPersonalResponses(personal || []);
+      }
+      
+      // Check if personal is enabled
+      const agent = agents.find(a => a.id === selectedAgentId);
+      const agentConfig = (agent as any)?.config;
+      setPersonalEnabled(agentConfig?.canned_responses_personal_enabled !== false);
+    };
+    loadCanned();
+  }, [selectedAgentId, user?.id]);
+
+
   useEffect(() => {
     const convId = searchParams.get('conversationId');
     if (!convId || conversations.length === 0) return;
@@ -643,6 +690,44 @@ export default function Conversations() {
     } finally {
       setHandoverLoading(null);
     }
+  };
+
+  const insertCannedResponse = (body: string) => {
+    const agentName = profile?.full_name || (profile as any)?.first_name || 'Agent';
+    const deptName = activeSession?.departments?.name || pendingSession?.departments?.name || 'Support';
+    
+    const resolved = body
+      .replace(/\{\{agent_name\}\}/g, agentName)
+      .replace(/\{\{department\}\}/g, deptName);
+    
+    setChatMessage(resolved);
+    setShowCannedDropdown(false);
+  };
+
+  const addPersonalResponse = async () => {
+    if (!newPersonalTitle.trim() || !newPersonalBody.trim() || !user?.id) return;
+    await supabase.from("canned_responses").insert({
+      user_id: user.id,
+      category: newPersonalCategory.trim() || "General",
+      title: newPersonalTitle.trim(),
+      body: newPersonalBody.trim(),
+      sort_order: personalResponses.length,
+    });
+    setNewPersonalTitle(""); setNewPersonalBody(""); setNewPersonalCategory("General");
+    setAddingPersonal(false);
+    const { data } = await supabase
+      .from("canned_responses")
+      .select("*")
+      .eq("user_id", user.id)
+      .is("agent_id", null)
+      .order("category")
+      .order("sort_order");
+    setPersonalResponses(data || []);
+  };
+
+  const deletePersonalResponse = async (id: string) => {
+    await supabase.from("canned_responses").delete().eq("id", id);
+    setPersonalResponses(prev => prev.filter(r => r.id !== id));
   };
 
   const handleSendChatMessage = async () => {
@@ -1232,6 +1317,105 @@ export default function Conversations() {
                 <div className="flex-shrink-0 border-t border-border bg-background p-3">
                   {selectedConversation.status === 'in_handover' && selectedConversation.owner_id === currentClientUserId ? (
                     <div className="flex items-center gap-2">
+                      {/* Canned responses button */}
+                      <Popover open={showCannedDropdown} onOpenChange={setShowCannedDropdown}>
+                        <PopoverTrigger asChild>
+                          <Button size="icon" variant="ghost" className="shrink-0">
+                            <MessageSquareText className="h-4 w-4" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80 p-0 max-h-[400px] overflow-hidden" side="top" align="start">
+                          <Tabs value={cannedTab} onValueChange={v => setCannedTab(v as 'org' | 'personal')}>
+                            <TabsList className="w-full rounded-none border-b">
+                              <TabsTrigger value="org" className="flex-1 text-xs">Organisation</TabsTrigger>
+                              {personalEnabled && <TabsTrigger value="personal" className="flex-1 text-xs">Personal</TabsTrigger>}
+                            </TabsList>
+                            <div className="max-h-[340px] overflow-y-auto">
+                              <TabsContent value="org" className="mt-0">
+                                {orgResponses.length === 0 ? (
+                                  <div className="p-4 text-xs text-center text-muted-foreground">No org responses configured</div>
+                                ) : (
+                                  (() => {
+                                    const cats = [...new Set(orgResponses.map(r => r.category))].sort();
+                                    return cats.map(cat => (
+                                      <div key={cat}>
+                                        <div className="px-3 py-2 text-xs font-medium text-muted-foreground bg-muted/30 flex items-center gap-1.5">
+                                          <FolderOpen className="h-3 w-3" />
+                                          {cat}
+                                        </div>
+                                        {orgResponses.filter(r => r.category === cat).map(r => (
+                                          <button
+                                            key={r.id}
+                                            onClick={() => insertCannedResponse(r.body)}
+                                            className="w-full text-left px-3 py-2 hover:bg-muted/50 transition-colors border-b border-border/50"
+                                          >
+                                            <div className="text-xs font-medium">{r.title}</div>
+                                            <div className="text-xs text-muted-foreground truncate">{r.body}</div>
+                                          </button>
+                                        ))}
+                                      </div>
+                                    ));
+                                  })()
+                                )}
+                              </TabsContent>
+                              
+                              {personalEnabled && (
+                                <TabsContent value="personal" className="mt-0">
+                                  {personalResponses.length === 0 && !addingPersonal ? (
+                                    <div className="p-4 text-xs text-center text-muted-foreground">No personal responses yet</div>
+                                  ) : (
+                                    (() => {
+                                      const cats = [...new Set(personalResponses.map(r => r.category))].sort();
+                                      return cats.map(cat => (
+                                        <div key={cat}>
+                                          <div className="px-3 py-2 text-xs font-medium text-muted-foreground bg-muted/30 flex items-center gap-1.5">
+                                            <FolderOpen className="h-3 w-3" />
+                                            {cat}
+                                          </div>
+                                          {personalResponses.filter(r => r.category === cat).map(r => (
+                                            <div key={r.id} className="flex items-center border-b border-border/50">
+                                              <button
+                                                onClick={() => insertCannedResponse(r.body)}
+                                                className="flex-1 text-left px-3 py-2 hover:bg-muted/50 transition-colors"
+                                              >
+                                                <div className="text-xs font-medium">{r.title}</div>
+                                                <div className="text-xs text-muted-foreground truncate">{r.body}</div>
+                                              </button>
+                                              <Button size="icon" variant="ghost" className="h-6 w-6 mr-1 shrink-0 hover:bg-destructive/10 hover:text-destructive" onClick={() => deletePersonalResponse(r.id)}>
+                                                <Trash2 className="h-3 w-3" />
+                                              </Button>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      ));
+                                    })()
+                                  )}
+                                  
+                                  {/* Add personal response inline */}
+                                  {addingPersonal ? (
+                                    <div className="p-3 space-y-2 border-t">
+                                      <Input className="text-xs h-7" placeholder="Category" value={newPersonalCategory} onChange={e => setNewPersonalCategory(e.target.value)} />
+                                      <Input className="text-xs h-7" placeholder="Title" value={newPersonalTitle} onChange={e => setNewPersonalTitle(e.target.value)} />
+                                      <Textarea className="text-xs min-h-[50px]" placeholder="Message body..." value={newPersonalBody} onChange={e => setNewPersonalBody(e.target.value)} />
+                                      <div className="flex gap-2">
+                                        <Button size="sm" className="text-xs h-7" onClick={addPersonalResponse}>Save</Button>
+                                        <Button size="sm" variant="ghost" className="text-xs h-7" onClick={() => setAddingPersonal(false)}>Cancel</Button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      onClick={() => setAddingPersonal(true)}
+                                      className="w-full px-3 py-2 text-xs text-primary hover:bg-muted/50 flex items-center gap-1 border-t"
+                                    >
+                                      <Plus className="h-3 w-3" /> Add personal response
+                                    </button>
+                                  )}
+                                </TabsContent>
+                              )}
+                            </div>
+                          </Tabs>
+                        </PopoverContent>
+                      </Popover>
                       <Input
                         value={chatMessage}
                         onChange={(e) => setChatMessage(e.target.value)}

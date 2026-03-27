@@ -774,6 +774,50 @@ export type Database = {
           },
         ]
       }
+      canned_responses: {
+        Row: {
+          agent_id: string | null
+          body: string
+          category: string
+          created_at: string | null
+          id: string
+          sort_order: number | null
+          title: string
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          agent_id?: string | null
+          body: string
+          category?: string
+          created_at?: string | null
+          id?: string
+          sort_order?: number | null
+          title: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          agent_id?: string | null
+          body?: string
+          category?: string
+          created_at?: string | null
+          id?: string
+          sort_order?: number | null
+          title?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "canned_responses_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_roles: {
         Row: {
           client_id: string
