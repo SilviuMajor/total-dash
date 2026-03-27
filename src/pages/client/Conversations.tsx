@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ConversationsSkeleton } from "@/components/skeletons";
-import { Phone, Clock, CheckCircle, MessageSquare, ArrowDown, ArrowUpDown, X, Plus, Tag, Users, Building2, Send, UserCheck, PhoneOff, ArrowRightLeft, Lock, Loader2, AlertTriangle, Timer, MessageSquareText, Trash2, FolderOpen } from "lucide-react";
+import { Phone, Clock, CheckCircle, MessageSquare, ArrowDown, ArrowUpDown, X, Plus, Tag, Users, Building2, Send, UserCheck, PhoneOff, ArrowRightLeft, Lock, Loader2, AlertTriangle, Timer, MessageSquareText, Trash2, FolderOpen, Sparkles, Check } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -138,6 +138,12 @@ export default function Conversations() {
   const [newPersonalTitle, setNewPersonalTitle] = useState("");
   const [newPersonalBody, setNewPersonalBody] = useState("");
   const [newPersonalCategory, setNewPersonalCategory] = useState("General");
+
+  // AI enhance state
+  const [aiEnhanceOpen, setAiEnhanceOpen] = useState(false);
+  const [aiEnhancing, setAiEnhancing] = useState(false);
+  const [aiEnhancedText, setAiEnhancedText] = useState("");
+  const [aiEnhanceMode, setAiEnhanceMode] = useState<string | null>(null);
 
 
   const {
@@ -728,6 +734,38 @@ export default function Conversations() {
   const deletePersonalResponse = async (id: string) => {
     await supabase.from("canned_responses").delete().eq("id", id);
     setPersonalResponses(prev => prev.filter(r => r.id !== id));
+  };
+
+  const handleAiEnhance = async (mode: string) => {
+    if (!chatMessage.trim()) return;
+    setAiEnhancing(true);
+    setAiEnhanceMode(mode);
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-enhance', {
+        body: { message: chatMessage.trim(), mode },
+      });
+      if (error) throw error;
+      if (data?.enhanced) {
+        setAiEnhancedText(data.enhanced);
+      }
+    } catch (e) {
+      console.error('AI enhance error:', e);
+      toast({ title: "Error", description: "Failed to enhance message", variant: "destructive" });
+    } finally {
+      setAiEnhancing(false);
+    }
+  };
+
+  const acceptEnhanced = () => {
+    setChatMessage(aiEnhancedText);
+    setAiEnhancedText("");
+    setAiEnhanceMode(null);
+    setAiEnhanceOpen(false);
+  };
+
+  const dismissEnhanced = () => {
+    setAiEnhancedText("");
+    setAiEnhanceMode(null);
   };
 
   const handleSendChatMessage = async () => {
@@ -1414,6 +1452,69 @@ export default function Conversations() {
                               )}
                             </div>
                           </Tabs>
+                        </PopoverContent>
+                      </Popover>
+                      {/* AI Enhance button */}
+                      <Popover open={aiEnhanceOpen} onOpenChange={setAiEnhanceOpen}>
+                        <PopoverTrigger asChild>
+                          <Button size="icon" variant="ghost" className="shrink-0" disabled={!chatMessage.trim()}>
+                            <Sparkles className="h-4 w-4" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-64 p-0" align="start">
+                          {aiEnhancedText ? (
+                            <div className="p-3 space-y-2">
+                              <div className="text-xs font-medium text-muted-foreground">
+                                {aiEnhanceMode === 'improve' ? 'Improved' : aiEnhanceMode === 'concise' ? 'Concise' : 'Friendly'} version
+                              </div>
+                              <p className="text-sm">{aiEnhancedText}</p>
+                              <div className="flex gap-2">
+                                <Button size="sm" className="text-xs h-7 gap-1" onClick={acceptEnhanced}>
+                                  <Check className="h-3 w-3" /> Use this
+                                </Button>
+                                <Button size="sm" variant="ghost" className="text-xs h-7" onClick={dismissEnhanced}>
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="p-2 space-y-1">
+                              <div className="px-2 py-1 text-xs font-medium text-muted-foreground">Enhance with AI</div>
+                              <button
+                                onClick={() => handleAiEnhance('improve')}
+                                disabled={aiEnhancing}
+                                className="w-full text-left px-2 py-1.5 text-sm rounded hover:bg-muted transition-colors flex items-center gap-2 disabled:opacity-50"
+                              >
+                                {aiEnhancing && aiEnhanceMode === 'improve' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                                <div>
+                                  <div className="font-medium">Improve</div>
+                                  <div className="text-xs text-muted-foreground">Grammar + tone</div>
+                                </div>
+                              </button>
+                              <button
+                                onClick={() => handleAiEnhance('concise')}
+                                disabled={aiEnhancing}
+                                className="w-full text-left px-2 py-1.5 text-sm rounded hover:bg-muted transition-colors flex items-center gap-2 disabled:opacity-50"
+                              >
+                                {aiEnhancing && aiEnhanceMode === 'concise' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                                <div>
+                                  <div className="font-medium">Concise</div>
+                                  <div className="text-xs text-muted-foreground">Shorter</div>
+                                </div>
+                              </button>
+                              <button
+                                onClick={() => handleAiEnhance('friendly')}
+                                disabled={aiEnhancing}
+                                className="w-full text-left px-2 py-1.5 text-sm rounded hover:bg-muted transition-colors flex items-center gap-2 disabled:opacity-50"
+                              >
+                                {aiEnhancing && aiEnhanceMode === 'friendly' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                                <div>
+                                  <div className="font-medium">Friendly</div>
+                                  <div className="text-xs text-muted-foreground">Warmer</div>
+                                </div>
+                              </button>
+                            </div>
+                          )}
                         </PopoverContent>
                       </Popover>
                       <Input
