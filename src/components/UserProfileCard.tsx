@@ -518,7 +518,7 @@ export function UserProfileCard({ onSignOut }: UserProfileCardProps) {
             <p className="text-sm font-medium">Notification Sounds</p>
 
             {/* Handover request sound */}
-            <div className="space-y-2">
+            <div className="space-y-2 p-3 border rounded-lg">
               <div className="flex items-center justify-between">
                 <span className="text-sm">Handover requests</span>
                 <Switch
@@ -562,12 +562,21 @@ export function UserProfileCard({ onSignOut }: UserProfileCardProps) {
                       className="flex-1"
                     />
                   </div>
+                  <div className="flex items-center justify-between pt-1">
+                    <div>
+                      <span className="text-xs">My departments only</span>
+                    </div>
+                    <Switch
+                      checked={soundPrefs.myDepartmentsOnly || false}
+                      onCheckedChange={(v) => updateSoundPref('myDepartmentsOnly', v)}
+                    />
+                  </div>
                 </div>
               )}
             </div>
 
             {/* New message sound */}
-            <div className="space-y-2">
+            <div className="space-y-2 p-3 border rounded-lg">
               <div className="flex items-center justify-between">
                 <span className="text-sm">Customer messages</span>
                 <Switch
@@ -617,18 +626,56 @@ export function UserProfileCard({ onSignOut }: UserProfileCardProps) {
 
             <Separator />
 
-            {/* Department filter */}
+            {/* Browser notifications */}
             <div className="flex items-center justify-between">
               <div className="flex-1 min-w-0">
-                <span className="text-sm">My departments only</span>
-                <p className="text-xs text-muted-foreground">Only notify for your assigned departments</p>
+                <span className="text-sm">Browser notifications</span>
+                <p className="text-xs text-muted-foreground">Show alerts when tab is not focused</p>
               </div>
               <Switch
-                checked={soundPrefs.myDepartmentsOnly}
-                onCheckedChange={(v) => updateSoundPref('myDepartmentsOnly', v)}
+                checked={soundPrefs.browserNotifications}
+                onCheckedChange={async (v) => {
+                  if (v) {
+                    const granted = await requestNotificationPermission();
+                    if (!granted) {
+                      toast({ title: "Permission denied", description: "Please allow notifications in your browser settings", variant: "destructive" });
+                      return;
+                    }
+                  }
+                  updateSoundPref('browserNotifications', v);
+                }}
               />
             </div>
 
+            <Separator />
+
+            {/* Webhook integrations — coming soon */}
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-muted-foreground">Integrations</p>
+              <div className="space-y-2 opacity-50">
+                <div className="flex items-center justify-between p-2 border rounded-lg bg-muted/30">
+                  <div className="flex items-center gap-2">
+                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    <span className="text-xs">Slack</span>
+                  </div>
+                  <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">Coming soon</span>
+                </div>
+                <div className="flex items-center justify-between p-2 border rounded-lg bg-muted/30">
+                  <div className="flex items-center gap-2">
+                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    <span className="text-xs">Microsoft Teams</span>
+                  </div>
+                  <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">Coming soon</span>
+                </div>
+                <div className="flex items-center justify-between p-2 border rounded-lg bg-muted/30">
+                  <div className="flex items-center gap-2">
+                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    <span className="text-xs">Email alerts</span>
+                  </div>
+                  <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">Coming soon</span>
+                </div>
+              </div>
+            </div>
             <Separator />
 
             {/* Browser notifications */}

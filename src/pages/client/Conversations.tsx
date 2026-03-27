@@ -342,16 +342,7 @@ export default function Conversations() {
               playHandoverRequestSound(prefs.handoverRequestVolume);
             }
           }
-          // Play sound for new customer message during handover
-          if (newTranscript.speaker === 'user' && selectedConversationRef.current?.status === 'in_handover') {
-            const prefs = getSoundPreferences();
-            if (prefs.newMessageEnabled) {
-              playNewMessageSound(prefs.newMessageVolume);
-            }
-            if (prefs.browserNotifications) {
-              sendBrowserNotification("New Message", "A customer sent a message during handover");
-            }
-          }
+          // Customer message sounds are handled by the global my-handover-messages subscription
           // Auto-scroll after React re-renders the new message
           setTimeout(() => {
             if (transcriptScrollRef.current) {
