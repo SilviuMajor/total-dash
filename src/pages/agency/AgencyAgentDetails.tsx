@@ -168,7 +168,8 @@ export default function AgencyAgentDetails() {
           <TabsTrigger value="knowledge-base">Knowledge Base</TabsTrigger>
           <TabsTrigger value="channels">Channels</TabsTrigger>
           <TabsTrigger value="specs">Specs</TabsTrigger>
-          {agent.provider === "voiceflow" && <TabsTrigger value="settings">Settings</TabsTrigger>}
+          {agent.provider === "voiceflow" && <TabsTrigger value="conversations">Conversations</TabsTrigger>}
+          {agent.provider === "voiceflow" && <TabsTrigger value="handover">Handover</TabsTrigger>}
           <TabsTrigger value="config">Config</TabsTrigger>
         </TabsList>
 
