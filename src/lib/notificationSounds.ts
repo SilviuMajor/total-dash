@@ -186,7 +186,7 @@ export function getSoundPreferences(): SoundPreferences {
     handoverRequestSound: "triple-beep",
     newMessageEnabled: true,
     newMessageVolume: 0.3,
-    newMessageSound: "pop",
+    newMessageSound: "double-pop",
     myDepartmentsOnly: false,
     browserNotifications: false,
   };
