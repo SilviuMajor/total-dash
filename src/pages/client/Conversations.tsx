@@ -768,7 +768,7 @@ export default function Conversations() {
     setAiEnhanceMode(null);
   };
 
-
+  const handleSendChatMessage = async () => {
     if (!chatMessage.trim() || sendingMessage) return;
     const messageText = chatMessage.trim();
     setChatMessage("");
