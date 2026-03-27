@@ -779,6 +779,7 @@ export type Database = {
           agent_id: string | null
           body: string
           category: string
+          client_id: string | null
           created_at: string | null
           id: string
           sort_order: number | null
@@ -790,6 +791,7 @@ export type Database = {
           agent_id?: string | null
           body: string
           category?: string
+          client_id?: string | null
           created_at?: string | null
           id?: string
           sort_order?: number | null
@@ -801,6 +803,7 @@ export type Database = {
           agent_id?: string | null
           body?: string
           category?: string
+          client_id?: string | null
           created_at?: string | null
           id?: string
           sort_order?: number | null
@@ -814,6 +817,13 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "canned_responses_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
             referencedColumns: ["id"]
           },
         ]
