@@ -239,6 +239,7 @@ export function UserProfileCard({ onSignOut }: UserProfileCardProps) {
   const isAdmin = roles.includes('admin');
   const isSuperAdmin = userType === 'super_admin';
   const isAgencyUser = userType === 'agency';
+  const isOperatingAsClient = userType === 'client' || isClientPreviewMode || previewDepth === 'agency_to_client';
   
   const canEditName = isSuperAdmin || isAgencyUser || !profileAccessControl || profileAccessControl.edit_name === 'all' || isAdmin;
   const canChangeEmail = isSuperAdmin || isAgencyUser || !profileAccessControl || profileAccessControl.change_email === 'all' || isAdmin;
