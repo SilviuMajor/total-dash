@@ -487,6 +487,9 @@ export default function Conversations() {
           if (prefs.handoverRequestEnabled) {
             playHandoverRequestSound(prefs.handoverRequestVolume);
           }
+          if (prefs.browserNotifications) {
+            sendBrowserNotification("New Handover Request", "A customer is requesting to speak with an agent");
+          }
         }
       )
       .subscribe();
