@@ -192,6 +192,19 @@ serve(async (req) => {
             },
           });
 
+          // Insert handover_ended so the widget detects the end and fetches resume messages
+          await supabaseClient.from("transcripts").insert({
+            conversation_id: session.conversation_id,
+            speaker: "system",
+            text: "Handover ended",
+            metadata: {
+              type: "handover_ended",
+              resolved: false,
+              reason: "timeout",
+              timestamp: new Date().toISOString(),
+            },
+          });
+
           // Log status change
           await supabaseClient.from("conversation_status_history").insert({
             conversation_id: session.conversation_id,
