@@ -77,3 +77,6 @@ verify_jwt = true
 
 [functions.handover-actions]
 verify_jwt = true
+
+[functions.ai-enhance]
+verify_jwt = true
