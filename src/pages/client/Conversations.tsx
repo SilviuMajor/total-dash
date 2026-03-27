@@ -43,7 +43,7 @@ import {
 } from "@/hooks/queries/useConversationMutations";
 import { useAuth } from "@/hooks/useAuth";
 import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
-import { getSoundPreferences, playHandoverRequestSound, playNewMessageSound } from "@/lib/notificationSounds";
+import { getSoundPreferences, playHandoverRequestSound, playNewMessageSound, sendBrowserNotification } from "@/lib/notificationSounds";
 
 interface Conversation {
   id: string;
@@ -146,6 +146,11 @@ export default function Conversations() {
   const [aiEnhancedText, setAiEnhancedText] = useState("");
   const [aiEnhanceMode, setAiEnhanceMode] = useState<string | null>(null);
 
+  const selectedConversationRef = useRef(selectedConversation);
+
+  useEffect(() => {
+    selectedConversationRef.current = selectedConversation;
+  }, [selectedConversation]);
 
   const {
     data: conversationsData,
@@ -338,10 +343,13 @@ export default function Conversations() {
             }
           }
           // Play sound for new customer message during handover
-          if (newTranscript.speaker === 'user' && selectedConversation?.status === 'in_handover') {
+          if (newTranscript.speaker === 'user' && selectedConversationRef.current?.status === 'in_handover') {
             const prefs = getSoundPreferences();
             if (prefs.newMessageEnabled) {
               playNewMessageSound(prefs.newMessageVolume);
+            }
+            if (prefs.browserNotifications) {
+              sendBrowserNotification("New Message", "A customer sent a message during handover");
             }
           }
           // Auto-scroll after React re-renders the new message
@@ -478,6 +486,9 @@ export default function Conversations() {
           const prefs = getSoundPreferences();
           if (prefs.handoverRequestEnabled) {
             playHandoverRequestSound(prefs.handoverRequestVolume);
+          }
+          if (prefs.browserNotifications) {
+            sendBrowserNotification("New Handover Request", "A customer is requesting to speak with an agent");
           }
         }
       )
