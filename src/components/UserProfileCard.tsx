@@ -28,7 +28,7 @@ interface UserProfileCardProps {
 type MenuView = 'main' | 'account' | 'edit-name' | 'change-email' | 'change-password' | 'notifications';
 
 export function UserProfileCard({ onSignOut }: UserProfileCardProps) {
-  const { profile, userType } = useMultiTenantAuth();
+  const { profile, userType, isClientPreviewMode, previewDepth } = useMultiTenantAuth();
   const { effectiveTheme, setTheme, isLoading: themeLoading } = useTheme();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
@@ -239,6 +239,7 @@ export function UserProfileCard({ onSignOut }: UserProfileCardProps) {
   const isAdmin = roles.includes('admin');
   const isSuperAdmin = userType === 'super_admin';
   const isAgencyUser = userType === 'agency';
+  const isOperatingAsClient = userType === 'client' || isClientPreviewMode || previewDepth === 'agency_to_client';
   
   const canEditName = isSuperAdmin || isAgencyUser || !profileAccessControl || profileAccessControl.edit_name === 'all' || isAdmin;
   const canChangeEmail = isSuperAdmin || isAgencyUser || !profileAccessControl || profileAccessControl.change_email === 'all' || isAdmin;
@@ -324,14 +325,16 @@ export function UserProfileCard({ onSignOut }: UserProfileCardProps) {
               <User className="h-4 w-4" />
               <span>Account Details</span>
             </Button>
-            <Button
-              variant="ghost"
-              className="w-full justify-start gap-2 h-auto py-2"
-              onClick={() => setMenuView('notifications')}
-            >
-              <Volume2 className="h-4 w-4" />
-              <span>Notifications</span>
-            </Button>
+            {isOperatingAsClient && (
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-2 h-auto py-2"
+                onClick={() => setMenuView('notifications')}
+              >
+                <Volume2 className="h-4 w-4" />
+                <span>Notifications</span>
+              </Button>
+            )}
             <Separator />
             <Button
               variant="ghost"
@@ -562,10 +565,8 @@ export function UserProfileCard({ onSignOut }: UserProfileCardProps) {
                       className="flex-1"
                     />
                   </div>
-                  <div className="flex items-center justify-between pt-1">
-                    <div>
-                      <span className="text-xs">My departments only</span>
-                    </div>
+                  <div className="flex items-center justify-between pt-1 border-t mt-1">
+                    <span className="text-xs">My departments only</span>
                     <Switch
                       checked={soundPrefs.myDepartmentsOnly || false}
                       onCheckedChange={(v) => updateSoundPref('myDepartmentsOnly', v)}
@@ -647,35 +648,6 @@ export function UserProfileCard({ onSignOut }: UserProfileCardProps) {
               />
             </div>
 
-            <Separator />
-
-            {/* Webhook integrations — coming soon */}
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-muted-foreground">Integrations</p>
-              <div className="space-y-2 opacity-50">
-                <div className="flex items-center justify-between p-2 border rounded-lg bg-muted/30">
-                  <div className="flex items-center gap-2">
-                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    <span className="text-xs">Slack</span>
-                  </div>
-                  <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">Coming soon</span>
-                </div>
-                <div className="flex items-center justify-between p-2 border rounded-lg bg-muted/30">
-                  <div className="flex items-center gap-2">
-                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    <span className="text-xs">Microsoft Teams</span>
-                  </div>
-                  <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">Coming soon</span>
-                </div>
-                <div className="flex items-center justify-between p-2 border rounded-lg bg-muted/30">
-                  <div className="flex items-center gap-2">
-                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    <span className="text-xs">Email alerts</span>
-                  </div>
-                  <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">Coming soon</span>
-                </div>
-              </div>
-            </div>
           </div>
         )}
       </PopoverContent>
