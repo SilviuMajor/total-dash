@@ -40,6 +40,11 @@ export default function AgencyClientDetails() {
   const [loading, setLoading] = useState(true);
   const [settingsPageEnabled, setSettingsPageEnabled] = useState(false);
   const [existingCapabilities, setExistingCapabilities] = useState<Record<string, any>>({});
+  const [deptEnabled, setDeptEnabled] = useState(true);
+  const [teamEnabled, setTeamEnabled] = useState(true);
+  const [permissionsEnabled, setPermissionsEnabled] = useState(true);
+  const [cannedEnabled, setCannedEnabled] = useState(true);
+  const [generalEnabled, setGeneralEnabled] = useState(true);
   const activeTab = tab || "overview";
 
   const agencyId = isPreviewMode ? previewAgency?.id : profile?.agency?.id;
