@@ -257,7 +257,7 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
       }
 
       const userIds = (clientUsers || []).map(u => u.user_id);
-      let rolesByUser: Record<string, { role_id: string | null; has_overrides: boolean; permissions: Record<string, any> }> = {};
+      const rolesByUser: Record<string, { role_id: string | null; has_overrides: boolean; permissions: Record<string, any> }> = {};
 
       if (userIds.length > 0) {
         const { data: permRows } = await supabase
