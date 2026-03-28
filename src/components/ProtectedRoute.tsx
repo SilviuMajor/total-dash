@@ -8,7 +8,7 @@ interface ProtectedRouteProps {
   children: React.ReactNode;
   requireAdmin?: boolean;
   requireClient?: boolean;
-  requiredPage?: 'conversations' | 'transcripts' | 'analytics' | 'knowledge_base' | 'agent_settings' | 'specs';
+  requiredPage?: 'conversations' | 'transcripts' | 'analytics' | 'knowledge_base' | 'agent_settings' | 'specs' | 'guides' | 'settings_page' | 'audit_log';
 }
 
 export function ProtectedRoute({ 
