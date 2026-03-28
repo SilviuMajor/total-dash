@@ -92,7 +92,7 @@ export function Sidebar() {
     // Client navigation with filtering
     navigation = clientNavigation.filter(item => {
       // settings_page special check
-      if (item.permissionKey === 'settings_page') return clientSettingsPageEnabled;
+      if (item.permissionKey === 'settings_page') return selectedAgentPermissions?.settings_page === true;
       
       // Items with null permissionKey are always visible
       if (item.permissionKey === null) {
