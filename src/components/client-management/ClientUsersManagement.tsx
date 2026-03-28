@@ -281,7 +281,7 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
           allPermsByUser[r.user_id][r.agent_id] = r.permissions || {};
         });
 
-        const roleIds = [...new Set(Object.values(rolesByUser).map(r => r.role_id).filter(Boolean))];
+        const roleIds = [...new Set(Object.values(rolesByUser).map(r => r.role_id).filter(Boolean))] as string[];
         let roleMap: Record<string, ClientRole> = {};
         if (roleIds.length > 0) {
           const { data: rolesData } = await supabase.from('client_roles').select('*').in('id', roleIds);
