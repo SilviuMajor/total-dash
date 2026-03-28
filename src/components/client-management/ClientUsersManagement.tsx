@@ -826,7 +826,7 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
                                 await supabase
                                   .from('client_user_agent_permissions')
                                   .update({
-                                    permissions: perms,
+                                    permissions: perms as unknown as Record<string, any>,
                                     has_overrides: hasOverrides,
                                   })
                                   .eq('user_id', user.user_id)
