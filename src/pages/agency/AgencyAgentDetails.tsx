@@ -16,7 +16,9 @@ import { RetellWidget } from "@/components/agent-management/retell/RetellWidget"
 import { RetellChannels } from "@/components/agent-management/retell/RetellChannels";
 import { SpecsSettings } from "@/components/agent-management/specs/SpecsSettings";
 import { WidgetTestPanel } from "@/components/agent-management/voiceflow/widget/WidgetTestPanel";
-import { ClientAccessToggle } from "@/components/agent-management/ClientAccessToggle";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Lock } from "lucide-react";
 import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
 import { useToast } from "@/hooks/use-toast";
 
@@ -44,7 +46,7 @@ export default function AgencyAgentDetails() {
   const [agent, setAgent] = useState<Agent | null>(null);
   const [assignedClients, setAssignedClients] = useState<AssignedClient[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("settings");
+  const [activeTab, setActiveTab] = useState("client-access");
 
   useEffect(() => {
     if (agencyId) {
@@ -57,12 +59,11 @@ export default function AgencyAgentDetails() {
 
     setLoading(true);
     try {
-      // Load agent details with security check
       const { data: agentData, error: agentError } = await supabase
         .from("agents")
         .select("*")
         .eq("id", agentId)
-        .eq("agency_id", agencyId) // Security: verify agent belongs to agency
+        .eq("agency_id", agencyId)
         .single();
 
       if (agentError) {
@@ -80,7 +81,6 @@ export default function AgencyAgentDetails() {
         config: (agentData.config as Record<string, any>) || {}
       });
 
-      // Load assigned clients
       const { data: clientsData, error: clientsError } = await supabase
         .from("agent_assignments")
         .select("client_id, clients(id, name)")
@@ -152,6 +152,12 @@ export default function AgencyAgentDetails() {
     return null;
   };
 
+  const handleToggleAccess = async (key: string, checked: boolean) => {
+    const updatedConfig = { ...agent.config, [key]: checked };
+    await supabase.from("agents").update({ config: updatedConfig }).eq("id", agent.id);
+    loadAgentDetails();
+  };
+
   const content = (
     <div className="p-6 space-y-8">
       <AgentDetailHeader 
@@ -164,6 +170,7 @@ export default function AgencyAgentDetails() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList>
+          <TabsTrigger value="client-access"><Lock className="w-3.5 h-3.5 mr-1.5" />Client Access</TabsTrigger>
           <TabsTrigger value="widget">Widget</TabsTrigger>
           <TabsTrigger value="knowledge-base">Knowledge Base</TabsTrigger>
           <TabsTrigger value="channels">Channels</TabsTrigger>
@@ -173,14 +180,74 @@ export default function AgencyAgentDetails() {
           <TabsTrigger value="config">Config</TabsTrigger>
         </TabsList>
 
+        <TabsContent value="client-access" className="space-y-6">
+          {/* Agency-only banner */}
+          <div className="flex items-center gap-3 p-3 border border-dashed border-primary/40 rounded-lg bg-primary/5">
+            <Lock className="w-4 h-4 text-primary shrink-0" />
+            <p className="text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">Agency only</span> — These controls determine what your client can see for this agent. Clients do not see this page.
+            </p>
+          </div>
+
+          {/* Sidebar pages */}
+          <div className="rounded-lg border bg-card">
+            <div className="p-4 border-b">
+              <h3 className="text-sm font-semibold">Sidebar pages</h3>
+            </div>
+            {[
+              { key: "client_conversations_enabled", label: "Conversations", desc: "View conversations and handle handovers" },
+              { key: "client_transcripts_enabled", label: "Transcripts", desc: "View completed conversation records" },
+              { key: "client_analytics_enabled", label: "Analytics", desc: "View performance metrics and insights" },
+              { key: "client_specs_enabled", label: "Specifications", desc: "View agent specs and update logs" },
+              { key: "client_knowledge_base_enabled", label: "Knowledge base", desc: "View and manage knowledge base content" },
+              { key: "client_guides_enabled", label: "Guides", desc: "View agent guides and documentation" },
+              { key: "client_agent_settings_enabled", label: "Agent settings", desc: "Access agent configuration pages" },
+            ].map((item, i, arr) => (
+              <div key={item.key} className={`flex items-center justify-between p-4 ${i < arr.length - 1 ? 'border-b' : ''}`}>
+                <div>
+                  <p className="text-sm font-medium">{item.label}</p>
+                  <p className="text-xs text-muted-foreground">{item.desc}</p>
+                </div>
+                <Switch
+                  checked={agent.config?.[item.key] !== false}
+                  onCheckedChange={(checked) => handleToggleAccess(item.key, checked)}
+                />
+              </div>
+            ))}
+          </div>
+
+          {/* Agent Settings sub-tabs — only show if agent_settings is enabled */}
+          {agent.config?.client_agent_settings_enabled !== false && (
+            <div className="rounded-lg border bg-card">
+              <div className="p-4 border-b">
+                <h3 className="text-sm font-semibold">Agent settings sub-tabs</h3>
+              </div>
+              {[
+                { key: "client_widget_access_enabled", label: "Widget", desc: "View and edit widget appearance" },
+                { key: "client_channels_access_enabled", label: "Channels", desc: "View and manage communication channels" },
+                ...(agent.provider === "voiceflow" ? [
+                  { key: "client_conversations_settings_enabled", label: "Conversation settings", desc: "Configure auto-end timers and thresholds" },
+                  { key: "client_handover_settings_enabled", label: "Handover settings", desc: "Configure inactivity nudge and timeout" },
+                ] : []),
+              ].map((item, i, arr) => (
+                <div key={item.key} className={`flex items-center justify-between p-4 ${i < arr.length - 1 ? 'border-b' : ''}`}>
+                  <div>
+                    <p className="text-sm font-medium">{item.label}</p>
+                    <p className="text-xs text-muted-foreground">{item.desc}</p>
+                  </div>
+                  <Switch
+                    checked={agent.config?.[item.key] !== false}
+                    onCheckedChange={(checked) => handleToggleAccess(item.key, checked)}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+
+          <p className="text-xs text-muted-foreground">Changes save automatically. Disabling a page removes it from all client users immediately.</p>
+        </TabsContent>
+
         <TabsContent value="widget" className="space-y-6">
-          <ClientAccessToggle
-            agent={agent}
-            configKey="client_widget_access_enabled"
-            label="Enable Widget Settings for Clients"
-            description="Allow clients to view and edit widget appearance settings"
-            onUpdate={loadAgentDetails}
-          />
           {renderProviderContent("widget")}
         </TabsContent>
 
@@ -189,13 +256,6 @@ export default function AgencyAgentDetails() {
         </TabsContent>
 
         <TabsContent value="channels" className="space-y-6">
-          <ClientAccessToggle
-            agent={agent}
-            configKey="client_channels_access_enabled"
-            label="Enable Channels for Clients"
-            description="Allow clients to view and manage communication channels"
-            onUpdate={loadAgentDetails}
-          />
           {renderProviderContent("channels")}
         </TabsContent>
 
@@ -205,26 +265,12 @@ export default function AgencyAgentDetails() {
 
         {agent.provider === "voiceflow" && (
           <TabsContent value="conversations" className="space-y-6">
-            <ClientAccessToggle
-              agent={agent}
-              configKey="client_conversations_settings_enabled"
-              label="Enable Conversation Settings for Clients"
-              description="Allow clients to configure auto-end timers and response time thresholds"
-              onUpdate={loadAgentDetails}
-            />
             {renderProviderContent("conversations")}
           </TabsContent>
         )}
 
         {agent.provider === "voiceflow" && (
           <TabsContent value="handover" className="space-y-6">
-            <ClientAccessToggle
-              agent={agent}
-              configKey="client_handover_settings_enabled"
-              label="Enable Handover Settings for Clients"
-              description="Allow clients to configure inactivity nudge and timeout settings"
-              onUpdate={loadAgentDetails}
-            />
             {renderProviderContent("handover")}
           </TabsContent>
         )}
