@@ -47,8 +47,17 @@ export function Sidebar() {
   const location = useLocation();
   const isAdmin = profile?.role === 'admin';
   const isMac = typeof navigator !== 'undefined' && navigator.platform.toUpperCase().includes('MAC');
-  // Determine branding context - moved up before usage
+  // Determine branding context
+  const isClientView = isClientPreviewMode;
+  const agencyId = isClientView ? previewClientAgencyId : undefined;
   
+  // Use branding hook for dynamic branding
+  const branding = useBranding({ isClientView, agencyId, appTheme: effectiveTheme });
+  
+  // Use multi-tenant auth if available
+  const effectiveProfile = mtProfile || profile;
+  const effectiveSignOut = mtProfile ? mtSignOut : signOut;
+
   // Determine which navigation to show based on preview depth
   const { previewDepth } = useMultiTenantAuth();
   let navigation;
