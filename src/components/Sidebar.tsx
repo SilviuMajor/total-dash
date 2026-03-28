@@ -10,7 +10,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { ClientAgentSelector } from "./ClientAgentSelector";
 import { UserProfileCard } from "./UserProfileCard";
 import { Button } from "./ui/button";
-import { supabase } from "@/integrations/supabase/client";
+
 
 const clientNavigation = [
   { name: "Conversations", href: "/", icon: MessageSquare, permissionKey: "conversations", provider: "voiceflow" },
