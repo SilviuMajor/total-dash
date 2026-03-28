@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { DepartmentManagement } from "@/components/client-management/DepartmentManagement";
 import { ClientUsersManagement } from "@/components/client-management/ClientUsersManagement";
-import { DefaultPermissionsCard } from "@/components/client-management/DefaultPermissionsCard";
+import { RolesManagement } from "@/components/settings/RolesManagement";
 import { CannedResponsesSettings } from "@/components/settings/CannedResponsesSettings";
 import { useAuth } from "@/hooks/useAuth";
 import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
@@ -19,6 +19,7 @@ export default function Settings() {
   const [clientId, setClientId] = useState<string | null>(null);
   const [capabilities, setCapabilities] = useState<Record<string, any>>({});
   const [client, setClient] = useState<any>(null);
+  const [teamSubTab, setTeamSubTab] = useState<"roles" | "team">("roles");
 
   useEffect(() => {
     const isInPreview = isClientPreviewMode || previewDepth === 'agency_to_client' || previewDepth === 'client';
@@ -70,17 +71,14 @@ export default function Settings() {
     );
   }
 
-  // Check which tabs are enabled (default all ON)
   const showDepartments = capabilities.client_departments_enabled !== false;
   const showTeam = capabilities.client_team_enabled !== false;
-  const showPermissions = capabilities.client_permissions_enabled !== false;
   const showCannedResponses = capabilities.client_canned_responses_enabled !== false;
   const showGeneral = capabilities.client_general_enabled !== false;
 
   const getDefaultTab = () => {
     if (showDepartments) return "departments";
-    if (showTeam) return "team";
-    if (showPermissions) return "permissions";
+    if (showTeam) return "team-permissions";
     if (showCannedResponses) return "canned-responses";
     if (showGeneral) return "general";
     return "departments";
@@ -96,8 +94,7 @@ export default function Settings() {
       <Tabs defaultValue={getDefaultTab()} className="w-full">
         <TabsList>
           {showDepartments && <TabsTrigger value="departments">Departments</TabsTrigger>}
-          {showTeam && <TabsTrigger value="team">Team</TabsTrigger>}
-          {showPermissions && <TabsTrigger value="permissions">Permissions</TabsTrigger>}
+          {showTeam && <TabsTrigger value="team-permissions">Team & Permissions</TabsTrigger>}
           {showCannedResponses && <TabsTrigger value="canned-responses">Canned Responses</TabsTrigger>}
           {showGeneral && <TabsTrigger value="general">General</TabsTrigger>}
         </TabsList>
@@ -109,14 +106,32 @@ export default function Settings() {
         )}
 
         {showTeam && (
-          <TabsContent value="team" className="space-y-6">
-            <ClientUsersManagement clientId={clientId} />
-          </TabsContent>
-        )}
+          <TabsContent value="team-permissions" className="space-y-6">
+            <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1 w-fit">
+              <button
+                onClick={() => setTeamSubTab("roles")}
+                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                  teamSubTab === "roles"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                Roles
+              </button>
+              <button
+                onClick={() => setTeamSubTab("team")}
+                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                  teamSubTab === "team"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                Team
+              </button>
+            </div>
 
-        {showPermissions && (
-          <TabsContent value="permissions" className="space-y-6">
-            <DefaultPermissionsCard clientId={clientId} />
+            {teamSubTab === "roles" && <RolesManagement clientId={clientId} />}
+            {teamSubTab === "team" && <ClientUsersManagement clientId={clientId} />}
           </TabsContent>
         )}
 
