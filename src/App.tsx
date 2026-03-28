@@ -178,15 +178,15 @@ const App = () => (
                       <AgencyClientPreviewBanner />
                       <main className="flex-1 overflow-y-auto">
                         <Routes>
-                          <Route path="/" element={<Conversations />} />
-                          <Route path="/transcripts" element={<Transcripts />} />
-                          <Route path="/text-transcripts" element={<TextTranscripts />} />
-                          <Route path="/analytics" element={<Analytics />} />
-                          <Route path="/knowledge-base" element={<KnowledgeBase />} />
-                          <Route path="/agent-settings" element={<AgentSettings />} />
-                          <Route path="/specs" element={<AgentSpecs />} />
-                          <Route path="/guides" element={<Guides />} />
-                          <Route path="/settings" element={<Settings />} />
+                          <Route path="/" element={<ProtectedRoute requiredPage="conversations"><Conversations /></ProtectedRoute>} />
+                          <Route path="/transcripts" element={<ProtectedRoute requiredPage="transcripts"><Transcripts /></ProtectedRoute>} />
+                          <Route path="/text-transcripts" element={<ProtectedRoute requiredPage="transcripts"><TextTranscripts /></ProtectedRoute>} />
+                          <Route path="/analytics" element={<ProtectedRoute requiredPage="analytics"><Analytics /></ProtectedRoute>} />
+                          <Route path="/knowledge-base" element={<ProtectedRoute requiredPage="knowledge_base"><KnowledgeBase /></ProtectedRoute>} />
+                          <Route path="/agent-settings" element={<ProtectedRoute requiredPage="agent_settings"><AgentSettings /></ProtectedRoute>} />
+                          <Route path="/specs" element={<ProtectedRoute requiredPage="specs"><AgentSpecs /></ProtectedRoute>} />
+                          <Route path="/guides" element={<ProtectedRoute requiredPage="guides"><Guides /></ProtectedRoute>} />
+                          <Route path="/settings" element={<ProtectedRoute requiredPage="settings_page"><Settings /></ProtectedRoute>} />
                           <Route path="*" element={<NotFound />} />
                         </Routes>
                       </main>

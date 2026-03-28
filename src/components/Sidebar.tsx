@@ -10,7 +10,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { ClientAgentSelector } from "./ClientAgentSelector";
 import { UserProfileCard } from "./UserProfileCard";
 import { Button } from "./ui/button";
-import { supabase } from "@/integrations/supabase/client";
+
 
 const clientNavigation = [
   { name: "Conversations", href: "/", icon: MessageSquare, permissionKey: "conversations", provider: "voiceflow" },
@@ -47,17 +47,6 @@ export function Sidebar() {
   const location = useLocation();
   const isAdmin = profile?.role === 'admin';
   const isMac = typeof navigator !== 'undefined' && navigator.platform.toUpperCase().includes('MAC');
-  interface ClientPermissions {
-    conversations?: boolean;
-    transcripts?: boolean;
-    analytics?: boolean;
-    knowledge_base?: boolean;
-    settings?: boolean;
-    [key: string]: boolean | undefined;
-  }
-  const [clientPermissions, setClientPermissions] = useState<ClientPermissions | null>(null);
-  const [clientSettingsPageEnabled, setClientSettingsPageEnabled] = useState(false);
-  
   // Determine branding context
   const isClientView = isClientPreviewMode;
   const agencyId = isClientView ? previewClientAgencyId : undefined;
@@ -69,46 +58,6 @@ export function Sidebar() {
   const effectiveProfile = mtProfile || profile;
   const effectiveSignOut = mtProfile ? mtSignOut : signOut;
 
-  useEffect(() => {
-    if (isClientPreviewMode && previewClient) {
-      const loadClientPermissions = async () => {
-        const { data } = await supabase
-          .from('client_settings')
-          .select('default_user_permissions, admin_capabilities')
-          .eq('client_id', previewClient.id)
-          .single();
-        
-        if (data?.default_user_permissions) {
-          setClientPermissions(data.default_user_permissions as ClientPermissions);
-        }
-        // In preview mode, always show the settings page
-        setClientSettingsPageEnabled(true);
-      };
-      loadClientPermissions();
-    } else if (!isClientPreviewMode && effectiveProfile?.role === 'client') {
-      // Regular client: load capabilities
-      const loadCapabilities = async () => {
-        // Get clientId from client_users
-        const { data: cuData } = await supabase
-          .from('client_users')
-          .select('client_id')
-          .eq('user_id', effectiveProfile.id)
-          .single();
-        if (cuData?.client_id) {
-          const { data: csData } = await supabase
-            .from('client_settings')
-            .select('admin_capabilities')
-            .eq('client_id', cuData.client_id)
-            .single();
-          if (csData?.admin_capabilities) {
-            setClientSettingsPageEnabled((csData.admin_capabilities as any)?.settings_page_enabled === true);
-          }
-        }
-      };
-      loadCapabilities();
-    }
-  }, [isClientPreviewMode, previewClient, effectiveProfile]);
-  
   // Determine which navigation to show based on preview depth
   const { previewDepth } = useMultiTenantAuth();
   let navigation;
@@ -143,7 +92,7 @@ export function Sidebar() {
     // Client navigation with filtering
     navigation = clientNavigation.filter(item => {
       // settings_page special check
-      if (item.permissionKey === 'settings_page') return clientSettingsPageEnabled;
+      if (item.permissionKey === 'settings_page') return selectedAgentPermissions?.settings_page === true;
       
       // Items with null permissionKey are always visible
       if (item.permissionKey === null) {
