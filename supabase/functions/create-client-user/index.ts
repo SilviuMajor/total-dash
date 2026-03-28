@@ -59,7 +59,8 @@ serve(async (req) => {
       email, 
       firstName,
       lastName,
-      role, 
+      role,
+      roleId,
       departmentId, 
       avatarUrl, 
       pagePermissions,
@@ -69,13 +70,13 @@ serve(async (req) => {
     console.log('Creating user with:', { email, firstName, lastName, role, clientId });
 
     // Better validation
-    if (!email || !firstName || !lastName || !clientId || !role) {
+    if (!email || !firstName || !lastName || !clientId || (!role && !roleId)) {
       const missing = [];
       if (!email) missing.push('email');
       if (!firstName) missing.push('firstName');
       if (!lastName) missing.push('lastName');
       if (!clientId) missing.push('clientId');
-      if (!role) missing.push('role');
+      if (!role && !roleId) missing.push('role or roleId');
       throw new Error(`Missing required fields: ${missing.join(', ')}`);
     }
 
@@ -140,20 +141,40 @@ serve(async (req) => {
       throw clientUserError;
     }
 
-    // Create entry in user_roles table
+    // Resolve role: use roleId if provided, otherwise look up by slug from the old role field
+    let resolvedRoleId = roleId;
+    if (!resolvedRoleId && role) {
+      const { data: roleData } = await supabaseAdmin
+        .from('client_roles')
+        .select('id')
+        .eq('client_id', clientId)
+        .eq('slug', role === 'admin' ? 'admin' : 'agent')
+        .single();
+      resolvedRoleId = roleData?.id;
+    }
+
+    if (!resolvedRoleId) {
+      // Fallback: get the default role for this client
+      const { data: defaultRole } = await supabaseAdmin
+        .from('client_roles')
+        .select('id')
+        .eq('client_id', clientId)
+        .eq('is_default', true)
+        .single();
+      resolvedRoleId = defaultRole?.id;
+    }
+
+    // Still write to user_roles for backward compatibility during transition
     const { error: roleError } = await supabaseAdmin
       .from('user_roles')
       .insert({
         user_id: authData.user.id,
         client_id: clientId,
-        role: role
+        role: role || 'user'
       });
 
     if (roleError) {
-      console.error('Role error:', roleError);
-      // Cleanup: delete auth user and client_user if role insert fails
-      await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
-      throw roleError;
+      console.error('Role error (legacy):', roleError);
     }
 
     // Store password HINT only (first 2 characters) with must_change_password flag
@@ -177,6 +198,7 @@ serve(async (req) => {
       JSON.stringify({ 
         success: true, 
         userId: authData.user.id,
+        roleId: resolvedRoleId,
         temporaryPassword 
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
