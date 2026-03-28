@@ -198,6 +198,7 @@ serve(async (req) => {
       JSON.stringify({ 
         success: true, 
         userId: authData.user.id,
+        roleId: resolvedRoleId,
         temporaryPassword 
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

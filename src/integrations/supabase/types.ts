@@ -723,6 +723,78 @@ export type Database = {
           },
         ]
       }
+      audit_log: {
+        Row: {
+          action: string
+          actor_email: string | null
+          actor_id: string
+          actor_name: string
+          actor_type: string
+          agent_id: string | null
+          agent_name: string | null
+          category: string
+          changes: Json | null
+          client_id: string
+          created_at: string
+          description: string
+          id: string
+          target_id: string | null
+          target_name: string | null
+          target_type: string | null
+        }
+        Insert: {
+          action: string
+          actor_email?: string | null
+          actor_id: string
+          actor_name: string
+          actor_type: string
+          agent_id?: string | null
+          agent_name?: string | null
+          category: string
+          changes?: Json | null
+          client_id: string
+          created_at?: string
+          description: string
+          id?: string
+          target_id?: string | null
+          target_name?: string | null
+          target_type?: string | null
+        }
+        Update: {
+          action?: string
+          actor_email?: string | null
+          actor_id?: string
+          actor_name?: string
+          actor_type?: string
+          agent_id?: string | null
+          agent_name?: string | null
+          category?: string
+          changes?: Json | null
+          client_id?: string
+          created_at?: string
+          description?: string
+          id?: string
+          target_id?: string | null
+          target_name?: string | null
+          target_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_log_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_log_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       auth_contexts: {
         Row: {
           agency_id: string | null
@@ -831,6 +903,7 @@ export type Database = {
       client_roles: {
         Row: {
           client_id: string
+          client_permissions: Json | null
           created_at: string | null
           id: string
           is_admin_tier: boolean | null
@@ -843,6 +916,7 @@ export type Database = {
         }
         Insert: {
           client_id: string
+          client_permissions?: Json | null
           created_at?: string | null
           id?: string
           is_admin_tier?: boolean | null
@@ -855,6 +929,7 @@ export type Database = {
         }
         Update: {
           client_id?: string
+          client_permissions?: Json | null
           created_at?: string | null
           id?: string
           is_admin_tier?: boolean | null
@@ -992,8 +1067,10 @@ export type Database = {
           agent_id: string
           client_id: string
           created_at: string
+          has_overrides: boolean | null
           id: string
           permissions: Json
+          role_id: string | null
           updated_at: string
           user_id: string
         }
@@ -1001,8 +1078,10 @@ export type Database = {
           agent_id: string
           client_id: string
           created_at?: string
+          has_overrides?: boolean | null
           id?: string
           permissions?: Json
+          role_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -1010,8 +1089,10 @@ export type Database = {
           agent_id?: string
           client_id?: string
           created_at?: string
+          has_overrides?: boolean | null
           id?: string
           permissions?: Json
+          role_id?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -1028,6 +1109,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_user_agent_permissions_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "client_roles"
             referencedColumns: ["id"]
           },
         ]
@@ -2074,6 +2162,9 @@ export type Database = {
         Returns: boolean
       }
       cleanup_expired_auth_contexts: { Args: never; Returns: undefined }
+      get_actor_email: { Args: { actor_uuid: string }; Returns: string }
+      get_actor_name: { Args: { actor_uuid: string }; Returns: string }
+      get_actor_type: { Args: { actor_uuid: string }; Returns: string }
       get_agencies_overview_data: {
         Args: never
         Returns: {
