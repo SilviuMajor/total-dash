@@ -181,7 +181,7 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
         // For preview, fetch role info from client_user_agent_permissions
         const previewUsers = functionData?.users || [];
         const userIds = previewUsers.map((u: any) => u.user_id);
-        let rolesByUser: Record<string, { role_id: string | null; has_overrides: boolean }> = {};
+        const rolesByUser: Record<string, { role_id: string | null; has_overrides: boolean }> = {};
         const allPermsByUser: Record<string, Record<string, any>> = {};
 
         if (userIds.length > 0) {
@@ -202,15 +202,15 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
           });
         }
 
-        const roleIds = [...new Set(Object.values(rolesByUser).map(r => r.role_id).filter(Boolean))];
-        let roleMap: Record<string, ClientRole> = {};
+        const roleIds = [...new Set(Object.values(rolesByUser).map(r => r.role_id).filter(Boolean))] as string[];
+        const roleMap: Record<string, ClientRole> = {};
         if (roleIds.length > 0) {
           const { data: rolesData } = await supabase.from('client_roles').select('*').in('id', roleIds);
           (rolesData || []).forEach((r: any) => { roleMap[r.id] = r; });
         }
 
         const usersWithRoles = previewUsers.map((u: any) => {
-          const roleInfo = rolesByUser[u.user_id] || {};
+          const roleInfo = rolesByUser[u.user_id] || { role_id: null, has_overrides: false };
           const role = roleInfo.role_id ? roleMap[roleInfo.role_id] : null;
           return {
             id: u.id,
