@@ -70,13 +70,13 @@ serve(async (req) => {
     console.log('Creating user with:', { email, firstName, lastName, role, clientId });
 
     // Better validation
-    if (!email || !firstName || !lastName || !clientId || !role) {
+    if (!email || !firstName || !lastName || !clientId || (!role && !roleId)) {
       const missing = [];
       if (!email) missing.push('email');
       if (!firstName) missing.push('firstName');
       if (!lastName) missing.push('lastName');
       if (!clientId) missing.push('clientId');
-      if (!role) missing.push('role');
+      if (!role && !roleId) missing.push('role or roleId');
       throw new Error(`Missing required fields: ${missing.join(', ')}`);
     }
 
