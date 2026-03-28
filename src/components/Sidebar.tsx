@@ -47,67 +47,7 @@ export function Sidebar() {
   const location = useLocation();
   const isAdmin = profile?.role === 'admin';
   const isMac = typeof navigator !== 'undefined' && navigator.platform.toUpperCase().includes('MAC');
-  interface ClientPermissions {
-    conversations?: boolean;
-    transcripts?: boolean;
-    analytics?: boolean;
-    knowledge_base?: boolean;
-    settings?: boolean;
-    [key: string]: boolean | undefined;
-  }
-  const [clientPermissions, setClientPermissions] = useState<ClientPermissions | null>(null);
-  const [clientSettingsPageEnabled, setClientSettingsPageEnabled] = useState(false);
-  
-  // Determine branding context
-  const isClientView = isClientPreviewMode;
-  const agencyId = isClientView ? previewClientAgencyId : undefined;
-  
-  // Use branding hook for dynamic branding
-  const branding = useBranding({ isClientView, agencyId, appTheme: effectiveTheme });
-  
-  // Use multi-tenant auth if available
-  const effectiveProfile = mtProfile || profile;
-  const effectiveSignOut = mtProfile ? mtSignOut : signOut;
-
-  useEffect(() => {
-    if (isClientPreviewMode && previewClient) {
-      const loadClientPermissions = async () => {
-        const { data } = await supabase
-          .from('client_settings')
-          .select('default_user_permissions, admin_capabilities')
-          .eq('client_id', previewClient.id)
-          .single();
-        
-        if (data?.default_user_permissions) {
-          setClientPermissions(data.default_user_permissions as ClientPermissions);
-        }
-        // In preview mode, always show the settings page
-        setClientSettingsPageEnabled(true);
-      };
-      loadClientPermissions();
-    } else if (!isClientPreviewMode && effectiveProfile?.role === 'client') {
-      // Regular client: load capabilities
-      const loadCapabilities = async () => {
-        // Get clientId from client_users
-        const { data: cuData } = await supabase
-          .from('client_users')
-          .select('client_id')
-          .eq('user_id', effectiveProfile.id)
-          .single();
-        if (cuData?.client_id) {
-          const { data: csData } = await supabase
-            .from('client_settings')
-            .select('admin_capabilities')
-            .eq('client_id', cuData.client_id)
-            .single();
-          if (csData?.admin_capabilities) {
-            setClientSettingsPageEnabled((csData.admin_capabilities as any)?.settings_page_enabled === true);
-          }
-        }
-      };
-      loadCapabilities();
-    }
-  }, [isClientPreviewMode, previewClient, effectiveProfile]);
+  // Determine branding context - moved up before usage
   
   // Determine which navigation to show based on preview depth
   const { previewDepth } = useMultiTenantAuth();

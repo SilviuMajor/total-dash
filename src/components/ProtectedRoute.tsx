@@ -66,16 +66,18 @@ export function ProtectedRoute({
           
           if (!hasAccess) {
             // Redirect to first available page
-            const redirectOrder = ['conversations', 'transcripts', 'analytics', 'knowledge_base', 'agent_settings'];
+            const redirectOrder = ['conversations', 'transcripts', 'analytics', 'knowledge_base', 'agent_settings', 'specs', 'guides'];
             
             for (const page of redirectOrder) {
               if (selectedAgentPermissions[page as keyof typeof selectedAgentPermissions]) {
                 const pathMap: Record<string, string> = {
                   conversations: '/',
-                  transcripts: '/transcripts',
+                  transcripts: '/text-transcripts',
                   analytics: '/analytics',
                   knowledge_base: '/knowledge-base',
                   agent_settings: '/agent-settings',
+                  specs: '/specs',
+                  guides: '/guides',
                 };
                 navigate(pathMap[page], { replace: true });
                 return;
