@@ -289,7 +289,7 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
         }
 
         const usersWithRoles = (clientUsers || []).map(u => {
-          const roleInfo = rolesByUser[u.user_id] || {};
+          const roleInfo = rolesByUser[u.user_id] || { role_id: null, has_overrides: false, permissions: {} };
           const role = roleInfo.role_id ? roleMap[roleInfo.role_id] : null;
           return {
             id: u.id,
