@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Settings, Trash2, UserPlus, Copy, AlertCircle, Loader2 } from "lucide-react";
+import { Trash2, UserPlus, Copy, AlertCircle, Loader2, ChevronDown, ChevronRight } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AvatarUpload } from "@/components/AvatarUpload";
@@ -24,13 +24,29 @@ interface ClientUser {
   full_name: string | null;
   avatar_url: string | null;
   department_id: string | null;
-  roles: string[];
+  role_id: string | null;
+  role_name: string | null;
+  role_slug: string | null;
+  is_admin_tier: boolean;
+  has_overrides: boolean;
   profiles: {
     email: string;
   };
   departments?: {
     name: string;
+    color?: string;
   };
+  agent_permissions: Record<string, any>;
+}
+
+interface ClientRole {
+  id: string;
+  name: string;
+  slug: string;
+  is_admin_tier: boolean;
+  is_system: boolean;
+  is_default: boolean;
+  client_permissions: Record<string, boolean>;
 }
 
 interface Department {
@@ -54,6 +70,7 @@ interface AgentPermission {
   knowledge_base: boolean;
   agent_settings: boolean;
   specs: boolean;
+  guides: boolean;
 }
 
 export function ClientUsersManagement({ clientId }: { clientId: string }) {
@@ -62,14 +79,17 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
   const [users, setUsers] = useState<ClientUser[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
+  const [roles, setRoles] = useState<ClientRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
-  const [permissionsOpen, setPermissionsOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<ClientUser | null>(null);
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
   const [userToRemove, setUserToRemove] = useState<ClientUser | null>(null);
   const [generatedPassword, setGeneratedPassword] = useState<string>("");
+  const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
+  const [roleChangeModal, setRoleChangeModal] = useState<{ user: ClientUser; newRoleId: string } | null>(null);
+  const [roleTemplates, setRoleTemplates] = useState<Record<string, Record<string, any>>>({});
+  const [agentCeilings, setAgentCeilings] = useState<Record<string, Record<string, any>>>({});
   
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserFullName, setNewUserFullName] = useState("");
@@ -79,15 +99,9 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
   const [newUserPassword, setNewUserPassword] = useState("");
   const [newUserAgentPermissions, setNewUserAgentPermissions] = useState<Record<string, AgentPermission>>({});
   const [selectedUserAgentPermissions, setSelectedUserAgentPermissions] = useState<Record<string, AgentPermission>>({});
-  const [profileAccessControl, setProfileAccessControl] = useState({
-    edit_name: 'all',
-    change_email: 'admin_only',
-    change_password: 'all',
-  });
 
   const { toast } = useToast();
 
-  // Safe helper for getting initials
   const getInitials = (name?: string | null, fallback?: string): string => {
     const src = name || fallback || "";
     if (!src.trim()) return "U";
@@ -97,40 +111,59 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
   };
 
   useEffect(() => {
-    // Check authentication first
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        return;
-      }
+      if (!session) return;
     };
-    
     checkAuth();
-    
-    // Wait for super admin status to be determined before loading
-    if (isSuperAdminLoading) {
-      return;
-    }
-    
+    if (isSuperAdminLoading) return;
     loadUsers();
     loadDepartments();
     loadAgents();
+    loadRoles();
+    loadAgentCeilings();
   }, [clientId, isSuperAdmin, isSuperAdminLoading, isPreviewMode]);
 
-  useEffect(() => {
-    loadProfileAccessSettings();
-  }, [clientId]);
+  const loadRoles = async () => {
+    const { data } = await supabase
+      .from("client_roles")
+      .select("*")
+      .eq("client_id", clientId)
+      .order("sort_order");
+    setRoles((data || []) as ClientRole[]);
+  };
+
+  const loadAgentCeilings = async () => {
+    const { data: assignments } = await supabase
+      .from("agent_assignments")
+      .select("agent_id, agents(id, name, config)")
+      .eq("client_id", clientId);
+    const ceilings: Record<string, Record<string, any>> = {};
+    (assignments || []).forEach((a: any) => {
+      if (a.agents) ceilings[a.agents.id] = a.agents.config || {};
+    });
+    setAgentCeilings(ceilings);
+  };
+
+  const loadRoleTemplates = async (roleId: string) => {
+    const { data } = await supabase
+      .from("role_permission_templates")
+      .select("agent_id, permissions")
+      .eq("role_id", roleId)
+      .eq("client_id", clientId);
+    const map: Record<string, any> = {};
+    (data || []).forEach((t: any) => { map[t.agent_id] = t.permissions || {}; });
+    return map;
+  };
 
   const loadUsers = async () => {
     if (!clientId) return;
-
     setLoading(true);
     setError(null);
 
     try {
       const isSuperAdminPreview = isPreviewMode && isSuperAdmin === true;
 
-      // If super admin preview, always use bypass function
       if (isSuperAdminPreview) {
         const { data: functionData, error: functionError } = await supabase.functions.invoke(
           'get-client-users',
@@ -145,23 +178,63 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
           return;
         }
 
-        const usersWithRoles = (functionData?.users || []).map((u: any) => ({
-          id: u.id,
-          user_id: u.user_id,
-          full_name: u.full_name,
-          avatar_url: u.avatar_url,
-          department_id: u.department_id,
-          profiles: u.profiles || { email: '' },
-          departments: u.departments || undefined,
-          roles: u.roles || [],
-        }));
+        // For preview, fetch role info from client_user_agent_permissions
+        const previewUsers = functionData?.users || [];
+        const userIds = previewUsers.map((u: any) => u.user_id);
+        let rolesByUser: Record<string, { role_id: string | null; has_overrides: boolean }> = {};
+        const allPermsByUser: Record<string, Record<string, any>> = {};
+
+        if (userIds.length > 0) {
+          const { data: permRows } = await supabase
+            .from('client_user_agent_permissions')
+            .select('user_id, role_id, has_overrides, permissions, agent_id')
+            .eq('client_id', clientId)
+            .in('user_id', userIds);
+
+          const seenUsers = new Set<string>();
+          (permRows || []).forEach((r: any) => {
+            if (!seenUsers.has(r.user_id)) {
+              seenUsers.add(r.user_id);
+              rolesByUser[r.user_id] = { role_id: r.role_id, has_overrides: r.has_overrides || false };
+            }
+            if (!allPermsByUser[r.user_id]) allPermsByUser[r.user_id] = {};
+            allPermsByUser[r.user_id][r.agent_id] = r.permissions || {};
+          });
+        }
+
+        const roleIds = [...new Set(Object.values(rolesByUser).map(r => r.role_id).filter(Boolean))];
+        let roleMap: Record<string, ClientRole> = {};
+        if (roleIds.length > 0) {
+          const { data: rolesData } = await supabase.from('client_roles').select('*').in('id', roleIds);
+          (rolesData || []).forEach((r: any) => { roleMap[r.id] = r; });
+        }
+
+        const usersWithRoles = previewUsers.map((u: any) => {
+          const roleInfo = rolesByUser[u.user_id] || {};
+          const role = roleInfo.role_id ? roleMap[roleInfo.role_id] : null;
+          return {
+            id: u.id,
+            user_id: u.user_id,
+            full_name: u.full_name,
+            avatar_url: u.avatar_url,
+            department_id: u.department_id,
+            profiles: u.profiles || { email: '' },
+            departments: u.departments || undefined,
+            role_id: roleInfo.role_id || null,
+            role_name: role?.name || null,
+            role_slug: role?.slug || null,
+            is_admin_tier: role?.is_admin_tier || false,
+            has_overrides: roleInfo.has_overrides || false,
+            agent_permissions: allPermsByUser[u.user_id] || {},
+          };
+        });
 
         setUsers(usersWithRoles);
         setLoading(false);
         return;
       }
 
-      // Normal path: direct RLS-governed queries
+      // Normal path
       const { data: clientUsers, error } = await supabase
         .from('client_users')
         .select(`
@@ -183,38 +256,62 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
         return;
       }
 
-      // Fetch roles for these users
       const userIds = (clientUsers || []).map(u => u.user_id);
-      let rolesByUser: Record<string, string[]> = {};
-      
+      let rolesByUser: Record<string, { role_id: string | null; has_overrides: boolean; permissions: Record<string, any> }> = {};
+
       if (userIds.length > 0) {
-        const { data: roles, error: rolesError } = await supabase
-          .from('user_roles')
-          .select('user_id, role')
+        const { data: permRows } = await supabase
+          .from('client_user_agent_permissions')
+          .select('user_id, role_id, has_overrides, permissions, agent_id')
           .eq('client_id', clientId)
           .in('user_id', userIds);
 
-        if (!rolesError && roles) {
-          rolesByUser = roles.reduce((acc, r) => {
-            acc[r.user_id] = acc[r.user_id] || [];
-            acc[r.user_id].push(r.role);
-            return acc;
-          }, {} as Record<string, string[]>);
+        const seenUsers = new Set<string>();
+        const allPermsByUser: Record<string, Record<string, any>> = {};
+        (permRows || []).forEach((r: any) => {
+          if (!seenUsers.has(r.user_id)) {
+            seenUsers.add(r.user_id);
+            rolesByUser[r.user_id] = {
+              role_id: r.role_id,
+              has_overrides: r.has_overrides || false,
+              permissions: r.permissions || {},
+            };
+          }
+          if (!allPermsByUser[r.user_id]) allPermsByUser[r.user_id] = {};
+          allPermsByUser[r.user_id][r.agent_id] = r.permissions || {};
+        });
+
+        const roleIds = [...new Set(Object.values(rolesByUser).map(r => r.role_id).filter(Boolean))];
+        let roleMap: Record<string, ClientRole> = {};
+        if (roleIds.length > 0) {
+          const { data: rolesData } = await supabase.from('client_roles').select('*').in('id', roleIds);
+          (rolesData || []).forEach((r: any) => { roleMap[r.id] = r; });
         }
+
+        const usersWithRoles = (clientUsers || []).map(u => {
+          const roleInfo = rolesByUser[u.user_id] || {};
+          const role = roleInfo.role_id ? roleMap[roleInfo.role_id] : null;
+          return {
+            id: u.id,
+            user_id: u.user_id,
+            full_name: u.full_name,
+            avatar_url: u.avatar_url,
+            department_id: u.department_id,
+            profiles: u.profiles || { email: '' },
+            departments: u.departments || undefined,
+            role_id: roleInfo.role_id || null,
+            role_name: role?.name || null,
+            role_slug: role?.slug || null,
+            is_admin_tier: role?.is_admin_tier || false,
+            has_overrides: roleInfo.has_overrides || false,
+            agent_permissions: allPermsByUser[u.user_id] || {},
+          };
+        });
+
+        setUsers(usersWithRoles);
+      } else {
+        setUsers([]);
       }
-
-      const usersWithRoles = (clientUsers || []).map(u => ({
-        id: u.id,
-        user_id: u.user_id,
-        full_name: u.full_name,
-        avatar_url: u.avatar_url,
-        department_id: u.department_id,
-        profiles: u.profiles || { email: '' },
-        departments: u.departments || undefined,
-        roles: rolesByUser[u.user_id] || [],
-      }));
-
-      setUsers(usersWithRoles);
     } catch (err) {
       console.error('[ClientUsersManagement] Fatal error:', err);
       setError(err instanceof Error ? err.message : 'Failed to load users');
@@ -231,15 +328,10 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
         .select('*')
         .eq('client_id', clientId)
         .order('name');
-
-      if (error) {
-        console.error('[ClientUsersManagement] Error loading departments:', error);
-        throw error;
-      }
+      if (error) throw error;
       setDepartments(data || []);
     } catch (error: any) {
       console.error('[ClientUsersManagement] Error in loadDepartments:', error);
-      // Don't set error state for departments - it's not critical
     }
   };
 
@@ -260,9 +352,6 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
         .order('sort_order', { ascending: true });
 
       if (error) {
-        console.error('[ClientUsersManagement] Error loading agents:', error);
-        // Don't throw - agents might not be accessible in preview mode
-        // Just log and continue with empty agents list
         setAgents([]);
         return;
       }
@@ -278,7 +367,6 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
 
       setAgents(agentsList);
 
-      // Initialize permissions for new user
       const initialPermissions: Record<string, AgentPermission> = {};
       agentsList.forEach(agent => {
         initialPermissions[agent.id] = {
@@ -289,6 +377,7 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
           knowledge_base: false,
           agent_settings: false,
           specs: true,
+          guides: false,
         };
       });
       setNewUserAgentPermissions(initialPermissions);
@@ -322,54 +411,8 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
     }
   };
 
-  const loadProfileAccessSettings = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('client_settings')
-        .select('profile_access_control')
-        .eq('client_id', clientId)
-        .single();
-
-      if (error) throw error;
-      if (data?.profile_access_control) {
-        setProfileAccessControl(data.profile_access_control as any);
-      }
-    } catch (error: any) {
-      console.error('Error loading profile access settings:', error);
-    }
-  };
-
-  const updateAccessControl = async (field: string, value: string) => {
-    try {
-      const newAccessControl = {
-        ...profileAccessControl,
-        [field]: value,
-      };
-
-      const { error } = await supabase
-        .from('client_settings')
-        .update({ profile_access_control: newAccessControl })
-        .eq('client_id', clientId);
-
-      if (error) throw error;
-
-      setProfileAccessControl(newAccessControl);
-      toast({
-        title: "Success",
-        description: "Profile access settings updated",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
-
   const handleAddUser = async () => {
     try {
-      // Parse fullName into firstName and lastName
       const nameParts = newUserFullName.trim().split(' ');
       const firstName = nameParts[0] || '';
       const lastName = nameParts.slice(1).join(' ') || nameParts[0];
@@ -378,8 +421,8 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
         body: {
           clientId,
           email: newUserEmail,
-          firstName: firstName,
-          lastName: lastName,
+          firstName,
+          lastName,
           role: newUserRole,
           departmentId: newUserDepartment === "none" ? null : newUserDepartment || null,
           avatarUrl: newUserAvatar || null,
@@ -390,12 +433,10 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
 
       if (error) throw error;
 
-      // Add agent permissions if user was created successfully
       if (data.success && data.userId) {
         const activePermissions = Object.values(newUserAgentPermissions);
-        
         for (const permission of activePermissions) {
-          const { error: permError } = await supabase
+          await supabase
             .from('client_user_agent_permissions')
             .insert({
               user_id: data.userId,
@@ -404,23 +445,19 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
               permissions: {
                 analytics: permission.analytics,
                 conversations: permission.conversations,
-                agent_settings: permission.agent_settings,
+                transcripts: permission.transcripts,
                 knowledge_base: permission.knowledge_base,
+                agent_settings: permission.agent_settings,
+                specs: permission.specs,
+                guides: permission.guides,
               },
             });
-          
-          if (permError) {
-            console.error('Error adding agent permission:', permError);
-          }
         }
       }
 
       if (data.success) {
         setGeneratedPassword(data.temporaryPassword);
-        toast({
-          title: "Success",
-          description: `User created successfully`,
-        });
+        toast({ title: "Success", description: "User created successfully" });
         loadUsers();
         setOpen(false);
         setNewUserEmail("");
@@ -430,7 +467,6 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
         setNewUserAvatar("");
         setNewUserPassword("");
         
-        // Reset permissions
         const initialPermissions: Record<string, AgentPermission> = {};
         agents.forEach(agent => {
           initialPermissions[agent.id] = {
@@ -441,14 +477,13 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
             knowledge_base: false,
             agent_settings: false,
             specs: true,
+            guides: false,
           };
         });
         setNewUserAgentPermissions(initialPermissions);
       }
     } catch (error: any) {
       console.error('[ClientUsersManagement] User creation failed:', error);
-      
-      // Don't close dialog on error - let user fix the issue
       toast({
         title: "Error Creating User",
         description: error.message || 'Failed to create user. Please try again.',
@@ -457,116 +492,26 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
     }
   };
 
-  const handleUpdatePermissions = async () => {
-    if (!selectedUser) return;
-
+  const handleRemoveUser = async () => {
+    if (!userToRemove) return;
     try {
-      // Check if removing admin role from last admin
-      const currentRoles = selectedUser.roles || [];
-      const isCurrentlyAdmin = currentRoles.includes('admin');
-      const willBeAdmin = selectedUser.roles.includes('admin');
+      await supabase
+        .from('client_user_agent_permissions')
+        .delete()
+        .eq('user_id', userToRemove.user_id)
+        .eq('client_id', clientId);
 
-      if (isCurrentlyAdmin && !willBeAdmin) {
-        const { data: isLast } = await supabase.rpc('is_last_admin', {
-          _user_id: selectedUser.user_id,
-          _client_id: clientId
-        });
+      await supabase
+        .from('client_user_departments')
+        .delete()
+        .eq('client_user_id', userToRemove.id);
 
-        if (isLast) {
-          toast({
-            title: "Cannot Remove Admin",
-            description: "This is the last admin user. At least one admin is required.",
-            variant: "destructive",
-          });
-          return;
-        }
-      }
-
-      // Update client_users basic info
-      const { error: userError } = await supabase
-        .from('client_users')
-        .update({
-          full_name: selectedUser.full_name,
-          department_id: selectedUser.department_id || null,
-          avatar_url: selectedUser.avatar_url,
-        })
-        .eq('id', selectedUser.id);
-
-      if (userError) throw userError;
-
-      // Update roles
       await supabase
         .from('user_roles')
         .delete()
-        .eq('user_id', selectedUser.user_id)
+        .eq('user_id', userToRemove.user_id)
         .eq('client_id', clientId);
 
-      if (selectedUser.roles.length > 0) {
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .insert(
-            selectedUser.roles.map(role => ({
-              user_id: selectedUser.user_id,
-              client_id: clientId,
-              role: role as 'admin' | 'user'
-            }))
-          );
-
-        if (roleError) throw roleError;
-      }
-
-      // Delete existing permissions
-      const { error: deleteError } = await supabase
-        .from('client_user_agent_permissions')
-        .delete()
-        .eq('user_id', selectedUser.user_id)
-        .eq('client_id', clientId);
-
-      if (deleteError) throw deleteError;
-
-      // Insert new permissions
-      const permissionsToInsert = Object.values(selectedUserAgentPermissions).map(p => ({
-        user_id: selectedUser.user_id,
-        agent_id: p.agent_id,
-        client_id: clientId,
-        permissions: {
-          analytics: p.analytics,
-          conversations: p.conversations,
-          transcripts: p.transcripts,
-          knowledge_base: p.knowledge_base,
-          agent_settings: p.agent_settings,
-          specs: p.specs,
-        },
-      }));
-
-      if (permissionsToInsert.length > 0) {
-        const { error: insertError } = await supabase
-          .from('client_user_agent_permissions')
-          .insert(permissionsToInsert);
-
-        if (insertError) throw insertError;
-      }
-
-      toast({
-        title: "Success",
-        description: "Permissions updated successfully",
-      });
-      loadUsers();
-      setPermissionsOpen(false);
-      setSelectedUser(null);
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleRemoveUser = async () => {
-    if (!userToRemove) return;
-
-    try {
       const { error } = await supabase
         .from('client_users')
         .delete()
@@ -574,48 +519,46 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
 
       if (error) throw error;
 
-      toast({
-        title: "Success",
-        description: "User removed from client successfully",
-      });
+      toast({ title: "Removed", description: "User removed successfully" });
       loadUsers();
       setRemoveDialogOpen(false);
       setUserToRemove(null);
+      setExpandedUserId(null);
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     }
   };
 
   const copyPassword = () => {
     navigator.clipboard.writeText(generatedPassword);
-    toast({
-      title: "Copied",
-      description: "Password copied to clipboard",
-    });
+    toast({ title: "Copied", description: "Password copied to clipboard" });
   };
 
   const toggleAgentPermission = (agentId: string, field: keyof AgentPermission, value: boolean, isNewUser: boolean = true) => {
     if (isNewUser) {
       setNewUserAgentPermissions(prev => ({
         ...prev,
-        [agentId]: {
-          ...prev[agentId],
-          [field]: value,
-        },
+        [agentId]: { ...prev[agentId], [field]: value },
       }));
     } else {
       setSelectedUserAgentPermissions(prev => ({
         ...prev,
-        [agentId]: {
-          ...prev[agentId],
-          [field]: value,
-        },
+        [agentId]: { ...prev[agentId], [field]: value },
       }));
     }
+  };
+
+  const countOverrides = (user: ClientUser): number => {
+    if (!user.has_overrides) return 0;
+    let count = 0;
+    const templates = roleTemplates[user.user_id] || {};
+    for (const [agentId, perms] of Object.entries(user.agent_permissions)) {
+      const template = templates[agentId] || {};
+      Object.keys(perms).forEach(k => {
+        if ((perms as any)[k] !== (template[k] ?? false)) count++;
+      });
+    }
+    return count;
   };
 
   if (loading) {
@@ -650,79 +593,11 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
 
   return (
     <>
-      <Card className="p-6 bg-gradient-card border-border/50 mb-6">
-        <h3 className="text-lg font-semibold text-foreground mb-4">
-          Profile Access Settings
-        </h3>
-        <p className="text-sm text-muted-foreground mb-4">
-          Control which profile settings features are available to all users vs. admin-only
-        </p>
-        
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <Label>Edit Name</Label>
-              <p className="text-xs text-muted-foreground">Allow users to change their first/last name</p>
-            </div>
-            <Select
-              value={profileAccessControl.edit_name}
-              onValueChange={(value) => updateAccessControl('edit_name', value)}
-            >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Users</SelectItem>
-                <SelectItem value="admin_only">Admin Only</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="flex items-center justify-between">
-            <div>
-              <Label>Change Email</Label>
-              <p className="text-xs text-muted-foreground">Allow users to change their email address</p>
-            </div>
-            <Select
-              value={profileAccessControl.change_email}
-              onValueChange={(value) => updateAccessControl('change_email', value)}
-            >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Users</SelectItem>
-                <SelectItem value="admin_only">Admin Only</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="flex items-center justify-between">
-            <div>
-              <Label>Change Password</Label>
-              <p className="text-xs text-muted-foreground">Allow users to change their password</p>
-            </div>
-            <Select
-              value={profileAccessControl.change_password}
-              onValueChange={(value) => updateAccessControl('change_password', value)}
-            >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Users</SelectItem>
-                <SelectItem value="admin_only">Admin Only</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      </Card>
-
       <Card className="p-6 bg-gradient-card border-border/50">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-2xl font-semibold text-foreground">Client Users</h2>
-            <p className="text-sm text-muted-foreground">Manage users for this client</p>
+            <h2 className="text-2xl font-semibold text-foreground">Team Members</h2>
+            <p className="text-sm text-muted-foreground">Manage users and their permissions</p>
           </div>
           <Button onClick={() => setOpen(true)} className="bg-foreground text-background hover:bg-foreground/90">
             <UserPlus className="w-4 h-4 mr-2" />
@@ -735,55 +610,242 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
             No users assigned to this client yet.
           </div>
         ) : (
-          <div className="space-y-3">
-            {users.map((user) => (
-              <div
-                key={user.id}
-                className="flex items-center gap-4 p-4 rounded-lg border border-border/50 bg-card hover:bg-muted/50 transition-colors"
-              >
-                <Avatar className="h-12 w-12">
-                  <AvatarImage src={user.avatar_url || undefined} />
-                  <AvatarFallback>{getInitials(user.full_name)}</AvatarFallback>
-                </Avatar>
+          <div className="space-y-2">
+            {users.map((user) => {
+              const isExpanded = expandedUserId === user.user_id;
 
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="font-medium text-foreground truncate">{user.full_name || "Unnamed User"}</p>
-                    {user.roles.includes('admin') && <Badge variant="default">Admin</Badge>}
-                    {user.departments?.name && <Badge variant="secondary">{user.departments.name}</Badge>}
-                  </div>
-                  <div className="flex items-center gap-3 text-sm mt-1">
-                    <p className="text-muted-foreground truncate">{user.profiles?.email || 'No email'}</p>
-                    <span className="text-muted-foreground">|</span>
-                    <PasswordDisplay userId={user.user_id} />
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
+              return (
+                <div
+                  key={user.id}
+                  className={`border rounded-lg overflow-hidden transition-colors ${isExpanded ? 'border-border' : 'border-border/50'}`}
+                >
+                  {/* User header row */}
+                  <div
+                    className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors"
                     onClick={async () => {
-                      setSelectedUser(user);
-                      await loadUserAgentPermissions(user.user_id);
-                      setPermissionsOpen(true);
+                      if (isExpanded) {
+                        setExpandedUserId(null);
+                      } else {
+                        setExpandedUserId(user.user_id);
+                        await loadUserAgentPermissions(user.user_id);
+                        if (user.role_id) {
+                          const templates = await loadRoleTemplates(user.role_id);
+                          setRoleTemplates(prev => ({ ...prev, [user.user_id]: templates }));
+                        }
+                      }
                     }}
                   >
-                    <Settings className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      setUserToRemove(user);
-                      setRemoveDialogOpen(true);
-                    }}
-                  >
-                    <Trash2 className="w-4 h-4 text-destructive" />
-                  </Button>
+                    <Avatar className="h-9 w-9">
+                      <AvatarImage src={user.avatar_url || undefined} />
+                      <AvatarFallback className="text-xs">{getInitials(user.full_name)}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-medium">{user.full_name || "Unnamed"}</span>
+                      <span className="text-xs text-muted-foreground block">{user.profiles?.email || 'No email'}</span>
+                    </div>
+                    {user.role_name && (
+                      <span className={`text-xs px-2.5 py-1 rounded-full ${
+                        user.is_admin_tier
+                          ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                          : 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                      }`}>
+                        {user.role_name}
+                      </span>
+                    )}
+                    {user.departments?.name && (
+                      <span className="text-xs text-muted-foreground">{user.departments.name}</span>
+                    )}
+                    <PasswordDisplay userId={user.user_id} />
+                    {isExpanded ? (
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </div>
+
+                  {/* Expanded body */}
+                  {isExpanded && (
+                    <div className="border-t px-4 py-4 space-y-4">
+                      {/* Role + Department dropdowns */}
+                      <div className="flex gap-3">
+                        <div className="flex-1 space-y-1">
+                          <Label className="text-xs text-muted-foreground">Role</Label>
+                          <Select
+                            value={user.role_id || ""}
+                            onValueChange={(newRoleId) => {
+                              if (newRoleId !== user.role_id) {
+                                setRoleChangeModal({ user, newRoleId });
+                              }
+                            }}
+                          >
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {roles.map(r => (
+                                <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex-1 space-y-1">
+                          <Label className="text-xs text-muted-foreground">Department</Label>
+                          <Select
+                            value={user.department_id || "none"}
+                            onValueChange={async (value) => {
+                              await supabase
+                                .from('client_users')
+                                .update({ department_id: value === "none" ? null : value })
+                                .eq('id', user.id);
+                              loadUsers();
+                            }}
+                          >
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">None</SelectItem>
+                              {departments.map(d => (
+                                <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      {/* Page access grid */}
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-medium text-muted-foreground">Page access</span>
+                          {user.has_overrides && (
+                            <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300">
+                              overrides from role
+                            </span>
+                          )}
+                        </div>
+                        {agents.map(agent => {
+                          const agentConfig = agentCeilings[agent.id] || {};
+                          const userPerms = selectedUserAgentPermissions[agent.id] || {};
+                          const templatePerms = roleTemplates[user.user_id]?.[agent.id] || {};
+
+                          const PERM_KEYS = [
+                            { key: "conversations", label: "Conversations" },
+                            { key: "transcripts", label: "Transcripts" },
+                            { key: "analytics", label: "Analytics" },
+                            { key: "specs", label: "Specifications" },
+                            { key: "knowledge_base", label: "Knowledge base" },
+                            { key: "guides", label: "Guides" },
+                            { key: "agent_settings", label: "Agent settings" },
+                          ];
+
+                          const visibleKeys = PERM_KEYS.filter(p => {
+                            const ceilingKey = "client_" + p.key + "_enabled";
+                            return agentConfig[ceilingKey] !== false;
+                          });
+
+                          if (visibleKeys.length === 0) return null;
+
+                          return (
+                            <div key={agent.id} className="mb-3">
+                              {agents.length > 1 && (
+                                <div className="text-xs font-medium text-muted-foreground mb-1.5">{agent.name}</div>
+                              )}
+                              <div className="grid grid-cols-2 gap-1.5">
+                                {visibleKeys.map(p => {
+                                  const isChecked = (userPerms as any)[p.key] ?? templatePerms[p.key] ?? false;
+                                  const isOverride = user.has_overrides && (userPerms as any)[p.key] !== undefined && (userPerms as any)[p.key] !== (templatePerms[p.key] ?? false);
+
+                                  return (
+                                    <label
+                                      key={p.key}
+                                      className={`flex items-center gap-2 px-3 py-2 rounded-md cursor-pointer text-sm transition-colors ${
+                                        isOverride
+                                          ? 'bg-amber-50 border border-amber-200 dark:bg-amber-950/30 dark:border-amber-800'
+                                          : 'bg-muted/50 hover:bg-muted'
+                                      }`}
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        className="w-4 h-4 rounded"
+                                        checked={isChecked}
+                                        onChange={(e) => toggleAgentPermission(agent.id, p.key as keyof AgentPermission, e.target.checked, false)}
+                                        style={{ accentColor: isOverride ? '#B45309' : undefined }}
+                                      />
+                                      <span>{p.label}</span>
+                                      {isOverride && (
+                                        <span className="text-[10px] text-amber-600 dark:text-amber-400 ml-auto">override</span>
+                                      )}
+                                    </label>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Action buttons */}
+                      <div className="flex items-center justify-between pt-2">
+                        {user.has_overrides && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-xs text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-950/30"
+                            onClick={async () => {
+                              if (!user.role_id) return;
+                              const templates = await loadRoleTemplates(user.role_id);
+                              for (const [agentId, perms] of Object.entries(templates)) {
+                                await supabase
+                                  .from('client_user_agent_permissions')
+                                  .update({ permissions: perms, has_overrides: false })
+                                  .eq('user_id', user.user_id)
+                                  .eq('agent_id', agentId)
+                                  .eq('client_id', clientId);
+                              }
+                              toast({ title: "Reset", description: "Permissions reset to role defaults" });
+                              loadUsers();
+                              await loadUserAgentPermissions(user.user_id);
+                            }}
+                          >
+                            Reset to role defaults
+                          </Button>
+                        )}
+                        <div className="flex gap-2 ml-auto">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => { setUserToRemove(user); setRemoveDialogOpen(true); }}
+                          >
+                            Remove user
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={async () => {
+                              for (const [agentId, perms] of Object.entries(selectedUserAgentPermissions)) {
+                                const templatePerms = roleTemplates[user.user_id]?.[agentId] || {};
+                                const hasOverrides = Object.keys(perms).some(
+                                  k => k !== 'agent_id' && (perms as any)[k] !== (templatePerms[k] ?? false)
+                                );
+                                await supabase
+                                  .from('client_user_agent_permissions')
+                                  .update({
+                                    permissions: perms,
+                                    has_overrides: hasOverrides,
+                                  })
+                                  .eq('user_id', user.user_id)
+                                  .eq('agent_id', agentId)
+                                  .eq('client_id', clientId);
+                              }
+                              toast({ title: "Saved", description: "User permissions updated" });
+                              loadUsers();
+                            }}
+                          >
+                            Save
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </Card>
@@ -913,6 +975,13 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
                           />
                           Specs
                         </label>
+                        <label className="flex items-center gap-2">
+                          <Checkbox
+                            checked={perms.guides}
+                            onCheckedChange={(checked) => toggleAgentPermission(agent.id, 'guides', checked as boolean)}
+                          />
+                          Guides
+                        </label>
                       </div>
                     </div>
                   );
@@ -957,142 +1026,57 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Permissions Dialog */}
-      <Dialog open={permissionsOpen} onOpenChange={setPermissionsOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit User Permissions</DialogTitle>
-          </DialogHeader>
-          {selectedUser && (
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="editFullName">Full Name</Label>
-                <Input
-                  id="editFullName"
-                  value={selectedUser.full_name || ""}
-                  onChange={(e) => setSelectedUser({ ...selectedUser, full_name: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="editDepartment">Department</Label>
-                <Select
-                  value={selectedUser.department_id || "none"}
-                  onValueChange={(value) =>
-                    setSelectedUser({ ...selectedUser, department_id: value === "none" ? null : value })
-                  }
-                >
-                  <SelectTrigger id="editDepartment">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    {departments.map((dept) => (
-                      <SelectItem key={dept.id} value={dept.id}>
-                        {dept.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="editRole">User Role</Label>
-                <Select
-                  value={selectedUser.roles.includes('admin') ? 'admin' : 'user'}
-                  onValueChange={(value) => {
-                    setSelectedUser({ 
-                      ...selectedUser, 
-                      roles: value === 'admin' ? ['admin'] : ['user']
-                    });
-                  }}
-                >
-                  <SelectTrigger id="editRole">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="user">User</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Agent permissions */}
-              <div>
-                <h3 className="text-sm font-semibold mb-2">Agent Permissions</h3>
-                <div className="space-y-2 max-h-64 overflow-y-auto">
-                  {agents.map((agent) => {
-                    const perms = selectedUserAgentPermissions[agent.id] || {
-                      agent_id: agent.id,
-                      analytics: false,
-                      conversations: false,
-                      transcripts: false,
-                      knowledge_base: false,
-                      agent_settings: false,
-                      specs: false,
-                    };
-
-                    return (
-                      <div key={agent.id} className="border p-3 rounded space-y-2">
-                        <div className="font-medium">{agent.name}</div>
-                        <div className="grid grid-cols-2 gap-2 text-sm">
-                          <label className="flex items-center gap-2">
-                            <Checkbox
-                              checked={perms.analytics}
-                              onCheckedChange={(checked) => toggleAgentPermission(agent.id, 'analytics', checked as boolean, false)}
-                            />
-                            Analytics
-                          </label>
-                          <label className="flex items-center gap-2">
-                            <Checkbox
-                              checked={perms.conversations}
-                              onCheckedChange={(checked) => toggleAgentPermission(agent.id, 'conversations', checked as boolean, false)}
-                            />
-                            Conversations
-                          </label>
-                          <label className="flex items-center gap-2">
-                            <Checkbox
-                              checked={perms.transcripts}
-                              onCheckedChange={(checked) => toggleAgentPermission(agent.id, 'transcripts', checked as boolean, false)}
-                            />
-                            Transcripts
-                          </label>
-                          <label className="flex items-center gap-2">
-                            <Checkbox
-                              checked={perms.knowledge_base}
-                              onCheckedChange={(checked) => toggleAgentPermission(agent.id, 'knowledge_base', checked as boolean, false)}
-                            />
-                            Knowledge Base
-                          </label>
-                          <label className="flex items-center gap-2">
-                            <Checkbox
-                              checked={perms.agent_settings}
-                              onCheckedChange={(checked) => toggleAgentPermission(agent.id, 'agent_settings', checked as boolean, false)}
-                            />
-                            Agent Settings
-                          </label>
-                          <label className="flex items-center gap-2">
-                            <Checkbox
-                              checked={perms.specs}
-                              onCheckedChange={(checked) => toggleAgentPermission(agent.id, 'specs', checked as boolean, false)}
-                            />
-                            Specs
-                          </label>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-4">
-                <Button variant="outline" onClick={() => setPermissionsOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleUpdatePermissions}>Save Changes</Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* Role Change Confirmation */}
+      <AlertDialog open={!!roleChangeModal} onOpenChange={() => setRoleChangeModal(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Change role</AlertDialogTitle>
+            <AlertDialogDescription>
+              Change {roleChangeModal?.user.full_name}'s role to {roles.find(r => r.id === roleChangeModal?.newRoleId)?.name}?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <Button
+              variant="outline"
+              onClick={async () => {
+                if (!roleChangeModal) return;
+                const { user, newRoleId } = roleChangeModal;
+                await supabase
+                  .from('client_user_agent_permissions')
+                  .update({ role_id: newRoleId, has_overrides: true })
+                  .eq('user_id', user.user_id)
+                  .eq('client_id', clientId);
+                toast({ title: "Role changed", description: "Kept current permissions as overrides" });
+                setRoleChangeModal(null);
+                loadUsers();
+              }}
+            >
+              Keep current permissions
+            </Button>
+            <AlertDialogAction
+              onClick={async () => {
+                if (!roleChangeModal) return;
+                const { user, newRoleId } = roleChangeModal;
+                const templates = await loadRoleTemplates(newRoleId);
+                for (const [agentId, perms] of Object.entries(templates)) {
+                  await supabase
+                    .from('client_user_agent_permissions')
+                    .update({ permissions: perms, role_id: newRoleId, has_overrides: false })
+                    .eq('user_id', user.user_id)
+                    .eq('agent_id', agentId)
+                    .eq('client_id', clientId);
+                }
+                toast({ title: "Role changed", description: "Permissions reset to new role defaults" });
+                setRoleChangeModal(null);
+                loadUsers();
+              }}
+            >
+              Reset to defaults
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Remove User Dialog */}
       <AlertDialog open={removeDialogOpen} onOpenChange={setRemoveDialogOpen}>
