@@ -150,7 +150,7 @@ export default function Settings() {
 
         {showCannedResponses && (
           <TabsContent value="canned-responses" className="space-y-6">
-            <CannedResponsesSettings />
+            <CannedResponsesSettings readOnly={!canManageCannedResponses} />
           </TabsContent>
         )}
 

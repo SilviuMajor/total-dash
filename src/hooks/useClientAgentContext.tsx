@@ -441,6 +441,7 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
         selectedAgentId,
         setSelectedAgentId,
         selectedAgentPermissions,
+        companySettingsPermissions,
         loading,
         clientId,
         userRoleSlug,
