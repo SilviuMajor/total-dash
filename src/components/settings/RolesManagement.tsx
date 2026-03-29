@@ -149,12 +149,8 @@ export function RolesManagement({ clientId }: RolesManagementProps) {
     return AGENT_PERMISSION_KEYS.filter(p => isAgencyEnabled(agentId, p.key));
   };
 
-  const getVisibleClientPermKeys = () => {
-    return CLIENT_PERMISSION_KEYS.filter(p => {
-      if (p.key === "settings_page") return isClientCapEnabled("settings_page_enabled");
-      if (p.key === "audit_log") return isClientCapEnabled("client_audit_log_enabled");
-      return true;
-    });
+  const getVisibleCompanyTabs = () => {
+    return COMPANY_SETTINGS_TABS.filter(t => clientCaps[t.capKey] !== false);
   };
 
   const togglePermission = async (roleId: string, agentId: string, permKey: string, value: boolean) => {
