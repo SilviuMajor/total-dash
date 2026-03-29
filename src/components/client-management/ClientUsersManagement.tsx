@@ -492,25 +492,15 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
         setOpen(false);
         setNewUserEmail("");
         setNewUserFullName("");
-        setNewUserRole("user");
         setNewUserDepartment("none");
         setNewUserAvatar("");
         setNewUserPassword("");
         
-        const initialPermissions: Record<string, AgentPermission> = {};
-        agents.forEach(agent => {
-          initialPermissions[agent.id] = {
-            agent_id: agent.id,
-            analytics: true,
-            conversations: true,
-            transcripts: true,
-            knowledge_base: false,
-            agent_settings: false,
-            specs: true,
-            guides: false,
-          };
-        });
-        setNewUserAgentPermissions(initialPermissions);
+        const defaultRole = roles.find(r => r.is_default) || roles.find(r => !r.is_admin_tier);
+        setNewUserRoleId(defaultRole?.id || "");
+        if (defaultRole) {
+          populatePermissionsFromRole(defaultRole.id);
+        }
       }
     } catch (error: any) {
       console.error('[ClientUsersManagement] User creation failed:', error);
