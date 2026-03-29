@@ -94,7 +94,7 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserFullName, setNewUserFullName] = useState("");
   const [newUserDepartment, setNewUserDepartment] = useState<string>("none");
-  const [newUserRole, setNewUserRole] = useState<'admin' | 'user'>('user');
+  const [newUserRoleId, setNewUserRoleId] = useState<string>("");
   const [newUserAvatar, setNewUserAvatar] = useState("");
   const [newUserPassword, setNewUserPassword] = useState("");
   const [newUserAgentPermissions, setNewUserAgentPermissions] = useState<Record<string, AgentPermission>>({});
