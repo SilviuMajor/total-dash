@@ -964,6 +964,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                       )}
 
                       {/* Action buttons */}
+                      {!readOnly && (
                       <div className="flex items-center justify-between pt-2">
                         {user.has_overrides && (
                           <Button
