@@ -155,7 +155,7 @@ export function CannedResponsesSettings({ readOnly }: { readOnly?: boolean } = {
             <div className="text-sm font-medium">Personal Canned Responses</div>
             <p className="text-xs text-muted-foreground">Allow agents to create their own personal responses</p>
           </div>
-          <Switch checked={personalEnabled} onCheckedChange={togglePersonal} />
+          <Switch checked={personalEnabled} onCheckedChange={togglePersonal} disabled={readOnly} />
         </div>
       </Card>
 
