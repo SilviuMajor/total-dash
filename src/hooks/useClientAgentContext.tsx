@@ -153,6 +153,14 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
         });
       }
       setUserRoleSlug('admin');
+      setCompanySettingsPermissions({
+        settings_page: true,
+        settings_departments_view: true, settings_departments_manage: true,
+        settings_team_view: true, settings_team_manage: true,
+        settings_canned_responses_view: true, settings_canned_responses_manage: true,
+        settings_general_view: true, settings_general_manage: true,
+        settings_audit_log_view: true,
+      });
     } catch (error) {
       console.error('Error loading client agents for preview:', error);
     } finally {
