@@ -538,12 +538,14 @@ export function RolesManagement({ clientId }: RolesManagementProps) {
                               <button
                                 className="text-[11px] px-2 py-0.5 rounded border border-border text-muted-foreground hover:bg-muted"
                                 onClick={() => {
+                                  const updates: Record<string, boolean> = {};
                                   getVisibleCompanyTabs().forEach(t => {
                                     if (!(t as any).viewOnly) {
-                                      toggleClientPermission(role.id, t.key + '_view', true);
-                                      toggleClientPermission(role.id, t.key + '_manage', true);
+                                      updates[t.key + '_view'] = true;
+                                      updates[t.key + '_manage'] = true;
                                     }
                                   });
+                                  toggleClientPermissions(role.id, updates);
                                 }}
                               >
                                 manage all
