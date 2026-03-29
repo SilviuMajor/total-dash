@@ -458,6 +458,16 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
     }
   };
 
+  const loadUserClientPermissions = async (userId: string) => {
+    const { data } = await supabase
+      .from("client_user_permissions")
+      .select("client_permissions, role_id")
+      .eq("user_id", userId)
+      .eq("client_id", clientId)
+      .maybeSingle();
+    setSelectedUserClientPerms((data?.client_permissions || {}) as Record<string, boolean>);
+  };
+
   const handleAddUser = async () => {
     try {
       const nameParts = newUserFullName.trim().split(' ');
