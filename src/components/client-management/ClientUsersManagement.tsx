@@ -824,7 +824,10 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                                         type="checkbox"
                                         className="w-4 h-4 rounded"
                                         checked={isChecked}
-                                        onChange={(e) => toggleAgentPermission(agent.id, p.key as keyof AgentPermission, e.target.checked, false)}
+                                        onChange={(e) => {
+                                          if (readOnly) return;
+                                          toggleAgentPermission(agent.id, p.key as keyof AgentPermission, e.target.checked, false);
+                                        }}
                                         style={{ accentColor: isOverride ? '#B45309' : undefined }}
                                       />
                                       <span>{p.label}</span>
