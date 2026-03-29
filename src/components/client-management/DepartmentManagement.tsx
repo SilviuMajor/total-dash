@@ -318,10 +318,12 @@ export function DepartmentManagement({ clientId, readOnly }: { clientId: string;
             <h3 className="text-lg font-semibold text-foreground">Departments</h3>
             <p className="text-sm text-muted-foreground">Configure handover routing departments</p>
           </div>
-          <Button onClick={() => handleOpenDialog()} variant="default" size="sm">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Department
-          </Button>
+          {!readOnly && (
+            <Button onClick={() => handleOpenDialog()} variant="default" size="sm">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Department
+            </Button>
+          )}
         </div>
 
         {departments.length === 0 ? (
