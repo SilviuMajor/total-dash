@@ -110,7 +110,7 @@ export default function Guides() {
                     <AccordionContent>
                       <div 
                         className="prose prose-sm max-w-none dark:prose-invert"
-                        dangerouslySetInnerHTML={{ __html: section.content }} 
+                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(section.content) }} 
                       />
                     </AccordionContent>
                   </AccordionItem>
