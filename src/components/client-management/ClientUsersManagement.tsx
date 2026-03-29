@@ -763,7 +763,7 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
                       {/* Page access grid */}
                       <div>
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs font-medium text-muted-foreground">Page access</span>
+                          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Agent access</span>
                           {user.has_overrides && (
                             <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300">
                               overrides from role
