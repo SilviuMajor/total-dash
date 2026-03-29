@@ -957,6 +957,18 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
                                   .eq('agent_id', agentId)
                                   .eq('client_id', clientId);
                               }
+                              // Reset client-scoped permissions
+                              const roleClientPerms = roles.find(r => r.id === user.role_id)?.client_permissions || {};
+                              await supabase
+                                .from('client_user_permissions')
+                                .upsert({
+                                  user_id: user.user_id,
+                                  client_id: clientId,
+                                  role_id: user.role_id,
+                                  client_permissions: roleClientPerms,
+                                  has_overrides: false,
+                                }, { onConflict: 'user_id,client_id' });
+                              setSelectedUserClientPerms(roleClientPerms as Record<string, boolean>);
                               toast({ title: "Reset", description: "Permissions reset to role defaults" });
                               loadUsers();
                               await loadUserAgentPermissions(user.user_id);
