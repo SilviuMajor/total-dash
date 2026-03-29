@@ -144,7 +144,7 @@ export default function Settings() {
             </div>
 
             {teamSubTab === "roles" && <RolesManagement clientId={clientId} />}
-            {teamSubTab === "team" && <ClientUsersManagement clientId={clientId} />}
+            {teamSubTab === "team" && <ClientUsersManagement clientId={clientId} readOnly={!canManageTeam} />}
           </TabsContent>
         )}
 
