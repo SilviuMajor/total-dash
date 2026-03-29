@@ -23,11 +23,25 @@ interface AgentPermissions {
   audit_log: boolean;
 }
 
+interface CompanySettingsPermissions {
+  settings_page: boolean;
+  settings_departments_view: boolean;
+  settings_departments_manage: boolean;
+  settings_team_view: boolean;
+  settings_team_manage: boolean;
+  settings_canned_responses_view: boolean;
+  settings_canned_responses_manage: boolean;
+  settings_general_view: boolean;
+  settings_general_manage: boolean;
+  settings_audit_log_view: boolean;
+}
+
 interface ClientAgentContextType {
   agents: Agent[];
   selectedAgentId: string | null;
   setSelectedAgentId: (id: string) => void;
   selectedAgentPermissions: AgentPermissions | null;
+  companySettingsPermissions: CompanySettingsPermissions | null;
   loading: boolean;
   clientId: string | null;
   userRoleSlug: string | null;
