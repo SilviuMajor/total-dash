@@ -94,7 +94,7 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserFullName, setNewUserFullName] = useState("");
   const [newUserDepartment, setNewUserDepartment] = useState<string>("none");
-  const [newUserRole, setNewUserRole] = useState<'admin' | 'user'>('user');
+  const [newUserRoleId, setNewUserRoleId] = useState<string>("");
   const [newUserAvatar, setNewUserAvatar] = useState("");
   const [newUserPassword, setNewUserPassword] = useState("");
   const [newUserAgentPermissions, setNewUserAgentPermissions] = useState<Record<string, AgentPermission>>({});
@@ -124,13 +124,43 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
     loadAgentCeilings();
   }, [clientId, isSuperAdmin, isSuperAdminLoading, isPreviewMode]);
 
+  useEffect(() => {
+    if (newUserRoleId && agents.length > 0) {
+      populatePermissionsFromRole(newUserRoleId);
+    }
+  }, [newUserRoleId, agents.length]);
+
   const loadRoles = async () => {
     const { data } = await supabase
       .from("client_roles")
       .select("*")
       .eq("client_id", clientId)
       .order("sort_order");
-    setRoles((data || []) as ClientRole[]);
+    const rolesList = (data || []) as ClientRole[];
+    setRoles(rolesList);
+    const defaultRole = rolesList.find(r => r.is_default) || rolesList.find(r => !r.is_admin_tier);
+    if (defaultRole && !newUserRoleId) {
+      setNewUserRoleId(defaultRole.id);
+    }
+  };
+
+  const populatePermissionsFromRole = async (roleId: string) => {
+    const templates = await loadRoleTemplates(roleId);
+    const perms: Record<string, AgentPermission> = {};
+    agents.forEach(agent => {
+      const template = templates[agent.id] || {};
+      perms[agent.id] = {
+        agent_id: agent.id,
+        conversations: template.conversations || false,
+        transcripts: template.transcripts || false,
+        analytics: template.analytics || false,
+        specs: template.specs || false,
+        knowledge_base: template.knowledge_base || false,
+        guides: template.guides || false,
+        agent_settings: template.agent_settings || false,
+      };
+    });
+    setNewUserAgentPermissions(perms);
   };
 
   const loadAgentCeilings = async () => {
@@ -367,17 +397,14 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
 
       setAgents(agentsList);
 
+      // Permissions will be populated when role is selected via populatePermissionsFromRole
+      // Set empty defaults initially
       const initialPermissions: Record<string, AgentPermission> = {};
       agentsList.forEach(agent => {
         initialPermissions[agent.id] = {
           agent_id: agent.id,
-          analytics: true,
-          conversations: true,
-          transcripts: true,
-          knowledge_base: false,
-          agent_settings: false,
-          specs: true,
-          guides: false,
+          analytics: false, conversations: false, transcripts: false,
+          knowledge_base: false, agent_settings: false, specs: false, guides: false,
         };
       });
       setNewUserAgentPermissions(initialPermissions);
@@ -423,7 +450,8 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
           email: newUserEmail,
           firstName,
           lastName,
-          role: newUserRole,
+          role: roles.find(r => r.id === newUserRoleId)?.is_admin_tier ? 'admin' : 'user',
+          roleId: newUserRoleId,
           departmentId: newUserDepartment === "none" ? null : newUserDepartment || null,
           avatarUrl: newUserAvatar || null,
           pagePermissions: null,
@@ -442,14 +470,16 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
               user_id: data.userId,
               agent_id: permission.agent_id,
               client_id: clientId,
+              role_id: newUserRoleId || null,
+              has_overrides: false,
               permissions: {
-                analytics: permission.analytics,
                 conversations: permission.conversations,
                 transcripts: permission.transcripts,
-                knowledge_base: permission.knowledge_base,
-                agent_settings: permission.agent_settings,
+                analytics: permission.analytics,
                 specs: permission.specs,
+                knowledge_base: permission.knowledge_base,
                 guides: permission.guides,
+                agent_settings: permission.agent_settings,
               },
             });
         }
@@ -462,25 +492,15 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
         setOpen(false);
         setNewUserEmail("");
         setNewUserFullName("");
-        setNewUserRole("user");
         setNewUserDepartment("none");
         setNewUserAvatar("");
         setNewUserPassword("");
         
-        const initialPermissions: Record<string, AgentPermission> = {};
-        agents.forEach(agent => {
-          initialPermissions[agent.id] = {
-            agent_id: agent.id,
-            analytics: true,
-            conversations: true,
-            transcripts: true,
-            knowledge_base: false,
-            agent_settings: false,
-            specs: true,
-            guides: false,
-          };
-        });
-        setNewUserAgentPermissions(initialPermissions);
+        const defaultRole = roles.find(r => r.is_default) || roles.find(r => !r.is_admin_tier);
+        setNewUserRoleId(defaultRole?.id || "");
+        if (defaultRole) {
+          populatePermissionsFromRole(defaultRole.id);
+        }
       }
     } catch (error: any) {
       console.error('[ClientUsersManagement] User creation failed:', error);
@@ -810,6 +830,40 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
                           <Button
                             size="sm"
                             variant="ghost"
+                            className="text-xs"
+                            onClick={async () => {
+                              try {
+                                await supabase.functions.invoke('reinvite-user', {
+                                  body: { userId: user.user_id, userType: 'client', contextId: clientId },
+                                });
+                                toast({ title: "Sent", description: "Invite resent to " + (user.profiles?.email || "user") });
+                              } catch (e: any) {
+                                toast({ title: "Error", description: e.message, variant: "destructive" });
+                              }
+                            }}
+                          >
+                            Resend invite
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-xs"
+                            onClick={async () => {
+                              try {
+                                await supabase.functions.invoke('send-password-reset-email', {
+                                  body: { userId: user.user_id },
+                                });
+                                toast({ title: "Sent", description: "Password reset email sent" });
+                              } catch (e: any) {
+                                toast({ title: "Error", description: e.message, variant: "destructive" });
+                              }
+                            }}
+                          >
+                            Reset password
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
                             className="text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
                             onClick={() => { setUserToRemove(user); setRemoveDialogOpen(true); }}
                           >
@@ -905,16 +959,29 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
               </Select>
             </div>
             <div>
-              <Label htmlFor="role">User Role</Label>
-              <Select value={newUserRole} onValueChange={(value: 'admin' | 'user') => setNewUserRole(value)}>
+              <Label htmlFor="role">Role</Label>
+              <Select value={newUserRoleId} onValueChange={(value) => {
+                setNewUserRoleId(value);
+                populatePermissionsFromRole(value);
+              }}>
                 <SelectTrigger id="role">
-                  <SelectValue />
+                  <SelectValue placeholder="Select role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="user">User</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
+                  {roles.map(r => (
+                    <SelectItem key={r.id} value={r.id}>
+                      {r.name}
+                      {r.is_system && " (system)"}
+                      {r.is_default && " (default)"}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                {roles.find(r => r.id === newUserRoleId)?.is_admin_tier
+                  ? "Full access to all agency-enabled features"
+                  : "Permissions auto-populated from role template — customise below"}
+              </p>
             </div>
             <AvatarUpload
               currentUrl={newUserAvatar}

@@ -1229,6 +1229,54 @@ export type Database = {
           },
         ]
       }
+      client_user_permissions: {
+        Row: {
+          client_id: string
+          client_permissions: Json | null
+          created_at: string | null
+          has_overrides: boolean | null
+          id: string
+          role_id: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          client_permissions?: Json | null
+          created_at?: string | null
+          has_overrides?: boolean | null
+          id?: string
+          role_id?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          client_permissions?: Json | null
+          created_at?: string | null
+          has_overrides?: boolean | null
+          id?: string
+          role_id?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_user_permissions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_user_permissions_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "client_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_users: {
         Row: {
           avatar_url: string | null
