@@ -172,9 +172,11 @@ export function CannedResponsesSettings({ readOnly }: { readOnly?: boolean } = {
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <div className="text-sm font-medium">Organisation Responses</div>
-          <Button size="sm" variant="outline" onClick={() => setShowAdd(true)}>
-            <Plus className="h-3 w-3 mr-1" /> Add Response
-          </Button>
+          {!readOnly && (
+            <Button size="sm" variant="outline" onClick={() => setShowAdd(true)}>
+              <Plus className="h-3 w-3 mr-1" /> Add Response
+            </Button>
+          )}
         </div>
 
         {/* Add form */}
