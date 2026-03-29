@@ -719,6 +719,11 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                   {/* Expanded body */}
                   {isExpanded && (
                     <div className="border-t px-4 py-4 space-y-4">
+                      {readOnly && (
+                        <div className="text-xs text-muted-foreground bg-muted/50 rounded-md px-3 py-2">
+                          View only — you don't have manage permissions for Team & Permissions.
+                        </div>
+                      )}
                       {/* Role + Department dropdowns */}
                       <div className="flex gap-3">
                         <div className="flex-1 space-y-1">
