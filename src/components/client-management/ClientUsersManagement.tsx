@@ -130,7 +130,31 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
       .select("*")
       .eq("client_id", clientId)
       .order("sort_order");
-    setRoles((data || []) as ClientRole[]);
+    const rolesList = (data || []) as ClientRole[];
+    setRoles(rolesList);
+    const defaultRole = rolesList.find(r => r.is_default) || rolesList.find(r => !r.is_admin_tier);
+    if (defaultRole && !newUserRoleId) {
+      setNewUserRoleId(defaultRole.id);
+    }
+  };
+
+  const populatePermissionsFromRole = async (roleId: string) => {
+    const templates = await loadRoleTemplates(roleId);
+    const perms: Record<string, AgentPermission> = {};
+    agents.forEach(agent => {
+      const template = templates[agent.id] || {};
+      perms[agent.id] = {
+        agent_id: agent.id,
+        conversations: template.conversations || false,
+        transcripts: template.transcripts || false,
+        analytics: template.analytics || false,
+        specs: template.specs || false,
+        knowledge_base: template.knowledge_base || false,
+        guides: template.guides || false,
+        agent_settings: template.agent_settings || false,
+      };
+    });
+    setNewUserAgentPermissions(perms);
   };
 
   const loadAgentCeilings = async () => {
