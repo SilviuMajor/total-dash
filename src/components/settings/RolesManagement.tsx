@@ -41,9 +41,12 @@ const AGENT_PERMISSION_KEYS = [
   { key: "agent_settings", label: "Agent settings" },
 ];
 
-const CLIENT_PERMISSION_KEYS = [
-  { key: "settings_page", label: "Company settings" },
-  { key: "audit_log", label: "Audit log" },
+const COMPANY_SETTINGS_TABS = [
+  { key: "settings_departments", label: "Departments", capKey: "client_departments_enabled" },
+  { key: "settings_team", label: "Team & permissions", capKey: "client_team_enabled" },
+  { key: "settings_canned_responses", label: "Canned responses", capKey: "client_canned_responses_enabled" },
+  { key: "settings_general", label: "General", capKey: "client_general_enabled" },
+  { key: "settings_audit_log", label: "Audit log", capKey: "client_audit_log_enabled", viewOnly: true },
 ];
 
 export function RolesManagement({ clientId }: RolesManagementProps) {
@@ -146,12 +149,8 @@ export function RolesManagement({ clientId }: RolesManagementProps) {
     return AGENT_PERMISSION_KEYS.filter(p => isAgencyEnabled(agentId, p.key));
   };
 
-  const getVisibleClientPermKeys = () => {
-    return CLIENT_PERMISSION_KEYS.filter(p => {
-      if (p.key === "settings_page") return isClientCapEnabled("settings_page_enabled");
-      if (p.key === "audit_log") return isClientCapEnabled("client_audit_log_enabled");
-      return true;
-    });
+  const getVisibleCompanyTabs = () => {
+    return COMPANY_SETTINGS_TABS.filter(t => clientCaps[t.capKey] !== false);
   };
 
   const togglePermission = async (roleId: string, agentId: string, permKey: string, value: boolean) => {
@@ -230,7 +229,14 @@ export function RolesManagement({ clientId }: RolesManagementProps) {
         is_system: false,
         is_default: false,
         sort_order: roles.length,
-        client_permissions: { settings_page: false, audit_log: false },
+        client_permissions: {
+          settings_page: false,
+          settings_departments_view: false, settings_departments_manage: false,
+          settings_team_view: false, settings_team_manage: false,
+          settings_canned_responses_view: false, settings_canned_responses_manage: false,
+          settings_general_view: false, settings_general_manage: false,
+          settings_audit_log_view: false,
+        },
       })
       .select()
       .single();
@@ -375,19 +381,93 @@ export function RolesManagement({ clientId }: RolesManagementProps) {
                         </div>
                       );
                     })}
-                    {getVisibleClientPermKeys().length > 0 && (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 pt-2 border-t border-border">
-                        {getVisibleClientPermKeys().map(p => (
-                          <label key={p.key} className="flex items-center gap-2 text-sm cursor-pointer">
+                    {clientCaps['settings_page_enabled'] !== false && (
+                      <div className="space-y-3 pt-3 border-t border-border">
+                        <div className="flex items-center justify-between">
+                          <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
                             <input
                               type="checkbox"
-                              checked={role.client_permissions?.[p.key] || false}
-                              onChange={e => toggleClientPermission(role.id, p.key, e.target.checked)}
-                              className="rounded border-input"
+                              className="w-4 h-4 rounded accent-primary"
+                              checked={role.client_permissions?.settings_page || false}
+                              onChange={e => toggleClientPermission(role.id, 'settings_page', e.target.checked)}
                             />
-                            {p.label}
+                            Company settings
                           </label>
-                        ))}
+                          {role.client_permissions?.settings_page && (
+                            <div className="flex gap-2 items-center">
+                              <button
+                                className="text-[11px] px-2 py-0.5 rounded border border-border text-muted-foreground hover:bg-muted"
+                                onClick={() => {
+                                  getVisibleCompanyTabs().forEach(t => {
+                                    toggleClientPermission(role.id, t.key + '_view', true);
+                                  });
+                                }}
+                              >
+                                view all
+                              </button>
+                              <button
+                                className="text-[11px] px-2 py-0.5 rounded border border-border text-muted-foreground hover:bg-muted"
+                                onClick={() => {
+                                  getVisibleCompanyTabs().forEach(t => {
+                                    if (!(t as any).viewOnly) {
+                                      toggleClientPermission(role.id, t.key + '_view', true);
+                                      toggleClientPermission(role.id, t.key + '_manage', true);
+                                    }
+                                  });
+                                }}
+                              >
+                                manage all
+                              </button>
+                              <span className="text-[11px] text-muted-foreground">view / manage</span>
+                            </div>
+                          )}
+                        </div>
+                        {role.client_permissions?.settings_page && (
+                          <div className="space-y-1.5 pl-6">
+                            {getVisibleCompanyTabs().map(tab => (
+                              <div key={tab.key} className="flex items-center justify-between px-3 py-2 bg-muted/50 rounded-md">
+                                <span className="text-sm">{tab.label}</span>
+                                <div className="flex gap-4">
+                                  <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      className="w-3.5 h-3.5 rounded accent-primary"
+                                      checked={role.client_permissions?.[tab.key + '_view'] || false}
+                                      onChange={e => {
+                                        toggleClientPermission(role.id, tab.key + '_view', e.target.checked);
+                                        if (!e.target.checked) {
+                                          toggleClientPermission(role.id, tab.key + '_manage', false);
+                                        }
+                                      }}
+                                    />
+                                    view
+                                  </label>
+                                  {(tab as any).viewOnly ? (
+                                    <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground/40">
+                                      <input type="checkbox" className="w-3.5 h-3.5 rounded opacity-30" disabled />
+                                      manage
+                                    </label>
+                                  ) : (
+                                    <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer">
+                                      <input
+                                        type="checkbox"
+                                        className="w-3.5 h-3.5 rounded accent-primary"
+                                        checked={role.client_permissions?.[tab.key + '_manage'] || false}
+                                        onChange={e => {
+                                          toggleClientPermission(role.id, tab.key + '_manage', e.target.checked);
+                                          if (e.target.checked) {
+                                            toggleClientPermission(role.id, tab.key + '_view', true);
+                                          }
+                                        }}
+                                      />
+                                      manage
+                                    </label>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )}
                     <div className="flex justify-end pt-2">
@@ -421,19 +501,93 @@ export function RolesManagement({ clientId }: RolesManagementProps) {
                         </div>
                       );
                     })}
-                    {getVisibleClientPermKeys().length > 0 && (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 pt-2 border-t border-border">
-                        {getVisibleClientPermKeys().map(p => (
-                          <label key={p.key} className="flex items-center gap-2 text-sm cursor-pointer">
+                    {clientCaps['settings_page_enabled'] !== false && (
+                      <div className="space-y-3 pt-3 border-t border-border">
+                        <div className="flex items-center justify-between">
+                          <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
                             <input
                               type="checkbox"
-                              checked={roles.find(r => r.id === role.id)?.client_permissions?.[p.key] || false}
-                              onChange={e => toggleClientPermission(role.id, p.key, e.target.checked)}
-                              className="rounded border-input"
+                              className="w-4 h-4 rounded accent-primary"
+                              checked={role.client_permissions?.settings_page || false}
+                              onChange={e => toggleClientPermission(role.id, 'settings_page', e.target.checked)}
                             />
-                            {p.label}
+                            Company settings
                           </label>
-                        ))}
+                          {role.client_permissions?.settings_page && (
+                            <div className="flex gap-2 items-center">
+                              <button
+                                className="text-[11px] px-2 py-0.5 rounded border border-border text-muted-foreground hover:bg-muted"
+                                onClick={() => {
+                                  getVisibleCompanyTabs().forEach(t => {
+                                    toggleClientPermission(role.id, t.key + '_view', true);
+                                  });
+                                }}
+                              >
+                                view all
+                              </button>
+                              <button
+                                className="text-[11px] px-2 py-0.5 rounded border border-border text-muted-foreground hover:bg-muted"
+                                onClick={() => {
+                                  getVisibleCompanyTabs().forEach(t => {
+                                    if (!(t as any).viewOnly) {
+                                      toggleClientPermission(role.id, t.key + '_view', true);
+                                      toggleClientPermission(role.id, t.key + '_manage', true);
+                                    }
+                                  });
+                                }}
+                              >
+                                manage all
+                              </button>
+                              <span className="text-[11px] text-muted-foreground">view / manage</span>
+                            </div>
+                          )}
+                        </div>
+                        {role.client_permissions?.settings_page && (
+                          <div className="space-y-1.5 pl-6">
+                            {getVisibleCompanyTabs().map(tab => (
+                              <div key={tab.key} className="flex items-center justify-between px-3 py-2 bg-muted/50 rounded-md">
+                                <span className="text-sm">{tab.label}</span>
+                                <div className="flex gap-4">
+                                  <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      className="w-3.5 h-3.5 rounded accent-primary"
+                                      checked={role.client_permissions?.[tab.key + '_view'] || false}
+                                      onChange={e => {
+                                        toggleClientPermission(role.id, tab.key + '_view', e.target.checked);
+                                        if (!e.target.checked) {
+                                          toggleClientPermission(role.id, tab.key + '_manage', false);
+                                        }
+                                      }}
+                                    />
+                                    view
+                                  </label>
+                                  {(tab as any).viewOnly ? (
+                                    <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground/40">
+                                      <input type="checkbox" className="w-3.5 h-3.5 rounded opacity-30" disabled />
+                                      manage
+                                    </label>
+                                  ) : (
+                                    <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer">
+                                      <input
+                                        type="checkbox"
+                                        className="w-3.5 h-3.5 rounded accent-primary"
+                                        checked={role.client_permissions?.[tab.key + '_manage'] || false}
+                                        onChange={e => {
+                                          toggleClientPermission(role.id, tab.key + '_manage', e.target.checked);
+                                          if (e.target.checked) {
+                                            toggleClientPermission(role.id, tab.key + '_view', true);
+                                          }
+                                        }}
+                                      />
+                                      manage
+                                    </label>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )}
                     <div className="flex justify-end pt-2">
