@@ -517,7 +517,7 @@ export function RolesManagement({ clientId }: RolesManagementProps) {
                               type="checkbox"
                               className="w-4 h-4 rounded accent-primary"
                               checked={role.client_permissions?.settings_page || false}
-                              onChange={e => toggleClientPermission(role.id, 'settings_page', e.target.checked)}
+                              onChange={e => toggleClientPermissions(role.id, { settings_page: e.target.checked })}
                             />
                             Company settings
                           </label>
