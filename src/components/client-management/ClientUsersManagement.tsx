@@ -1038,6 +1038,16 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
                                   .eq('agent_id', agentId)
                                   .eq('client_id', clientId);
                               }
+                              // Save client-scoped permissions
+                              await supabase
+                                .from('client_user_permissions')
+                                .upsert({
+                                  user_id: user.user_id,
+                                  client_id: clientId,
+                                  role_id: user.role_id,
+                                  client_permissions: selectedUserClientPerms,
+                                  has_overrides: Object.keys(selectedUserClientPerms).length > 0,
+                                }, { onConflict: 'user_id,client_id' });
                               toast({ title: "Saved", description: "User permissions updated" });
                               loadUsers();
                             }}
