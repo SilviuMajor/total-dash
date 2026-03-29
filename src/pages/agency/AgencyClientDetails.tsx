@@ -294,7 +294,7 @@ export default function AgencyClientDetails() {
           <TabsTrigger value="agents">Agents</TabsTrigger>
           <TabsTrigger value="guides">Guides</TabsTrigger>
           <TabsTrigger value="company-settings">Company Settings</TabsTrigger>
-          <TabsTrigger value="audit-log">Audit Log</TabsTrigger>
+          
         </TabsList>
 
         <TabsContent value="overview">
