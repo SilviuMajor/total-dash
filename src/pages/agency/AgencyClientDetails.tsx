@@ -74,10 +74,10 @@ function CompanySettingsPanel({ clientId }: { clientId: string }) {
 
   const subTabs = [
     { id: "departments", label: "Departments", capKey: "client_departments_enabled" },
-    { id: "team", label: "Team", capKey: "client_team_enabled" },
-    { id: "permissions", label: "Permissions", capKey: "client_permissions_enabled" },
+    { id: "team", label: "Team & Permissions", capKey: "client_team_enabled" },
     { id: "canned-responses", label: "Canned Responses", capKey: "client_canned_responses_enabled" },
     { id: "general", label: "General", capKey: "client_general_enabled" },
+    { id: "audit-log", label: "Audit Log", capKey: "client_audit_log_enabled" },
   ];
 
   return (
