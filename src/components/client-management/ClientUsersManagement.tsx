@@ -73,6 +73,14 @@ interface AgentPermission {
   guides: boolean;
 }
 
+const COMPANY_SETTINGS_TABS = [
+  { key: "settings_departments", label: "Departments", capKey: "client_departments_enabled" },
+  { key: "settings_team", label: "Team & permissions", capKey: "client_team_enabled" },
+  { key: "settings_canned_responses", label: "Canned responses", capKey: "client_canned_responses_enabled" },
+  { key: "settings_general", label: "General", capKey: "client_general_enabled" },
+  { key: "settings_audit_log", label: "Audit log", capKey: "client_audit_log_enabled", viewOnly: true },
+];
+
 export function ClientUsersManagement({ clientId }: { clientId: string }) {
   const { isPreviewMode } = useMultiTenantAuth();
   const { isSuperAdmin, loading: isSuperAdminLoading } = useSuperAdminStatus();
@@ -90,6 +98,8 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
   const [roleChangeModal, setRoleChangeModal] = useState<{ user: ClientUser; newRoleId: string } | null>(null);
   const [roleTemplates, setRoleTemplates] = useState<Record<string, Record<string, any>>>({});
   const [agentCeilings, setAgentCeilings] = useState<Record<string, Record<string, any>>>({});
+  const [clientCaps, setClientCaps] = useState<Record<string, any>>({});
+  const [selectedUserClientPerms, setSelectedUserClientPerms] = useState<Record<string, boolean>>({});
   
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserFullName, setNewUserFullName] = useState("");
@@ -122,6 +132,7 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
     loadAgents();
     loadRoles();
     loadAgentCeilings();
+    loadClientCaps();
   }, [clientId, isSuperAdmin, isSuperAdminLoading, isPreviewMode]);
 
   useEffect(() => {
@@ -173,6 +184,15 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
       if (a.agents) ceilings[a.agents.id] = a.agents.config || {};
     });
     setAgentCeilings(ceilings);
+  };
+
+  const loadClientCaps = async () => {
+    const { data } = await supabase
+      .from("client_settings")
+      .select("admin_capabilities")
+      .eq("client_id", clientId)
+      .single();
+    setClientCaps((data?.admin_capabilities || {}) as Record<string, any>);
   };
 
   const loadRoleTemplates = async (roleId: string) => {
@@ -438,6 +458,16 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
     }
   };
 
+  const loadUserClientPermissions = async (userId: string) => {
+    const { data } = await supabase
+      .from("client_user_permissions")
+      .select("client_permissions, role_id")
+      .eq("user_id", userId)
+      .eq("client_id", clientId)
+      .maybeSingle();
+    setSelectedUserClientPerms((data?.client_permissions || {}) as Record<string, boolean>);
+  };
+
   const handleAddUser = async () => {
     try {
       const nameParts = newUserFullName.trim().split(' ');
@@ -648,6 +678,7 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
                       } else {
                         setExpandedUserId(user.user_id);
                         await loadUserAgentPermissions(user.user_id);
+                        await loadUserClientPermissions(user.user_id);
                         if (user.role_id) {
                           const templates = await loadRoleTemplates(user.role_id);
                           setRoleTemplates(prev => ({ ...prev, [user.user_id]: templates }));
@@ -732,7 +763,7 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
                       {/* Page access grid */}
                       <div>
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs font-medium text-muted-foreground">Page access</span>
+                          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Agent access</span>
                           {user.has_overrides && (
                             <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300">
                               overrides from role
@@ -800,6 +831,114 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
                         })}
                       </div>
 
+                      {/* Company settings section */}
+                      {clientCaps['settings_page_enabled'] !== false && (
+                        <div className="space-y-3 pt-3 border-t border-border">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Company settings</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                className="text-[11px] px-2 py-0.5 rounded border border-border text-muted-foreground hover:bg-muted"
+                                onClick={() => {
+                                  const updated = { ...selectedUserClientPerms, settings_page: true };
+                                  COMPANY_SETTINGS_TABS.filter(t => clientCaps[t.capKey] !== false).forEach(t => {
+                                    updated[t.key + '_view'] = true;
+                                  });
+                                  setSelectedUserClientPerms(updated);
+                                }}
+                              >
+                                view all
+                              </button>
+                              <button
+                                className="text-[11px] px-2 py-0.5 rounded border border-border text-muted-foreground hover:bg-muted"
+                                onClick={() => {
+                                  const updated = { ...selectedUserClientPerms, settings_page: true };
+                                  COMPANY_SETTINGS_TABS.filter(t => clientCaps[t.capKey] !== false && !t.viewOnly).forEach(t => {
+                                    updated[t.key + '_manage'] = true;
+                                  });
+                                  setSelectedUserClientPerms(updated);
+                                }}
+                              >
+                                manage all
+                              </button>
+                              <span className="text-[11px] text-muted-foreground">view / manage</span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-md">
+                            <input
+                              type="checkbox"
+                              className="w-4 h-4 rounded"
+                              checked={selectedUserClientPerms.settings_page || false}
+                              onChange={e => setSelectedUserClientPerms(prev => ({ ...prev, settings_page: e.target.checked }))}
+                            />
+                            <span className="text-sm font-medium">Company settings page</span>
+                          </div>
+
+                          {selectedUserClientPerms.settings_page && (
+                            <div className="space-y-1.5 pl-6">
+                              {COMPANY_SETTINGS_TABS
+                                .filter(tab => clientCaps[tab.capKey] !== false)
+                                .map(tab => {
+                                  const rolePerms = roles.find(r => r.id === user.role_id)?.client_permissions || {};
+                                  const viewKey = tab.key + '_view';
+                                  const manageKey = tab.key + '_manage';
+                                  const viewChecked = selectedUserClientPerms[viewKey] ?? (rolePerms as any)[viewKey] ?? false;
+                                  const manageChecked = selectedUserClientPerms[manageKey] ?? (rolePerms as any)[manageKey] ?? false;
+                                  const viewIsOverride = selectedUserClientPerms[viewKey] !== undefined && selectedUserClientPerms[viewKey] !== ((rolePerms as any)[viewKey] ?? false);
+                                  const manageIsOverride = !tab.viewOnly && selectedUserClientPerms[manageKey] !== undefined && selectedUserClientPerms[manageKey] !== ((rolePerms as any)[manageKey] ?? false);
+
+                                  return (
+                                    <div
+                                      key={tab.key}
+                                      className={`flex items-center justify-between px-3 py-2 rounded-md ${
+                                        viewIsOverride || manageIsOverride
+                                          ? 'bg-amber-50 border border-amber-200 dark:bg-amber-950/30 dark:border-amber-800'
+                                          : 'bg-muted/50'
+                                      }`}
+                                    >
+                                      <span className="text-sm">{tab.label}</span>
+                                      <div className="flex gap-4">
+                                        <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer">
+                                          <input
+                                            type="checkbox"
+                                            className="w-3.5 h-3.5 rounded"
+                                            checked={viewChecked}
+                                            onChange={e => setSelectedUserClientPerms(prev => ({ ...prev, [viewKey]: e.target.checked }))}
+                                            style={{ accentColor: viewIsOverride ? '#B45309' : undefined }}
+                                          />
+                                          view
+                                          {viewIsOverride && <span className="text-[10px] text-amber-600 dark:text-amber-400">override</span>}
+                                        </label>
+                                        {tab.viewOnly ? (
+                                          <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground/40">
+                                            <input type="checkbox" className="w-3.5 h-3.5 rounded opacity-30" disabled />
+                                            manage
+                                          </label>
+                                        ) : (
+                                          <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer">
+                                            <input
+                                              type="checkbox"
+                                              className="w-3.5 h-3.5 rounded"
+                                              checked={manageChecked}
+                                              onChange={e => setSelectedUserClientPerms(prev => ({ ...prev, [manageKey]: e.target.checked }))}
+                                              style={{ accentColor: manageIsOverride ? '#B45309' : undefined }}
+                                            />
+                                            manage
+                                            {manageIsOverride && <span className="text-[10px] text-amber-600 dark:text-amber-400">override</span>}
+                                          </label>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       {/* Action buttons */}
                       <div className="flex items-center justify-between pt-2">
                         {user.has_overrides && (
@@ -818,6 +957,18 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
                                   .eq('agent_id', agentId)
                                   .eq('client_id', clientId);
                               }
+                              // Reset client-scoped permissions
+                              const roleClientPerms = roles.find(r => r.id === user.role_id)?.client_permissions || {};
+                              await supabase
+                                .from('client_user_permissions')
+                                .upsert({
+                                  user_id: user.user_id,
+                                  client_id: clientId,
+                                  role_id: user.role_id,
+                                  client_permissions: roleClientPerms,
+                                  has_overrides: false,
+                                }, { onConflict: 'user_id,client_id' });
+                              setSelectedUserClientPerms(roleClientPerms as Record<string, boolean>);
                               toast({ title: "Reset", description: "Permissions reset to role defaults" });
                               loadUsers();
                               await loadUserAgentPermissions(user.user_id);
@@ -887,6 +1038,16 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
                                   .eq('agent_id', agentId)
                                   .eq('client_id', clientId);
                               }
+                              // Save client-scoped permissions
+                              await supabase
+                                .from('client_user_permissions')
+                                .upsert({
+                                  user_id: user.user_id,
+                                  client_id: clientId,
+                                  role_id: user.role_id,
+                                  client_permissions: selectedUserClientPerms,
+                                  has_overrides: Object.keys(selectedUserClientPerms).length > 0,
+                                }, { onConflict: 'user_id,client_id' });
                               toast({ title: "Saved", description: "User permissions updated" });
                               loadUsers();
                             }}
