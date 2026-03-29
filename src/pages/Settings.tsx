@@ -3,6 +3,7 @@ import { DepartmentManagement } from "@/components/client-management/DepartmentM
 import { ClientUsersManagement } from "@/components/client-management/ClientUsersManagement";
 import { RolesManagement } from "@/components/settings/RolesManagement";
 import { CannedResponsesSettings } from "@/components/settings/CannedResponsesSettings";
+import { AuditLog } from "@/components/settings/AuditLog";
 import { useAuth } from "@/hooks/useAuth";
 import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
 import { useClientAgentContext } from "@/hooks/useClientAgentContext";
@@ -83,6 +84,8 @@ export default function Settings() {
     (isInPreview || companySettingsPermissions?.settings_canned_responses_view !== false);
   const showGeneral = capabilities.client_general_enabled !== false &&
     (isInPreview || companySettingsPermissions?.settings_general_view !== false);
+  const showAuditLog = capabilities.client_audit_log_enabled === true &&
+    (isInPreview || companySettingsPermissions?.settings_audit_log_view === true);
 
   const canManageDepartments = isInPreview || companySettingsPermissions?.settings_departments_manage === true;
   const canManageTeam = isInPreview || companySettingsPermissions?.settings_team_manage === true;
@@ -110,6 +113,7 @@ export default function Settings() {
           {showTeam && <TabsTrigger value="team-permissions">Team & Permissions</TabsTrigger>}
           {showCannedResponses && <TabsTrigger value="canned-responses">Canned Responses</TabsTrigger>}
           {showGeneral && <TabsTrigger value="general">General</TabsTrigger>}
+          {showAuditLog && <TabsTrigger value="audit-log">Audit Log</TabsTrigger>}
         </TabsList>
 
         {showDepartments && (
@@ -185,6 +189,11 @@ export default function Settings() {
                 )}
               </div>
             </Card>
+          </TabsContent>
+        )}
+        {showAuditLog && clientId && (
+          <TabsContent value="audit-log" className="space-y-6">
+            <AuditLog clientId={clientId} isAgencyView={false} />
           </TabsContent>
         )}
       </Tabs>
