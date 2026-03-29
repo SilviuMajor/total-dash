@@ -15,8 +15,8 @@ import { ClientSettings } from "@/components/client-management/ClientSettings";
 import { DepartmentManagement } from "@/components/client-management/DepartmentManagement";
 import { ClientGuidesEditor } from "@/components/client-management/ClientGuidesEditor";
 import { ClientUsersManagement } from "@/components/client-management/ClientUsersManagement";
-import { DefaultPermissionsCard } from "@/components/client-management/DefaultPermissionsCard";
 import { CannedResponsesSettings } from "@/components/settings/CannedResponsesSettings";
+import { AuditLog } from "@/components/settings/AuditLog";
 
 
 interface ClientData {
