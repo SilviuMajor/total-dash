@@ -45,7 +45,7 @@ const CATEGORY_ICONS: Record<string, any> = {
 
 const PAGE_SIZE = 50;
 
-export function AuditLog({ clientId, isAgencyView = false }: AuditLogProps) {
+export function AuditLog({ clientId, isAgencyView = false, agencyName }: AuditLogProps) {
   const [entries, setEntries] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -56,6 +56,25 @@ export function AuditLog({ clientId, isAgencyView = false }: AuditLogProps) {
   const [collapsedDays, setCollapsedDays] = useState<Set<string>>(new Set());
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(0);
+  const [resolvedAgencyName, setResolvedAgencyName] = useState<string>(agencyName || "Agency");
+
+  useEffect(() => {
+    if (agencyName) {
+      setResolvedAgencyName(agencyName);
+      return;
+    }
+    const loadAgencyName = async () => {
+      const { data } = await supabase
+        .from("clients")
+        .select("agency:agencies(name)")
+        .eq("id", clientId)
+        .single();
+      if (data?.agency && typeof data.agency === 'object' && 'name' in data.agency) {
+        setResolvedAgencyName((data.agency as any).name || "Agency");
+      }
+    };
+    loadAgencyName();
+  }, [clientId, agencyName]);
 
   useEffect(() => {
     loadAgents();
