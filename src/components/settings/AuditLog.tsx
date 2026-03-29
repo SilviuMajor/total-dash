@@ -156,7 +156,7 @@ export function AuditLog({ clientId, isAgencyView = false, agencyName }: AuditLo
   }, {});
 
   const getActorDisplay = (entry: AuditEntry) => {
-    if (!isAgencyView && entry.actor_type === "agency_user") {
+    if (entry.actor_type === "agency_user") {
       return resolvedAgencyName;
     }
     return entry.actor_name || "System";
