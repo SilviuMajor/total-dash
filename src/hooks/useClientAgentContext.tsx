@@ -23,11 +23,25 @@ interface AgentPermissions {
   audit_log: boolean;
 }
 
+interface CompanySettingsPermissions {
+  settings_page: boolean;
+  settings_departments_view: boolean;
+  settings_departments_manage: boolean;
+  settings_team_view: boolean;
+  settings_team_manage: boolean;
+  settings_canned_responses_view: boolean;
+  settings_canned_responses_manage: boolean;
+  settings_general_view: boolean;
+  settings_general_manage: boolean;
+  settings_audit_log_view: boolean;
+}
+
 interface ClientAgentContextType {
   agents: Agent[];
   selectedAgentId: string | null;
   setSelectedAgentId: (id: string) => void;
   selectedAgentPermissions: AgentPermissions | null;
+  companySettingsPermissions: CompanySettingsPermissions | null;
   loading: boolean;
   clientId: string | null;
   userRoleSlug: string | null;
@@ -53,6 +67,7 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [clientId, setClientId] = useState<string | null>(null);
   const [userRoleSlug, setUserRoleSlug] = useState<string | null>(null);
+  const [companySettingsPermissions, setCompanySettingsPermissions] = useState<CompanySettingsPermissions | null>(null);
   const { user, profile } = useAuth();
   const { isClientPreviewMode, previewClient, previewDepth, userType } = useMultiTenantAuth();
 
@@ -138,6 +153,14 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
         });
       }
       setUserRoleSlug('admin');
+      setCompanySettingsPermissions({
+        settings_page: true,
+        settings_departments_view: true, settings_departments_manage: true,
+        settings_team_view: true, settings_team_manage: true,
+        settings_canned_responses_view: true, settings_canned_responses_manage: true,
+        settings_general_view: true, settings_general_manage: true,
+        settings_audit_log_view: true,
+      });
     } catch (error) {
       console.error('Error loading client agents for preview:', error);
     } finally {
@@ -223,6 +246,37 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
         .eq('client_id', clientUserData.client_id)
         .single();
       const adminCaps = (clientSettings?.admin_capabilities || {}) as Record<string, any>;
+
+      // Load user's client-scoped permission overrides
+      const { data: userClientPerms } = await supabase
+        .from('client_user_permissions')
+        .select('client_permissions, has_overrides')
+        .eq('user_id', user!.id)
+        .eq('client_id', clientUserData.client_id)
+        .maybeSingle();
+      const userClientOverrides = (userClientPerms?.client_permissions || {}) as Record<string, any>;
+      const hasClientOverrides = userClientPerms?.has_overrides || false;
+
+      // Resolve company settings permissions
+      const resolveCompanyPerm = (key: string, capKey: string): boolean => {
+        if (adminCaps[capKey] === false) return false;
+        if (role?.is_admin_tier) return true;
+        if (hasClientOverrides && userClientOverrides[key] !== undefined) return userClientOverrides[key];
+        return role?.client_permissions?.[key] || false;
+      };
+
+      setCompanySettingsPermissions({
+        settings_page: resolveCompanyPerm('settings_page', 'settings_page_enabled'),
+        settings_departments_view: resolveCompanyPerm('settings_departments_view', 'client_departments_enabled'),
+        settings_departments_manage: resolveCompanyPerm('settings_departments_manage', 'client_departments_enabled'),
+        settings_team_view: resolveCompanyPerm('settings_team_view', 'client_team_enabled'),
+        settings_team_manage: resolveCompanyPerm('settings_team_manage', 'client_team_enabled'),
+        settings_canned_responses_view: resolveCompanyPerm('settings_canned_responses_view', 'client_canned_responses_enabled'),
+        settings_canned_responses_manage: resolveCompanyPerm('settings_canned_responses_manage', 'client_canned_responses_enabled'),
+        settings_general_view: resolveCompanyPerm('settings_general_view', 'client_general_enabled'),
+        settings_general_manage: resolveCompanyPerm('settings_general_manage', 'client_general_enabled'),
+        settings_audit_log_view: resolveCompanyPerm('settings_audit_log_view', 'client_audit_log_enabled'),
+      });
 
       // Build agent list — only include agents the user has permission rows for
       const userPermMap = new Map(userPerms?.map(p => [p.agent_id, p]) || []);
@@ -387,6 +441,7 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
         selectedAgentId,
         setSelectedAgentId,
         selectedAgentPermissions,
+        companySettingsPermissions,
         loading,
         clientId,
         userRoleSlug,

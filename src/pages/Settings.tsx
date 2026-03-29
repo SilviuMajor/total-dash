@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 export default function Settings() {
   const { user } = useAuth();
   const { isClientPreviewMode, previewClient, previewDepth } = useMultiTenantAuth();
-  const { clientId: contextClientId } = useClientAgentContext();
+  const { clientId: contextClientId, companySettingsPermissions } = useClientAgentContext();
   const [clientId, setClientId] = useState<string | null>(null);
   const [capabilities, setCapabilities] = useState<Record<string, any>>({});
   const [client, setClient] = useState<any>(null);
@@ -71,10 +71,23 @@ export default function Settings() {
     );
   }
 
-  const showDepartments = capabilities.client_departments_enabled !== false;
-  const showTeam = capabilities.client_team_enabled !== false;
-  const showCannedResponses = capabilities.client_canned_responses_enabled !== false;
-  const showGeneral = capabilities.client_general_enabled !== false;
+  // In preview mode, show everything the agency has enabled
+  // In normal mode, also check user's view permission
+  const isInPreview = isClientPreviewMode || previewDepth === 'agency_to_client' || previewDepth === 'client';
+
+  const showDepartments = capabilities.client_departments_enabled !== false &&
+    (isInPreview || companySettingsPermissions?.settings_departments_view !== false);
+  const showTeam = capabilities.client_team_enabled !== false &&
+    (isInPreview || companySettingsPermissions?.settings_team_view !== false);
+  const showCannedResponses = capabilities.client_canned_responses_enabled !== false &&
+    (isInPreview || companySettingsPermissions?.settings_canned_responses_view !== false);
+  const showGeneral = capabilities.client_general_enabled !== false &&
+    (isInPreview || companySettingsPermissions?.settings_general_view !== false);
+
+  const canManageDepartments = isInPreview || companySettingsPermissions?.settings_departments_manage === true;
+  const canManageTeam = isInPreview || companySettingsPermissions?.settings_team_manage === true;
+  const canManageCannedResponses = isInPreview || companySettingsPermissions?.settings_canned_responses_manage === true;
+  const canManageGeneral = isInPreview || companySettingsPermissions?.settings_general_manage === true;
 
   const getDefaultTab = () => {
     if (showDepartments) return "departments";
@@ -101,7 +114,7 @@ export default function Settings() {
 
         {showDepartments && (
           <TabsContent value="departments" className="space-y-6">
-            <DepartmentManagement clientId={clientId} />
+            <DepartmentManagement clientId={clientId} readOnly={!canManageDepartments} />
           </TabsContent>
         )}
 
@@ -131,13 +144,13 @@ export default function Settings() {
             </div>
 
             {teamSubTab === "roles" && <RolesManagement clientId={clientId} />}
-            {teamSubTab === "team" && <ClientUsersManagement clientId={clientId} />}
+            {teamSubTab === "team" && <ClientUsersManagement clientId={clientId} readOnly={!canManageTeam} />}
           </TabsContent>
         )}
 
         {showCannedResponses && (
           <TabsContent value="canned-responses" className="space-y-6">
-            <CannedResponsesSettings />
+            <CannedResponsesSettings readOnly={!canManageCannedResponses} />
           </TabsContent>
         )}
 
