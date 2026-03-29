@@ -156,14 +156,14 @@ export function AuditLog({ clientId, isAgencyView = false, agencyName }: AuditLo
   }, {});
 
   const getActorDisplay = (entry: AuditEntry) => {
-    if (entry.actor_type === "agency_user") {
+    if (entry.actor_type === "agency_user" || entry.actor_type === "super_admin") {
       return resolvedAgencyName;
     }
     return entry.actor_name || "System";
   };
 
   const getActorBadgeClass = (entry: AuditEntry) => {
-    if (entry.actor_type === "agency_user") {
+    if (entry.actor_type === "agency_user" || entry.actor_type === "super_admin") {
       return "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300 px-1.5 rounded";
     }
     return "";
