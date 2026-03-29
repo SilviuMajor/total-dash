@@ -929,7 +929,13 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
                                               type="checkbox"
                                               className="w-3.5 h-3.5 rounded"
                                               checked={manageChecked}
-                                              onChange={e => setSelectedUserClientPerms(prev => ({ ...prev, [manageKey]: e.target.checked }))}
+                                              onChange={e => {
+                                                const updates = { ...selectedUserClientPerms, [manageKey]: e.target.checked };
+                                                if (e.target.checked) {
+                                                  updates[viewKey] = true;
+                                                }
+                                                setSelectedUserClientPerms(updates);
+                                              }}
                                               style={{ accentColor: manageIsOverride ? '#B45309' : undefined }}
                                             />
                                             manage
