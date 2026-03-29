@@ -1097,14 +1097,44 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
                 if (!roleChangeModal) return;
                 const { user, newRoleId } = roleChangeModal;
                 const templates = await loadRoleTemplates(newRoleId);
+                
+                // First, update role_id on ALL of this user's permission rows
+                await supabase
+                  .from('client_user_agent_permissions')
+                  .update({ role_id: newRoleId })
+                  .eq('user_id', user.user_id)
+                  .eq('client_id', clientId);
+                
+                // Then update permissions for each agent that has a template
                 for (const [agentId, perms] of Object.entries(templates)) {
                   await supabase
                     .from('client_user_agent_permissions')
-                    .update({ permissions: perms, role_id: newRoleId, has_overrides: false })
+                    .update({ permissions: perms, has_overrides: false })
                     .eq('user_id', user.user_id)
                     .eq('agent_id', agentId)
                     .eq('client_id', clientId);
                 }
+                
+                // For agents WITHOUT a template, reset to all-false
+                const templateAgentIds = Object.keys(templates);
+                const allAgentIds = agents.map(a => a.id);
+                const untemplatedAgentIds = allAgentIds.filter(id => !templateAgentIds.includes(id));
+                
+                for (const agentId of untemplatedAgentIds) {
+                  await supabase
+                    .from('client_user_agent_permissions')
+                    .update({
+                      permissions: {
+                        conversations: false, transcripts: false, analytics: false,
+                        specs: false, knowledge_base: false, guides: false, agent_settings: false,
+                      },
+                      has_overrides: false,
+                    })
+                    .eq('user_id', user.user_id)
+                    .eq('agent_id', agentId)
+                    .eq('client_id', clientId);
+                }
+                
                 toast({ title: "Role changed", description: "Permissions reset to new role defaults" });
                 setRoleChangeModal(null);
                 loadUsers();
