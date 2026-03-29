@@ -400,9 +400,11 @@ export function RolesManagement({ clientId }: RolesManagementProps) {
                               <button
                                 className="text-[11px] px-2 py-0.5 rounded border border-border text-muted-foreground hover:bg-muted"
                                 onClick={() => {
+                                  const updates: Record<string, boolean> = {};
                                   getVisibleCompanyTabs().forEach(t => {
-                                    toggleClientPermission(role.id, t.key + '_view', true);
+                                    updates[t.key + '_view'] = true;
                                   });
+                                  toggleClientPermissions(role.id, updates);
                                 }}
                               >
                                 view all
