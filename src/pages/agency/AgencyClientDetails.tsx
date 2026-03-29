@@ -17,7 +17,7 @@ import { ClientGuidesEditor } from "@/components/client-management/ClientGuidesE
 import { ClientUsersManagement } from "@/components/client-management/ClientUsersManagement";
 import { DefaultPermissionsCard } from "@/components/client-management/DefaultPermissionsCard";
 import { CannedResponsesSettings } from "@/components/settings/CannedResponsesSettings";
-import { AuditLog } from "@/components/settings/AuditLog";
+
 
 interface ClientData {
   id: string;
@@ -294,7 +294,7 @@ export default function AgencyClientDetails() {
           <TabsTrigger value="agents">Agents</TabsTrigger>
           <TabsTrigger value="guides">Guides</TabsTrigger>
           <TabsTrigger value="company-settings">Company Settings</TabsTrigger>
-          <TabsTrigger value="audit-log">Audit Log</TabsTrigger>
+          
         </TabsList>
 
         <TabsContent value="overview">
@@ -313,9 +313,6 @@ export default function AgencyClientDetails() {
           <CompanySettingsPanel clientId={client.id} />
         </TabsContent>
 
-        <TabsContent value="audit-log">
-          <AuditLog clientId={client.id} isAgencyView={true} />
-        </TabsContent>
       </Tabs>
     </div>
   );
