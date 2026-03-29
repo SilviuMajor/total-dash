@@ -229,7 +229,14 @@ export function RolesManagement({ clientId }: RolesManagementProps) {
         is_system: false,
         is_default: false,
         sort_order: roles.length,
-        client_permissions: { settings_page: false, audit_log: false },
+        client_permissions: {
+          settings_page: false,
+          settings_departments_view: false, settings_departments_manage: false,
+          settings_team_view: false, settings_team_manage: false,
+          settings_canned_responses_view: false, settings_canned_responses_manage: false,
+          settings_general_view: false, settings_general_manage: false,
+          settings_audit_log_view: false,
+        },
       })
       .select()
       .single();
