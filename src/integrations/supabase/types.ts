@@ -362,6 +362,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "agent_assignments_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "agent_assignments_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
@@ -401,6 +408,13 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_integrations_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
             referencedColumns: ["id"]
           },
           {
@@ -449,6 +463,13 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_spec_sections_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
             referencedColumns: ["id"]
           },
         ]
@@ -507,6 +528,13 @@ export type Database = {
             referencedRelation: "agents"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "agent_update_logs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
         ]
       }
       agent_workflow_categories: {
@@ -543,6 +571,13 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_workflow_categories_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
             referencedColumns: ["id"]
           },
         ]
@@ -584,6 +619,13 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_workflows_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
             referencedColumns: ["id"]
           },
         ]
@@ -721,6 +763,13 @@ export type Database = {
             referencedRelation: "agents"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "analytics_tabs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
         ]
       }
       audit_log: {
@@ -784,6 +833,13 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_log_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
             referencedColumns: ["id"]
           },
           {
@@ -889,6 +945,13 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "canned_responses_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
             referencedColumns: ["id"]
           },
           {
@@ -1102,6 +1165,13 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_user_agent_permissions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
             referencedColumns: ["id"]
           },
           {
@@ -1481,6 +1551,13 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
             referencedColumns: ["id"]
           },
           {
@@ -1879,6 +1956,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "role_permission_templates_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "role_permission_templates_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
@@ -2046,6 +2130,13 @@ export type Database = {
             referencedRelation: "agents"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "text_transcripts_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
         ]
       }
       transcripts: {
@@ -2150,7 +2241,50 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      agents_safe: {
+        Row: {
+          agency_id: string | null
+          config: Json | null
+          created_at: string | null
+          data_region: string | null
+          id: string | null
+          name: string | null
+          provider: string | null
+          status: Database["public"]["Enums"]["agent_status"] | null
+          updated_at: string | null
+        }
+        Insert: {
+          agency_id?: string | null
+          config?: never
+          created_at?: string | null
+          data_region?: string | null
+          id?: string | null
+          name?: string | null
+          provider?: string | null
+          status?: Database["public"]["Enums"]["agent_status"] | null
+          updated_at?: string | null
+        }
+        Update: {
+          agency_id?: string | null
+          config?: never
+          created_at?: string | null
+          data_region?: string | null
+          id?: string | null
+          name?: string | null
+          provider?: string | null
+          status?: Database["public"]["Enums"]["agent_status"] | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agents_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       check_agency_limit: {
@@ -2233,6 +2367,10 @@ export type Database = {
           name: string
         }[]
       }
+      has_active_handover: {
+        Args: { _conversation_id: string }
+        Returns: boolean
+      }
       has_agency_role: {
         Args: {
           _agency_id: string
@@ -2254,6 +2392,23 @@ export type Database = {
         Returns: boolean
       }
       has_whitelabel_access: { Args: { _agency_id: string }; Returns: boolean }
+      insert_audit_log: {
+        Args: {
+          _action: string
+          _actor_id: string
+          _actor_type: string
+          _agent_id?: string
+          _agent_name?: string
+          _category: string
+          _changes?: Json
+          _client_id: string
+          _description: string
+          _target_id?: string
+          _target_name?: string
+          _target_type?: string
+        }
+        Returns: undefined
+      }
       is_admin: { Args: { user_id: string }; Returns: boolean }
       is_agency_owner: {
         Args: { _agency_id: string; _user_id: string }
