@@ -26,6 +26,7 @@ interface AuditEntry {
 interface AuditLogProps {
   clientId: string;
   isAgencyView?: boolean;
+  agencyName?: string;
 }
 
 const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
