@@ -124,6 +124,12 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
     loadAgentCeilings();
   }, [clientId, isSuperAdmin, isSuperAdminLoading, isPreviewMode]);
 
+  useEffect(() => {
+    if (newUserRoleId && agents.length > 0) {
+      populatePermissionsFromRole(newUserRoleId);
+    }
+  }, [newUserRoleId, agents.length]);
+
   const loadRoles = async () => {
     const { data } = await supabase
       .from("client_roles")
