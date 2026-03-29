@@ -132,6 +132,7 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
     loadAgents();
     loadRoles();
     loadAgentCeilings();
+    loadClientCaps();
   }, [clientId, isSuperAdmin, isSuperAdminLoading, isPreviewMode]);
 
   useEffect(() => {
