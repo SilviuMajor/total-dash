@@ -67,6 +67,7 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [clientId, setClientId] = useState<string | null>(null);
   const [userRoleSlug, setUserRoleSlug] = useState<string | null>(null);
+  const [companySettingsPermissions, setCompanySettingsPermissions] = useState<CompanySettingsPermissions | null>(null);
   const { user, profile } = useAuth();
   const { isClientPreviewMode, previewClient, previewDepth, userType } = useMultiTenantAuth();
 
