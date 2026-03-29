@@ -7,6 +7,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { VoiceflowGuides } from "@/components/guides/VoiceflowGuides";
 import { RetellGuides } from "@/components/guides/RetellGuides";
 import { BookOpen } from "lucide-react";
+import DOMPurify from "dompurify";
 
 interface GuideSection {
   id: string;
