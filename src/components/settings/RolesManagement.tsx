@@ -175,18 +175,20 @@ export function RolesManagement({ clientId }: RolesManagementProps) {
     }));
   };
 
-  const toggleClientPermission = async (roleId: string, permKey: string, value: boolean) => {
+  const toggleClientPermissions = async (roleId: string, updates: Record<string, boolean>) => {
     const role = roles.find(r => r.id === roleId);
     if (!role) return;
 
-    const updatedPerms = { ...role.client_permissions, [permKey]: value };
+    const updatedPerms = { ...role.client_permissions, ...updates };
 
+    // Update local state immediately for responsive UI
+    setRoles(prev => prev.map(r => r.id === roleId ? { ...r, client_permissions: updatedPerms } : r));
+
+    // Persist to database
     await supabase
       .from("client_roles")
       .update({ client_permissions: updatedPerms })
       .eq("id", roleId);
-
-    setRoles(prev => prev.map(r => r.id === roleId ? { ...r, client_permissions: updatedPerms } : r));
   };
 
   const handleSaveRole = (roleId: string, roleName: string) => {
