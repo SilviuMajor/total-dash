@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 export default function Settings() {
   const { user } = useAuth();
   const { isClientPreviewMode, previewClient, previewDepth } = useMultiTenantAuth();
-  const { clientId: contextClientId } = useClientAgentContext();
+  const { clientId: contextClientId, companySettingsPermissions } = useClientAgentContext();
   const [clientId, setClientId] = useState<string | null>(null);
   const [capabilities, setCapabilities] = useState<Record<string, any>>({});
   const [client, setClient] = useState<any>(null);
