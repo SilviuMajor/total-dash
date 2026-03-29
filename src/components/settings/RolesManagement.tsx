@@ -566,10 +566,11 @@ export function RolesManagement({ clientId }: RolesManagementProps) {
                                       className="w-3.5 h-3.5 rounded accent-primary"
                                       checked={role.client_permissions?.[tab.key + '_view'] || false}
                                       onChange={e => {
-                                        toggleClientPermission(role.id, tab.key + '_view', e.target.checked);
+                                        const updates: Record<string, boolean> = { [tab.key + '_view']: e.target.checked };
                                         if (!e.target.checked) {
-                                          toggleClientPermission(role.id, tab.key + '_manage', false);
+                                          updates[tab.key + '_manage'] = false;
                                         }
+                                        toggleClientPermissions(role.id, updates);
                                       }}
                                     />
                                     view
