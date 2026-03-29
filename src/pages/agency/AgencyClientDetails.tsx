@@ -15,8 +15,8 @@ import { ClientSettings } from "@/components/client-management/ClientSettings";
 import { DepartmentManagement } from "@/components/client-management/DepartmentManagement";
 import { ClientGuidesEditor } from "@/components/client-management/ClientGuidesEditor";
 import { ClientUsersManagement } from "@/components/client-management/ClientUsersManagement";
-import { DefaultPermissionsCard } from "@/components/client-management/DefaultPermissionsCard";
 import { CannedResponsesSettings } from "@/components/settings/CannedResponsesSettings";
+import { AuditLog } from "@/components/settings/AuditLog";
 
 
 interface ClientData {
@@ -74,10 +74,10 @@ function CompanySettingsPanel({ clientId }: { clientId: string }) {
 
   const subTabs = [
     { id: "departments", label: "Departments", capKey: "client_departments_enabled" },
-    { id: "team", label: "Team", capKey: "client_team_enabled" },
-    { id: "permissions", label: "Permissions", capKey: "client_permissions_enabled" },
+    { id: "team", label: "Team & Permissions", capKey: "client_team_enabled" },
     { id: "canned-responses", label: "Canned Responses", capKey: "client_canned_responses_enabled" },
     { id: "general", label: "General", capKey: "client_general_enabled" },
+    { id: "audit-log", label: "Audit Log", capKey: "client_audit_log_enabled" },
   ];
 
   return (
@@ -149,24 +149,6 @@ function CompanySettingsPanel({ clientId }: { clientId: string }) {
           <ClientUsersManagement clientId={clientId} />
         </TabsContent>
 
-        <TabsContent value="permissions">
-          <Card className="p-4 bg-card border-border/50 mb-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="h-2 w-2 rounded-full" style={{ backgroundColor: isTabEnabled("client_permissions_enabled") ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))' }} />
-                <div>
-                  <Label className="text-sm font-medium">Visible to Client</Label>
-                  <p className="text-xs text-muted-foreground">Allow clients to view and manage permissions</p>
-                </div>
-              </div>
-              <Switch
-                checked={isTabEnabled("client_permissions_enabled")}
-                onCheckedChange={(v) => updateCapability("client_permissions_enabled", v)}
-              />
-            </div>
-          </Card>
-          <DefaultPermissionsCard clientId={clientId} />
-        </TabsContent>
 
         <TabsContent value="canned-responses">
           <Card className="p-4 bg-card border-border/50 mb-4">
@@ -204,6 +186,25 @@ function CompanySettingsPanel({ clientId }: { clientId: string }) {
             </div>
           </Card>
           <ClientSettings client={{ id: clientId } as any} onUpdate={() => {}} />
+        </TabsContent>
+
+        <TabsContent value="audit-log">
+          <Card className="p-4 bg-card border-border/50 mb-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-2 w-2 rounded-full" style={{ backgroundColor: isTabEnabled("client_audit_log_enabled") ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))' }} />
+                <div>
+                  <Label className="text-sm font-medium">Visible to Client</Label>
+                  <p className="text-xs text-muted-foreground">Allow clients to view the audit log</p>
+                </div>
+              </div>
+              <Switch
+                checked={isTabEnabled("client_audit_log_enabled")}
+                onCheckedChange={(v) => updateCapability("client_audit_log_enabled", v)}
+              />
+            </div>
+          </Card>
+          <AuditLog clientId={clientId} isAgencyView={true} />
         </TabsContent>
       </Tabs>
     </div>
