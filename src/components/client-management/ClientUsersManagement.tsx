@@ -1081,6 +1081,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                           </Button>
                         </div>
                       </div>
+                      )}
                     </div>
                   )}
                 </div>
