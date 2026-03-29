@@ -649,10 +649,12 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
             <h2 className="text-2xl font-semibold text-foreground">Team Members</h2>
             <p className="text-sm text-muted-foreground">Manage users and their permissions</p>
           </div>
-          <Button onClick={() => setOpen(true)} className="bg-foreground text-background hover:bg-foreground/90">
-            <UserPlus className="w-4 h-4 mr-2" />
-            Add User
-          </Button>
+          {!readOnly && (
+            <Button onClick={() => setOpen(true)} className="bg-foreground text-background hover:bg-foreground/90">
+              <UserPlus className="w-4 h-4 mr-2" />
+              Add User
+            </Button>
+          )}
         </div>
 
         {users.length === 0 ? (
