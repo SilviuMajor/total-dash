@@ -374,7 +374,7 @@ export function AuditLog({ clientId, isAgencyView = false, agencyName }: AuditLo
                             {JSON.stringify(entry.changes, null, 2)}
                           </pre>
                           <div className="flex gap-4 text-muted-foreground pt-1 border-t border-border">
-                            {isAgencyView && <span>Actor: {entry.actor_email || entry.actor_name}</span>}
+                            {isAgencyView && (entry.actor_type === "agency_user" || entry.actor_type === "super_admin") && <span>Actor: {entry.actor_email || entry.actor_name}</span>}
                             {entry.target_name && <span>Target: {entry.target_name}</span>}
                             <span>ID: {entry.id.slice(0, 8)}</span>
                           </div>

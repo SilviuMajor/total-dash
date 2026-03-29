@@ -187,6 +187,25 @@ function CompanySettingsPanel({ clientId }: { clientId: string }) {
           </Card>
           <ClientSettings client={{ id: clientId } as any} onUpdate={() => {}} />
         </TabsContent>
+
+        <TabsContent value="audit-log">
+          <Card className="p-4 bg-card border-border/50 mb-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-2 w-2 rounded-full" style={{ backgroundColor: isTabEnabled("client_audit_log_enabled") ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))' }} />
+                <div>
+                  <Label className="text-sm font-medium">Visible to Client</Label>
+                  <p className="text-xs text-muted-foreground">Allow clients to view the audit log</p>
+                </div>
+              </div>
+              <Switch
+                checked={isTabEnabled("client_audit_log_enabled")}
+                onCheckedChange={(v) => updateCapability("client_audit_log_enabled", v)}
+              />
+            </div>
+          </Card>
+          <AuditLog clientId={clientId} isAgencyView={true} />
+        </TabsContent>
       </Tabs>
     </div>
   );
