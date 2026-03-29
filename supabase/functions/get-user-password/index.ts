@@ -27,31 +27,71 @@ serve(async (req) => {
     const { data: { user } } = await supabaseAdmin.auth.getUser(token);
 
     if (!user) {
-      throw new Error('Unauthorized');
+      return new Response(
+        JSON.stringify({ success: false, error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const { userId } = await req.json();
 
     if (!userId) {
-      throw new Error('Missing userId');
+      return new Response(
+        JSON.stringify({ success: false, error: 'Missing userId' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    // Fetch password hint and must_change_password flag from user_passwords table
+    // Authorization: verify requester is super admin, agency admin/owner, or client admin
+    const requestingUserId = user.id;
+
+    const { data: isSuperAdmin } = await supabaseAdmin
+      .from('super_admin_users')
+      .select('id')
+      .eq('user_id', requestingUserId)
+      .single();
+
+    if (!isSuperAdmin) {
+      const { data: isAgencyAdmin } = await supabaseAdmin
+        .from('agency_users')
+        .select('role')
+        .eq('user_id', requestingUserId)
+        .in('role', ['owner', 'admin'])
+        .single();
+
+      if (!isAgencyAdmin) {
+        const { data: isClientAdmin } = await supabaseAdmin
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', requestingUserId)
+          .eq('role', 'admin')
+          .single();
+
+        if (!isClientAdmin) {
+          return new Response(
+            JSON.stringify({ success: false, error: 'Forbidden' }),
+            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+    }
+
+    // Only return must_change_password flag — no password hints
     const { data, error } = await supabaseAdmin
       .from('user_passwords')
-      .select('password_hint, must_change_password')
+      .select('must_change_password')
       .eq('user_id', userId)
       .single();
 
     if (error && error.code !== 'PGRST116') {
-      console.error('Error fetching password hint:', error);
+      console.error('Error fetching user password data:', error);
       throw error;
     }
 
     return new Response(
       JSON.stringify({ 
         success: true,
-        hint: data?.password_hint || null,
+        hint: null,
         mustChangePassword: data?.must_change_password || false
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -59,16 +99,9 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in get-user-password:', error);
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: errorMessage 
-      }),
-      { 
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
+      JSON.stringify({ success: false, error: 'Internal error' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });

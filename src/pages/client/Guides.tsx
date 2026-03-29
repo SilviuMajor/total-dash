@@ -7,6 +7,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { VoiceflowGuides } from "@/components/guides/VoiceflowGuides";
 import { RetellGuides } from "@/components/guides/RetellGuides";
 import { BookOpen } from "lucide-react";
+import DOMPurify from "dompurify";
 
 interface GuideSection {
   id: string;
@@ -109,7 +110,7 @@ export default function Guides() {
                     <AccordionContent>
                       <div 
                         className="prose prose-sm max-w-none dark:prose-invert"
-                        dangerouslySetInnerHTML={{ __html: section.content }} 
+                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(section.content) }} 
                       />
                     </AccordionContent>
                   </AccordionItem>

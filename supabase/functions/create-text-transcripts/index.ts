@@ -100,6 +100,17 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Authenticate via CRON_SECRET
+  const cronSecret = req.headers.get('x-cron-secret');
+  const expectedSecret = Deno.env.get('CRON_SECRET');
+  
+  if (!expectedSecret || cronSecret !== expectedSecret) {
+    return new Response(
+      JSON.stringify({ error: 'Unauthorized' }),
+      { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
   try {
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -150,8 +161,6 @@ Deno.serve(async (req) => {
       // ============================================
       // JOB 1: Auto-end stale conversations
       // ============================================
-      // Find conversations that are still active but exceed the threshold
-      // Use started_at or last_activity_at based on auto_end_mode
       const timeColumn = autoEndMode === 'since_start' ? 'started_at' : 'last_activity_at';
       
       const { data: staleConversations, error: staleError } = await supabaseAdmin
@@ -189,7 +198,6 @@ Deno.serve(async (req) => {
       // ============================================
       // JOB 2: Create transcripts for ended conversations
       // ============================================
-      // Find all ended conversations for this agent
       const { data: endedConversations, error: endedError } = await supabaseAdmin
         .from('conversations')
         .select('id, agent_id, started_at, ended_at, metadata')
@@ -213,7 +221,6 @@ Deno.serve(async (req) => {
         const success = await createTranscriptForConversation(supabaseAdmin, conv);
         if (success) {
           totalTranscriptsCreated++;
-          // Add to set so we don't process twice if there's overlap
           existingTranscriptIds.add(conv.id);
         }
       }
