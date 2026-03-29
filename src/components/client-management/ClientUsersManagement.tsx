@@ -649,10 +649,12 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
             <h2 className="text-2xl font-semibold text-foreground">Team Members</h2>
             <p className="text-sm text-muted-foreground">Manage users and their permissions</p>
           </div>
-          <Button onClick={() => setOpen(true)} className="bg-foreground text-background hover:bg-foreground/90">
-            <UserPlus className="w-4 h-4 mr-2" />
-            Add User
-          </Button>
+          {!readOnly && (
+            <Button onClick={() => setOpen(true)} className="bg-foreground text-background hover:bg-foreground/90">
+              <UserPlus className="w-4 h-4 mr-2" />
+              Add User
+            </Button>
+          )}
         </div>
 
         {users.length === 0 ? (
@@ -717,6 +719,11 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                   {/* Expanded body */}
                   {isExpanded && (
                     <div className="border-t px-4 py-4 space-y-4">
+                      {readOnly && (
+                        <div className="text-xs text-muted-foreground bg-muted/50 rounded-md px-3 py-2">
+                          View only — you don't have manage permissions for Team & Permissions.
+                        </div>
+                      )}
                       {/* Role + Department dropdowns */}
                       <div className="flex gap-3">
                         <div className="flex-1 space-y-1">
@@ -724,6 +731,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                           <Select
                             value={user.role_id || ""}
                             onValueChange={(newRoleId) => {
+                              if (readOnly) return;
                               if (newRoleId !== user.role_id) {
                                 setRoleChangeModal({ user, newRoleId });
                               }
@@ -742,6 +750,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                           <Select
                             value={user.department_id || "none"}
                             onValueChange={async (value) => {
+                              if (readOnly) return;
                               await supabase
                                 .from('client_users')
                                 .update({ department_id: value === "none" ? null : value })
@@ -815,7 +824,10 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                                         type="checkbox"
                                         className="w-4 h-4 rounded"
                                         checked={isChecked}
-                                        onChange={(e) => toggleAgentPermission(agent.id, p.key as keyof AgentPermission, e.target.checked, false)}
+                                        onChange={(e) => {
+                                          if (readOnly) return;
+                                          toggleAgentPermission(agent.id, p.key as keyof AgentPermission, e.target.checked, false);
+                                        }}
                                         style={{ accentColor: isOverride ? '#B45309' : undefined }}
                                       />
                                       <span>{p.label}</span>
@@ -907,6 +919,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                                             className="w-3.5 h-3.5 rounded"
                                             checked={viewChecked}
                                             onChange={e => {
+                                              if (readOnly) return;
                                               const updates = { ...selectedUserClientPerms, [viewKey]: e.target.checked };
                                               if (!e.target.checked) {
                                                 updates[manageKey] = false;
@@ -929,13 +942,14 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                                               type="checkbox"
                                               className="w-3.5 h-3.5 rounded"
                                               checked={manageChecked}
-                                              onChange={e => {
-                                                const updates = { ...selectedUserClientPerms, [manageKey]: e.target.checked };
-                                                if (e.target.checked) {
-                                                  updates[viewKey] = true;
-                                                }
-                                                setSelectedUserClientPerms(updates);
-                                              }}
+                                                onChange={e => {
+                                                  if (readOnly) return;
+                                                  const updates = { ...selectedUserClientPerms, [manageKey]: e.target.checked };
+                                                  if (e.target.checked) {
+                                                    updates[viewKey] = true;
+                                                  }
+                                                  setSelectedUserClientPerms(updates);
+                                                }}
                                               style={{ accentColor: manageIsOverride ? '#B45309' : undefined }}
                                             />
                                             manage
@@ -952,6 +966,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                       )}
 
                       {/* Action buttons */}
+                      {!readOnly && (
                       <div className="flex items-center justify-between pt-2">
                         {user.has_overrides && (
                           <Button
@@ -1068,6 +1083,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                           </Button>
                         </div>
                       </div>
+                      )}
                     </div>
                   )}
                 </div>

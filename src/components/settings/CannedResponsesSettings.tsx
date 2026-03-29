@@ -155,7 +155,7 @@ export function CannedResponsesSettings({ readOnly }: { readOnly?: boolean } = {
             <div className="text-sm font-medium">Personal Canned Responses</div>
             <p className="text-xs text-muted-foreground">Allow agents to create their own personal responses</p>
           </div>
-          <Switch checked={personalEnabled} onCheckedChange={togglePersonal} />
+          <Switch checked={personalEnabled} onCheckedChange={togglePersonal} disabled={readOnly} />
         </div>
       </Card>
 
@@ -172,9 +172,11 @@ export function CannedResponsesSettings({ readOnly }: { readOnly?: boolean } = {
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <div className="text-sm font-medium">Organisation Responses</div>
-          <Button size="sm" variant="outline" onClick={() => setShowAdd(true)}>
-            <Plus className="h-3 w-3 mr-1" /> Add Response
-          </Button>
+          {!readOnly && (
+            <Button size="sm" variant="outline" onClick={() => setShowAdd(true)}>
+              <Plus className="h-3 w-3 mr-1" /> Add Response
+            </Button>
+          )}
         </div>
 
         {/* Add form */}
@@ -231,7 +233,7 @@ export function CannedResponsesSettings({ readOnly }: { readOnly?: boolean } = {
                 <div className="border-t">
                   {responses.filter(r => r.category === cat).map(resp => (
                     <div key={resp.id} className="p-3 border-b last:border-b-0 hover:bg-muted/30">
-                      {editingId === resp.id ? (
+                      {editingId === resp.id && !readOnly ? (
                         <div className="space-y-2">
                           <div className="grid grid-cols-2 gap-2">
                             <Input value={editCategory} onChange={e => setEditCategory(e.target.value)} placeholder="Category" />
@@ -249,19 +251,21 @@ export function CannedResponsesSettings({ readOnly }: { readOnly?: boolean } = {
                             <div className="text-sm font-medium">{resp.title}</div>
                             <div className="text-xs text-muted-foreground mt-1 whitespace-pre-wrap">{resp.body}</div>
                           </div>
-                          <div className="flex gap-1 ml-2">
-                            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => {
-                              setEditingId(resp.id);
-                              setEditTitle(resp.title);
-                              setEditBody(resp.body);
-                              setEditCategory(resp.category);
-                            }}>
-                              <Edit2 className="h-3 w-3" />
-                            </Button>
-                            <Button size="icon" variant="ghost" className="h-7 w-7 hover:bg-destructive/10 hover:text-destructive" onClick={() => setDeleteId(resp.id)}>
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </div>
+                          {!readOnly && (
+                            <div className="flex gap-1 ml-2">
+                              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => {
+                                setEditingId(resp.id);
+                                setEditTitle(resp.title);
+                                setEditBody(resp.body);
+                                setEditCategory(resp.category);
+                              }}>
+                                <Edit2 className="h-3 w-3" />
+                              </Button>
+                              <Button size="icon" variant="ghost" className="h-7 w-7 hover:bg-destructive/10 hover:text-destructive" onClick={() => setDeleteId(resp.id)}>
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>

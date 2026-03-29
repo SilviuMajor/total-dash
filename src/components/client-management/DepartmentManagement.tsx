@@ -318,10 +318,12 @@ export function DepartmentManagement({ clientId, readOnly }: { clientId: string;
             <h3 className="text-lg font-semibold text-foreground">Departments</h3>
             <p className="text-sm text-muted-foreground">Configure handover routing departments</p>
           </div>
-          <Button onClick={() => handleOpenDialog()} variant="default" size="sm">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Department
-          </Button>
+          {!readOnly && (
+            <Button onClick={() => handleOpenDialog()} variant="default" size="sm">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Department
+            </Button>
+          )}
         </div>
 
         {departments.length === 0 ? (
@@ -376,18 +378,22 @@ export function DepartmentManagement({ clientId, readOnly }: { clientId: string;
                       <span className={cn("w-2 h-2 rounded-full", isOpen ? "bg-green-500" : "bg-red-400")} />
                       <span className="text-xs text-muted-foreground hidden lg:block">{isOpen ? "Open" : "Closed"}</span>
                     </div>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleOpenDialog(dept)}>
-                      <Pencil className="w-3.5 h-3.5" />
-                    </Button>
-                    {!dept.is_global && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => { setDepartmentToDelete(dept); setDeleteDialogOpen(true); }}
-                      >
-                        <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                      </Button>
+                    {!readOnly && (
+                      <>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleOpenDialog(dept)}>
+                          <Pencil className="w-3.5 h-3.5" />
+                        </Button>
+                        {!dept.is_global && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => { setDepartmentToDelete(dept); setDeleteDialogOpen(true); }}
+                          >
+                            <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                          </Button>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
