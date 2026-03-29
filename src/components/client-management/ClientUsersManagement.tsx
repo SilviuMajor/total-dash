@@ -678,6 +678,7 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
                       } else {
                         setExpandedUserId(user.user_id);
                         await loadUserAgentPermissions(user.user_id);
+                        await loadUserClientPermissions(user.user_id);
                         if (user.role_id) {
                           const templates = await loadRoleTemplates(user.role_id);
                           setRoleTemplates(prev => ({ ...prev, [user.user_id]: templates }));
