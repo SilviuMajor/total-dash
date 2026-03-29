@@ -731,6 +731,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                           <Select
                             value={user.role_id || ""}
                             onValueChange={(newRoleId) => {
+                              if (readOnly) return;
                               if (newRoleId !== user.role_id) {
                                 setRoleChangeModal({ user, newRoleId });
                               }
