@@ -919,6 +919,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                                             className="w-3.5 h-3.5 rounded"
                                             checked={viewChecked}
                                             onChange={e => {
+                                              if (readOnly) return;
                                               const updates = { ...selectedUserClientPerms, [viewKey]: e.target.checked };
                                               if (!e.target.checked) {
                                                 updates[manageKey] = false;
