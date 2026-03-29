@@ -3,6 +3,7 @@ import { DepartmentManagement } from "@/components/client-management/DepartmentM
 import { ClientUsersManagement } from "@/components/client-management/ClientUsersManagement";
 import { RolesManagement } from "@/components/settings/RolesManagement";
 import { CannedResponsesSettings } from "@/components/settings/CannedResponsesSettings";
+import { AuditLog } from "@/components/settings/AuditLog";
 import { useAuth } from "@/hooks/useAuth";
 import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
 import { useClientAgentContext } from "@/hooks/useClientAgentContext";
