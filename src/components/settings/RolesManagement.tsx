@@ -587,10 +587,11 @@ export function RolesManagement({ clientId }: RolesManagementProps) {
                                         className="w-3.5 h-3.5 rounded accent-primary"
                                         checked={role.client_permissions?.[tab.key + '_manage'] || false}
                                         onChange={e => {
-                                          toggleClientPermission(role.id, tab.key + '_manage', e.target.checked);
+                                          const updates: Record<string, boolean> = { [tab.key + '_manage']: e.target.checked };
                                           if (e.target.checked) {
-                                            toggleClientPermission(role.id, tab.key + '_view', true);
+                                            updates[tab.key + '_view'] = true;
                                           }
+                                          toggleClientPermissions(role.id, updates);
                                         }}
                                       />
                                       manage
