@@ -942,13 +942,14 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                                               type="checkbox"
                                               className="w-3.5 h-3.5 rounded"
                                               checked={manageChecked}
-                                              onChange={e => {
-                                                const updates = { ...selectedUserClientPerms, [manageKey]: e.target.checked };
-                                                if (e.target.checked) {
-                                                  updates[viewKey] = true;
-                                                }
-                                                setSelectedUserClientPerms(updates);
-                                              }}
+                                                onChange={e => {
+                                                  if (readOnly) return;
+                                                  const updates = { ...selectedUserClientPerms, [manageKey]: e.target.checked };
+                                                  if (e.target.checked) {
+                                                    updates[viewKey] = true;
+                                                  }
+                                                  setSelectedUserClientPerms(updates);
+                                                }}
                                               style={{ accentColor: manageIsOverride ? '#B45309' : undefined }}
                                             />
                                             manage
