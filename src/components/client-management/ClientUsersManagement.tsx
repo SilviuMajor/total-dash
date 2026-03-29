@@ -831,6 +831,114 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
                         })}
                       </div>
 
+                      {/* Company settings section */}
+                      {clientCaps['settings_page_enabled'] !== false && (
+                        <div className="space-y-3 pt-3 border-t border-border">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Company settings</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                className="text-[11px] px-2 py-0.5 rounded border border-border text-muted-foreground hover:bg-muted"
+                                onClick={() => {
+                                  const updated = { ...selectedUserClientPerms, settings_page: true };
+                                  COMPANY_SETTINGS_TABS.filter(t => clientCaps[t.capKey] !== false).forEach(t => {
+                                    updated[t.key + '_view'] = true;
+                                  });
+                                  setSelectedUserClientPerms(updated);
+                                }}
+                              >
+                                view all
+                              </button>
+                              <button
+                                className="text-[11px] px-2 py-0.5 rounded border border-border text-muted-foreground hover:bg-muted"
+                                onClick={() => {
+                                  const updated = { ...selectedUserClientPerms, settings_page: true };
+                                  COMPANY_SETTINGS_TABS.filter(t => clientCaps[t.capKey] !== false && !t.viewOnly).forEach(t => {
+                                    updated[t.key + '_manage'] = true;
+                                  });
+                                  setSelectedUserClientPerms(updated);
+                                }}
+                              >
+                                manage all
+                              </button>
+                              <span className="text-[11px] text-muted-foreground">view / manage</span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-md">
+                            <input
+                              type="checkbox"
+                              className="w-4 h-4 rounded"
+                              checked={selectedUserClientPerms.settings_page || false}
+                              onChange={e => setSelectedUserClientPerms(prev => ({ ...prev, settings_page: e.target.checked }))}
+                            />
+                            <span className="text-sm font-medium">Company settings page</span>
+                          </div>
+
+                          {selectedUserClientPerms.settings_page && (
+                            <div className="space-y-1.5 pl-6">
+                              {COMPANY_SETTINGS_TABS
+                                .filter(tab => clientCaps[tab.capKey] !== false)
+                                .map(tab => {
+                                  const rolePerms = roles.find(r => r.id === user.role_id)?.client_permissions || {};
+                                  const viewKey = tab.key + '_view';
+                                  const manageKey = tab.key + '_manage';
+                                  const viewChecked = selectedUserClientPerms[viewKey] ?? (rolePerms as any)[viewKey] ?? false;
+                                  const manageChecked = selectedUserClientPerms[manageKey] ?? (rolePerms as any)[manageKey] ?? false;
+                                  const viewIsOverride = selectedUserClientPerms[viewKey] !== undefined && selectedUserClientPerms[viewKey] !== ((rolePerms as any)[viewKey] ?? false);
+                                  const manageIsOverride = !tab.viewOnly && selectedUserClientPerms[manageKey] !== undefined && selectedUserClientPerms[manageKey] !== ((rolePerms as any)[manageKey] ?? false);
+
+                                  return (
+                                    <div
+                                      key={tab.key}
+                                      className={`flex items-center justify-between px-3 py-2 rounded-md ${
+                                        viewIsOverride || manageIsOverride
+                                          ? 'bg-amber-50 border border-amber-200 dark:bg-amber-950/30 dark:border-amber-800'
+                                          : 'bg-muted/50'
+                                      }`}
+                                    >
+                                      <span className="text-sm">{tab.label}</span>
+                                      <div className="flex gap-4">
+                                        <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer">
+                                          <input
+                                            type="checkbox"
+                                            className="w-3.5 h-3.5 rounded"
+                                            checked={viewChecked}
+                                            onChange={e => setSelectedUserClientPerms(prev => ({ ...prev, [viewKey]: e.target.checked }))}
+                                            style={{ accentColor: viewIsOverride ? '#B45309' : undefined }}
+                                          />
+                                          view
+                                          {viewIsOverride && <span className="text-[10px] text-amber-600 dark:text-amber-400">override</span>}
+                                        </label>
+                                        {tab.viewOnly ? (
+                                          <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground/40">
+                                            <input type="checkbox" className="w-3.5 h-3.5 rounded opacity-30" disabled />
+                                            manage
+                                          </label>
+                                        ) : (
+                                          <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer">
+                                            <input
+                                              type="checkbox"
+                                              className="w-3.5 h-3.5 rounded"
+                                              checked={manageChecked}
+                                              onChange={e => setSelectedUserClientPerms(prev => ({ ...prev, [manageKey]: e.target.checked }))}
+                                              style={{ accentColor: manageIsOverride ? '#B45309' : undefined }}
+                                            />
+                                            manage
+                                            {manageIsOverride && <span className="text-[10px] text-amber-600 dark:text-amber-400">override</span>}
+                                          </label>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       {/* Action buttons */}
                       <div className="flex items-center justify-between pt-2">
                         {user.has_overrides && (
