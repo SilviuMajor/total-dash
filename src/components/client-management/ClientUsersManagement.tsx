@@ -830,6 +830,40 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
                           <Button
                             size="sm"
                             variant="ghost"
+                            className="text-xs"
+                            onClick={async () => {
+                              try {
+                                await supabase.functions.invoke('reinvite-user', {
+                                  body: { userId: user.user_id, userType: 'client', contextId: clientId },
+                                });
+                                toast({ title: "Sent", description: "Invite resent to " + (user.profiles?.email || "user") });
+                              } catch (e: any) {
+                                toast({ title: "Error", description: e.message, variant: "destructive" });
+                              }
+                            }}
+                          >
+                            Resend invite
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-xs"
+                            onClick={async () => {
+                              try {
+                                await supabase.functions.invoke('send-password-reset-email', {
+                                  body: { userId: user.user_id },
+                                });
+                                toast({ title: "Sent", description: "Password reset email sent" });
+                              } catch (e: any) {
+                                toast({ title: "Error", description: e.message, variant: "destructive" });
+                              }
+                            }}
+                          >
+                            Reset password
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
                             className="text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
                             onClick={() => { setUserToRemove(user); setRemoveDialogOpen(true); }}
                           >
