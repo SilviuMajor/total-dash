@@ -175,18 +175,20 @@ export function RolesManagement({ clientId }: RolesManagementProps) {
     }));
   };
 
-  const toggleClientPermission = async (roleId: string, permKey: string, value: boolean) => {
+  const toggleClientPermissions = async (roleId: string, updates: Record<string, boolean>) => {
     const role = roles.find(r => r.id === roleId);
     if (!role) return;
 
-    const updatedPerms = { ...role.client_permissions, [permKey]: value };
+    const updatedPerms = { ...role.client_permissions, ...updates };
 
+    // Update local state immediately for responsive UI
+    setRoles(prev => prev.map(r => r.id === roleId ? { ...r, client_permissions: updatedPerms } : r));
+
+    // Persist to database
     await supabase
       .from("client_roles")
       .update({ client_permissions: updatedPerms })
       .eq("id", roleId);
-
-    setRoles(prev => prev.map(r => r.id === roleId ? { ...r, client_permissions: updatedPerms } : r));
   };
 
   const handleSaveRole = (roleId: string, roleName: string) => {
@@ -389,7 +391,7 @@ export function RolesManagement({ clientId }: RolesManagementProps) {
                               type="checkbox"
                               className="w-4 h-4 rounded accent-primary"
                               checked={role.client_permissions?.settings_page || false}
-                              onChange={e => toggleClientPermission(role.id, 'settings_page', e.target.checked)}
+                              onChange={e => toggleClientPermissions(role.id, { settings_page: e.target.checked })}
                             />
                             Company settings
                           </label>
@@ -398,9 +400,11 @@ export function RolesManagement({ clientId }: RolesManagementProps) {
                               <button
                                 className="text-[11px] px-2 py-0.5 rounded border border-border text-muted-foreground hover:bg-muted"
                                 onClick={() => {
+                                  const updates: Record<string, boolean> = {};
                                   getVisibleCompanyTabs().forEach(t => {
-                                    toggleClientPermission(role.id, t.key + '_view', true);
+                                    updates[t.key + '_view'] = true;
                                   });
+                                  toggleClientPermissions(role.id, updates);
                                 }}
                               >
                                 view all
@@ -408,12 +412,14 @@ export function RolesManagement({ clientId }: RolesManagementProps) {
                               <button
                                 className="text-[11px] px-2 py-0.5 rounded border border-border text-muted-foreground hover:bg-muted"
                                 onClick={() => {
+                                  const updates: Record<string, boolean> = {};
                                   getVisibleCompanyTabs().forEach(t => {
                                     if (!(t as any).viewOnly) {
-                                      toggleClientPermission(role.id, t.key + '_view', true);
-                                      toggleClientPermission(role.id, t.key + '_manage', true);
+                                      updates[t.key + '_view'] = true;
+                                      updates[t.key + '_manage'] = true;
                                     }
                                   });
+                                  toggleClientPermissions(role.id, updates);
                                 }}
                               >
                                 manage all
@@ -434,10 +440,11 @@ export function RolesManagement({ clientId }: RolesManagementProps) {
                                       className="w-3.5 h-3.5 rounded accent-primary"
                                       checked={role.client_permissions?.[tab.key + '_view'] || false}
                                       onChange={e => {
-                                        toggleClientPermission(role.id, tab.key + '_view', e.target.checked);
+                                        const updates: Record<string, boolean> = { [tab.key + '_view']: e.target.checked };
                                         if (!e.target.checked) {
-                                          toggleClientPermission(role.id, tab.key + '_manage', false);
+                                          updates[tab.key + '_manage'] = false;
                                         }
+                                        toggleClientPermissions(role.id, updates);
                                       }}
                                     />
                                     view
@@ -454,10 +461,11 @@ export function RolesManagement({ clientId }: RolesManagementProps) {
                                         className="w-3.5 h-3.5 rounded accent-primary"
                                         checked={role.client_permissions?.[tab.key + '_manage'] || false}
                                         onChange={e => {
-                                          toggleClientPermission(role.id, tab.key + '_manage', e.target.checked);
+                                          const updates: Record<string, boolean> = { [tab.key + '_manage']: e.target.checked };
                                           if (e.target.checked) {
-                                            toggleClientPermission(role.id, tab.key + '_view', true);
+                                            updates[tab.key + '_view'] = true;
                                           }
+                                          toggleClientPermissions(role.id, updates);
                                         }}
                                       />
                                       manage
@@ -509,7 +517,7 @@ export function RolesManagement({ clientId }: RolesManagementProps) {
                               type="checkbox"
                               className="w-4 h-4 rounded accent-primary"
                               checked={role.client_permissions?.settings_page || false}
-                              onChange={e => toggleClientPermission(role.id, 'settings_page', e.target.checked)}
+                              onChange={e => toggleClientPermissions(role.id, { settings_page: e.target.checked })}
                             />
                             Company settings
                           </label>
@@ -518,9 +526,11 @@ export function RolesManagement({ clientId }: RolesManagementProps) {
                               <button
                                 className="text-[11px] px-2 py-0.5 rounded border border-border text-muted-foreground hover:bg-muted"
                                 onClick={() => {
+                                  const updates: Record<string, boolean> = {};
                                   getVisibleCompanyTabs().forEach(t => {
-                                    toggleClientPermission(role.id, t.key + '_view', true);
+                                    updates[t.key + '_view'] = true;
                                   });
+                                  toggleClientPermissions(role.id, updates);
                                 }}
                               >
                                 view all
@@ -528,12 +538,14 @@ export function RolesManagement({ clientId }: RolesManagementProps) {
                               <button
                                 className="text-[11px] px-2 py-0.5 rounded border border-border text-muted-foreground hover:bg-muted"
                                 onClick={() => {
+                                  const updates: Record<string, boolean> = {};
                                   getVisibleCompanyTabs().forEach(t => {
                                     if (!(t as any).viewOnly) {
-                                      toggleClientPermission(role.id, t.key + '_view', true);
-                                      toggleClientPermission(role.id, t.key + '_manage', true);
+                                      updates[t.key + '_view'] = true;
+                                      updates[t.key + '_manage'] = true;
                                     }
                                   });
+                                  toggleClientPermissions(role.id, updates);
                                 }}
                               >
                                 manage all
@@ -554,10 +566,11 @@ export function RolesManagement({ clientId }: RolesManagementProps) {
                                       className="w-3.5 h-3.5 rounded accent-primary"
                                       checked={role.client_permissions?.[tab.key + '_view'] || false}
                                       onChange={e => {
-                                        toggleClientPermission(role.id, tab.key + '_view', e.target.checked);
+                                        const updates: Record<string, boolean> = { [tab.key + '_view']: e.target.checked };
                                         if (!e.target.checked) {
-                                          toggleClientPermission(role.id, tab.key + '_manage', false);
+                                          updates[tab.key + '_manage'] = false;
                                         }
+                                        toggleClientPermissions(role.id, updates);
                                       }}
                                     />
                                     view
@@ -574,10 +587,11 @@ export function RolesManagement({ clientId }: RolesManagementProps) {
                                         className="w-3.5 h-3.5 rounded accent-primary"
                                         checked={role.client_permissions?.[tab.key + '_manage'] || false}
                                         onChange={e => {
-                                          toggleClientPermission(role.id, tab.key + '_manage', e.target.checked);
+                                          const updates: Record<string, boolean> = { [tab.key + '_manage']: e.target.checked };
                                           if (e.target.checked) {
-                                            toggleClientPermission(role.id, tab.key + '_view', true);
+                                            updates[tab.key + '_view'] = true;
                                           }
+                                          toggleClientPermissions(role.id, updates);
                                         }}
                                       />
                                       manage
