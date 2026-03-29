@@ -312,6 +312,10 @@ export default function AgencyClientDetails() {
         <TabsContent value="company-settings">
           <CompanySettingsPanel clientId={client.id} />
         </TabsContent>
+
+        <TabsContent value="audit-log">
+          <AuditLog clientId={client.id} isAgencyView={true} />
+        </TabsContent>
       </Tabs>
     </div>
   );
