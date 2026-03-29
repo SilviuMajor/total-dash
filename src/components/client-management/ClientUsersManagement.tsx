@@ -73,6 +73,14 @@ interface AgentPermission {
   guides: boolean;
 }
 
+const COMPANY_SETTINGS_TABS = [
+  { key: "settings_departments", label: "Departments", capKey: "client_departments_enabled" },
+  { key: "settings_team", label: "Team & permissions", capKey: "client_team_enabled" },
+  { key: "settings_canned_responses", label: "Canned responses", capKey: "client_canned_responses_enabled" },
+  { key: "settings_general", label: "General", capKey: "client_general_enabled" },
+  { key: "settings_audit_log", label: "Audit log", capKey: "client_audit_log_enabled", viewOnly: true },
+];
+
 export function ClientUsersManagement({ clientId }: { clientId: string }) {
   const { isPreviewMode } = useMultiTenantAuth();
   const { isSuperAdmin, loading: isSuperAdminLoading } = useSuperAdminStatus();
