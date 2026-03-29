@@ -397,17 +397,14 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
 
       setAgents(agentsList);
 
+      // Permissions will be populated when role is selected via populatePermissionsFromRole
+      // Set empty defaults initially
       const initialPermissions: Record<string, AgentPermission> = {};
       agentsList.forEach(agent => {
         initialPermissions[agent.id] = {
           agent_id: agent.id,
-          analytics: true,
-          conversations: true,
-          transcripts: true,
-          knowledge_base: false,
-          agent_settings: false,
-          specs: true,
-          guides: false,
+          analytics: false, conversations: false, transcripts: false,
+          knowledge_base: false, agent_settings: false, specs: false, guides: false,
         };
       });
       setNewUserAgentPermissions(initialPermissions);
