@@ -111,6 +111,7 @@ export default function Settings() {
           {showTeam && <TabsTrigger value="team-permissions">Team & Permissions</TabsTrigger>}
           {showCannedResponses && <TabsTrigger value="canned-responses">Canned Responses</TabsTrigger>}
           {showGeneral && <TabsTrigger value="general">General</TabsTrigger>}
+          {showAuditLog && <TabsTrigger value="audit-log">Audit Log</TabsTrigger>}
         </TabsList>
 
         {showDepartments && (
