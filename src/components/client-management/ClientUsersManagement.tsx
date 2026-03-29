@@ -750,6 +750,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                           <Select
                             value={user.department_id || "none"}
                             onValueChange={async (value) => {
+                              if (readOnly) return;
                               await supabase
                                 .from('client_users')
                                 .update({ department_id: value === "none" ? null : value })
