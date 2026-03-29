@@ -350,7 +350,7 @@ export function RolesManagement({ clientId }: RolesManagementProps) {
               <div className="border-t border-border p-4 space-y-4">
                 {role.is_admin_tier ? (
                   <>
-                    <p className="text-sm text-muted-foreground">Admin role automatically has access to all features enabled by your agency. These cannot be changed.</p>
+                    <p className="text-sm text-muted-foreground">Admin role defaults to full access. You can customise what new Admin users receive by default.</p>
                     {templates.map(template => {
                       const visibleKeys = getVisiblePermKeys(template.agent_id);
                       if (visibleKeys.length === 0) return null;
@@ -361,10 +361,13 @@ export function RolesManagement({ clientId }: RolesManagementProps) {
                           )}
                           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                             {visibleKeys.map(p => (
-                              <label key={p.key} className="flex items-center gap-2 text-sm text-muted-foreground">
-                                <div className="relative">
-                                  <input type="checkbox" checked disabled className="rounded border-input" />
-                                </div>
+                              <label key={p.key} className="flex items-center gap-2 text-sm cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={template.permissions[p.key] || false}
+                                  onChange={e => togglePermission(role.id, template.agent_id, p.key, e.target.checked)}
+                                  className="rounded border-input"
+                                />
                                 {p.label}
                               </label>
                             ))}
@@ -375,15 +378,21 @@ export function RolesManagement({ clientId }: RolesManagementProps) {
                     {getVisibleClientPermKeys().length > 0 && (
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 pt-2 border-t border-border">
                         {getVisibleClientPermKeys().map(p => (
-                          <label key={p.key} className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <div className="relative">
-                              <input type="checkbox" checked disabled className="rounded border-input" />
-                            </div>
+                          <label key={p.key} className="flex items-center gap-2 text-sm cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={role.client_permissions?.[p.key] || false}
+                              onChange={e => toggleClientPermission(role.id, p.key, e.target.checked)}
+                              className="rounded border-input"
+                            />
                             {p.label}
                           </label>
                         ))}
                       </div>
                     )}
+                    <div className="flex justify-end pt-2">
+                      <Button size="sm" onClick={() => handleSaveRole(role.id, role.name)}>Save</Button>
+                    </div>
                   </>
                 ) : (
                   <>
