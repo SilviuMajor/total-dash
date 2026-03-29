@@ -193,7 +193,7 @@ export default function Settings() {
         )}
         {showAuditLog && clientId && (
           <TabsContent value="audit-log" className="space-y-6">
-            <AuditLog clientId={clientId} isAgencyView={false} />
+            <AuditLog clientId={clientId} isAgencyView={isInPreview} />
           </TabsContent>
         )}
       </Tabs>
