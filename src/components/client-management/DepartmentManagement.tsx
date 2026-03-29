@@ -120,7 +120,7 @@ function generateCode(name: string): string {
   return name.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "");
 }
 
-export function DepartmentManagement({ clientId }: { clientId: string }) {
+export function DepartmentManagement({ clientId, readOnly }: { clientId: string; readOnly?: boolean }) {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);

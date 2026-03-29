@@ -24,7 +24,7 @@ interface CannedResponse {
   sort_order: number;
 }
 
-export function CannedResponsesSettings() {
+export function CannedResponsesSettings({ readOnly }: { readOnly?: boolean } = {}) {
   const { toast } = useToast();
   const { agents, selectedAgentId, clientId } = useClientAgentContext();
   const selectedAgent = agents.find(a => a.id === selectedAgentId);

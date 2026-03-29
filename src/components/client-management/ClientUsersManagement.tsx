@@ -81,7 +81,7 @@ const COMPANY_SETTINGS_TABS = [
   { key: "settings_audit_log", label: "Audit log", capKey: "client_audit_log_enabled", viewOnly: true },
 ];
 
-export function ClientUsersManagement({ clientId }: { clientId: string }) {
+export function ClientUsersManagement({ clientId, readOnly }: { clientId: string; readOnly?: boolean }) {
   const { isPreviewMode } = useMultiTenantAuth();
   const { isSuperAdmin, loading: isSuperAdminLoading } = useSuperAdminStatus();
   const [users, setUsers] = useState<ClientUser[]>([]);
