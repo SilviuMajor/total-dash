@@ -186,6 +186,15 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
     setAgentCeilings(ceilings);
   };
 
+  const loadClientCaps = async () => {
+    const { data } = await supabase
+      .from("client_settings")
+      .select("admin_capabilities")
+      .eq("client_id", clientId)
+      .single();
+    setClientCaps((data?.admin_capabilities || {}) as Record<string, any>);
+  };
+
   const loadRoleTemplates = async (roleId: string) => {
     const { data } = await supabase
       .from("role_permission_templates")
