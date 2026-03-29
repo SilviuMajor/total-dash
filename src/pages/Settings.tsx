@@ -114,7 +114,7 @@ export default function Settings() {
 
         {showDepartments && (
           <TabsContent value="departments" className="space-y-6">
-            <DepartmentManagement clientId={clientId} />
+            <DepartmentManagement clientId={clientId} readOnly={!canManageDepartments} />
           </TabsContent>
         )}
 
