@@ -959,16 +959,29 @@ export function ClientUsersManagement({ clientId }: { clientId: string }) {
               </Select>
             </div>
             <div>
-              <Label htmlFor="role">User Role</Label>
-              <Select value={newUserRole} onValueChange={(value: 'admin' | 'user') => setNewUserRole(value)}>
+              <Label htmlFor="role">Role</Label>
+              <Select value={newUserRoleId} onValueChange={(value) => {
+                setNewUserRoleId(value);
+                populatePermissionsFromRole(value);
+              }}>
                 <SelectTrigger id="role">
-                  <SelectValue />
+                  <SelectValue placeholder="Select role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="user">User</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
+                  {roles.map(r => (
+                    <SelectItem key={r.id} value={r.id}>
+                      {r.name}
+                      {r.is_system && " (system)"}
+                      {r.is_default && " (default)"}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                {roles.find(r => r.id === newUserRoleId)?.is_admin_tier
+                  ? "Full access to all agency-enabled features"
+                  : "Permissions auto-populated from role template — customise below"}
+              </p>
             </div>
             <AvatarUpload
               currentUrl={newUserAvatar}
