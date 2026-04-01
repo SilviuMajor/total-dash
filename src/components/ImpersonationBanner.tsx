@@ -18,7 +18,6 @@ export function ImpersonationBanner() {
     exitAll,
     exitToParent,
   } = useImpersonation();
-  const navigate = useNavigate();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
