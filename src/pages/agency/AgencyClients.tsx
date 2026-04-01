@@ -17,6 +17,7 @@ import { useAgencyClients, useClientAgents, useClientUserCounts } from "@/hooks/
 
 export default function AgencyClients() {
   const { profile, isPreviewMode, previewAgency } = useMultiTenantAuth();
+  const { startImpersonation, isImpersonating } = useImpersonation();
   const agencyId = isPreviewMode ? previewAgency?.id : profile?.agency?.id;
   const navigate = useNavigate();
   const { toast } = useToast();
