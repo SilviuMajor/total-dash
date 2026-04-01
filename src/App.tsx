@@ -19,6 +19,7 @@ import { CommandSearch } from "./components/CommandSearch";
 import { AdminPreviewBanner } from "./components/AdminPreviewBanner";
 import { ClientPreviewBanner } from "./components/ClientPreviewBanner";
 import { AgencyClientPreviewBanner } from "./components/AgencyClientPreviewBanner";
+import { ImpersonationBanner } from "./components/ImpersonationBanner";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import ChangePassword from "./pages/ChangePassword";
