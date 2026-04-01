@@ -505,7 +505,9 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
       if (error) throw error;
 
       if (data.success && data.userId) {
-        const activePermissions = Object.values(newUserAgentPermissions);
+        const activePermissions = Object.values(newUserAgentPermissions).filter(
+          p => newUserAgentAccess[p.agent_id] !== false
+        );
         for (const permission of activePermissions) {
           await supabase
             .from('client_user_agent_permissions')
