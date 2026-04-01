@@ -325,7 +325,7 @@ export default function AgencyClients() {
                         clientId: client.id,
                         agencyId: agencyId || profile?.agency?.id || undefined,
                       });
-                      navigate('/');
+                      window.location.href = '/';
                     } catch (e: any) {
                       toast({ title: "Error", description: e.message, variant: "destructive" });
                     }

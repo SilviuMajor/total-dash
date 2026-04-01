@@ -65,6 +65,7 @@ const queryClient = new QueryClient({
 const BrandingWrapper = ({ children }: { children: React.ReactNode }) => {
   const { effectiveTheme } = useTheme();
   const { isClientPreviewMode, previewClientAgencyId, isPreviewMode, previewAgency } = useMultiTenantAuth();
+  const { isImpersonating } = useImpersonation();
   const location = useLocation();
   // Only consider it client view if actually in client preview mode
   const isClientView = isClientPreviewMode;
@@ -86,6 +87,10 @@ const BrandingWrapper = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     document.title = branding.companyName || 'FiveLeaf';
   }, [branding.companyName]);
+
+  // Expose isImpersonating via context-like approach using a global ref
+  // so route sections can access it without hooks
+  (window as any).__isImpersonating = isImpersonating;
   
   return <>{children}</>;
 };

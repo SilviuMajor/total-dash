@@ -58,17 +58,15 @@ export function ImpersonationBanner() {
   const handleExit = async () => {
     if (hasParent) {
       await exitToParent();
-      if (activeSession.agency_id && !activeSession.parent_session_id) {
-        navigate("/agency/clients");
-      }
+      window.location.href = "/agency/clients";
     } else {
       await endImpersonation();
       if (activeSession.actor_type === "super_admin") {
-        navigate("/admin/agencies");
+        window.location.href = "/admin/agencies";
       } else if (activeSession.actor_type === "agency_user") {
-        navigate("/agency/clients");
+        window.location.href = "/agency/clients";
       } else {
-        navigate("/");
+        window.location.href = "/";
       }
     }
   };
@@ -76,11 +74,11 @@ export function ImpersonationBanner() {
   const handleExitAll = async () => {
     await exitAll();
     if (activeSession.actor_type === "super_admin") {
-      navigate("/admin/agencies");
+      window.location.href = "/admin/agencies";
     } else if (activeSession.actor_type === "agency_user") {
-      navigate("/agency/clients");
+      window.location.href = "/agency/clients";
     } else {
-      navigate("/");
+      window.location.href = "/";
     }
   };
 
