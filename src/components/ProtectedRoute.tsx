@@ -51,6 +51,10 @@ export function ProtectedRoute({
     userType === 'super_admin' && 
     (previewDepth !== 'none' && previewDepth !== undefined);
 
+  // Impersonation: full access mode bypasses like preview, view_as_user uses resolved permissions
+  const isImpersonationFullAccess = isImpersonating && impersonationMode === 'full_access';
+  const isImpersonationViewAsUser = isImpersonating && impersonationMode === 'view_as_user';
+
   useEffect(() => {
     if (!loading) {
       if (!user) {
