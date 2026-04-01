@@ -1072,7 +1072,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                                   targetUserId: user.user_id,
                                   clientId: clientId,
                                 });
-                                navigate('/');
+                                window.location.href = '/';
                               } catch (e: any) {
                                 toast({ title: "Error", description: e.message, variant: "destructive" });
                               }

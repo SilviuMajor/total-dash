@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { MultiTenantAuthProvider, useMultiTenantAuth } from "./hooks/useMultiTenantAuth";
 import { ClientAgentProvider } from "./hooks/useClientAgentContext";
-import { ImpersonationProvider } from "./hooks/useImpersonation";
+import { ImpersonationProvider, useImpersonation } from "./hooks/useImpersonation";
 import { ThemeProvider, useTheme } from "./hooks/useTheme";
 import { useBranding } from "./hooks/useBranding";
 import { useFavicon } from "./hooks/useFavicon";
@@ -86,7 +86,14 @@ const BrandingWrapper = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     document.title = branding.companyName || 'FiveLeaf';
   }, [branding.companyName]);
-  
+
+  return <>{children}</>;
+};
+
+// Wrapper to hide old preview banners during impersonation
+const LegacyBanner = ({ children }: { children: React.ReactNode }) => {
+  const { isImpersonating } = useImpersonation();
+  if (isImpersonating) return null;
   return <>{children}</>;
 };
 
@@ -116,7 +123,7 @@ const App = () => (
                       <Sidebar />
                       <div className="flex-1 flex flex-col overflow-hidden">
                         <ImpersonationBanner />
-                        <AdminPreviewBanner />
+                        <LegacyBanner><AdminPreviewBanner /></LegacyBanner>
                         <main className="flex-1 overflow-y-auto">
                           <Routes>
                             <Route path="/" element={<Agencies />} />
@@ -145,8 +152,8 @@ const App = () => (
                       <Sidebar />
                       <div className="flex-1 flex flex-col overflow-hidden">
                         <ImpersonationBanner />
-                        <AdminPreviewBanner />
-                        <ClientPreviewBanner />
+                        <LegacyBanner><AdminPreviewBanner /></LegacyBanner>
+                        <LegacyBanner><ClientPreviewBanner /></LegacyBanner>
                         <main className="flex-1 overflow-y-auto">
                           <Routes>
                             <Route path="/" element={<Navigate to="/agency/clients" replace />} />
@@ -180,8 +187,8 @@ const App = () => (
                     <Sidebar />
                     <div className="flex-1 flex flex-col overflow-hidden">
                       <ImpersonationBanner />
-                      <ClientPreviewBanner />
-                      <AgencyClientPreviewBanner />
+                      <LegacyBanner><ClientPreviewBanner /></LegacyBanner>
+                      <LegacyBanner><AgencyClientPreviewBanner /></LegacyBanner>
                       <main className="flex-1 overflow-y-auto">
                         <Routes>
                           <Route path="/" element={<ProtectedRoute requiredPage="conversations"><Conversations /></ProtectedRoute>} />

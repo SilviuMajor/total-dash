@@ -2,7 +2,6 @@ import { useImpersonation } from "@/hooks/useImpersonation";
 import { useAuth } from "@/hooks/useAuth";
 import { Eye, X, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
 import { useState, useRef, useEffect } from "react";
 
 export function ImpersonationBanner() {
@@ -19,7 +18,6 @@ export function ImpersonationBanner() {
     exitAll,
     exitToParent,
   } = useImpersonation();
-  const navigate = useNavigate();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -60,17 +58,15 @@ export function ImpersonationBanner() {
   const handleExit = async () => {
     if (hasParent) {
       await exitToParent();
-      if (activeSession.agency_id && !activeSession.parent_session_id) {
-        navigate("/agency/clients");
-      }
+      window.location.href = "/agency/clients";
     } else {
       await endImpersonation();
       if (activeSession.actor_type === "super_admin") {
-        navigate("/admin/agencies");
+        window.location.href = "/admin/agencies";
       } else if (activeSession.actor_type === "agency_user") {
-        navigate("/agency/clients");
+        window.location.href = "/agency/clients";
       } else {
-        navigate("/");
+        window.location.href = "/";
       }
     }
   };
@@ -78,11 +74,11 @@ export function ImpersonationBanner() {
   const handleExitAll = async () => {
     await exitAll();
     if (activeSession.actor_type === "super_admin") {
-      navigate("/admin/agencies");
+      window.location.href = "/admin/agencies";
     } else if (activeSession.actor_type === "agency_user") {
-      navigate("/agency/clients");
+      window.location.href = "/agency/clients";
     } else {
-      navigate("/");
+      window.location.href = "/";
     }
   };
 
