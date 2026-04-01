@@ -1865,6 +1865,65 @@ export type Database = {
           },
         ]
       }
+      impersonation_sessions: {
+        Row: {
+          actor_id: string
+          actor_name: string
+          actor_type: string
+          agency_id: string | null
+          client_id: string | null
+          ended_at: string | null
+          id: string
+          ip_address: string | null
+          mode: string
+          parent_session_id: string | null
+          started_at: string | null
+          target_type: string
+          target_user_id: string | null
+          target_user_name: string | null
+        }
+        Insert: {
+          actor_id: string
+          actor_name: string
+          actor_type: string
+          agency_id?: string | null
+          client_id?: string | null
+          ended_at?: string | null
+          id?: string
+          ip_address?: string | null
+          mode?: string
+          parent_session_id?: string | null
+          started_at?: string | null
+          target_type: string
+          target_user_id?: string | null
+          target_user_name?: string | null
+        }
+        Update: {
+          actor_id?: string
+          actor_name?: string
+          actor_type?: string
+          agency_id?: string | null
+          client_id?: string | null
+          ended_at?: string | null
+          id?: string
+          ip_address?: string | null
+          mode?: string
+          parent_session_id?: string | null
+          started_at?: string | null
+          target_type?: string
+          target_user_id?: string | null
+          target_user_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "impersonation_sessions_parent_session_id_fkey"
+            columns: ["parent_session_id"]
+            isOneToOne: false
+            referencedRelation: "impersonation_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       integration_options: {
         Row: {
           created_at: string
