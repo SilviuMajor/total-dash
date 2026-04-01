@@ -1266,37 +1266,51 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
 
             {/* Agent permissions */}
             <div>
-              <h3 className="text-sm font-semibold mb-2">Agent Permissions</h3>
+              <h3 className="text-sm font-semibold mb-2">Agent Access</h3>
               <div className="space-y-2 max-h-64 overflow-y-auto">
                 {agents.map((agent) => {
                   const perms = newUserAgentPermissions[agent.id];
-                  if (!perms) return null;
+                  const hasAccess = newUserAgentAccess[agent.id] ?? !!perms;
 
                   return (
-                    <div key={agent.id} className="border p-3 rounded space-y-2">
-                      <div className="font-medium">{agent.name}</div>
-                      <div className="grid grid-cols-2 gap-2 text-sm">
-                        {[
-                          { key: 'conversations', label: 'Conversations' },
-                          { key: 'transcripts', label: 'Transcripts' },
-                          { key: 'analytics', label: 'Analytics' },
-                          { key: 'specs', label: 'Specifications' },
-                          { key: 'knowledge_base', label: 'Knowledge base' },
-                          { key: 'guides', label: 'Guides' },
-                          { key: 'agent_settings', label: 'Agent settings' },
-                        ].filter(p => {
-                          const config = agentCeilings[agent.id] || {};
-                          return config['client_' + p.key + '_enabled'] !== false;
-                        }).map(p => (
-                          <label key={p.key} className="flex items-center gap-2">
-                            <Checkbox
-                              checked={(perms as any)[p.key] || false}
-                              onCheckedChange={(checked) => toggleAgentPermission(agent.id, p.key as keyof AgentPermission, checked as boolean)}
-                            />
-                            {p.label}
-                          </label>
-                        ))}
-                      </div>
+                    <div key={agent.id} className="border rounded p-3 space-y-2">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <Checkbox
+                          checked={hasAccess}
+                          onCheckedChange={(checked) => {
+                            setNewUserAgentAccess(prev => ({ ...prev, [agent.id]: !!checked }));
+                            if (checked && !perms) {
+                              populatePermissionsFromRole(newUserRoleId);
+                            }
+                          }}
+                        />
+                        <span className="font-medium">{agent.name}</span>
+                        <span className="text-xs text-muted-foreground ml-auto">{agent.provider}</span>
+                      </label>
+                      {hasAccess && perms && (
+                        <div className="grid grid-cols-2 gap-2 text-sm pl-6">
+                          {[
+                            { key: 'conversations', label: 'Conversations' },
+                            { key: 'transcripts', label: 'Transcripts' },
+                            { key: 'analytics', label: 'Analytics' },
+                            { key: 'specs', label: 'Specifications' },
+                            { key: 'knowledge_base', label: 'Knowledge base' },
+                            { key: 'guides', label: 'Guides' },
+                            { key: 'agent_settings', label: 'Agent settings' },
+                          ].filter(p => {
+                            const config = agentCeilings[agent.id] || {};
+                            return config['client_' + p.key + '_enabled'] !== false;
+                          }).map(p => (
+                            <label key={p.key} className="flex items-center gap-2">
+                              <Checkbox
+                                checked={(perms as any)[p.key] || false}
+                                onCheckedChange={(checked) => toggleAgentPermission(agent.id, p.key as keyof AgentPermission, checked as boolean)}
+                              />
+                              {p.label}
+                            </label>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
