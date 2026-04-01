@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { MultiTenantAuthProvider, useMultiTenantAuth } from "./hooks/useMultiTenantAuth";
 import { ClientAgentProvider } from "./hooks/useClientAgentContext";
-import { ImpersonationProvider } from "./hooks/useImpersonation";
+import { ImpersonationProvider, useImpersonation } from "./hooks/useImpersonation";
 import { ThemeProvider, useTheme } from "./hooks/useTheme";
 import { useBranding } from "./hooks/useBranding";
 import { useFavicon } from "./hooks/useFavicon";
