@@ -65,7 +65,7 @@ export function ProtectedRoute({
       } else if (requireClient && profile?.role === 'admin' && !isAdminPreview && !isAgencyClientPreview && !isSuperAdminInPreview && !isImpersonationFullAccess) {
         // Only redirect if NOT in preview mode
         navigate('/admin/clients');
-      } else if (requiredPage && !isAdminPreview && !isAgencyClientPreview && !isSuperAdminInPreview) {
+      } else if (requiredPage && !isAdminPreview && !isAgencyClientPreview && !isSuperAdminInPreview && !isImpersonationFullAccess) {
         // Check agent-based permissions for client users
         if (profile?.role === 'client' && selectedAgentPermissions) {
           const hasAccess = selectedAgentPermissions[requiredPage as keyof typeof selectedAgentPermissions];
