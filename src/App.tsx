@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { MultiTenantAuthProvider, useMultiTenantAuth } from "./hooks/useMultiTenantAuth";
 import { ClientAgentProvider } from "./hooks/useClientAgentContext";
+import { ImpersonationProvider } from "./hooks/useImpersonation";
 import { ThemeProvider, useTheme } from "./hooks/useTheme";
 import { useBranding } from "./hooks/useBranding";
 import { useFavicon } from "./hooks/useFavicon";
@@ -96,6 +97,7 @@ const App = () => (
       <BrowserRouter>
         <MultiTenantAuthProvider>
             <ThemeProvider>
+              <ImpersonationProvider>
               <ClientAgentProvider>
                 <BrandingWrapper>
                   <CommandSearch />
@@ -198,6 +200,7 @@ const App = () => (
               </Routes>
                 </BrandingWrapper>
               </ClientAgentProvider>
+              </ImpersonationProvider>
             </ThemeProvider>
         </MultiTenantAuthProvider>
       </BrowserRouter>
