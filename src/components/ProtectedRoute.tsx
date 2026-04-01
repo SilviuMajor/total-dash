@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
 import { useClientAgentContext } from "@/hooks/useClientAgentContext";
+import { useImpersonation } from "@/hooks/useImpersonation";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
