@@ -97,6 +97,7 @@ const App = () => (
       <BrowserRouter>
         <MultiTenantAuthProvider>
             <ThemeProvider>
+              <ImpersonationProvider>
               <ClientAgentProvider>
                 <BrandingWrapper>
                   <CommandSearch />
