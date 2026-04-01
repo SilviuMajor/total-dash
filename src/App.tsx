@@ -88,10 +88,13 @@ const BrandingWrapper = ({ children }: { children: React.ReactNode }) => {
     document.title = branding.companyName || 'FiveLeaf';
   }, [branding.companyName]);
 
-  // Expose isImpersonating via context-like approach using a global ref
-  // so route sections can access it without hooks
-  (window as any).__isImpersonating = isImpersonating;
-  
+  return <>{children}</>;
+};
+
+// Wrapper to hide old preview banners during impersonation
+const LegacyBanner = ({ children }: { children: React.ReactNode }) => {
+  const { isImpersonating } = useImpersonation();
+  if (isImpersonating) return null;
   return <>{children}</>;
 };
 
