@@ -100,6 +100,8 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
   const [agentCeilings, setAgentCeilings] = useState<Record<string, Record<string, any>>>({});
   const [clientCaps, setClientCaps] = useState<Record<string, any>>({});
   const [selectedUserClientPerms, setSelectedUserClientPerms] = useState<Record<string, boolean>>({});
+  const [selectedUserAgentAccess, setSelectedUserAgentAccess] = useState<Record<string, boolean>>({});
+  const [newUserAgentAccess, setNewUserAgentAccess] = useState<Record<string, boolean>>({});
   
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserFullName, setNewUserFullName] = useState("");
@@ -172,6 +174,10 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
       };
     });
     setNewUserAgentPermissions(perms);
+
+    const access: Record<string, boolean> = {};
+    agents.forEach(a => { access[a.id] = true; });
+    setNewUserAgentAccess(access);
   };
 
   const loadAgentCeilings = async () => {
@@ -453,6 +459,13 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
       });
 
       setSelectedUserAgentPermissions(permissions);
+
+      // Track which agents the user has access to
+      const access: Record<string, boolean> = {};
+      agents.forEach(a => {
+        access[a.id] = !!permissions[a.id];
+      });
+      setSelectedUserAgentAccess(access);
     } catch (error: any) {
       console.error('Error loading user permissions:', error);
     }
@@ -492,7 +505,9 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
       if (error) throw error;
 
       if (data.success && data.userId) {
-        const activePermissions = Object.values(newUserAgentPermissions);
+        const activePermissions = Object.values(newUserAgentPermissions).filter(
+          p => newUserAgentAccess[p.agent_id] !== false
+        );
         for (const permission of activePermissions) {
           await supabase
             .from('client_user_agent_permissions')
@@ -781,6 +796,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                         </div>
                         {agents.map(agent => {
                           const agentConfig = agentCeilings[agent.id] || {};
+                          const hasAccess = selectedUserAgentAccess[agent.id] ?? !!selectedUserAgentPermissions[agent.id];
                           const userPerms = selectedUserAgentPermissions[agent.id] || {};
                           const templatePerms = roleTemplates[user.user_id]?.[agent.id] || {};
 
@@ -799,45 +815,80 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                             return agentConfig[ceilingKey] !== false;
                           });
 
-                          if (visibleKeys.length === 0) return null;
-
                           return (
-                            <div key={agent.id} className="mb-3">
-                              {agents.length > 1 && (
-                                <div className="text-xs font-medium text-muted-foreground mb-1.5">{agent.name}</div>
-                              )}
-                              <div className="grid grid-cols-2 gap-1.5">
-                                {visibleKeys.map(p => {
-                                  const isChecked = (userPerms as any)[p.key] ?? templatePerms[p.key] ?? false;
-                                  const isOverride = user.has_overrides && (userPerms as any)[p.key] !== undefined && (userPerms as any)[p.key] !== (templatePerms[p.key] ?? false);
-
-                                  return (
-                                    <label
-                                      key={p.key}
-                                      className={`flex items-center gap-2 px-3 py-2 rounded-md cursor-pointer text-sm transition-colors ${
-                                        isOverride
-                                          ? 'bg-amber-50 border border-amber-200 dark:bg-amber-950/30 dark:border-amber-800'
-                                          : 'bg-muted/50 hover:bg-muted'
-                                      }`}
-                                    >
-                                      <input
-                                        type="checkbox"
-                                        className="w-4 h-4 rounded"
-                                        checked={isChecked}
-                                        onChange={(e) => {
-                                          if (readOnly) return;
-                                          toggleAgentPermission(agent.id, p.key as keyof AgentPermission, e.target.checked, false);
-                                        }}
-                                        style={{ accentColor: isOverride ? '#B45309' : undefined }}
-                                      />
-                                      <span>{p.label}</span>
-                                      {isOverride && (
-                                        <span className="text-[10px] text-amber-600 dark:text-amber-400 ml-auto">override</span>
-                                      )}
-                                    </label>
-                                  );
-                                })}
+                            <div key={agent.id} className="mb-2">
+                              <div
+                                className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${
+                                  hasAccess ? 'bg-muted/50 cursor-pointer hover:bg-muted' : 'bg-muted/30 opacity-60'
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  className="w-4 h-4 rounded"
+                                  checked={hasAccess}
+                                  onChange={e => {
+                                    if (readOnly) return;
+                                    const newAccess = { ...selectedUserAgentAccess, [agent.id]: e.target.checked };
+                                    setSelectedUserAgentAccess(newAccess);
+                                    if (e.target.checked && !selectedUserAgentPermissions[agent.id]) {
+                                      setSelectedUserAgentPermissions(prev => ({
+                                        ...prev,
+                                        [agent.id]: {
+                                          agent_id: agent.id,
+                                          conversations: templatePerms.conversations || false,
+                                          transcripts: templatePerms.transcripts || false,
+                                          analytics: templatePerms.analytics || false,
+                                          specs: templatePerms.specs || false,
+                                          knowledge_base: templatePerms.knowledge_base || false,
+                                          guides: templatePerms.guides || false,
+                                          agent_settings: templatePerms.agent_settings || false,
+                                        },
+                                      }));
+                                    }
+                                  }}
+                                  style={{ accentColor: 'hsl(var(--primary))' }}
+                                />
+                                <span className="text-sm font-medium flex-1">{agent.name}</span>
+                                <span className="text-[11px] text-muted-foreground">{agent.provider}</span>
+                                {!hasAccess && <span className="text-[11px] text-muted-foreground">no access</span>}
                               </div>
+
+                              {hasAccess && visibleKeys.length > 0 && (
+                                <div className="pl-8 pt-1.5 pb-1">
+                                  <div className="grid grid-cols-2 gap-1.5">
+                                    {visibleKeys.map(p => {
+                                      const isChecked = (userPerms as any)[p.key] ?? templatePerms[p.key] ?? false;
+                                      const isOverride = user.has_overrides && (userPerms as any)[p.key] !== undefined && (userPerms as any)[p.key] !== (templatePerms[p.key] ?? false);
+
+                                      return (
+                                        <label
+                                          key={p.key}
+                                          className={`flex items-center gap-2 px-3 py-2 rounded-md cursor-pointer text-sm transition-colors ${
+                                            isOverride
+                                              ? 'bg-amber-50 border border-amber-200 dark:bg-amber-950/30 dark:border-amber-800'
+                                              : 'bg-muted/50 hover:bg-muted'
+                                          }`}
+                                        >
+                                          <input
+                                            type="checkbox"
+                                            className="w-4 h-4 rounded"
+                                            checked={isChecked}
+                                            onChange={(e) => {
+                                              if (readOnly) return;
+                                              toggleAgentPermission(agent.id, p.key as keyof AgentPermission, e.target.checked, false);
+                                            }}
+                                            style={{ accentColor: isOverride ? '#B45309' : undefined }}
+                                          />
+                                          <span>{p.label}</span>
+                                          {isOverride && (
+                                            <span className="text-[10px] text-amber-600 dark:text-amber-400 ml-auto">override</span>
+                                          )}
+                                        </label>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           );
                         })}
@@ -1050,20 +1101,58 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                           <Button
                             size="sm"
                             onClick={async () => {
-                              for (const [agentId, perms] of Object.entries(selectedUserAgentPermissions)) {
-                                const templatePerms = roleTemplates[user.user_id]?.[agentId] || {};
-                                const hasOverrides = Object.keys(perms).some(
-                                  k => k !== 'agent_id' && (perms as any)[k] !== (templatePerms[k] ?? false)
-                                );
-                                await supabase
-                                  .from('client_user_agent_permissions')
-                                  .update({
-                                    permissions: perms as unknown as Record<string, any>,
-                                    has_overrides: hasOverrides,
-                                  })
-                                  .eq('user_id', user.user_id)
-                                  .eq('agent_id', agentId)
-                                  .eq('client_id', clientId);
+                              // Save agent-scoped permissions
+                              for (const agent of agents) {
+                                const hasAccess = selectedUserAgentAccess[agent.id] ?? !!selectedUserAgentPermissions[agent.id];
+                                const hadAccess = !!user.agent_permissions[agent.id];
+
+                                if (hasAccess && hadAccess) {
+                                  const perms = selectedUserAgentPermissions[agent.id];
+                                  if (perms) {
+                                    const templatePerms = roleTemplates[user.user_id]?.[agent.id] || {};
+                                    const hasOverrides = Object.keys(perms).some(
+                                      k => k !== 'agent_id' && (perms as any)[k] !== (templatePerms[k] ?? false)
+                                    );
+                                    await supabase
+                                      .from('client_user_agent_permissions')
+                                      .update({
+                                        permissions: perms as unknown as Record<string, any>,
+                                        has_overrides: hasOverrides,
+                                      })
+                                      .eq('user_id', user.user_id)
+                                      .eq('agent_id', agent.id)
+                                      .eq('client_id', clientId);
+                                  }
+                                } else if (hasAccess && !hadAccess) {
+                                  const perms = selectedUserAgentPermissions[agent.id];
+                                  if (perms) {
+                                    await supabase
+                                      .from('client_user_agent_permissions')
+                                      .insert({
+                                        user_id: user.user_id,
+                                        agent_id: agent.id,
+                                        client_id: clientId,
+                                        role_id: user.role_id,
+                                        has_overrides: false,
+                                        permissions: {
+                                          conversations: perms.conversations,
+                                          transcripts: perms.transcripts,
+                                          analytics: perms.analytics,
+                                          specs: perms.specs,
+                                          knowledge_base: perms.knowledge_base,
+                                          guides: perms.guides,
+                                          agent_settings: perms.agent_settings,
+                                        },
+                                      });
+                                  }
+                                } else if (!hasAccess && hadAccess) {
+                                  await supabase
+                                    .from('client_user_agent_permissions')
+                                    .delete()
+                                    .eq('user_id', user.user_id)
+                                    .eq('agent_id', agent.id)
+                                    .eq('client_id', clientId);
+                                }
                               }
                               // Save client-scoped permissions
                               await supabase
@@ -1179,37 +1268,51 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
 
             {/* Agent permissions */}
             <div>
-              <h3 className="text-sm font-semibold mb-2">Agent Permissions</h3>
+              <h3 className="text-sm font-semibold mb-2">Agent Access</h3>
               <div className="space-y-2 max-h-64 overflow-y-auto">
                 {agents.map((agent) => {
                   const perms = newUserAgentPermissions[agent.id];
-                  if (!perms) return null;
+                  const hasAccess = newUserAgentAccess[agent.id] ?? !!perms;
 
                   return (
-                    <div key={agent.id} className="border p-3 rounded space-y-2">
-                      <div className="font-medium">{agent.name}</div>
-                      <div className="grid grid-cols-2 gap-2 text-sm">
-                        {[
-                          { key: 'conversations', label: 'Conversations' },
-                          { key: 'transcripts', label: 'Transcripts' },
-                          { key: 'analytics', label: 'Analytics' },
-                          { key: 'specs', label: 'Specifications' },
-                          { key: 'knowledge_base', label: 'Knowledge base' },
-                          { key: 'guides', label: 'Guides' },
-                          { key: 'agent_settings', label: 'Agent settings' },
-                        ].filter(p => {
-                          const config = agentCeilings[agent.id] || {};
-                          return config['client_' + p.key + '_enabled'] !== false;
-                        }).map(p => (
-                          <label key={p.key} className="flex items-center gap-2">
-                            <Checkbox
-                              checked={(perms as any)[p.key] || false}
-                              onCheckedChange={(checked) => toggleAgentPermission(agent.id, p.key as keyof AgentPermission, checked as boolean)}
-                            />
-                            {p.label}
-                          </label>
-                        ))}
-                      </div>
+                    <div key={agent.id} className="border rounded p-3 space-y-2">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <Checkbox
+                          checked={hasAccess}
+                          onCheckedChange={(checked) => {
+                            setNewUserAgentAccess(prev => ({ ...prev, [agent.id]: !!checked }));
+                            if (checked && !perms) {
+                              populatePermissionsFromRole(newUserRoleId);
+                            }
+                          }}
+                        />
+                        <span className="font-medium">{agent.name}</span>
+                        <span className="text-xs text-muted-foreground ml-auto">{agent.provider}</span>
+                      </label>
+                      {hasAccess && perms && (
+                        <div className="grid grid-cols-2 gap-2 text-sm pl-6">
+                          {[
+                            { key: 'conversations', label: 'Conversations' },
+                            { key: 'transcripts', label: 'Transcripts' },
+                            { key: 'analytics', label: 'Analytics' },
+                            { key: 'specs', label: 'Specifications' },
+                            { key: 'knowledge_base', label: 'Knowledge base' },
+                            { key: 'guides', label: 'Guides' },
+                            { key: 'agent_settings', label: 'Agent settings' },
+                          ].filter(p => {
+                            const config = agentCeilings[agent.id] || {};
+                            return config['client_' + p.key + '_enabled'] !== false;
+                          }).map(p => (
+                            <label key={p.key} className="flex items-center gap-2">
+                              <Checkbox
+                                checked={(perms as any)[p.key] || false}
+                                onCheckedChange={(checked) => toggleAgentPermission(agent.id, p.key as keyof AgentPermission, checked as boolean)}
+                              />
+                              {p.label}
+                            </label>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
