@@ -1099,20 +1099,58 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                           <Button
                             size="sm"
                             onClick={async () => {
-                              for (const [agentId, perms] of Object.entries(selectedUserAgentPermissions)) {
-                                const templatePerms = roleTemplates[user.user_id]?.[agentId] || {};
-                                const hasOverrides = Object.keys(perms).some(
-                                  k => k !== 'agent_id' && (perms as any)[k] !== (templatePerms[k] ?? false)
-                                );
-                                await supabase
-                                  .from('client_user_agent_permissions')
-                                  .update({
-                                    permissions: perms as unknown as Record<string, any>,
-                                    has_overrides: hasOverrides,
-                                  })
-                                  .eq('user_id', user.user_id)
-                                  .eq('agent_id', agentId)
-                                  .eq('client_id', clientId);
+                              // Save agent-scoped permissions
+                              for (const agent of agents) {
+                                const hasAccess = selectedUserAgentAccess[agent.id] ?? !!selectedUserAgentPermissions[agent.id];
+                                const hadAccess = !!user.agent_permissions[agent.id];
+
+                                if (hasAccess && hadAccess) {
+                                  const perms = selectedUserAgentPermissions[agent.id];
+                                  if (perms) {
+                                    const templatePerms = roleTemplates[user.user_id]?.[agent.id] || {};
+                                    const hasOverrides = Object.keys(perms).some(
+                                      k => k !== 'agent_id' && (perms as any)[k] !== (templatePerms[k] ?? false)
+                                    );
+                                    await supabase
+                                      .from('client_user_agent_permissions')
+                                      .update({
+                                        permissions: perms as unknown as Record<string, any>,
+                                        has_overrides: hasOverrides,
+                                      })
+                                      .eq('user_id', user.user_id)
+                                      .eq('agent_id', agent.id)
+                                      .eq('client_id', clientId);
+                                  }
+                                } else if (hasAccess && !hadAccess) {
+                                  const perms = selectedUserAgentPermissions[agent.id];
+                                  if (perms) {
+                                    await supabase
+                                      .from('client_user_agent_permissions')
+                                      .insert({
+                                        user_id: user.user_id,
+                                        agent_id: agent.id,
+                                        client_id: clientId,
+                                        role_id: user.role_id,
+                                        has_overrides: false,
+                                        permissions: {
+                                          conversations: perms.conversations,
+                                          transcripts: perms.transcripts,
+                                          analytics: perms.analytics,
+                                          specs: perms.specs,
+                                          knowledge_base: perms.knowledge_base,
+                                          guides: perms.guides,
+                                          agent_settings: perms.agent_settings,
+                                        },
+                                      });
+                                  }
+                                } else if (!hasAccess && hadAccess) {
+                                  await supabase
+                                    .from('client_user_agent_permissions')
+                                    .delete()
+                                    .eq('user_id', user.user_id)
+                                    .eq('agent_id', agent.id)
+                                    .eq('client_id', clientId);
+                                }
                               }
                               // Save client-scoped permissions
                               await supabase
