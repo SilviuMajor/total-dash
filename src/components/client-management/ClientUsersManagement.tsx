@@ -174,6 +174,10 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
       };
     });
     setNewUserAgentPermissions(perms);
+
+    const access: Record<string, boolean> = {};
+    agents.forEach(a => { access[a.id] = true; });
+    setNewUserAgentAccess(access);
   };
 
   const loadAgentCeilings = async () => {
