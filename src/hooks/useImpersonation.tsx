@@ -218,9 +218,21 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
       setActiveSession(data.session as ImpersonationSession);
       sessionStorage.setItem(SESSION_STORAGE_KEY, data.session.id);
 
+      // Bridge: set old preview mode sessionStorage values so existing components work
+      if (params.clientId) {
+        sessionStorage.setItem('preview_mode', 'client');
+        sessionStorage.setItem('preview_client', params.clientId);
+        if (params.agencyId) {
+          sessionStorage.setItem('preview_client_agency', params.agencyId);
+        }
+      }
+
       if (params.clientId) {
         loadClientUsers(params.clientId);
       }
+
+      // Trigger re-read in useMultiTenantAuth by dispatching a custom event
+      window.dispatchEvent(new Event('impersonation-changed'));
     } catch (error) {
       console.error('Failed to start impersonation:', error);
       throw error;
@@ -259,6 +271,16 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
       setActiveSession(null);
       setClientUsers([]);
       sessionStorage.removeItem(SESSION_STORAGE_KEY);
+
+      // Bridge: clear old preview mode sessionStorage values
+      sessionStorage.removeItem('preview_mode');
+      sessionStorage.removeItem('preview_client');
+      sessionStorage.removeItem('preview_client_agency');
+      sessionStorage.removeItem('preview_agency');
+      sessionStorage.removeItem('preview_token');
+
+      // Trigger re-read in useMultiTenantAuth
+      window.dispatchEvent(new Event('impersonation-changed'));
     } catch (error) {
       console.error('Failed to end impersonation:', error);
     }
@@ -273,6 +295,16 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
       setActiveSession(null);
       setClientUsers([]);
       sessionStorage.removeItem(SESSION_STORAGE_KEY);
+
+      // Bridge: clear old preview mode sessionStorage values
+      sessionStorage.removeItem('preview_mode');
+      sessionStorage.removeItem('preview_client');
+      sessionStorage.removeItem('preview_client_agency');
+      sessionStorage.removeItem('preview_agency');
+      sessionStorage.removeItem('preview_token');
+
+      // Trigger re-read in useMultiTenantAuth
+      window.dispatchEvent(new Event('impersonation-changed'));
     } catch (error) {
       console.error('Failed to exit all impersonation:', error);
     }

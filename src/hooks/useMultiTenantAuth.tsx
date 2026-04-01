@@ -492,6 +492,38 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Listen for impersonation changes to re-read sessionStorage
+  useEffect(() => {
+    const handleImpersonationChange = () => {
+      const storedPreviewMode = sessionStorage.getItem('preview_mode');
+      const storedPreviewClient = sessionStorage.getItem('preview_client');
+      const storedPreviewClientAgency = sessionStorage.getItem('preview_client_agency');
+      const storedPreviewAgency = sessionStorage.getItem('preview_agency');
+
+      if (storedPreviewMode === 'client' && storedPreviewClient && storedPreviewClientAgency) {
+        setIsClientPreviewMode(true);
+        const hasAgencyPreview = storedPreviewAgency !== null;
+        setPreviewDepth(hasAgencyPreview ? 'agency_to_client' : 'client');
+        loadPreviewClient(storedPreviewClient, storedPreviewClientAgency);
+        if (hasAgencyPreview) {
+          setIsPreviewMode(true);
+          loadPreviewAgency(storedPreviewAgency);
+        }
+      } else if (!storedPreviewMode) {
+        // Impersonation ended — reset preview state
+        setIsPreviewMode(false);
+        setIsClientPreviewMode(false);
+        setPreviewClient(null);
+        setPreviewClientAgencyId(null);
+        setPreviewDepth('none');
+        setPreviewAgency(null);
+      }
+    };
+
+    window.addEventListener('impersonation-changed', handleImpersonationChange);
+    return () => window.removeEventListener('impersonation-changed', handleImpersonationChange);
+  }, []);
+
   return (
     <MultiTenantAuthContext.Provider
       value={{
