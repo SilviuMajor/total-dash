@@ -1063,6 +1063,27 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                           <Button
                             size="sm"
                             variant="ghost"
+                            className="text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/30"
+                            disabled={isImpersonating}
+                            onClick={async () => {
+                              try {
+                                await startImpersonation({
+                                  targetType: 'client_user',
+                                  targetUserId: user.user_id,
+                                  clientId: clientId,
+                                });
+                                navigate('/');
+                              } catch (e: any) {
+                                toast({ title: "Error", description: e.message, variant: "destructive" });
+                              }
+                            }}
+                          >
+                            <Eye className="h-3 w-3 mr-1" />
+                            View as
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
                             className="text-xs"
                             onClick={async () => {
                               try {

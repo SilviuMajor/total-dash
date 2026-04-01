@@ -317,13 +317,22 @@ export default function AgencyClients() {
                   size="sm"
                   variant="outline"
                   className="h-7 px-2 text-xs"
-                  onClick={() => {
-                    const targetAgencyId = agencyId || profile?.agency?.id;
-                    window.open(`/?preview=true&clientId=${client.id}&agencyId=${targetAgencyId}`, '_blank');
+                  disabled={isImpersonating}
+                  onClick={async () => {
+                    try {
+                      await startImpersonation({
+                        targetType: 'client_full',
+                        clientId: client.id,
+                        agencyId: agencyId || profile?.agency?.id || undefined,
+                      });
+                      navigate('/');
+                    } catch (e: any) {
+                      toast({ title: "Error", description: e.message, variant: "destructive" });
+                    }
                   }}
                 >
                   <Eye className="h-3.5 w-3.5 mr-1" />
-                  Preview
+                  View as
                 </Button>
                 <Button
                   size="sm"
