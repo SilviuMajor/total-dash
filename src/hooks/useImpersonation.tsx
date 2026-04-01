@@ -271,6 +271,16 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
       setActiveSession(null);
       setClientUsers([]);
       sessionStorage.removeItem(SESSION_STORAGE_KEY);
+
+      // Bridge: clear old preview mode sessionStorage values
+      sessionStorage.removeItem('preview_mode');
+      sessionStorage.removeItem('preview_client');
+      sessionStorage.removeItem('preview_client_agency');
+      sessionStorage.removeItem('preview_agency');
+      sessionStorage.removeItem('preview_token');
+
+      // Trigger re-read in useMultiTenantAuth
+      window.dispatchEvent(new Event('impersonation-changed'));
     } catch (error) {
       console.error('Failed to end impersonation:', error);
     }
@@ -285,6 +295,16 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
       setActiveSession(null);
       setClientUsers([]);
       sessionStorage.removeItem(SESSION_STORAGE_KEY);
+
+      // Bridge: clear old preview mode sessionStorage values
+      sessionStorage.removeItem('preview_mode');
+      sessionStorage.removeItem('preview_client');
+      sessionStorage.removeItem('preview_client_agency');
+      sessionStorage.removeItem('preview_agency');
+      sessionStorage.removeItem('preview_token');
+
+      // Trigger re-read in useMultiTenantAuth
+      window.dispatchEvent(new Event('impersonation-changed'));
     } catch (error) {
       console.error('Failed to exit all impersonation:', error);
     }
