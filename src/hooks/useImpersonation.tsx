@@ -218,9 +218,21 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
       setActiveSession(data.session as ImpersonationSession);
       sessionStorage.setItem(SESSION_STORAGE_KEY, data.session.id);
 
+      // Bridge: set old preview mode sessionStorage values so existing components work
+      if (params.clientId) {
+        sessionStorage.setItem('preview_mode', 'client');
+        sessionStorage.setItem('preview_client', params.clientId);
+        if (params.agencyId) {
+          sessionStorage.setItem('preview_client_agency', params.agencyId);
+        }
+      }
+
       if (params.clientId) {
         loadClientUsers(params.clientId);
       }
+
+      // Trigger re-read in useMultiTenantAuth by dispatching a custom event
+      window.dispatchEvent(new Event('impersonation-changed'));
     } catch (error) {
       console.error('Failed to start impersonation:', error);
       throw error;
