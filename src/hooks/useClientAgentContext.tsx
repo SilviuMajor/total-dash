@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useMultiTenantAuth } from './useMultiTenantAuth';
+import { useImpersonation } from './useImpersonation';
 
 interface Agent {
   id: string;
@@ -45,6 +46,7 @@ interface ClientAgentContextType {
   loading: boolean;
   clientId: string | null;
   userRoleSlug: string | null;
+  isImpersonationReadOnly: boolean;
 }
 
 const ClientAgentContext = createContext<ClientAgentContextType | undefined>(undefined);
@@ -68,8 +70,10 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
   const [clientId, setClientId] = useState<string | null>(null);
   const [userRoleSlug, setUserRoleSlug] = useState<string | null>(null);
   const [companySettingsPermissions, setCompanySettingsPermissions] = useState<CompanySettingsPermissions | null>(null);
+  const [isImpersonationReadOnly, setIsImpersonationReadOnly] = useState(false);
   const { user, profile } = useAuth();
   const { isClientPreviewMode, previewClient, previewDepth, userType } = useMultiTenantAuth();
+  const { isImpersonating, activeSession, impersonationMode, targetUserId, targetClientId } = useImpersonation();
 
   useEffect(() => {
     // Check for any form of client preview (admin or super_admin), with sessionStorage fallback
@@ -83,16 +87,23 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
       (storedPreviewMode === 'client' && !!storedPreviewClient);
 
     if (user && profile) {
+      // Impersonation takes priority over old preview mode
+      if (isImpersonating && activeSession?.client_id) {
+        if (impersonationMode === 'view_as_user' && targetUserId) {
+          loadClientAgentsAsUser(activeSession.client_id, targetUserId);
+        } else {
+          loadClientAgentsForPreview(activeSession.client_id);
+        }
+        return;
+      }
+
       if (isInClientPreview) {
-        // In preview mode, prefer previewClient from context but fall back to sessionStorage
         const effectiveClientId = previewClient?.id || storedPreviewClient;
         if (effectiveClientId) {
           loadClientAgentsForPreview(effectiveClientId);
         }
-        // Don't set loading(false) yet - wait for preview data to load
         return;
       } else if (profile.role === 'client') {
-        // Normal client mode: load from client_users
         loadClientAgents();
       } else {
         setLoading(false);
@@ -100,11 +111,12 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
     } else {
       setLoading(false);
     }
-  }, [user, profile, isClientPreviewMode, previewClient, previewDepth]);
+  }, [user, profile, isClientPreviewMode, previewClient, previewDepth, isImpersonating, activeSession?.id, impersonationMode, targetUserId]);
 
   const loadClientAgentsForPreview = async (previewClientId: string) => {
     try {
       setClientId(previewClientId);
+      setIsImpersonationReadOnly(false);
 
       // Get agents assigned to this client
       const { data: assignments, error: assignmentsError } = await supabase
@@ -168,6 +180,169 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const loadClientAgentsAsUser = async (targetClientIdParam: string, targetUserIdParam: string) => {
+    try {
+      setClientId(targetClientIdParam);
+      setIsImpersonationReadOnly(true);
+
+      // Get ALL agents assigned to this client
+      const { data: assignments, error: assignmentsError } = await supabase
+        .from('agent_assignments')
+        .select(`
+          agent_id,
+          sort_order,
+          agents (
+            id,
+            name,
+            provider,
+            status,
+            config
+          )
+        `)
+        .eq('client_id', targetClientIdParam)
+        .order('sort_order', { ascending: true });
+
+      if (assignmentsError) throw assignmentsError;
+
+      // Get TARGET user's permission rows
+      const { data: userPerms } = await supabase
+        .from('client_user_agent_permissions')
+        .select('agent_id, permissions, role_id, has_overrides')
+        .eq('user_id', targetUserIdParam)
+        .eq('client_id', targetClientIdParam);
+
+      // Get target user's role
+      const userRoleId = userPerms?.find(p => p.role_id)?.role_id;
+
+      let role: any = null;
+      let roleTemplates: Record<string, any> = {};
+      if (userRoleId) {
+        const { data: roleData } = await supabase
+          .from('client_roles')
+          .select('*')
+          .eq('id', userRoleId)
+          .single();
+        role = roleData;
+        setUserRoleSlug(roleData?.slug || null);
+
+        const { data: templates } = await supabase
+          .from('role_permission_templates')
+          .select('agent_id, permissions')
+          .eq('role_id', userRoleId)
+          .eq('client_id', targetClientIdParam);
+
+        templates?.forEach(t => {
+          roleTemplates[t.agent_id] = t.permissions;
+        });
+      }
+
+      // Load client settings for ceilings
+      const { data: clientSettings } = await supabase
+        .from('client_settings')
+        .select('admin_capabilities')
+        .eq('client_id', targetClientIdParam)
+        .single();
+      const adminCaps = (clientSettings?.admin_capabilities || {}) as Record<string, any>;
+
+      // Load target user's client-scoped overrides
+      const { data: userClientPerms } = await supabase
+        .from('client_user_permissions')
+        .select('client_permissions, has_overrides')
+        .eq('user_id', targetUserIdParam)
+        .eq('client_id', targetClientIdParam)
+        .maybeSingle();
+      const userClientOverrides = (userClientPerms?.client_permissions || {}) as Record<string, any>;
+      const hasClientOverrides = userClientPerms?.has_overrides || false;
+
+      // Resolve company settings as target user
+      const resolveCompanyPerm = (key: string, capKey: string): boolean => {
+        if (adminCaps[capKey] === false) return false;
+        if (role?.is_admin_tier) return true;
+        if (hasClientOverrides && userClientOverrides[key] !== undefined) return userClientOverrides[key];
+        return role?.client_permissions?.[key] || false;
+      };
+
+      setCompanySettingsPermissions({
+        settings_page: resolveCompanyPerm('settings_page', 'settings_page_enabled'),
+        settings_departments_view: resolveCompanyPerm('settings_departments_view', 'client_departments_enabled'),
+        settings_departments_manage: resolveCompanyPerm('settings_departments_manage', 'client_departments_enabled'),
+        settings_team_view: resolveCompanyPerm('settings_team_view', 'client_team_enabled'),
+        settings_team_manage: resolveCompanyPerm('settings_team_manage', 'client_team_enabled'),
+        settings_canned_responses_view: resolveCompanyPerm('settings_canned_responses_view', 'client_canned_responses_enabled'),
+        settings_canned_responses_manage: resolveCompanyPerm('settings_canned_responses_manage', 'client_canned_responses_enabled'),
+        settings_general_view: resolveCompanyPerm('settings_general_view', 'client_general_enabled'),
+        settings_general_manage: resolveCompanyPerm('settings_general_manage', 'client_general_enabled'),
+        settings_audit_log_view: resolveCompanyPerm('settings_audit_log_view', 'client_audit_log_enabled'),
+      });
+
+      // Build agent list — only agents the TARGET user has permission rows for
+      const userPermMap = new Map(userPerms?.map(p => [p.agent_id, p]) || []);
+
+      const agentsList = (assignments as any[])
+        ?.map(a => {
+          const agent = a.agents;
+          if (!agent?.id) return null;
+          const userPerm = userPermMap.get(agent.id);
+          if (!userPerm) return null;
+
+          const agentConfig = (agent.config || {}) as Record<string, any>;
+          const template = roleTemplates[agent.id] || {};
+          const userOverrides = (userPerm.permissions || {}) as Record<string, any>;
+          const hasOverrides = userPerm.has_overrides;
+
+          const resolvePermission = (key: string): boolean => {
+            const ceilingKey = 'client_' + key + '_enabled';
+            if (agentConfig[ceilingKey] === false) return false;
+            if (role?.is_admin_tier) return true;
+            if (hasOverrides && userOverrides[key] !== undefined) return userOverrides[key];
+            return template[key] || false;
+          };
+
+          const resolveClientScoped = (key: string, capKey: string): boolean => {
+            if (adminCaps[capKey] === false) return false;
+            if (role?.is_admin_tier) return true;
+            if (hasOverrides && userOverrides[key] !== undefined) return userOverrides[key];
+            return role?.client_permissions?.[key] || false;
+          };
+
+          return {
+            id: agent.id,
+            name: agent.name,
+            provider: agent.provider,
+            status: agent.status as Agent['status'],
+            sort_order: a.sort_order ?? 0,
+            effectivePermissions: {
+              conversations: resolvePermission('conversations'),
+              transcripts: resolvePermission('transcripts'),
+              analytics: resolvePermission('analytics'),
+              specs: resolvePermission('specs'),
+              knowledge_base: resolvePermission('knowledge_base'),
+              guides: resolvePermission('guides'),
+              agent_settings: resolvePermission('agent_settings'),
+              settings_page: resolveClientScoped('settings_page', 'settings_page_enabled'),
+              audit_log: resolveClientScoped('audit_log', 'client_audit_log_enabled'),
+            } as AgentPermissions,
+          };
+        })
+        .filter(Boolean)
+        .sort((a: any, b: any) => a.sort_order - b.sort_order) || [];
+
+      setAgents(agentsList.map(({ effectivePermissions, ...agent }: any) => agent));
+
+      if (agentsList.length > 0) {
+        setSelectedAgentId(agentsList[0].id);
+        setSelectedAgentPermissions(agentsList[0].effectivePermissions);
+      } else {
+        setSelectedAgentId(null);
+        setSelectedAgentPermissions(null);
+      }
+    } catch (error) {
+      console.error('Error loading client agents as user:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const loadClientAgents = async () => {
     try {
       // First, get the client_id for this user
@@ -186,6 +361,7 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
       }
 
       setClientId(clientUserData.client_id);
+      setIsImpersonationReadOnly(false);
 
       // Get ALL agents assigned to this client (not filtered by user permissions)
       const { data: assignments, error: assignmentsError } = await supabase
@@ -351,7 +527,12 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
 
   // Update permissions when selected agent changes
   useEffect(() => {
-    if (selectedAgentId && user && clientId && profile?.role === 'client') {
+    const shouldResolve = 
+      (profile?.role === 'client') ||
+      (isImpersonating && impersonationMode === 'view_as_user' && targetUserId);
+
+    if (selectedAgentId && user && clientId && shouldResolve) {
+      const resolveUserId = (isImpersonating && targetUserId) ? targetUserId : user.id;
       const loadAgentPermissions = async () => {
         // Get agent config (ceiling)
         const { data: agentData } = await supabase
@@ -365,7 +546,7 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
         const { data: userPerm } = await supabase
           .from('client_user_agent_permissions')
           .select('permissions, role_id, has_overrides')
-          .eq('user_id', user.id)
+          .eq('user_id', resolveUserId)
           .eq('agent_id', selectedAgentId)
           .eq('client_id', clientId)
           .single();
@@ -432,7 +613,7 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
       };
       loadAgentPermissions();
     }
-  }, [selectedAgentId, user, clientId, profile]);
+  }, [selectedAgentId, user, clientId, profile, isImpersonating, impersonationMode, targetUserId]);
 
   return (
     <ClientAgentContext.Provider
@@ -445,6 +626,7 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
         loading,
         clientId,
         userRoleSlug,
+        isImpersonationReadOnly,
       }}
     >
       {children}
