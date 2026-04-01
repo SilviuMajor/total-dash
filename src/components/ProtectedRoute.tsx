@@ -62,7 +62,7 @@ export function ProtectedRoute({
         navigate('/client/login');
       } else if (requireAdmin && profile?.role !== 'admin') {
         navigate('/');
-      } else if (requireClient && profile?.role === 'admin' && !isAdminPreview && !isAgencyClientPreview && !isSuperAdminInPreview) {
+      } else if (requireClient && profile?.role === 'admin' && !isAdminPreview && !isAgencyClientPreview && !isSuperAdminInPreview && !isImpersonationFullAccess) {
         // Only redirect if NOT in preview mode
         navigate('/admin/clients');
       } else if (requiredPage && !isAdminPreview && !isAgencyClientPreview && !isSuperAdminInPreview) {
