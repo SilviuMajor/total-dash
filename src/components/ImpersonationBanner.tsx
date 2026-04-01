@@ -2,7 +2,6 @@ import { useImpersonation } from "@/hooks/useImpersonation";
 import { useAuth } from "@/hooks/useAuth";
 import { Eye, X, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
 import { useState, useRef, useEffect } from "react";
 
 export function ImpersonationBanner() {
