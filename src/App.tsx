@@ -200,6 +200,7 @@ const App = () => (
               </Routes>
                 </BrandingWrapper>
               </ClientAgentProvider>
+              </ImpersonationProvider>
             </ThemeProvider>
         </MultiTenantAuthProvider>
       </BrowserRouter>
