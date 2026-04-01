@@ -188,8 +188,8 @@ const App = () => (
                     <Sidebar />
                     <div className="flex-1 flex flex-col overflow-hidden">
                       <ImpersonationBanner />
-                      <ClientPreviewBanner />
-                      <AgencyClientPreviewBanner />
+                      <LegacyBanner><ClientPreviewBanner /></LegacyBanner>
+                      <LegacyBanner><AgencyClientPreviewBanner /></LegacyBanner>
                       <main className="flex-1 overflow-y-auto">
                         <Routes>
                           <Route path="/" element={<ProtectedRoute requiredPage="conversations"><Conversations /></ProtectedRoute>} />
