@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
 import { useClientAgentContext } from "@/hooks/useClientAgentContext";
+import { useImpersonation } from "@/hooks/useImpersonation";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -19,6 +20,7 @@ export function ProtectedRoute({
 }: ProtectedRouteProps) {
   const { user, profile, loading: authLoading } = useAuth();
   const { selectedAgentPermissions } = useClientAgentContext();
+  const { isImpersonating, impersonationMode } = useImpersonation();
   const { 
     userType, 
     loading: mtLoading,
@@ -49,6 +51,10 @@ export function ProtectedRoute({
     userType === 'super_admin' && 
     (previewDepth !== 'none' && previewDepth !== undefined);
 
+  // Impersonation: full access mode bypasses like preview, view_as_user uses resolved permissions
+  const isImpersonationFullAccess = isImpersonating && impersonationMode === 'full_access';
+  const isImpersonationViewAsUser = isImpersonating && impersonationMode === 'view_as_user';
+
   useEffect(() => {
     if (!loading) {
       if (!user) {
@@ -56,10 +62,10 @@ export function ProtectedRoute({
         navigate('/client/login');
       } else if (requireAdmin && profile?.role !== 'admin') {
         navigate('/');
-      } else if (requireClient && profile?.role === 'admin' && !isAdminPreview && !isAgencyClientPreview && !isSuperAdminInPreview) {
+      } else if (requireClient && profile?.role === 'admin' && !isAdminPreview && !isAgencyClientPreview && !isSuperAdminInPreview && !isImpersonationFullAccess) {
         // Only redirect if NOT in preview mode
         navigate('/admin/clients');
-      } else if (requiredPage && !isAdminPreview && !isAgencyClientPreview && !isSuperAdminInPreview) {
+      } else if (requiredPage && !isAdminPreview && !isAgencyClientPreview && !isSuperAdminInPreview && !isImpersonationFullAccess) {
         // Check agent-based permissions for client users
         if (profile?.role === 'client' && selectedAgentPermissions) {
           const hasAccess = selectedAgentPermissions[requiredPage as keyof typeof selectedAgentPermissions];
@@ -90,7 +96,7 @@ export function ProtectedRoute({
         }
       }
     }
-  }, [user, profile, loading, navigate, requireAdmin, requireClient, requiredPage, selectedAgentPermissions, location.pathname, isAdminPreview, isAgencyClientPreview, isSuperAdminInPreview]);
+  }, [user, profile, loading, navigate, requireAdmin, requireClient, requiredPage, selectedAgentPermissions, location.pathname, isAdminPreview, isAgencyClientPreview, isSuperAdminInPreview, isImpersonationFullAccess]);
 
   if (loading) {
     return (
@@ -109,12 +115,12 @@ export function ProtectedRoute({
     );
   }
 
-  if (!user || (requireAdmin && profile?.role !== 'admin') || (requireClient && profile?.role === 'admin' && !isAdminPreview && !isAgencyClientPreview && !isSuperAdminInPreview)) {
+  if (!user || (requireAdmin && profile?.role !== 'admin') || (requireClient && profile?.role === 'admin' && !isAdminPreview && !isAgencyClientPreview && !isSuperAdminInPreview && !isImpersonationFullAccess)) {
     return null;
   }
 
   // Check page permissions for client users (skip for admin/agency/super_admin preview)
-  if (requiredPage && profile?.role === 'client' && selectedAgentPermissions && !isAdminPreview && !isAgencyClientPreview && !isSuperAdminInPreview) {
+  if (requiredPage && profile?.role === 'client' && selectedAgentPermissions && !isAdminPreview && !isAgencyClientPreview && !isSuperAdminInPreview && !isImpersonationFullAccess) {
     const hasAccess = selectedAgentPermissions[requiredPage as keyof typeof selectedAgentPermissions];
     if (!hasAccess) {
       return null;

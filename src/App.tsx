@@ -19,6 +19,7 @@ import { CommandSearch } from "./components/CommandSearch";
 import { AdminPreviewBanner } from "./components/AdminPreviewBanner";
 import { ClientPreviewBanner } from "./components/ClientPreviewBanner";
 import { AgencyClientPreviewBanner } from "./components/AgencyClientPreviewBanner";
+import { ImpersonationBanner } from "./components/ImpersonationBanner";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import ChangePassword from "./pages/ChangePassword";
@@ -114,6 +115,7 @@ const App = () => (
                     <div className="flex h-screen w-full bg-background overflow-hidden">
                       <Sidebar />
                       <div className="flex-1 flex flex-col overflow-hidden">
+                        <ImpersonationBanner />
                         <AdminPreviewBanner />
                         <main className="flex-1 overflow-y-auto">
                           <Routes>
@@ -142,6 +144,7 @@ const App = () => (
                     <div className="flex h-screen w-full bg-background overflow-hidden">
                       <Sidebar />
                       <div className="flex-1 flex flex-col overflow-hidden">
+                        <ImpersonationBanner />
                         <AdminPreviewBanner />
                         <ClientPreviewBanner />
                         <main className="flex-1 overflow-y-auto">
@@ -176,6 +179,7 @@ const App = () => (
                   <div className="flex h-screen w-full bg-background overflow-hidden">
                     <Sidebar />
                     <div className="flex-1 flex flex-col overflow-hidden">
+                      <ImpersonationBanner />
                       <ClientPreviewBanner />
                       <AgencyClientPreviewBanner />
                       <main className="flex-1 overflow-y-auto">
