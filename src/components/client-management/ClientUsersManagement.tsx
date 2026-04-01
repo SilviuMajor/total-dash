@@ -100,6 +100,8 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
   const [agentCeilings, setAgentCeilings] = useState<Record<string, Record<string, any>>>({});
   const [clientCaps, setClientCaps] = useState<Record<string, any>>({});
   const [selectedUserClientPerms, setSelectedUserClientPerms] = useState<Record<string, boolean>>({});
+  const [selectedUserAgentAccess, setSelectedUserAgentAccess] = useState<Record<string, boolean>>({});
+  const [newUserAgentAccess, setNewUserAgentAccess] = useState<Record<string, boolean>>({});
   
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserFullName, setNewUserFullName] = useState("");
