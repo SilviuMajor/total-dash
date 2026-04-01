@@ -455,6 +455,13 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
       });
 
       setSelectedUserAgentPermissions(permissions);
+
+      // Track which agents the user has access to
+      const access: Record<string, boolean> = {};
+      agents.forEach(a => {
+        access[a.id] = !!permissions[a.id];
+      });
+      setSelectedUserAgentAccess(access);
     } catch (error: any) {
       console.error('Error loading user permissions:', error);
     }
