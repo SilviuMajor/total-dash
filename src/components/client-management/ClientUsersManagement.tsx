@@ -12,7 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Trash2, UserPlus, Copy, AlertCircle, Loader2, ChevronDown, ChevronRight } from "lucide-react";
+import { Trash2, UserPlus, Copy, AlertCircle, Loader2, ChevronDown, ChevronRight, Eye } from "lucide-react";
+import { useImpersonation } from "@/hooks/useImpersonation";
+import { useNavigate } from "react-router-dom";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AvatarUpload } from "@/components/AvatarUpload";
