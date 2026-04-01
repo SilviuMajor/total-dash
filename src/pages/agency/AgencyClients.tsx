@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
+import { useImpersonation } from "@/hooks/useImpersonation";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Eye, Settings, AlertCircle, Building2, Bot, Users, Search } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -16,6 +17,7 @@ import { useAgencyClients, useClientAgents, useClientUserCounts } from "@/hooks/
 
 export default function AgencyClients() {
   const { profile, isPreviewMode, previewAgency } = useMultiTenantAuth();
+  const { startImpersonation, isImpersonating } = useImpersonation();
   const agencyId = isPreviewMode ? previewAgency?.id : profile?.agency?.id;
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -315,13 +317,22 @@ export default function AgencyClients() {
                   size="sm"
                   variant="outline"
                   className="h-7 px-2 text-xs"
-                  onClick={() => {
-                    const targetAgencyId = agencyId || profile?.agency?.id;
-                    window.open(`/?preview=true&clientId=${client.id}&agencyId=${targetAgencyId}`, '_blank');
+                  disabled={isImpersonating}
+                  onClick={async () => {
+                    try {
+                      await startImpersonation({
+                        targetType: 'client_full',
+                        clientId: client.id,
+                        agencyId: agencyId || profile?.agency?.id || undefined,
+                      });
+                      navigate('/');
+                    } catch (e: any) {
+                      toast({ title: "Error", description: e.message, variant: "destructive" });
+                    }
                   }}
                 >
                   <Eye className="h-3.5 w-3.5 mr-1" />
-                  Preview
+                  View as
                 </Button>
                 <Button
                   size="sm"

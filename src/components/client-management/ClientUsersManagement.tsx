@@ -12,7 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Trash2, UserPlus, Copy, AlertCircle, Loader2, ChevronDown, ChevronRight } from "lucide-react";
+import { Trash2, UserPlus, Copy, AlertCircle, Loader2, ChevronDown, ChevronRight, Eye } from "lucide-react";
+import { useImpersonation } from "@/hooks/useImpersonation";
+import { useNavigate } from "react-router-dom";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AvatarUpload } from "@/components/AvatarUpload";
@@ -84,6 +86,8 @@ const COMPANY_SETTINGS_TABS = [
 export function ClientUsersManagement({ clientId, readOnly }: { clientId: string; readOnly?: boolean }) {
   const { isPreviewMode } = useMultiTenantAuth();
   const { isSuperAdmin, loading: isSuperAdminLoading } = useSuperAdminStatus();
+  const { startImpersonation, isImpersonating } = useImpersonation();
+  const navigate = useNavigate();
   const [users, setUsers] = useState<ClientUser[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -1056,6 +1060,27 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                           </Button>
                         )}
                         <div className="flex gap-2 ml-auto">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/30"
+                            disabled={isImpersonating}
+                            onClick={async () => {
+                              try {
+                                await startImpersonation({
+                                  targetType: 'client_user',
+                                  targetUserId: user.user_id,
+                                  clientId: clientId,
+                                });
+                                navigate('/');
+                              } catch (e: any) {
+                                toast({ title: "Error", description: e.message, variant: "destructive" });
+                              }
+                            }}
+                          >
+                            <Eye className="h-3 w-3 mr-1" />
+                            View as
+                          </Button>
                           <Button
                             size="sm"
                             variant="ghost"
