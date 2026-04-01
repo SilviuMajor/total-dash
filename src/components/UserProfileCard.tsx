@@ -99,14 +99,25 @@ export function UserProfileCard({ onSignOut }: UserProfileCardProps) {
           }
         }
 
-        // Load roles
-        const { data: rolesData } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', profile.id);
+        // Load roles from new permission system
+        const { data: permData } = await supabase
+          .from('client_user_agent_permissions')
+          .select('role_id, client_roles:client_roles(name)')
+          .eq('user_id', profile.id)
+          .limit(1)
+          .maybeSingle();
 
-        if (rolesData) {
-          setRoles(rolesData.map(r => r.role));
+        if (permData?.client_roles) {
+          setRoles([(permData.client_roles as any).name]);
+        } else {
+          // Fallback to legacy user_roles
+          const { data: rolesData } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', profile.id);
+          if (rolesData) {
+            setRoles(rolesData.map(r => r.role));
+          }
         }
       } else if (userType === 'agency') {
         const { data: agencyUserData } = await supabase
