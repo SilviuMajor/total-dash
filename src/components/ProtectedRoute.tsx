@@ -120,7 +120,7 @@ export function ProtectedRoute({
   }
 
   // Check page permissions for client users (skip for admin/agency/super_admin preview)
-  if (requiredPage && profile?.role === 'client' && selectedAgentPermissions && !isAdminPreview && !isAgencyClientPreview && !isSuperAdminInPreview) {
+  if (requiredPage && profile?.role === 'client' && selectedAgentPermissions && !isAdminPreview && !isAgencyClientPreview && !isSuperAdminInPreview && !isImpersonationFullAccess) {
     const hasAccess = selectedAgentPermissions[requiredPage as keyof typeof selectedAgentPermissions];
     if (!hasAccess) {
       return null;
