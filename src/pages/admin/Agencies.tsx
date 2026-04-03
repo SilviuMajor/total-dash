@@ -38,6 +38,7 @@ export default function Agencies() {
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { startImpersonation } = useImpersonation();
 
   useEffect(() => {
     loadAgencies();
