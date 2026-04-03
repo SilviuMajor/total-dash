@@ -223,12 +223,20 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
       sessionStorage.setItem(SESSION_STORAGE_KEY, data.session.id);
 
       // Bridge: set old preview mode sessionStorage values so existing components work
-      if (params.clientId) {
+      if (params.targetType === 'agency' && params.agencyId) {
+        sessionStorage.setItem('preview_mode', 'agency');
+        sessionStorage.setItem('preview_agency', params.agencyId);
+        // Clear any client preview values
+        sessionStorage.removeItem('preview_client');
+        sessionStorage.removeItem('preview_client_agency');
+      } else if (params.clientId) {
         sessionStorage.setItem('preview_mode', 'client');
         sessionStorage.setItem('preview_client', params.clientId);
         if (params.agencyId) {
           sessionStorage.setItem('preview_client_agency', params.agencyId);
         }
+        // Clear agency preview values
+        sessionStorage.removeItem('preview_agency');
       }
 
       if (params.clientId) {
