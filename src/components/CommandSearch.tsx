@@ -77,15 +77,7 @@ export function CommandSearch() {
 
   const navigate = useNavigate();
   const { userType, previewDepth, profile } = useMultiTenantAuth();
-  const clientAgentContext = (() => {
-    try {
-      return useClientAgentContext();
-    } catch {
-      return null;
-    }
-  })();
-  const selectedAgentId = clientAgentContext?.selectedAgentId;
-  const agents = clientAgentContext?.agents;
+  const { selectedAgentId, agents } = useClientAgentContext();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const searchMode = getSearchMode(userType, previewDepth);
