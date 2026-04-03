@@ -65,6 +65,7 @@ const ImpersonationContext = createContext<ImpersonationContextType>({
   exitAll: async () => {},
   exitToParent: async () => {},
   switchTarget: async () => {},
+  backToAgency: async () => null,
   getReturnUrl: () => null,
   setReturnUrl: () => {},
 });
