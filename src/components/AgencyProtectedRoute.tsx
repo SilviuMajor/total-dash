@@ -66,14 +66,15 @@ export function AgencyProtectedRoute({ children }: AgencyProtectedRouteProps) {
 
   // Check if in preview mode via token
   const isValidPreview = isPreviewMode && userType === 'super_admin' && hasToken;
+  const isImpersonatingAgency = isImpersonating && activeSession?.target_type === 'agency' && userType === 'super_admin';
 
-  // Allow super admins with valid preview token
-  if (isValidPreview) {
+  // Allow super admins with valid preview token or impersonation
+  if (isValidPreview || isImpersonatingAgency) {
     return <>{children}</>;
   }
 
   // Don't redirect if token is being validated or if no token and not agency user
-  if (!hasToken && !isValidatingToken && userType !== 'agency') {
+  if (!hasToken && !isValidatingToken && userType !== 'agency' && !isImpersonatingAgency) {
     return <Navigate to="/agency/login" replace />;
   }
 

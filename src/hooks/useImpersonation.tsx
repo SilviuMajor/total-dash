@@ -374,6 +374,8 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
         exitAll,
         exitToParent,
         switchTarget,
+        getReturnUrl,
+        setReturnUrl,
       }}
     >
       {children}

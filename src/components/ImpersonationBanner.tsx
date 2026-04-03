@@ -67,7 +67,9 @@ export function ImpersonationBanner() {
       } else if (activeSession.actor_type === "agency_user") {
         window.location.href = "/agency/clients";
       } else {
-        window.location.href = "/";
+        // Client admin — return to stored URL or home
+        const returnUrl = getReturnUrl();
+        window.location.href = returnUrl || "/";
       }
     }
   };
