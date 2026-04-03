@@ -44,6 +44,7 @@ interface ImpersonationContextType {
   exitAll: () => Promise<void>;
   exitToParent: () => Promise<void>;
   switchTarget: (targetUserId: string | null) => Promise<void>;
+  backToAgency: () => Promise<string | null>;
   getReturnUrl: () => string | null;
   setReturnUrl: (url: string) => void;
 }
