@@ -315,6 +315,7 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
       sessionStorage.removeItem('preview_client_agency');
       sessionStorage.removeItem('preview_agency');
       sessionStorage.removeItem('preview_token');
+      sessionStorage.removeItem('impersonation_return_url');
 
       // Trigger re-read in useMultiTenantAuth
       window.dispatchEvent(new Event('impersonation-changed'));
