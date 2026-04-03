@@ -84,7 +84,7 @@ const COMPANY_SETTINGS_TABS = [
 ];
 
 export function ClientUsersManagement({ clientId, readOnly }: { clientId: string; readOnly?: boolean }) {
-  const { isPreviewMode } = useMultiTenantAuth();
+  const { isPreviewMode, userType } = useMultiTenantAuth();
   const { isSuperAdmin, loading: isSuperAdminLoading } = useSuperAdminStatus();
   const { startImpersonation, isImpersonating } = useImpersonation();
   const navigate = useNavigate();
