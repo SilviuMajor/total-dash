@@ -317,13 +317,13 @@ export default function AgencyClients() {
                   size="sm"
                   variant="outline"
                   className="h-7 px-2 text-xs"
-                  disabled={isImpersonating}
                   onClick={async () => {
                     try {
                       await startImpersonation({
                         targetType: 'client_full',
                         clientId: client.id,
                         agencyId: agencyId || profile?.agency?.id || undefined,
+                        parentSessionId: activeSession?.id || undefined,
                       });
                       window.location.href = '/';
                     } catch (e: any) {

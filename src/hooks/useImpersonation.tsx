@@ -412,6 +412,7 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
         exitAll,
         exitToParent,
         switchTarget,
+        backToAgency,
         getReturnUrl,
         setReturnUrl,
       }}

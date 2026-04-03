@@ -175,8 +175,8 @@ export function ImpersonationBanner() {
 
         {/* Navigation buttons */}
         {hasParent && (
-          <Button variant="ghost" size="sm" onClick={handleExit} className="text-white hover:bg-white/15">
-            Back
+          <Button variant="ghost" size="sm" onClick={handleExit} className="text-white hover:bg-white/15 text-xs">
+            Back to agency
           </Button>
         )}
 
