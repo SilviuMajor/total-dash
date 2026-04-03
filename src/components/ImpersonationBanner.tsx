@@ -16,7 +16,7 @@ export function ImpersonationBanner() {
     switchTarget,
     endImpersonation,
     exitAll,
-    exitToParent,
+    backToAgency,
     getReturnUrl,
   } = useImpersonation();
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -57,8 +57,8 @@ export function ImpersonationBanner() {
       : "Admin";
 
   const handleExit = async () => {
-    if (hasParent) {
-      await exitToParent();
+    if (hasParent && activeSession.actor_type === "super_admin") {
+      await backToAgency();
       window.location.href = "/agency/clients";
     } else {
       await endImpersonation();
@@ -67,7 +67,6 @@ export function ImpersonationBanner() {
       } else if (activeSession.actor_type === "agency_user") {
         window.location.href = "/agency/clients";
       } else {
-        // Client admin — return to stored URL or home
         const returnUrl = getReturnUrl();
         window.location.href = returnUrl || "/";
       }
@@ -176,8 +175,8 @@ export function ImpersonationBanner() {
 
         {/* Navigation buttons */}
         {hasParent && (
-          <Button variant="ghost" size="sm" onClick={handleExit} className="text-white hover:bg-white/15">
-            Back
+          <Button variant="ghost" size="sm" onClick={handleExit} className="text-white hover:bg-white/15 text-xs">
+            Back to agency
           </Button>
         )}
 

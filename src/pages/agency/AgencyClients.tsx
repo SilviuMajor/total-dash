@@ -17,7 +17,7 @@ import { useAgencyClients, useClientAgents, useClientUserCounts } from "@/hooks/
 
 export default function AgencyClients() {
   const { profile, isPreviewMode, previewAgency } = useMultiTenantAuth();
-  const { startImpersonation, isImpersonating } = useImpersonation();
+  const { startImpersonation, isImpersonating, activeSession } = useImpersonation();
   const agencyId = isPreviewMode ? previewAgency?.id : profile?.agency?.id;
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -317,13 +317,13 @@ export default function AgencyClients() {
                   size="sm"
                   variant="outline"
                   className="h-7 px-2 text-xs"
-                  disabled={isImpersonating}
                   onClick={async () => {
                     try {
                       await startImpersonation({
                         targetType: 'client_full',
                         clientId: client.id,
                         agencyId: agencyId || profile?.agency?.id || undefined,
+                        parentSessionId: activeSession?.id || undefined,
                       });
                       window.location.href = '/';
                     } catch (e: any) {
