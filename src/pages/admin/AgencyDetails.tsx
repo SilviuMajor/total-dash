@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Eye, Save, Link2, Plus, Minus } from "lucide-react";
+import { useImpersonation } from "@/hooks/useImpersonation";
 
 export default function AgencyDetails() {
   const { id } = useParams();
