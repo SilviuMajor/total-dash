@@ -44,6 +44,8 @@ interface ImpersonationContextType {
   exitAll: () => Promise<void>;
   exitToParent: () => Promise<void>;
   switchTarget: (targetUserId: string | null) => Promise<void>;
+  getReturnUrl: () => string | null;
+  setReturnUrl: (url: string) => void;
 }
 
 const ImpersonationContext = createContext<ImpersonationContextType>({
@@ -62,6 +64,8 @@ const ImpersonationContext = createContext<ImpersonationContextType>({
   exitAll: async () => {},
   exitToParent: async () => {},
   switchTarget: async () => {},
+  getReturnUrl: () => null,
+  setReturnUrl: () => {},
 });
 
 const SESSION_STORAGE_KEY = 'impersonation_session_id';
@@ -219,12 +223,20 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
       sessionStorage.setItem(SESSION_STORAGE_KEY, data.session.id);
 
       // Bridge: set old preview mode sessionStorage values so existing components work
-      if (params.clientId) {
+      if (params.targetType === 'agency' && params.agencyId) {
+        sessionStorage.setItem('preview_mode', 'agency');
+        sessionStorage.setItem('preview_agency', params.agencyId);
+        // Clear any client preview values
+        sessionStorage.removeItem('preview_client');
+        sessionStorage.removeItem('preview_client_agency');
+      } else if (params.clientId) {
         sessionStorage.setItem('preview_mode', 'client');
         sessionStorage.setItem('preview_client', params.clientId);
         if (params.agencyId) {
           sessionStorage.setItem('preview_client_agency', params.agencyId);
         }
+        // Clear agency preview values
+        sessionStorage.removeItem('preview_agency');
       }
 
       if (params.clientId) {
@@ -278,6 +290,7 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
       sessionStorage.removeItem('preview_client_agency');
       sessionStorage.removeItem('preview_agency');
       sessionStorage.removeItem('preview_token');
+      sessionStorage.removeItem('impersonation_return_url');
 
       // Trigger re-read in useMultiTenantAuth
       window.dispatchEvent(new Event('impersonation-changed'));
@@ -302,6 +315,7 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
       sessionStorage.removeItem('preview_client_agency');
       sessionStorage.removeItem('preview_agency');
       sessionStorage.removeItem('preview_token');
+      sessionStorage.removeItem('impersonation_return_url');
 
       // Trigger re-read in useMultiTenantAuth
       window.dispatchEvent(new Event('impersonation-changed'));
@@ -311,9 +325,16 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const exitToParent = useCallback(async () => {
-    // Same as endImpersonation — it handles parent restoration
     await endImpersonation();
   }, [endImpersonation]);
+
+  const getReturnUrl = useCallback((): string | null => {
+    return sessionStorage.getItem('impersonation_return_url');
+  }, []);
+
+  const setReturnUrl = useCallback((url: string) => {
+    sessionStorage.setItem('impersonation_return_url', url);
+  }, []);
 
   const switchTarget = useCallback(async (targetUserId: string | null) => {
     try {
@@ -353,6 +374,8 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
         exitAll,
         exitToParent,
         switchTarget,
+        getReturnUrl,
+        setReturnUrl,
       }}
     >
       {children}

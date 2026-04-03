@@ -84,7 +84,7 @@ const COMPANY_SETTINGS_TABS = [
 ];
 
 export function ClientUsersManagement({ clientId, readOnly }: { clientId: string; readOnly?: boolean }) {
-  const { isPreviewMode } = useMultiTenantAuth();
+  const { isPreviewMode, userType } = useMultiTenantAuth();
   const { isSuperAdmin, loading: isSuperAdminLoading } = useSuperAdminStatus();
   const { startImpersonation, isImpersonating } = useImpersonation();
   const navigate = useNavigate();
@@ -1060,27 +1060,30 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                           </Button>
                         )}
                         <div className="flex gap-2 ml-auto">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/30"
-                            disabled={isImpersonating}
-                            onClick={async () => {
-                              try {
-                                await startImpersonation({
-                                  targetType: 'client_user',
-                                  targetUserId: user.user_id,
-                                  clientId: clientId,
-                                });
-                                window.location.href = '/';
-                              } catch (e: any) {
-                                toast({ title: "Error", description: e.message, variant: "destructive" });
-                              }
-                            }}
-                          >
-                            <Eye className="h-3 w-3 mr-1" />
-                            View as
-                          </Button>
+                          {userType === 'client' && !isPreviewMode && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/30"
+                              disabled={isImpersonating}
+                              onClick={async () => {
+                                try {
+                                  sessionStorage.setItem('impersonation_return_url', window.location.pathname + window.location.search);
+                                  await startImpersonation({
+                                    targetType: 'client_user',
+                                    targetUserId: user.user_id,
+                                    clientId: clientId,
+                                  });
+                                  window.location.href = '/';
+                                } catch (e: any) {
+                                  toast({ title: "Error", description: e.message, variant: "destructive" });
+                                }
+                              }}
+                            >
+                              <Eye className="h-3 w-3 mr-1" />
+                              View as
+                            </Button>
+                          )}
                           <Button
                             size="sm"
                             variant="ghost"
