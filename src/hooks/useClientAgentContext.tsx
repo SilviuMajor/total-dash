@@ -49,7 +49,17 @@ interface ClientAgentContextType {
   isImpersonationReadOnly: boolean;
 }
 
-const ClientAgentContext = createContext<ClientAgentContextType | undefined>(undefined);
+const ClientAgentContext = createContext<ClientAgentContextType>({
+  agents: [],
+  selectedAgentId: null,
+  setSelectedAgentId: () => {},
+  selectedAgentPermissions: null,
+  companySettingsPermissions: null,
+  loading: true,
+  clientId: null,
+  userRoleSlug: null,
+  isImpersonationReadOnly: false,
+});
 
 interface AgentAssignmentRow {
   agent_id: string;
