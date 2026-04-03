@@ -16,7 +16,7 @@ export function ImpersonationBanner() {
     switchTarget,
     endImpersonation,
     exitAll,
-    exitToParent,
+    backToAgency,
     getReturnUrl,
   } = useImpersonation();
   const [dropdownOpen, setDropdownOpen] = useState(false);
