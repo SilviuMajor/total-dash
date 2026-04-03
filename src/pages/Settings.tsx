@@ -83,22 +83,23 @@ export default function Settings() {
   // In preview mode, show everything the agency has enabled
   // In normal mode, also check user's view permission
   const isInPreview = isClientPreviewMode || previewDepth === 'agency_to_client' || previewDepth === 'client';
+  const isInPreviewOrImpersonating = isInPreview || isImpersonating;
 
   const showDepartments = capabilities.client_departments_enabled !== false &&
-    (isInPreview || companySettingsPermissions?.settings_departments_view !== false);
+    (isInPreviewOrImpersonating || companySettingsPermissions?.settings_departments_view !== false);
   const showTeam = capabilities.client_team_enabled !== false &&
-    (isInPreview || companySettingsPermissions?.settings_team_view !== false);
+    (isInPreviewOrImpersonating || companySettingsPermissions?.settings_team_view !== false);
   const showCannedResponses = capabilities.client_canned_responses_enabled !== false &&
-    (isInPreview || companySettingsPermissions?.settings_canned_responses_view !== false);
+    (isInPreviewOrImpersonating || companySettingsPermissions?.settings_canned_responses_view !== false);
   const showGeneral = capabilities.client_general_enabled !== false &&
-    (isInPreview || companySettingsPermissions?.settings_general_view !== false);
-  const showAuditLog = isInPreview ||
+    (isInPreviewOrImpersonating || companySettingsPermissions?.settings_general_view !== false);
+  const showAuditLog = isInPreviewOrImpersonating ||
     (capabilities.client_audit_log_enabled === true && companySettingsPermissions?.settings_audit_log_view === true);
 
-  const canManageDepartments = isInPreview || companySettingsPermissions?.settings_departments_manage === true;
-  const canManageTeam = isInPreview || companySettingsPermissions?.settings_team_manage === true;
-  const canManageCannedResponses = isInPreview || companySettingsPermissions?.settings_canned_responses_manage === true;
-  const canManageGeneral = isInPreview || companySettingsPermissions?.settings_general_manage === true;
+  const canManageDepartments = !isImpersonationViewAsUser && (isInPreview || companySettingsPermissions?.settings_departments_manage === true);
+  const canManageTeam = !isImpersonationViewAsUser && (isInPreview || companySettingsPermissions?.settings_team_manage === true);
+  const canManageCannedResponses = !isImpersonationViewAsUser && (isInPreview || companySettingsPermissions?.settings_canned_responses_manage === true);
+  const canManageGeneral = !isImpersonationViewAsUser && (isInPreview || companySettingsPermissions?.settings_general_manage === true);
 
   const getDefaultTab = () => {
     if (showDepartments) return "departments";
