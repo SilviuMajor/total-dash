@@ -9,11 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Eye, Save, Link2, Plus, Minus } from "lucide-react";
+import { useImpersonation } from "@/hooks/useImpersonation";
 
 export default function AgencyDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { startImpersonation } = useImpersonation();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [agency, setAgency] = useState<any>(null);
@@ -189,72 +191,20 @@ export default function AgencyDetails() {
     return null;
   };
 
-  const invokePreview = async (isRetry = false) => {
+  const handlePreview = async () => {
     try {
-      const { data, error } = await supabase.functions.invoke('authenticate-with-context', {
-        body: {
-          contextType: 'agency',
-          agencyId: id,
-          isPreview: true,
-        },
+      await startImpersonation({
+        targetType: 'agency',
+        agencyId: id,
       });
-
-      if (error) {
-        const status = getHttpStatus(error);
-        
-        // On 401 and not retrying: refresh session and retry once
-        if (status === 401 && !isRetry) {
-          console.log('Preview auth failed with 401, refreshing session and retrying...');
-          const { error: refreshError } = await supabase.auth.refreshSession();
-          if (refreshError) {
-            console.error('Session refresh failed:', refreshError);
-            toast({
-              title: "Session expired",
-              description: "Please log in again.",
-              variant: "destructive",
-            });
-            return;
-          }
-          // Retry once
-          return invokePreview(true);
-        }
-        
-        // Handle 403 specifically
-        if (status === 403) {
-          toast({
-            title: "Permission denied",
-            description: "You do not have permission to preview this agency.",
-            variant: "destructive",
-          });
-          return;
-        }
-        
-        // Other errors
-        throw error;
-      }
-
-      if (!data?.token) {
-        toast({
-          title: "Error",
-          description: "No preview token received.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      window.open(`/agency?token=${data.token}`, '_blank');
-    } catch (error: any) {
-      console.error('Error generating preview token:', error);
+      window.location.href = '/agency/clients';
+    } catch (e: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to generate preview token",
+        description: e.message || "Failed to impersonate agency",
         variant: "destructive",
       });
     }
-  };
-
-  const handlePreview = () => {
-    invokePreview();
   };
 
   const handleToggleManualOverride = async (enabled: boolean) => {

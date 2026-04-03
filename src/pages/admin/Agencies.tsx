@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Building2, Users, Calendar, ArrowRight, Settings, Eye } from "lucide-react";
 import { toast } from "sonner";
+import { useImpersonation } from "@/hooks/useImpersonation";
 
 interface Agency {
   id: string;
@@ -37,6 +38,7 @@ export default function Agencies() {
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { startImpersonation } = useImpersonation();
 
   useEffect(() => {
     loadAgencies();
@@ -175,58 +177,19 @@ export default function Agencies() {
                     variant="outline"
                     size="sm"
                     onClick={async () => {
-                      const invokePreview = async (retrying = false): Promise<void> => {
-                        try {
-                          const { data, error } = await supabase.functions.invoke('authenticate-with-context', {
-                            body: {
-                              contextType: 'agency',
-                              agencyId: agency.id,
-                              isPreview: true,
-                            },
-                          });
-                          
-                          if (error) {
-                            console.error('Auth context error:', error);
-                            const status = getHttpStatus(error);
-                            
-                            // Retry once on 401 by refreshing session
-                            if (!retrying && status === 401) {
-                              console.log("Got 401, refreshing session and retrying preview...");
-                              const { error: refreshError } = await supabase.auth.refreshSession();
-                              if (refreshError) {
-                                console.error("Session refresh failed:", refreshError);
-                                toast.error("Session expired. Please log in again.");
-                                return;
-                              }
-                              return invokePreview(true);
-                            }
-                            
-                            if (status === 403) {
-                              toast.error('You do not have permission to preview this agency');
-                              return;
-                            }
-                            
-                            toast.error('Failed to generate preview token');
-                            return;
-                          }
-                          
-                          if (!data?.token) {
-                            toast.error('No token received');
-                            return;
-                          }
-                          
-                          window.open(`/agency?token=${data.token}`, '_blank');
-                        } catch (error) {
-                          toast.error('Failed to enter preview mode');
-                          console.error(error);
-                        }
-                      };
-                      
-                      await invokePreview();
+                      try {
+                        await startImpersonation({
+                          targetType: 'agency',
+                          agencyId: agency.id,
+                        });
+                        window.location.href = '/agency/clients';
+                      } catch (e: any) {
+                        toast.error(e.message || 'Failed to impersonate agency');
+                      }
                     }}
                   >
                     <Eye className="w-4 h-4 mr-2" />
-                    Preview
+                    View as
                   </Button>
                 </div>
                 
