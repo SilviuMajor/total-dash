@@ -18,6 +18,8 @@ export default function Settings() {
   const { user } = useAuth();
   const { isClientPreviewMode, previewClient, previewDepth } = useMultiTenantAuth();
   const { clientId: contextClientId, companySettingsPermissions } = useClientAgentContext();
+  const { isImpersonating, impersonationMode } = useImpersonation();
+  const isImpersonationViewAsUser = isImpersonating && impersonationMode === 'view_as_user';
   const [clientId, setClientId] = useState<string | null>(null);
   const [capabilities, setCapabilities] = useState<Record<string, any>>({});
   const [client, setClient] = useState<any>(null);
