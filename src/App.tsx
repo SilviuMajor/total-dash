@@ -137,8 +137,7 @@ const App = () => (
                       <Sidebar />
                       <div className="flex-1 flex flex-col overflow-hidden">
                         <ImpersonationBanner />
-                        <LegacyBanner><AdminPreviewBanner /></LegacyBanner>
-                        <LegacyBanner><ClientPreviewBanner /></LegacyBanner>
+                        
                         <main className="flex-1 overflow-y-auto">
                           <Routes>
                             <Route path="/" element={<Navigate to="/agency/clients" replace />} />
