@@ -64,6 +64,8 @@ const ImpersonationContext = createContext<ImpersonationContextType>({
   exitAll: async () => {},
   exitToParent: async () => {},
   switchTarget: async () => {},
+  getReturnUrl: () => null,
+  setReturnUrl: () => {},
 });
 
 const SESSION_STORAGE_KEY = 'impersonation_session_id';
