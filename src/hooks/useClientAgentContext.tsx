@@ -645,9 +645,5 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
 }
 
 export function useClientAgentContext() {
-  const context = useContext(ClientAgentContext);
-  if (context === undefined) {
-    throw new Error('useClientAgentContext must be used within a ClientAgentProvider');
-  }
-  return context;
+  return useContext(ClientAgentContext);
 }
