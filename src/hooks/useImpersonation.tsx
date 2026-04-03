@@ -257,30 +257,9 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
     try {
       if (!activeSession) return;
 
-      // If this session has a parent, restore the parent
-      const parentId = activeSession.parent_session_id;
-
       await supabase.functions.invoke('end-impersonation', {
         body: { sessionId: activeSession.id },
       });
-
-      if (parentId) {
-        // Restore parent session
-        const { data } = await supabase
-          .from('impersonation_sessions')
-          .select('*')
-          .eq('id', parentId)
-          .is('ended_at', null)
-          .maybeSingle();
-
-        if (data) {
-          setActiveSession(data as ImpersonationSession);
-          sessionStorage.setItem(SESSION_STORAGE_KEY, data.id);
-          if (data.client_id) loadClientUsers(data.client_id);
-          else setClientUsers([]);
-          return;
-        }
-      }
 
       setActiveSession(null);
       setClientUsers([]);
