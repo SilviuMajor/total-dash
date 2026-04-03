@@ -161,14 +161,6 @@ export function Sidebar() {
         )}
       </div>
 
-      {(mtIsPreviewMode || isClientPreviewMode) && (
-        <div className="px-3.5 py-2 bg-blue-600/10 border-b border-blue-600/20">
-          <div className="flex items-center gap-2 text-blue-600 text-sm">
-            <Eye className="w-4 h-4" />
-            <span>Preview Mode</span>
-          </div>
-        </div>
-      )}
 
       {(effectiveProfile?.role === 'client' || previewDepth === 'client' || previewDepth === 'agency_to_client') && (
       <div className="px-3 py-1.5 border-b border-border">
