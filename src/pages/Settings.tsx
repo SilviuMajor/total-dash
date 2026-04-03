@@ -31,6 +31,11 @@ export default function Settings() {
       setClientId(previewClient.id);
       return;
     }
+    if (isImpersonating && !previewClient?.id && contextClientId) {
+      // Impersonation mode — clientId comes from useClientAgentContext
+      setClientId(contextClientId);
+      return;
+    }
     if (contextClientId) {
       setClientId(contextClientId);
       return;
