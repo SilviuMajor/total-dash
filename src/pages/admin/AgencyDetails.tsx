@@ -15,6 +15,7 @@ export default function AgencyDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { startImpersonation } = useImpersonation();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [agency, setAgency] = useState<any>(null);
