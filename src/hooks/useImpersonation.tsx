@@ -325,9 +325,16 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const exitToParent = useCallback(async () => {
-    // Same as endImpersonation — it handles parent restoration
     await endImpersonation();
   }, [endImpersonation]);
+
+  const getReturnUrl = useCallback((): string | null => {
+    return sessionStorage.getItem('impersonation_return_url');
+  }, []);
+
+  const setReturnUrl = useCallback((url: string) => {
+    sessionStorage.setItem('impersonation_return_url', url);
+  }, []);
 
   const switchTarget = useCallback(async (targetUserId: string | null) => {
     try {
