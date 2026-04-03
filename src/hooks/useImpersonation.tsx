@@ -317,6 +317,63 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
     sessionStorage.setItem('impersonation_return_url', url);
   }, []);
 
+  const backToAgency = useCallback(async (): Promise<string | null> => {
+    try {
+      if (!activeSession) return null;
+
+      const agencyId = activeSession.agency_id;
+
+      await supabase.functions.invoke('end-impersonation', {
+        body: { sessionId: activeSession.id },
+      });
+
+      if (!agencyId) {
+        setActiveSession(null);
+        setClientUsers([]);
+        sessionStorage.removeItem(SESSION_STORAGE_KEY);
+        sessionStorage.removeItem('preview_mode');
+        sessionStorage.removeItem('preview_client');
+        sessionStorage.removeItem('preview_client_agency');
+        sessionStorage.removeItem('preview_agency');
+        sessionStorage.removeItem('preview_token');
+        sessionStorage.removeItem('impersonation_return_url');
+        window.dispatchEvent(new Event('impersonation-changed'));
+        return null;
+      }
+
+      const { data, error } = await supabase.functions.invoke('start-impersonation', {
+        body: {
+          targetType: 'agency',
+          agencyId,
+        },
+      });
+
+      if (error || !data?.success) {
+        console.error('Failed to start agency session:', error || data?.error);
+        setActiveSession(null);
+        sessionStorage.removeItem(SESSION_STORAGE_KEY);
+        return null;
+      }
+
+      setActiveSession(data.session as ImpersonationSession);
+      sessionStorage.setItem(SESSION_STORAGE_KEY, data.session.id);
+      setClientUsers([]);
+
+      sessionStorage.setItem('preview_mode', 'agency');
+      sessionStorage.setItem('preview_agency', agencyId);
+      sessionStorage.removeItem('preview_client');
+      sessionStorage.removeItem('preview_client_agency');
+      sessionStorage.removeItem('impersonation_return_url');
+
+      window.dispatchEvent(new Event('impersonation-changed'));
+
+      return agencyId;
+    } catch (error) {
+      console.error('Failed to go back to agency:', error);
+      return null;
+    }
+  }, [activeSession]);
+
   const switchTarget = useCallback(async (targetUserId: string | null) => {
     try {
       if (!activeSession) return;
