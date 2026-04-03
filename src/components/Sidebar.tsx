@@ -46,6 +46,7 @@ export function Sidebar() {
   const { selectedAgentPermissions, agents, selectedAgentId } = useClientAgentContext();
   const { effectiveTheme } = useTheme();
   const location = useLocation();
+  const [overlayOpen, setOverlayOpen] = useState(false);
   const isAdmin = profile?.role === 'admin';
   const isMac = typeof navigator !== 'undefined' && navigator.platform.toUpperCase().includes('MAC');
   // Determine branding context
