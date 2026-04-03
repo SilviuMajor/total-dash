@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Building2, Users, Calendar, ArrowRight, Settings, Eye } from "lucide-react";
 import { toast } from "sonner";
+import { useImpersonation } from "@/hooks/useImpersonation";
 
 interface Agency {
   id: string;
