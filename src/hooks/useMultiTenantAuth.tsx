@@ -500,7 +500,13 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
       const storedPreviewClientAgency = sessionStorage.getItem('preview_client_agency');
       const storedPreviewAgency = sessionStorage.getItem('preview_agency');
 
-      if (storedPreviewMode === 'client' && storedPreviewClient && storedPreviewClientAgency) {
+      if (storedPreviewMode === 'agency' && storedPreviewAgency) {
+        setIsPreviewMode(true);
+        setPreviewDepth('agency');
+        setIsClientPreviewMode(false);
+        setPreviewClient(null);
+        loadPreviewAgency(storedPreviewAgency);
+      } else if (storedPreviewMode === 'client' && storedPreviewClient && storedPreviewClientAgency) {
         setIsClientPreviewMode(true);
         const hasAgencyPreview = storedPreviewAgency !== null;
         setPreviewDepth(hasAgencyPreview ? 'agency_to_client' : 'client');
