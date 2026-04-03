@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { ImpersonationOverlay } from "./ImpersonationOverlay";
 import { NavLink, useLocation } from "react-router-dom";
 import { MessageSquare, BarChart3, BookOpen, Settings, Users, Bot, Eye, FileText, Home, CreditCard, Building2, DollarSign, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -45,6 +46,7 @@ export function Sidebar() {
   const { selectedAgentPermissions, agents, selectedAgentId } = useClientAgentContext();
   const { effectiveTheme } = useTheme();
   const location = useLocation();
+  const [overlayOpen, setOverlayOpen] = useState(false);
   const isAdmin = profile?.role === 'admin';
   const isMac = typeof navigator !== 'undefined' && navigator.platform.toUpperCase().includes('MAC');
   // Determine branding context
@@ -211,8 +213,27 @@ export function Sidebar() {
         ))}
       </nav>
 
+      {/* Impersonation trigger — super admin only */}
+      {userType === 'super_admin' && (
+        <div className="px-2.5 pb-1">
+          <button
+            onClick={() => setOverlayOpen(true)}
+            className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-all"
+            title="Impersonate"
+          >
+            <Eye className="w-[18px] h-[18px] flex-shrink-0" />
+            Impersonate
+          </button>
+        </div>
+      )}
+
       {/* User Profile Card */}
       <UserProfileCard onSignOut={effectiveSignOut} />
+
+      {/* Impersonation Overlay */}
+      {userType === 'super_admin' && (
+        <ImpersonationOverlay open={overlayOpen} onClose={() => setOverlayOpen(false)} />
+      )}
     </div>
   );
 }
