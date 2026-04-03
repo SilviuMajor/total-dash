@@ -49,7 +49,17 @@ interface ClientAgentContextType {
   isImpersonationReadOnly: boolean;
 }
 
-const ClientAgentContext = createContext<ClientAgentContextType | undefined>(undefined);
+const ClientAgentContext = createContext<ClientAgentContextType>({
+  agents: [],
+  selectedAgentId: null,
+  setSelectedAgentId: () => {},
+  selectedAgentPermissions: null,
+  companySettingsPermissions: null,
+  loading: true,
+  clientId: null,
+  userRoleSlug: null,
+  isImpersonationReadOnly: false,
+});
 
 interface AgentAssignmentRow {
   agent_id: string;
@@ -635,9 +645,5 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
 }
 
 export function useClientAgentContext() {
-  const context = useContext(ClientAgentContext);
-  if (context === undefined) {
-    throw new Error('useClientAgentContext must be used within a ClientAgentProvider');
-  }
-  return context;
+  return useContext(ClientAgentContext);
 }
