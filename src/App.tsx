@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { MultiTenantAuthProvider, useMultiTenantAuth } from "./hooks/useMultiTenantAuth";
 import { ClientAgentProvider } from "./hooks/useClientAgentContext";
-import { ImpersonationProvider, useImpersonation } from "./hooks/useImpersonation";
+import { ImpersonationProvider } from "./hooks/useImpersonation";
 import { ThemeProvider, useTheme } from "./hooks/useTheme";
 import { useBranding } from "./hooks/useBranding";
 import { useFavicon } from "./hooks/useFavicon";
@@ -16,9 +16,6 @@ import { AdminProtectedRoute } from "./components/AdminProtectedRoute";
 import { AgencyProtectedRoute } from "./components/AgencyProtectedRoute";
 import { Sidebar } from "./components/Sidebar";
 import { CommandSearch } from "./components/CommandSearch";
-import { AdminPreviewBanner } from "./components/AdminPreviewBanner";
-import { ClientPreviewBanner } from "./components/ClientPreviewBanner";
-import { AgencyClientPreviewBanner } from "./components/AgencyClientPreviewBanner";
 import { ImpersonationBanner } from "./components/ImpersonationBanner";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
@@ -66,12 +63,7 @@ const BrandingWrapper = ({ children }: { children: React.ReactNode }) => {
   const { effectiveTheme } = useTheme();
   const { isClientPreviewMode, previewClientAgencyId, isPreviewMode, previewAgency } = useMultiTenantAuth();
   const location = useLocation();
-  // Only consider it client view if actually in client preview mode
   const isClientView = isClientPreviewMode;
-  // Determine which agency's branding to show:
-  // - Client preview mode: show the client's agency branding
-  // - Agency preview mode: show the previewed agency's branding
-  // - Otherwise: show platform branding (super admin)
   const relevantAgencyId = isClientPreviewMode 
     ? previewClientAgencyId 
     : (isPreviewMode && previewAgency ? previewAgency.id : undefined);
@@ -87,13 +79,6 @@ const BrandingWrapper = ({ children }: { children: React.ReactNode }) => {
     document.title = branding.companyName || 'FiveLeaf';
   }, [branding.companyName]);
 
-  return <>{children}</>;
-};
-
-// Wrapper to hide old preview banners during impersonation
-const LegacyBanner = ({ children }: { children: React.ReactNode }) => {
-  const { isImpersonating } = useImpersonation();
-  if (isImpersonating) return null;
   return <>{children}</>;
 };
 
