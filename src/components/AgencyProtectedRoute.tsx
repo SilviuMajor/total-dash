@@ -65,7 +65,7 @@ export function AgencyProtectedRoute({ children }: AgencyProtectedRouteProps) {
   }
 
   // Check if in preview mode via token
-  const isValidPreview = isPreviewMode && userType === 'super_admin' && hasToken;
+  const isValidPreview = isPreviewMode && userType === 'super_admin';
   const isImpersonatingAgency = isImpersonating && activeSession?.target_type === 'agency' && userType === 'super_admin';
 
   // Allow super admins with valid preview token or impersonation

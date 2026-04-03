@@ -1,13 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ImpersonationOverlay } from "./ImpersonationOverlay";
 import { NavLink, useLocation } from "react-router-dom";
-import { MessageSquare, BarChart3, BookOpen, Settings, Users, Bot, Eye, FileText, Home, CreditCard, Building2, DollarSign, Search } from "lucide-react";
+import { MessageSquare, BarChart3, BookOpen, Settings, Users, Bot, Eye, FileText, Home, CreditCard, Building2, DollarSign, Search, X, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
 import { useClientAgentContext } from "@/hooks/useClientAgentContext";
 import { useBranding } from "@/hooks/useBranding";
 import { useTheme } from "@/hooks/useTheme";
+import { useImpersonation } from "@/hooks/useImpersonation";
 import { ClientAgentSelector } from "./ClientAgentSelector";
 import { UserProfileCard } from "./UserProfileCard";
 import { Button } from "./ui/button";
@@ -46,9 +47,24 @@ export function Sidebar() {
   const { selectedAgentPermissions, agents, selectedAgentId } = useClientAgentContext();
   const { effectiveTheme } = useTheme();
   const location = useLocation();
+  const { isImpersonating, activeSession, impersonationMode, targetUserName, elapsedMinutes, endImpersonation, exitAll, backToAgency, switchTarget, clientUsers, getReturnUrl } = useImpersonation();
   const [overlayOpen, setOverlayOpen] = useState(false);
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const userDropdownRef = useRef<HTMLDivElement>(null);
   const isAdmin = profile?.role === 'admin';
   const isMac = typeof navigator !== 'undefined' && navigator.platform.toUpperCase().includes('MAC');
+
+  // Close user dropdown on outside click
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (userDropdownRef.current && !userDropdownRef.current.contains(e.target as Node)) {
+        setUserDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
   // Determine branding context
   const isClientView = isClientPreviewMode;
   const agencyId = isClientView ? previewClientAgencyId : undefined;
@@ -142,6 +158,43 @@ export function Sidebar() {
     return basePath;
   };
 
+  const handleImpersonationExit = async () => {
+    const hasParent = !!activeSession?.parent_session_id;
+    if (hasParent && activeSession?.actor_type === "super_admin") {
+      await backToAgency();
+      window.location.href = "/agency/clients";
+    } else {
+      await endImpersonation();
+      if (activeSession?.actor_type === "super_admin") {
+        window.location.href = "/admin/agencies";
+      } else if (activeSession?.actor_type === "agency_user") {
+        window.location.href = "/agency/clients";
+      } else {
+        const returnUrl = getReturnUrl();
+        window.location.href = returnUrl || "/";
+      }
+    }
+  };
+
+  const handleSwitchTarget = async (userId: string | null) => {
+    await switchTarget(userId);
+    setUserDropdownOpen(false);
+  };
+
+  const formatElapsed = (mins: number) => {
+    if (mins < 1) return "< 1m";
+    if (mins < 60) return `${mins}m`;
+    return `${Math.floor(mins / 60)}h ${mins % 60}m`;
+  };
+
+  // Determine session card color
+  const getSessionColor = () => {
+    if (!activeSession) return '';
+    if (activeSession.actor_type === 'super_admin') return 'bg-blue-600 dark:bg-blue-700';
+    if (activeSession.actor_type === 'agency_user') return 'bg-amber-600 dark:bg-amber-700';
+    return 'bg-emerald-600 dark:bg-emerald-700';
+  };
+
   return (
     <div className="flex flex-col w-[240px] h-screen border-r border-border bg-card overflow-hidden flex-shrink-0">
       {/* Logo area */}
@@ -205,17 +258,106 @@ export function Sidebar() {
         ))}
       </nav>
 
-      {/* Impersonation trigger — super admin only */}
-      {userType === 'super_admin' && (
+      {/* Impersonation — super admin and agency users */}
+      {(userType === 'super_admin' || (userType === 'agency' && isImpersonating)) && (
         <div className="px-2.5 pb-1">
-          <button
-            onClick={() => setOverlayOpen(true)}
-            className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-all"
-            title="Impersonate"
-          >
-            <Eye className="w-[18px] h-[18px] flex-shrink-0" />
-            Impersonate
-          </button>
+          {!isImpersonating ? (
+            /* Inactive state — outlined button */
+            <button
+              onClick={() => setOverlayOpen(true)}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border border-border text-foreground hover:bg-muted transition-all"
+            >
+              <Eye className="w-[18px] h-[18px] flex-shrink-0" />
+              Impersonate
+            </button>
+          ) : (
+            /* Active state — color-coded session card */
+            <div className={`${getSessionColor()} text-white rounded-lg p-2.5 space-y-1.5`}>
+              {/* Top row: name + exit */}
+              <div className="flex items-center justify-between">
+                <button
+                  onClick={() => setOverlayOpen(true)}
+                  className="flex-1 text-left text-xs font-medium truncate pr-2"
+                >
+                  {activeSession?.target_type === 'agency'
+                    ? 'Agency view'
+                    : impersonationMode === 'view_as_user'
+                    ? `as ${targetUserName || 'user'}`
+                    : 'Full access'}
+                </button>
+                <button onClick={handleImpersonationExit} className="p-0.5 rounded hover:bg-white/20 transition-colors">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Info row */}
+              <button
+                onClick={() => setOverlayOpen(true)}
+                className="w-full text-left"
+              >
+                <p className="text-[10px] opacity-70">
+                  {formatElapsed(elapsedMinutes)}
+                  {impersonationMode === 'view_as_user' && ' · read-only'}
+                  {activeSession?.parent_session_id && ' · via agency'}
+                </p>
+              </button>
+
+              {/* User switcher — only for client viewing */}
+              {activeSession?.client_id && clientUsers.length > 0 && (
+                <div className="relative" ref={userDropdownRef}>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setUserDropdownOpen(!userDropdownOpen); }}
+                    className="w-full flex items-center justify-between px-2 py-1 rounded bg-white/15 hover:bg-white/25 text-[11px] transition-colors"
+                  >
+                    {impersonationMode === 'view_as_user' ? targetUserName : 'Full access'}
+                    <ChevronDown className={`w-3 h-3 transition-transform ${userDropdownOpen ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {userDropdownOpen && (
+                    <div className="absolute bottom-full left-0 right-0 mb-1 bg-white dark:bg-gray-900 rounded-lg shadow-xl border border-border overflow-hidden z-50">
+                      <button
+                        onClick={() => handleSwitchTarget(null)}
+                        className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-50 dark:hover:bg-gray-800 ${
+                          impersonationMode !== 'view_as_user'
+                            ? 'text-blue-600 dark:text-blue-400 font-medium bg-blue-50 dark:bg-blue-950/30'
+                            : 'text-gray-700 dark:text-gray-300'
+                        }`}
+                      >
+                        Full access
+                      </button>
+                      <div className="border-t border-border" />
+                      <div className="max-h-48 overflow-y-auto">
+                        {clientUsers.map((u) => (
+                          <button
+                            key={u.id}
+                            onClick={() => handleSwitchTarget(u.user_id)}
+                            className={`w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 dark:hover:bg-gray-800 ${
+                              targetUserName === u.full_name
+                                ? 'text-blue-600 dark:text-blue-400 font-medium bg-blue-50 dark:bg-blue-950/30'
+                                : 'text-gray-700 dark:text-gray-300'
+                            }`}
+                          >
+                            <p className="font-medium">{u.full_name}</p>
+                            <p className="text-[10px] opacity-60">{u.role_name}</p>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Back to agency link */}
+              {activeSession?.parent_session_id && activeSession?.actor_type === 'super_admin' && (
+                <button
+                  onClick={async () => { await backToAgency(); window.location.href = '/agency/clients'; }}
+                  className="w-full text-left text-[10px] opacity-70 hover:opacity-100 mt-1 transition-opacity"
+                >
+                  ← Back to agency
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
 

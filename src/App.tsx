@@ -16,7 +16,6 @@ import { AdminProtectedRoute } from "./components/AdminProtectedRoute";
 import { AgencyProtectedRoute } from "./components/AgencyProtectedRoute";
 import { Sidebar } from "./components/Sidebar";
 import { CommandSearch } from "./components/CommandSearch";
-import { ImpersonationBanner } from "./components/ImpersonationBanner";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import ChangePassword from "./pages/ChangePassword";
@@ -107,8 +106,6 @@ const App = () => (
                     <div className="flex h-screen w-full bg-background overflow-hidden">
                       <Sidebar />
                       <div className="flex-1 flex flex-col overflow-hidden">
-                        <ImpersonationBanner />
-                        
                         <main className="flex-1 overflow-y-auto">
                           <Routes>
                             <Route path="/" element={<Agencies />} />
@@ -136,8 +133,6 @@ const App = () => (
                     <div className="flex h-screen w-full bg-background overflow-hidden">
                       <Sidebar />
                       <div className="flex-1 flex flex-col overflow-hidden">
-                        <ImpersonationBanner />
-                        
                         <main className="flex-1 overflow-y-auto">
                           <Routes>
                             <Route path="/" element={<Navigate to="/agency/clients" replace />} />
@@ -170,8 +165,6 @@ const App = () => (
                   <div className="flex h-screen w-full bg-background overflow-hidden">
                     <Sidebar />
                     <div className="flex-1 flex flex-col overflow-hidden">
-                      <ImpersonationBanner />
-                      
                       <main className="flex-1 overflow-y-auto">
                         <Routes>
                           <Route path="/" element={<ProtectedRoute requiredPage="conversations"><Conversations /></ProtectedRoute>} />
