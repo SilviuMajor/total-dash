@@ -298,17 +298,25 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
       if (params.targetType === 'agency' && params.agencyId) {
         sessionStorage.setItem('preview_mode', 'agency');
         sessionStorage.setItem('preview_agency', params.agencyId);
+        if (params.agencyName) {
+          sessionStorage.setItem('preview_agency_name', params.agencyName);
+        }
         // Clear any client preview values
         sessionStorage.removeItem('preview_client');
         sessionStorage.removeItem('preview_client_agency');
+        sessionStorage.removeItem('preview_client_name');
       } else if (params.clientId) {
         sessionStorage.setItem('preview_mode', 'client');
         sessionStorage.setItem('preview_client', params.clientId);
         if (params.agencyId) {
           sessionStorage.setItem('preview_client_agency', params.agencyId);
         }
+        if (params.clientName) {
+          sessionStorage.setItem('preview_client_name', params.clientName);
+        }
         // Clear agency preview values
         sessionStorage.removeItem('preview_agency');
+        sessionStorage.removeItem('preview_agency_name');
       }
 
       if (params.clientId) {

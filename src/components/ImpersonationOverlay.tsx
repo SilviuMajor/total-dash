@@ -136,7 +136,7 @@ export function ImpersonationOverlay({ open, onClose }: ImpersonationOverlayProp
     catch (e: any) { console.error(e); alert('Failed to enter client: ' + (e.message || 'Unknown error')); }
   };
   const handleViewAsUser = async (u: UserItem) => {
-    try { const client = clients.find((c) => c.id === u.client_id); await startImpersonation({ targetType: "client_user", targetUserId: u.user_id, clientId: u.client_id, agencyId: client?.agency_id }); onClose(); window.location.href = "/"; }
+    try { const client = clients.find((c) => c.id === u.client_id); await startImpersonation({ targetType: "client_user", targetUserId: u.user_id, clientId: u.client_id, agencyId: client?.agency_id, clientName: u.client_name }); onClose(); window.location.href = "/"; }
     catch (e: any) { console.error(e); alert('Failed to view as user: ' + (e.message || 'Unknown error')); }
   };
   const handleReEnter = async (session: RecentSession) => {
