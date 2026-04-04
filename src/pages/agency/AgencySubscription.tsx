@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
+import { useImpersonation } from "@/hooks/useImpersonation";
 import { useToast } from "@/hooks/use-toast";
 import { Check, Crown } from "lucide-react";
 
