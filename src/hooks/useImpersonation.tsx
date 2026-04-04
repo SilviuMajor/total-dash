@@ -217,6 +217,23 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
     }
   }, [elapsedMinutes]);
 
+  // End impersonation session on tab/browser close via sendBeacon
+  useEffect(() => {
+    if (!activeSession) return;
+
+    const handleUnload = () => {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const url = `${supabaseUrl}/functions/v1/end-impersonation`;
+      navigator.sendBeacon(
+        url,
+        JSON.stringify({ sessionId: activeSession.id, beacon: true })
+      );
+    };
+
+    window.addEventListener('beforeunload', handleUnload);
+    return () => window.removeEventListener('beforeunload', handleUnload);
+  }, [activeSession?.id]);
+
   const loadClientUsers = async (clientId: string) => {
     const { data } = await supabase
       .from('client_users')

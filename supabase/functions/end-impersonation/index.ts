@@ -18,12 +18,38 @@ serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false }
     });
 
+    const body = await req.json();
+    const { sessionId, endAll, beacon } = body;
+
+    // For beacon requests (tab close), we can't send auth headers.
+    // Accept sessionId as a capability token — the UUID is unguessable.
+    if (beacon && sessionId) {
+      const { error } = await supabase
+        .from('impersonation_sessions')
+        .update({ ended_at: new Date().toISOString() })
+        .eq('id', sessionId)
+        .is('ended_at', null);
+
+      if (error) throw error;
+
+      // Also end any child sessions
+      await supabase
+        .from('impersonation_sessions')
+        .update({ ended_at: new Date().toISOString() })
+        .eq('parent_session_id', sessionId)
+        .is('ended_at', null);
+
+      return new Response(
+        JSON.stringify({ success: true }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Authenticated path — require auth header
     const authHeader = req.headers.get('Authorization')!;
     const token = authHeader.replace('Bearer ', '');
     const { data: { user } } = await supabase.auth.getUser(token);
     if (!user) throw new Error('Unauthorized');
-
-    const { sessionId, endAll } = await req.json();
 
     if (endAll) {
       // End all active sessions for this actor (including chained)
