@@ -270,6 +270,7 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
       }
     } else if (storedPreviewMode === 'agency' && storedPreviewAgency) {
       const storedToken = sessionStorage.getItem('preview_token');
+      const hasImpersonationSession = !!sessionStorage.getItem('impersonation_session_id');
       
       if (storedToken) {
         const validateStoredToken = async () => {
@@ -294,7 +295,13 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
         };
         
         validateStoredToken();
+      } else if (hasImpersonationSession) {
+        // Bridge values set by impersonation system (no token needed)
+        setIsPreviewMode(true);
+        setPreviewDepth('agency');
+        loadPreviewAgency(storedPreviewAgency);
       } else {
+        // No token AND no impersonation session — stale, clean up
         sessionStorage.removeItem(PREVIEW_MODE_KEY);
         sessionStorage.removeItem(PREVIEW_AGENCY_KEY);
       }

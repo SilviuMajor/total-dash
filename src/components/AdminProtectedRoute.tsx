@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useRef } from "react";
+import { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
 import { useImpersonation } from "@/hooks/useImpersonation";
@@ -10,29 +10,11 @@ interface AdminProtectedRouteProps {
 
 export function AdminProtectedRoute({ children }: AdminProtectedRouteProps) {
   const { userType, loading } = useMultiTenantAuth();
-  const { isImpersonating, endImpersonation, loading: impersonationLoading } = useImpersonation();
-  const endingRef = useRef(false);
+  const { loading: impersonationLoading } = useImpersonation();
 
-  // Auto-end impersonation when super admin navigates to /admin/*
-  useEffect(() => {
-    if (!impersonationLoading && isImpersonating && userType === 'super_admin' && !endingRef.current) {
-      endingRef.current = true;
-      endImpersonation().finally(() => {
-        endingRef.current = false;
-      });
-    }
-  }, [impersonationLoading, isImpersonating, userType, endImpersonation]);
-
+  // Wait for both auth and impersonation to resolve
+  // useImpersonation.restoreSession() handles auto-ending stale sessions on admin routes
   if (loading || impersonationLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  // While auto-ending impersonation, show loader
-  if (isImpersonating && userType === 'super_admin') {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
