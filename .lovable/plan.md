@@ -1,68 +1,53 @@
 
 
-## Add robust impersonation session termination
+## Fix: `beforeunload` beacon kills newly started impersonation sessions
 
-### Problem
-Three gaps exist in session cleanup:
-1. **Logout** — `handleSignOut` clears `sessionStorage` but never calls `end-impersonation`, leaving the DB session open
-2. **Tab/browser close** — no cleanup at all; DB session stays open indefinitely
-3. **Server-side timeout** — the 4-hour timeout is client-side only; if the tab closes, sessions linger forever
+### Root cause
+
+When the overlay calls `handleViewAgency`, it does:
+1. `await startImpersonation(...)` — creates DB session, sets `activeSession` state, stores session ID in sessionStorage
+2. `window.location.href = "/agency/clients"` — triggers a hard page reload
+
+The problem: `startImpersonation` updates `activeSession`, which triggers the `useEffect` at line 221 that registers a `beforeunload` listener for the new session. When `window.location.href` fires immediately after, the browser fires `beforeunload`, which calls `navigator.sendBeacon` to end the session that was just created.
+
+On reload, `restoreSession` finds the session already ended, cleans up bridge values, and `AgencyProtectedRoute` redirects to `/agency/login`.
+
+This also explains the "heyb" (HeyB client) white screen — the same race happens for client impersonation, where the session is ended by the beacon, and `ProtectedRoute` redirects a super admin with no active preview to `/admin/agencies`.
+
+The multiple `end-impersonation` calls at 15:54:22 and 15:54:40 (5-7 concurrent) confirm this: the beacon, the `restoreSession` auto-end, and cleanup logic all fire in rapid succession.
 
 ### Solution
 
-**1. End impersonation on logout** (src/hooks/useMultiTenantAuth.tsx)
+**1. Delay `beforeunload` registration** (`src/hooks/useImpersonation.tsx`)
 
-In `handleSignOut`, before calling `supabase.auth.signOut()`, check for an active impersonation session and call `end-impersonation` with `endAll: true` to terminate all sessions for this actor.
-
-```text
-handleSignOut:
-  1. Clean up preview token (existing)
-  2. NEW: Call end-impersonation with { endAll: true }
-  3. Call supabase.auth.signOut() (existing)
-  4. Clear sessionStorage (existing)
-```
-
-**2. End impersonation on tab close** (src/hooks/useImpersonation.tsx)
-
-Add a `beforeunload` event listener that fires a `navigator.sendBeacon()` call to the `end-impersonation` edge function. `sendBeacon` is reliable during page unload (unlike `fetch`). This only fires if there's an active session.
+Add a grace period to the `beforeunload` listener. When `activeSession` changes, wait 2 seconds before registering the unload handler. If the page navigates away within that window (as it does during `window.location.href`), the handler is never registered and the beacon never fires.
 
 ```text
 useEffect:
-  if (activeSession) {
-    const handleUnload = () => {
-      const url = `${supabaseUrl}/functions/v1/end-impersonation`;
-      navigator.sendBeacon(url, JSON.stringify({ endAll: true }));
+  if (!activeSession) return;
+  let handler: (() => void) | null = null;
+  const timer = setTimeout(() => {
+    handler = () => {
+      sendBeacon to end-impersonation
     };
-    window.addEventListener('beforeunload', handleUnload);
-    return () => window.removeEventListener('beforeunload', handleUnload);
-  }
+    window.addEventListener('beforeunload', handler);
+  }, 2000);
+  return () => {
+    clearTimeout(timer);
+    if (handler) window.removeEventListener('beforeunload', handler);
+  };
 ```
 
-Note: `sendBeacon` cannot send auth headers, so the edge function will need to accept a fallback: include the session ID in the beacon body and allow ending by session ID without auth (the session ID is a UUID that acts as a capability token). Alternatively, we can pass the auth token in the body since `sendBeacon` supports `Blob` with custom content type.
+**2. Clean up the currently orphaned session**
 
-**3. Server-side cron cleanup** (new edge function + cron job)
-
-Create a `cleanup-impersonation-sessions` edge function that terminates all sessions older than 4 hours. Schedule it via `pg_cron` to run every 30 minutes.
-
-```sql
--- The edge function will run:
-UPDATE impersonation_sessions
-SET ended_at = now()
-WHERE ended_at IS NULL
-  AND started_at < now() - interval '4 hours';
-```
+There is an active `client_full` session (`333ed8b3`) in the database that should be ended.
 
 ### Files to change
 
-1. **`src/hooks/useMultiTenantAuth.tsx`** — Add `end-impersonation` call with `{ endAll: true }` in `handleSignOut` before sign-out
-2. **`src/hooks/useImpersonation.tsx`** — Add `beforeunload` listener with `sendBeacon` to end session on tab close
-3. **`supabase/functions/end-impersonation/index.ts`** — Add a fallback path that accepts `sessionId` in the body without requiring auth header (for `sendBeacon`)
-4. **`supabase/functions/cleanup-impersonation-sessions/index.ts`** — New edge function that ends sessions older than 4 hours
-5. **Database** — Schedule cron job to invoke the cleanup function every 30 minutes
+1. **`src/hooks/useImpersonation.tsx`** — Add 2-second delay before registering `beforeunload` handler (lines 221-235)
+2. **Database** — End the orphaned active session
 
-### Technical details
+### Why this is safe
 
-**sendBeacon auth workaround**: Since `sendBeacon` cannot set headers, we'll send the session ID directly in the body. The `end-impersonation` function already supports ending by `sessionId` — we just need to make the auth check optional when a valid session ID is provided (the session ID is unguessable). This is a common pattern for unload cleanup.
-
-**Cron setup**: Uses `pg_cron` + `pg_net` to POST to the cleanup function on a schedule. The cleanup function uses the service role key internally, no auth needed from the cron caller.
+The 2-second delay only affects the `beforeunload` beacon. All other termination layers (logout cleanup, admin route auto-end, server-side 30-minute cron, 4-hour client timeout) remain active. The only scenario not covered during the 2-second window is "user closes tab within 2 seconds of starting impersonation" — which would be caught by the cron job within 30 minutes.
 
