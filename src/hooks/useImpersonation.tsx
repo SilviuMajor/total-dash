@@ -118,20 +118,20 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
         const storedSessionId = sessionStorage.getItem(SESSION_STORAGE_KEY);
         const hasBridgeValues = !!sessionStorage.getItem('preview_mode');
 
-        console.log('[IMPERSONATION RESTORE]', { currentPath, isOnAdminRoute, storedSessionId, hasBridgeValues, userId: user.id });
+        
 
         if (!storedSessionId && !hasBridgeValues) {
-          console.log('[IMPERSONATION RESTORE] Early exit: no session ID, no bridge values');
+          
           return;
         }
 
         if (!storedSessionId && hasBridgeValues) {
-          console.log('[IMPERSONATION RESTORE] Stale bridge values only — cleaning up');
+          
           cleanupStaleSession();
           return;
         }
 
-        console.log('[IMPERSONATION RESTORE] Querying DB for session:', storedSessionId);
+        
         const { data, error } = await supabase
           .from('impersonation_sessions')
           .select('*')
@@ -140,13 +140,13 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
           .is('ended_at', null)
           .maybeSingle();
 
-        console.log('[IMPERSONATION RESTORE] DB result:', { data: !!data, error, target_type: data?.target_type, agency_id: data?.agency_id });
+        
 
         if (!data || error) {
-          console.log('[IMPERSONATION RESTORE] Session not found or error — cleaning up');
+          
           cleanupStaleSession();
         } else if (isOnAdminRoute) {
-          console.log('[IMPERSONATION RESTORE] On admin route — ending session in DB');
+          
           try {
             await supabase.functions.invoke('end-impersonation', {
               body: { sessionId: data.id },
@@ -159,15 +159,15 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
           }
           cleanupStaleSession();
         } else {
-          console.log('[IMPERSONATION RESTORE] Restoring active session:', data.id);
+          
           setActiveSession(data as ImpersonationSession);
           if (data.client_id) loadClientUsers(data.client_id);
         }
       } catch (error) {
-        console.error('[IMPERSONATION RESTORE] Fatal error:', error);
+        console.error('Impersonation restore error:', error);
         cleanupStaleSession();
       } finally {
-        console.log('[IMPERSONATION RESTORE] Setting loading = false');
+        
         setLoading(false);
       }
     };
@@ -205,30 +205,7 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
     }
   }, [elapsedMinutes]);
 
-  // End impersonation session on tab/browser close via sendBeacon
-  // Delay registration by 2s to avoid killing the session during the
-  // hard navigation (window.location.href) that follows startImpersonation.
-  useEffect(() => {
-    if (!activeSession) return;
 
-    let handler: (() => void) | null = null;
-    const timer = setTimeout(() => {
-      handler = () => {
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-        const url = `${supabaseUrl}/functions/v1/end-impersonation`;
-        navigator.sendBeacon(
-          url,
-          JSON.stringify({ sessionId: activeSession.id, beacon: true })
-        );
-      };
-      window.addEventListener('beforeunload', handler);
-    }, 2000);
-
-    return () => {
-      clearTimeout(timer);
-      if (handler) window.removeEventListener('beforeunload', handler);
-    };
-  }, [activeSession?.id]);
 
   const loadClientUsers = async (clientId: string) => {
     const { data } = await supabase
