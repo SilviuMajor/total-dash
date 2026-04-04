@@ -80,3 +80,6 @@ verify_jwt = true
 
 [functions.ai-enhance]
 verify_jwt = true
+
+[functions.cleanup-impersonation-sessions]
+verify_jwt = false
