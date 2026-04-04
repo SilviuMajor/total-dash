@@ -143,7 +143,7 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
         
 
         if (!data || error) {
-          console.log('[IMPERSONATION RESTORE] Session not found or error — cleaning up');
+          
           cleanupStaleSession();
         } else if (isOnAdminRoute) {
           console.log('[IMPERSONATION RESTORE] On admin route — ending session in DB');
