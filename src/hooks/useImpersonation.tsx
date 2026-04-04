@@ -115,18 +115,20 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
         const storedSessionId = sessionStorage.getItem(SESSION_STORAGE_KEY);
         const hasBridgeValues = !!sessionStorage.getItem('preview_mode');
 
-        // EARLY EXIT: No session ID and no bridge values → nothing to restore
+        console.log('[IMPERSONATION RESTORE]', { currentPath, isOnAdminRoute, storedSessionId, hasBridgeValues, userId: user.id });
+
         if (!storedSessionId && !hasBridgeValues) {
+          console.log('[IMPERSONATION RESTORE] Early exit: no session ID, no bridge values');
           return;
         }
 
-        // If we only have stale bridge values but no session ID, clean them up and exit
         if (!storedSessionId && hasBridgeValues) {
+          console.log('[IMPERSONATION RESTORE] Stale bridge values only — cleaning up');
           cleanupStaleSession();
           return;
         }
 
-        // From here, we have a storedSessionId — query DB to validate it
+        console.log('[IMPERSONATION RESTORE] Querying DB for session:', storedSessionId);
         const { data, error } = await supabase
           .from('impersonation_sessions')
           .select('*')
@@ -135,17 +137,18 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
           .is('ended_at', null)
           .maybeSingle();
 
+        console.log('[IMPERSONATION RESTORE] DB result:', { data: !!data, error, target_type: data?.target_type, agency_id: data?.agency_id });
+
         if (!data || error) {
-          // Session expired or invalid — clean up everything
+          console.log('[IMPERSONATION RESTORE] Session not found or error — cleaning up');
           cleanupStaleSession();
         } else if (isOnAdminRoute) {
-          // Active session found on admin route — end it in DB AND clean up locally
+          console.log('[IMPERSONATION RESTORE] On admin route — ending session in DB');
           try {
             await supabase.functions.invoke('end-impersonation', {
               body: { sessionId: data.id },
             });
           } catch (e) {
-            // Non-blocking: if Edge Function fails, just update DB directly
             await supabase
               .from('impersonation_sessions')
               .update({ ended_at: new Date().toISOString() })
@@ -153,14 +156,15 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
           }
           cleanupStaleSession();
         } else {
-          // Active session found on non-admin route — restore it
+          console.log('[IMPERSONATION RESTORE] Restoring active session:', data.id);
           setActiveSession(data as ImpersonationSession);
           if (data.client_id) loadClientUsers(data.client_id);
         }
       } catch (error) {
-        console.error('Error restoring impersonation session:', error);
+        console.error('[IMPERSONATION RESTORE] Fatal error:', error);
         cleanupStaleSession();
       } finally {
+        console.log('[IMPERSONATION RESTORE] Setting loading = false');
         setLoading(false);
       }
     };
