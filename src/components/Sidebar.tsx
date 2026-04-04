@@ -187,13 +187,6 @@ export function Sidebar() {
     return `${Math.floor(mins / 60)}h ${mins % 60}m`;
   };
 
-  // Determine session card color
-  const getSessionColor = () => {
-    if (!activeSession) return '';
-    if (activeSession.actor_type === 'super_admin') return 'bg-blue-600 dark:bg-blue-700';
-    if (activeSession.actor_type === 'agency_user') return 'bg-amber-600 dark:bg-amber-700';
-    return 'bg-emerald-600 dark:bg-emerald-700';
-  };
 
   return (
     <div className="flex flex-col w-[240px] h-screen border-r border-border bg-card overflow-hidden flex-shrink-0">
