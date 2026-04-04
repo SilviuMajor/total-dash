@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { ImpersonationOverlay } from "./ImpersonationOverlay";
 import { NavLink, useLocation } from "react-router-dom";
-import { MessageSquare, BarChart3, BookOpen, Settings, Users, User, Bot, Eye, FileText, Home, CreditCard, Building2, DollarSign, Search, X, ChevronDown } from "lucide-react";
+import { MessageSquare, BarChart3, BookOpen, Settings, Users, User, Bot, Eye, FileText, Home, CreditCard, Building2, DollarSign, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
@@ -11,7 +11,6 @@ import { useTheme } from "@/hooks/useTheme";
 import { useImpersonation } from "@/hooks/useImpersonation";
 import { ClientAgentSelector } from "./ClientAgentSelector";
 import { UserProfileCard } from "./UserProfileCard";
-import { Button } from "./ui/button";
 
 
 const clientNavigation = [
@@ -49,21 +48,8 @@ export function Sidebar() {
   const location = useLocation();
   const { isImpersonating, activeSession, impersonationMode, targetUserName, elapsedMinutes, endImpersonation, exitAll, backToAgency, switchTarget, clientUsers, getReturnUrl } = useImpersonation();
   const [overlayOpen, setOverlayOpen] = useState(false);
-  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
-  const userDropdownRef = useRef<HTMLDivElement>(null);
   const isAdmin = profile?.role === 'admin';
   const isMac = typeof navigator !== 'undefined' && navigator.platform.toUpperCase().includes('MAC');
-
-  // Close user dropdown on outside click
-  useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      if (userDropdownRef.current && !userDropdownRef.current.contains(e.target as Node)) {
-        setUserDropdownOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
 
   // Determine branding context
   const isClientView = isClientPreviewMode;
@@ -176,11 +162,6 @@ export function Sidebar() {
     }
   };
 
-  const handleSwitchTarget = async (userId: string | null) => {
-    await switchTarget(userId);
-    setUserDropdownOpen(false);
-  };
-
   const formatElapsed = (mins: number) => {
     if (mins < 1) return "< 1m";
     if (mins < 60) return `${mins}m`;
@@ -253,146 +234,130 @@ export function Sidebar() {
 
       {/* Impersonation panel — super admin and agency users */}
       {(userType === 'super_admin' || userType === 'agency') && (
-        <div className="px-2.5 pb-1 border-t border-border">
-          {!isImpersonating ? (
-            /* Inactive — outlined button */
-            <button
-              onClick={() => setOverlayOpen(true)}
-              className="w-full flex items-center gap-2 px-3 py-2 mt-2 rounded-lg text-sm font-medium border border-border text-foreground hover:bg-muted transition-all"
+        <div className="relative border-t border-border">
+          {/* Backdrop when expanded */}
+          {overlayOpen && (
+            <div
+              className="fixed inset-0 bg-black/30 z-40"
+              onClick={() => setOverlayOpen(false)}
+            />
+          )}
+
+          <div className="relative z-50">
+            {/* The single expanding container */}
+            <div
+              className={`rounded-lg mx-2 mb-1 mt-1 overflow-hidden transition-all ${
+                overlayOpen
+                  ? 'absolute bottom-0 left-0 right-0 mx-2 bg-background border border-border shadow-xl'
+                  : isImpersonating
+                  ? (() => {
+                      const isAgencyView = activeSession?.target_type === 'agency';
+                      const isUserView = impersonationMode === 'view_as_user';
+                      return isAgencyView
+                        ? 'bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800'
+                        : isUserView
+                        ? 'bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800'
+                        : 'bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800';
+                    })()
+                  : 'border border-border'
+              }`}
+              style={overlayOpen ? { maxHeight: 'calc(100vh - 160px)' } : {}}
             >
-              <Eye className="w-4 h-4 flex-shrink-0" />
-              {userType === 'agency' ? 'Preview client' : 'Impersonate'}
-            </button>
-          ) : (
-            /* Active — light pastel card */
-            (() => {
-              const isAgencyView = activeSession?.target_type === 'agency';
-              const isUserView = impersonationMode === 'view_as_user';
-
-              const colors = isAgencyView
-                ? { bg: 'bg-red-50 dark:bg-red-950/30', border: 'border-red-200 dark:border-red-800', icon: 'text-red-600 dark:text-red-400', title: 'text-red-900 dark:text-red-100', sub: 'text-red-700 dark:text-red-300', line: 'bg-red-200 dark:bg-red-800', badge: 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300' }
-                : isUserView
-                ? { bg: 'bg-green-50 dark:bg-green-950/30', border: 'border-green-200 dark:border-green-800', icon: 'text-green-600 dark:text-green-400', title: 'text-green-900 dark:text-green-100', sub: 'text-green-700 dark:text-green-300', line: 'bg-green-200 dark:bg-green-800', badge: 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300' }
-                : { bg: 'bg-blue-50 dark:bg-blue-950/30', border: 'border-blue-200 dark:border-blue-800', icon: 'text-blue-600 dark:text-blue-400', title: 'text-blue-900 dark:text-blue-100', sub: 'text-blue-700 dark:text-blue-300', line: 'bg-blue-200 dark:bg-blue-800', badge: 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300' };
-
-              const TypeIcon = isAgencyView ? Building2 : isUserView ? User : Users;
-
-              const displayName = isAgencyView
-                ? (previewAgency?.name || 'Agency')
-                : isUserView
-                ? (targetUserName || 'User')
-                : (previewClient?.name || 'Client');
-
-              return (
-                <div
-                  className={`mt-2 rounded-lg ${colors.bg} border ${colors.border} cursor-pointer transition-all`}
-                  onClick={() => setOverlayOpen(true)}
-                >
-                  {/* Header row */}
-                  <div className="flex items-center justify-between px-2.5 pt-2 pb-1.5">
+              {overlayOpen ? (
+                /* ===== EXPANDED STATE ===== */
+                <>
+                  {/* Header */}
+                  <div className="flex items-center justify-between px-2.5 pt-2.5 pb-1.5 flex-shrink-0">
                     <div className="flex items-center gap-1.5">
-                      <Eye className={`w-3.5 h-3.5 ${colors.icon}`} />
-                      <span className={`text-[12px] font-medium ${colors.title}`}>Impersonate</span>
+                      <Eye className="w-3.5 h-3.5 text-muted-foreground" />
+                      <span className="text-[12px] font-semibold">
+                        {userType === 'agency' ? 'Preview client' : 'Impersonate'}
+                      </span>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className={`text-[10px] ${colors.sub}`}>{formatElapsed(elapsedMinutes)}</span>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleImpersonationExit(); }}
-                        className={`w-4 h-4 rounded flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 transition-colors ${colors.sub}`}
-                      >
-                        <X className="w-2.5 h-2.5" />
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => setOverlayOpen(false)}
+                      className="w-5 h-5 rounded flex items-center justify-center hover:bg-muted transition-colors"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
                   </div>
 
-                  {/* Separator */}
-                  <div className="flex justify-center px-2.5">
-                    <div className={`w-[80%] h-[0.5px] ${colors.line} opacity-60`} />
-                  </div>
+                  {/* Overlay content */}
+                  <ImpersonationOverlay open={overlayOpen} onClose={() => setOverlayOpen(false)} />
+                </>
+              ) : isImpersonating ? (
+                /* ===== COLLAPSED — ACTIVE SESSION CARD ===== */
+                (() => {
+                  const isAgencyView = activeSession?.target_type === 'agency';
+                  const isUserView = impersonationMode === 'view_as_user';
 
-                  {/* Target row */}
-                  <div className="flex items-center justify-between px-2.5 pt-1.5 pb-2">
-                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                      <TypeIcon className={`w-3 h-3 flex-shrink-0 ${colors.icon}`} />
-                      <span className={`text-[11px] font-medium truncate ${colors.title}`}>{displayName}</span>
-                    </div>
-                    <span className={`text-[9px] px-1.5 py-0.5 rounded flex-shrink-0 ml-1.5 ${colors.badge}`}>
-                      {isUserView ? 'read-only' : 'full access'}
-                    </span>
-                  </div>
+                  const colors = isAgencyView
+                    ? { icon: 'text-red-600 dark:text-red-400', title: 'text-red-900 dark:text-red-100', sub: 'text-red-700 dark:text-red-300', line: 'bg-red-200 dark:bg-red-800', badge: 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300' }
+                    : isUserView
+                    ? { icon: 'text-green-600 dark:text-green-400', title: 'text-green-900 dark:text-green-100', sub: 'text-green-700 dark:text-green-300', line: 'bg-green-200 dark:bg-green-800', badge: 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300' }
+                    : { icon: 'text-blue-600 dark:text-blue-400', title: 'text-blue-900 dark:text-blue-100', sub: 'text-blue-700 dark:text-blue-300', line: 'bg-blue-200 dark:bg-blue-800', badge: 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300' };
 
-                  {/* User switcher — only for client viewing */}
-                  {activeSession?.client_id && clientUsers.length > 0 && (
-                    <div className="px-2.5 pb-2">
-                      <div className="relative" ref={userDropdownRef}>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setUserDropdownOpen(!userDropdownOpen); }}
-                          className={`w-full flex items-center justify-between px-2 py-1 rounded text-[10px] transition-colors border ${colors.border} hover:bg-black/5 dark:hover:bg-white/5`}
-                        >
-                          <span className={`truncate ${colors.sub}`}>{isUserView ? targetUserName : 'Full access'}</span>
-                          <ChevronDown className={`w-2.5 h-2.5 ml-1 flex-shrink-0 transition-transform ${colors.sub} ${userDropdownOpen ? 'rotate-180' : ''}`} />
-                        </button>
+                  const TypeIcon = isAgencyView ? Building2 : isUserView ? User : Users;
+                  const displayName = isAgencyView
+                    ? (previewAgency?.name || 'Agency')
+                    : isUserView
+                    ? (targetUserName || 'User')
+                    : (previewClient?.name || 'Client');
 
-                        {userDropdownOpen && (
-                          <div className="absolute bottom-full left-0 right-0 mb-1 bg-white dark:bg-gray-900 rounded-lg shadow-xl border border-border overflow-hidden z-50">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleSwitchTarget(null); }}
-                              className={`w-full text-left px-3 py-1.5 text-[11px] hover:bg-gray-50 dark:hover:bg-gray-800 ${
-                                !isUserView
-                                  ? 'text-blue-600 dark:text-blue-400 font-medium bg-blue-50 dark:bg-blue-950/30'
-                                  : 'text-gray-700 dark:text-gray-300'
-                              }`}
-                            >
-                              Full access
-                            </button>
-                            <div className="border-t border-border" />
-                            <div className="max-h-40 overflow-y-auto">
-                              {clientUsers.map((u) => (
-                                <button
-                                  key={u.user_id}
-                                  onClick={(e) => { e.stopPropagation(); handleSwitchTarget(u.user_id); }}
-                                  className={`w-full text-left px-3 py-1 text-[11px] hover:bg-gray-50 dark:hover:bg-gray-800 ${
-                                    targetUserName === u.full_name
-                                      ? 'text-green-600 dark:text-green-400 font-medium bg-green-50 dark:bg-green-950/30'
-                                      : 'text-gray-700 dark:text-gray-300'
-                                  }`}
-                                >
-                                  <p>{u.full_name}</p>
-                                  <p className="text-[9px] opacity-50">{u.role_name}</p>
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
+                  return (
+                    <div className="cursor-pointer" onClick={() => setOverlayOpen(true)}>
+                      {/* Header */}
+                      <div className="flex items-center justify-between px-2.5 pt-2 pb-1.5">
+                        <div className="flex items-center gap-1.5">
+                          <Eye className={`w-3.5 h-3.5 ${colors.icon}`} />
+                          <span className={`text-[12px] font-medium ${colors.title}`}>Impersonate</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className={`text-[10px] ${colors.sub}`}>{formatElapsed(elapsedMinutes)}</span>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleImpersonationExit(); }}
+                            className={`w-4 h-4 rounded flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 transition-colors ${colors.sub}`}
+                          >
+                            <X className="w-2.5 h-2.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* 80% separator */}
+                      <div className="flex justify-center px-2.5">
+                        <div className={`w-[80%] h-[0.5px] ${colors.line} opacity-60`} />
+                      </div>
+
+                      {/* Target */}
+                      <div className="flex items-center justify-between px-2.5 pt-1.5 pb-2">
+                        <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                          <TypeIcon className={`w-3 h-3 flex-shrink-0 ${colors.icon}`} />
+                          <span className={`text-[11px] font-medium truncate ${colors.title}`}>{displayName}</span>
+                        </div>
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded flex-shrink-0 ml-1.5 ${colors.badge}`}>
+                          {isUserView ? 'read-only' : 'full access'}
+                        </span>
                       </div>
                     </div>
-                  )}
-
-                  {/* Back to agency */}
-                  {activeSession?.parent_session_id && activeSession?.actor_type === 'super_admin' && (
-                    <div className="px-2.5 pb-2">
-                      <button
-                        onClick={async (e) => { e.stopPropagation(); await backToAgency(); window.location.href = '/agency/clients'; }}
-                        className={`text-[10px] ${colors.sub} hover:underline transition-colors`}
-                      >
-                        ← Back to agency
-                      </button>
-                    </div>
-                  )}
-                </div>
-              );
-            })()
-          )}
+                  );
+                })()
+              ) : (
+                /* ===== COLLAPSED — NO SESSION (BUTTON) ===== */
+                <button
+                  onClick={() => setOverlayOpen(true)}
+                  className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-foreground hover:bg-muted transition-all"
+                >
+                  <Eye className="w-4 h-4 flex-shrink-0" />
+                  {userType === 'agency' ? 'Preview client' : 'Impersonate'}
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
       {/* User Profile Card */}
       <UserProfileCard onSignOut={effectiveSignOut} />
-
-      {/* Impersonation Panel */}
-      {(userType === 'super_admin' || userType === 'agency') && (
-        <ImpersonationOverlay open={overlayOpen} onClose={() => setOverlayOpen(false)} />
-      )}
     </div>
   );
 }
