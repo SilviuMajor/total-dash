@@ -118,7 +118,7 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
         const storedSessionId = sessionStorage.getItem(SESSION_STORAGE_KEY);
         const hasBridgeValues = !!sessionStorage.getItem('preview_mode');
 
-        console.log('[IMPERSONATION RESTORE]', { currentPath, isOnAdminRoute, storedSessionId, hasBridgeValues, userId: user.id });
+        
 
         if (!storedSessionId && !hasBridgeValues) {
           console.log('[IMPERSONATION RESTORE] Early exit: no session ID, no bridge values');
