@@ -126,7 +126,7 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
         }
 
         if (!storedSessionId && hasBridgeValues) {
-          console.log('[IMPERSONATION RESTORE] Stale bridge values only — cleaning up');
+          
           cleanupStaleSession();
           return;
         }
