@@ -14,7 +14,7 @@ export default function AgencyAgents() {
   const { profile, isPreviewMode, previewAgency } = useMultiTenantAuth();
   const { activeSession } = useImpersonation();
   const agencyId = isPreviewMode 
-    ? (previewAgency?.id || activeSession?.agency_id) 
+    ? (previewAgency?.id || activeSession?.agency_id || sessionStorage.getItem('preview_agency')) 
     : profile?.agency?.id;
   const navigate = useNavigate();
   const { toast } = useToast();

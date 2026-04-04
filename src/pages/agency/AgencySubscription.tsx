@@ -4,12 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
+import { useImpersonation } from "@/hooks/useImpersonation";
 import { useToast } from "@/hooks/use-toast";
 import { Check, Crown } from "lucide-react";
 
 export default function AgencySubscription() {
   const { profile, isPreviewMode, previewAgency } = useMultiTenantAuth();
-  const agencyId = isPreviewMode ? previewAgency?.id : profile?.agency?.id;
+  const { activeSession } = useImpersonation();
+  const agencyId = isPreviewMode ? (previewAgency?.id || activeSession?.agency_id || sessionStorage.getItem('preview_agency')) : profile?.agency?.id;
   const { toast } = useToast();
   const [subscription, setSubscription] = useState<any>(null);
   const [plans, setPlans] = useState<any[]>([]);
