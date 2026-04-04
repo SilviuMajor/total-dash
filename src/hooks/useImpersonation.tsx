@@ -167,7 +167,7 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
         console.error('Impersonation restore error:', error);
         cleanupStaleSession();
       } finally {
-        console.log('[IMPERSONATION RESTORE] Setting loading = false');
+        
         setLoading(false);
       }
     };
