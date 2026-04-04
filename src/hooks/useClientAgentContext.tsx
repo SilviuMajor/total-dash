@@ -86,6 +86,10 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
   const { isImpersonating, activeSession, impersonationMode, targetUserId, targetClientId, loading: impersonationLoading } = useImpersonation();
 
   useEffect(() => {
+    // Wait for impersonation to finish loading before determining context
+    // This prevents stale bridge sessionStorage values from loading wrong data
+    if (impersonationLoading) return;
+
     // Check for any form of client preview (admin or super_admin), with sessionStorage fallback
     const storedPreviewMode = sessionStorage.getItem('preview_mode');
     const storedPreviewClient = sessionStorage.getItem('preview_client');
