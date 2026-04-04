@@ -121,7 +121,7 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
         
 
         if (!storedSessionId && !hasBridgeValues) {
-          console.log('[IMPERSONATION RESTORE] Early exit: no session ID, no bridge values');
+          
           return;
         }
 
