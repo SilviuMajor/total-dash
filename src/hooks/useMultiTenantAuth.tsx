@@ -82,35 +82,50 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
   let hasPreviewUrlParams = false;
 
   if (typeof window !== 'undefined') {
-    const searchParams = new URLSearchParams(window.location.search);
-    const previewParam = searchParams.get('preview') === 'true';
-    const urlAgencyId = searchParams.get('agencyId');
-    const urlClientId = searchParams.get('clientId');
+    const currentPath = window.location.pathname;
+    const isAdminRoute = currentPath.startsWith('/admin');
 
-    // Check URL params FIRST (highest priority for first-time navigation)
-    if (previewParam && urlClientId && urlAgencyId) {
-      hasPreviewUrlParams = true;
-      const storedPreviewAgency = sessionStorage.getItem(PREVIEW_AGENCY_KEY);
-      initialPreviewMode = storedPreviewAgency ? 'agency_to_client' : 'client';
-      initialIsClientPreviewMode = true;
-      initialIsPreviewMode = !!storedPreviewAgency;
-    } else if (previewParam && urlAgencyId && !urlClientId) {
-      hasPreviewUrlParams = true;
-      initialPreviewMode = 'agency';
-      initialIsPreviewMode = true;
+    // On admin routes, NEVER initialise preview state from sessionStorage
+    // Stale bridge values from previous impersonation sessions would poison the initial render
+    if (isAdminRoute) {
+      // Proactively clean any stale bridge values
+      const hadStale = sessionStorage.getItem(PREVIEW_MODE_KEY);
+      if (hadStale) {
+        sessionStorage.removeItem(PREVIEW_MODE_KEY);
+        sessionStorage.removeItem(PREVIEW_CLIENT_KEY);
+        sessionStorage.removeItem(PREVIEW_CLIENT_AGENCY_KEY);
+        sessionStorage.removeItem(PREVIEW_AGENCY_KEY);
+        sessionStorage.removeItem('preview_token');
+      }
     } else {
-      // Fall back to sessionStorage
-      const storedPreviewMode = sessionStorage.getItem(PREVIEW_MODE_KEY);
-      const storedPreviewAgency = sessionStorage.getItem(PREVIEW_AGENCY_KEY);
-      const storedPreviewClient = sessionStorage.getItem(PREVIEW_CLIENT_KEY);
+      const searchParams = new URLSearchParams(window.location.search);
+      const previewParam = searchParams.get('preview') === 'true';
+      const urlAgencyId = searchParams.get('agencyId');
+      const urlClientId = searchParams.get('clientId');
 
-      if (storedPreviewMode === 'agency' && storedPreviewAgency) {
-        initialPreviewMode = 'agency';
-        initialIsPreviewMode = true;
-      } else if (storedPreviewMode === 'client' && storedPreviewClient) {
+      if (previewParam && urlClientId && urlAgencyId) {
+        hasPreviewUrlParams = true;
+        const storedPreviewAgency = sessionStorage.getItem(PREVIEW_AGENCY_KEY);
         initialPreviewMode = storedPreviewAgency ? 'agency_to_client' : 'client';
         initialIsClientPreviewMode = true;
         initialIsPreviewMode = !!storedPreviewAgency;
+      } else if (previewParam && urlAgencyId && !urlClientId) {
+        hasPreviewUrlParams = true;
+        initialPreviewMode = 'agency';
+        initialIsPreviewMode = true;
+      } else {
+        const storedPreviewMode = sessionStorage.getItem(PREVIEW_MODE_KEY);
+        const storedPreviewAgency = sessionStorage.getItem(PREVIEW_AGENCY_KEY);
+        const storedPreviewClient = sessionStorage.getItem(PREVIEW_CLIENT_KEY);
+
+        if (storedPreviewMode === 'agency' && storedPreviewAgency) {
+          initialPreviewMode = 'agency';
+          initialIsPreviewMode = true;
+        } else if (storedPreviewMode === 'client' && storedPreviewClient) {
+          initialPreviewMode = storedPreviewAgency ? 'agency_to_client' : 'client';
+          initialIsClientPreviewMode = true;
+          initialIsPreviewMode = !!storedPreviewAgency;
+        }
       }
     }
   }
