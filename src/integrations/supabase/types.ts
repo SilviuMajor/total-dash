@@ -783,7 +783,7 @@ export type Database = {
           agent_name: string | null
           category: string
           changes: Json | null
-          client_id: string
+          client_id: string | null
           created_at: string
           description: string
           id: string
@@ -801,7 +801,7 @@ export type Database = {
           agent_name?: string | null
           category: string
           changes?: Json | null
-          client_id: string
+          client_id?: string | null
           created_at?: string
           description: string
           id?: string
@@ -819,7 +819,7 @@ export type Database = {
           agent_name?: string | null
           category?: string
           changes?: Json | null
-          client_id?: string
+          client_id?: string | null
           created_at?: string
           description?: string
           id?: string
