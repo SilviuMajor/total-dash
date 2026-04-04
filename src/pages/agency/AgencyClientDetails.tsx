@@ -216,11 +216,12 @@ export default function AgencyClientDetails() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { profile, isPreviewMode, previewAgency } = useMultiTenantAuth();
+  const { activeSession } = useImpersonation();
   const [client, setClient] = useState<ClientData | null>(null);
   const [loading, setLoading] = useState(true);
   const activeTab = tab || "overview";
 
-  const agencyId = isPreviewMode ? previewAgency?.id : profile?.agency?.id;
+  const agencyId = isPreviewMode ? (previewAgency?.id || activeSession?.agency_id) : profile?.agency?.id;
 
   useEffect(() => {
     if (agencyId) {

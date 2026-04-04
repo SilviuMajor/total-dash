@@ -17,8 +17,9 @@ import { BrandingUpload } from "@/components/BrandingUpload";
 
 export default function AgencySettings() {
   const { profile, isPreviewMode, previewAgency, userType, previewDepth } = useMultiTenantAuth();
+  const { activeSession } = useImpersonation();
   const effectiveIsPreviewMode = userType === 'super_admin' && previewDepth === 'agency';
-  const effectiveAgencyId = effectiveIsPreviewMode ? previewAgency?.id : profile?.agency?.id;
+  const effectiveAgencyId = effectiveIsPreviewMode ? (previewAgency?.id || activeSession?.agency_id) : profile?.agency?.id;
   const { toast } = useToast();
   interface AgencyRow {
     id: string;
