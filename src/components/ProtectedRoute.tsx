@@ -20,7 +20,7 @@ export function ProtectedRoute({
 }: ProtectedRouteProps) {
   const { user, profile, loading: authLoading } = useAuth();
   const { selectedAgentPermissions } = useClientAgentContext();
-  const { isImpersonating, impersonationMode } = useImpersonation();
+  const { isImpersonating, impersonationMode, loading: impersonationLoading } = useImpersonation();
   const { 
     userType, 
     loading: mtLoading,
