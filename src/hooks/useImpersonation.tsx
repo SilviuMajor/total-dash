@@ -104,6 +104,7 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
 
     const restoreSession = async () => {
       try {
+        const isOnAdminRoute = window.location.pathname.startsWith('/admin');
         const storedSessionId = sessionStorage.getItem(SESSION_STORAGE_KEY);
 
         if (storedSessionId) {
@@ -116,8 +117,20 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
             .maybeSingle();
 
           if (data && !error) {
-            setActiveSession(data as ImpersonationSession);
-            if (data.client_id) loadClientUsers(data.client_id);
+            // If on /admin/* route, auto-end the session instead of restoring it
+            if (isOnAdminRoute) {
+              try {
+                await supabase.functions.invoke('end-impersonation', {
+                  body: { sessionId: data.id },
+                });
+              } catch (e) {
+                console.error('Failed to auto-end session on admin route:', e);
+              }
+              cleanupStaleSession();
+            } else {
+              setActiveSession(data as ImpersonationSession);
+              if (data.client_id) loadClientUsers(data.client_id);
+            }
           } else {
             // Session expired or invalid — clean up EVERYTHING
             cleanupStaleSession();
@@ -134,9 +147,21 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
             .maybeSingle();
 
           if (data) {
-            setActiveSession(data as ImpersonationSession);
-            sessionStorage.setItem(SESSION_STORAGE_KEY, data.id);
-            if (data.client_id) loadClientUsers(data.client_id);
+            // If on /admin/* route, auto-end the session instead of restoring it
+            if (isOnAdminRoute) {
+              try {
+                await supabase.functions.invoke('end-impersonation', {
+                  body: { sessionId: data.id },
+                });
+              } catch (e) {
+                console.error('Failed to auto-end session on admin route:', e);
+              }
+              cleanupStaleSession();
+            } else {
+              setActiveSession(data as ImpersonationSession);
+              sessionStorage.setItem(SESSION_STORAGE_KEY, data.id);
+              if (data.client_id) loadClientUsers(data.client_id);
+            }
           } else {
             // No active session anywhere — clean up any stale bridge values
             cleanupStaleSession();

@@ -383,6 +383,7 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
             user_type: 'super_admin',
           });
         }
+        // ALWAYS set super_admin — bridge values must never override this
         setUserType('super_admin');
         setLoading(false);
         return;
