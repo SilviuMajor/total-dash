@@ -107,78 +107,61 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
         const currentPath = window.location.pathname;
         const isOnAdminRoute = currentPath.startsWith('/admin');
         const storedSessionId = sessionStorage.getItem(SESSION_STORAGE_KEY);
+        const hasBridgeValues = !!sessionStorage.getItem('preview_mode');
 
-        // Check if user is a super admin
-        const { data: isSuperAdmin } = await supabase.rpc('is_super_admin', { _user_id: user.id });
+        // EARLY EXIT: No session ID and no bridge values → nothing to restore
+        if (!storedSessionId && !hasBridgeValues) {
+          setLoading(false);
+          return;
+        }
 
-        // Super admins should auto-end sessions on admin routes OR on routes with no matching context
-        const shouldAutoEnd = (route: string, session: any) => {
-          if (isOnAdminRoute) return true;
-          // If super admin is on root '/' with an agency-only session (no client context), auto-end
-          if (isSuperAdmin && route === '/' && session.target_type === 'agency' && !session.client_id) return true;
-          // If super admin is on any non-agency/non-client route with no context, auto-end
-          if (isSuperAdmin && !route.startsWith('/agency') && !session.client_id) return true;
-          return false;
-        };
+        // If we only have stale bridge values but no session ID, clean them up and exit
+        if (!storedSessionId && hasBridgeValues) {
+          cleanupStaleSession();
+          setLoading(false);
+          return;
+        }
 
-        if (storedSessionId) {
-          const { data, error } = await supabase
-            .from('impersonation_sessions')
-            .select('*')
-            .eq('id', storedSessionId)
-            .eq('actor_id', user.id)
-            .is('ended_at', null)
-            .maybeSingle();
+        // From here, we have a storedSessionId — query DB to validate it
+        const { data, error } = await supabase
+          .from('impersonation_sessions')
+          .select('*')
+          .eq('id', storedSessionId!)
+          .eq('actor_id', user.id)
+          .is('ended_at', null)
+          .maybeSingle();
 
-          if (data && !error) {
-            // Auto-end if on admin route or super admin on non-contextual route
-            if (shouldAutoEnd(currentPath, data)) {
-              try {
-                await supabase.functions.invoke('end-impersonation', {
-                  body: { sessionId: data.id },
-                });
-              } catch (e) {
-                console.error('Failed to auto-end session on admin route:', e);
-              }
-              cleanupStaleSession();
-            } else {
-              setActiveSession(data as ImpersonationSession);
-              if (data.client_id) loadClientUsers(data.client_id);
-            }
-          } else {
-            // Session expired or invalid — clean up EVERYTHING
-            cleanupStaleSession();
-          }
+        if (!data || error) {
+          // Session expired or invalid — clean up everything
+          cleanupStaleSession();
         } else {
-          // Check for any active session in DB
-          const { data } = await supabase
-            .from('impersonation_sessions')
-            .select('*')
-            .eq('actor_id', user.id)
-            .is('ended_at', null)
-            .order('started_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
+          // Active session found — check if we should auto-end it
+          let shouldAutoEnd = false;
 
-          if (data) {
-            // Auto-end if on admin route or super admin on non-contextual route
-            if (shouldAutoEnd(currentPath, data)) {
-              try {
-                await supabase.functions.invoke('end-impersonation', {
-                  body: { sessionId: data.id },
-                });
-              } catch (e) {
-                console.error('Failed to auto-end session on admin route:', e);
-              }
-              cleanupStaleSession();
-            } else {
-              setActiveSession(data as ImpersonationSession);
-              sessionStorage.setItem(SESSION_STORAGE_KEY, data.id);
-              if (data.client_id) loadClientUsers(data.client_id);
-            }
+          if (isOnAdminRoute) {
+            shouldAutoEnd = true;
           } else {
-            // No active session anywhere — clean up any stale bridge values
+            // Only call is_super_admin when we actually need it (non-admin route with active session)
+            const { data: isSuperAdmin } = await supabase.rpc('is_super_admin', { _user_id: user.id });
+            if (isSuperAdmin && currentPath === '/' && data.target_type === 'agency' && !data.client_id) {
+              shouldAutoEnd = true;
+            } else if (isSuperAdmin && !currentPath.startsWith('/agency') && !data.client_id) {
+              shouldAutoEnd = true;
+            }
+          }
+
+          if (shouldAutoEnd) {
+            try {
+              await supabase.functions.invoke('end-impersonation', {
+                body: { sessionId: data.id },
+              });
+            } catch (e) {
+              console.error('Failed to auto-end session:', e);
+            }
             cleanupStaleSession();
+          } else {
+            setActiveSession(data as ImpersonationSession);
+            if (data.client_id) loadClientUsers(data.client_id);
           }
         }
       } catch (error) {
