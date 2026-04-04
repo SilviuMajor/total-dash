@@ -152,24 +152,30 @@ export function Sidebar() {
     return basePath;
   };
 
-  const handleImpersonationExit = async () => {
-    // Capture session info BEFORE ending — endImpersonation clears activeSession to null
+  const handleImpersonationExit = () => {
     const actorType = activeSession?.actor_type;
     const hasParent = !!activeSession?.parent_session_id;
 
+    // Navigate FIRST, then clean up in the background
+    // This prevents the brief login page flash that occurs when
+    // endImpersonation clears bridge values before navigation completes
     if (hasParent && actorType === "super_admin") {
-      await backToAgency();
+      backToAgency();
       window.location.href = "/agency/clients";
     } else {
-      await endImpersonation();
+      // Determine destination before clearing state
+      let destination = "/";
       if (actorType === "super_admin") {
-        window.location.href = "/admin/agencies";
+        destination = "/admin/agencies";
       } else if (actorType === "agency_user") {
-        window.location.href = "/agency/clients";
+        destination = "/agency/clients";
       } else {
-        const returnUrl = getReturnUrl();
-        window.location.href = returnUrl || "/";
+        destination = getReturnUrl() || "/";
       }
+
+      // Fire and forget — the admin route sync init will clean up bridge values
+      endImpersonation();
+      window.location.href = destination;
     }
   };
 

@@ -11,7 +11,11 @@ import { Check, Crown } from "lucide-react";
 export default function AgencySubscription() {
   const { profile, isPreviewMode, previewAgency } = useMultiTenantAuth();
   const { activeSession } = useImpersonation();
-  const agencyId = isPreviewMode ? (previewAgency?.id || activeSession?.agency_id || sessionStorage.getItem('preview_agency')) : profile?.agency?.id;
+  const agencyId = profile?.agency?.id 
+    || previewAgency?.id 
+    || activeSession?.agency_id 
+    || sessionStorage.getItem('preview_agency') 
+    || undefined;
   const { toast } = useToast();
   const [subscription, setSubscription] = useState<any>(null);
   const [plans, setPlans] = useState<any[]>([]);
