@@ -12,16 +12,19 @@ interface AgencyProtectedRouteProps {
 
 export function AgencyProtectedRoute({ children }: AgencyProtectedRouteProps) {
   const { userType, loading, profile, isPreviewMode, isValidatingToken } = useMultiTenantAuth();
-  const { isImpersonating, activeSession, loading: impersonationLoading } = useImpersonation();
+  const { isImpersonating, activeSession } = useImpersonation();
   const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
   const [checkingSubscription, setCheckingSubscription] = useState(true);
   const [gracePeriodEndsAt, setGracePeriodEndsAt] = useState<string | null>(null);
 
-  // Check for token in URL or sessionStorage
   const searchParams = new URLSearchParams(window.location.search);
   const tokenInUrl = searchParams.get('token');
   const tokenInSession = sessionStorage.getItem('preview_token');
   const hasToken = !!(tokenInUrl || tokenInSession);
+
+  // Check bridge values synchronously — don't wait for async impersonation restore
+  const hasBridgePreview = sessionStorage.getItem('preview_mode') === 'agency';
+  const hasImpersonationSession = !!sessionStorage.getItem('impersonation_session_id');
 
   useEffect(() => {
     const checkSubscription = async () => {
@@ -29,16 +32,13 @@ export function AgencyProtectedRoute({ children }: AgencyProtectedRouteProps) {
         setCheckingSubscription(false);
         return;
       }
-
       try {
         const { data, error } = await supabase
           .from('agency_subscriptions')
           .select('status, grace_period_ends_at')
           .eq('agency_id', profile.agency.id)
           .single();
-
         if (error) throw error;
-
         setSubscriptionStatus(data.status);
         setGracePeriodEndsAt(data.grace_period_ends_at);
       } catch (error) {
@@ -55,8 +55,8 @@ export function AgencyProtectedRoute({ children }: AgencyProtectedRouteProps) {
     }
   }, [profile?.agency?.id, userType, loading]);
 
-  // Show loading if validating token, checking subscription, or if token exists but userType not set yet
-  if (loading || checkingSubscription || isValidatingToken || impersonationLoading || (hasToken && !userType)) {
+  // Wait for auth only — not impersonation loading
+  if (loading || checkingSubscription || isValidatingToken || (hasToken && !userType)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -64,40 +64,37 @@ export function AgencyProtectedRoute({ children }: AgencyProtectedRouteProps) {
     );
   }
 
-  // Check if in preview mode via token
+  // Allow access if: preview mode (bridge), active impersonation, or valid token
   const isValidPreview = isPreviewMode && userType === 'super_admin';
   const isImpersonatingAgency = isImpersonating && activeSession?.target_type === 'agency' && userType === 'super_admin';
+  const hasBridgeAccess = (hasBridgePreview || hasImpersonationSession) && userType === 'super_admin';
 
-  // Allow super admins with valid preview token or impersonation
-  if (isValidPreview || isImpersonatingAgency) {
+  if (isValidPreview || isImpersonatingAgency || hasBridgeAccess) {
     return <>{children}</>;
   }
 
-  // Don't redirect if token is being validated or if no token and not agency user
-  if (!hasToken && !isValidatingToken && userType !== 'agency' && !isImpersonatingAgency) {
-    return <Navigate to="/agency/login" replace />;
+  // Regular agency user
+  if (userType === 'agency') {
+    const isInGracePeriod = gracePeriodEndsAt && new Date(gracePeriodEndsAt) > new Date();
+    const gracePeriodExpired = gracePeriodEndsAt && new Date(gracePeriodEndsAt) <= new Date();
+
+    if (subscriptionStatus === 'past_due' && gracePeriodExpired) {
+      return <Navigate to="/agency/subscription-required" replace />;
+    }
+
+    const blockedStatuses = ['canceled', 'incomplete', 'incomplete_expired'];
+    if (subscriptionStatus && blockedStatuses.includes(subscriptionStatus)) {
+      return <Navigate to="/agency/subscription-required" replace />;
+    }
+
+    return (
+      <>
+        {isInGracePeriod && <GracePeriodBanner gracePeriodEndsAt={gracePeriodEndsAt} />}
+        {children}
+      </>
+    );
   }
 
-  // Check grace period logic
-  const isInGracePeriod = gracePeriodEndsAt && new Date(gracePeriodEndsAt) > new Date();
-  const gracePeriodExpired = gracePeriodEndsAt && new Date(gracePeriodEndsAt) <= new Date();
-
-  // Block access if grace period has expired
-  if (subscriptionStatus === 'past_due' && gracePeriodExpired) {
-    return <Navigate to="/agency/subscription-required" replace />;
-  }
-
-  // Block access for canceled/incomplete subscriptions
-  const blockedStatuses = ['canceled', 'incomplete', 'incomplete_expired'];
-  if (subscriptionStatus && blockedStatuses.includes(subscriptionStatus)) {
-    return <Navigate to="/agency/subscription-required" replace />;
-  }
-
-  // Show grace period banner if in grace period
-  return (
-    <>
-      {isInGracePeriod && <GracePeriodBanner gracePeriodEndsAt={gracePeriodEndsAt} />}
-      {children}
-    </>
-  );
+  // Not authorized
+  return <Navigate to="/agency/login" replace />;
 }

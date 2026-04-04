@@ -20,65 +20,47 @@ export function ProtectedRoute({
 }: ProtectedRouteProps) {
   const { user, profile, loading: authLoading } = useAuth();
   const { selectedAgentPermissions } = useClientAgentContext();
-  const { isImpersonating, impersonationMode, loading: impersonationLoading } = useImpersonation();
+  const { isImpersonating, impersonationMode } = useImpersonation();
   const { 
     userType, 
     loading: mtLoading,
-    isPreviewMode: agencyPreviewMode, 
-    previewAgency, 
-    isClientPreviewMode, 
     previewDepth,
     isProcessingPreviewParams
   } = useMultiTenantAuth();
   const navigate = useNavigate();
   const location = useLocation();
   
-  // Combined loading state - wait for both auth contexts and preview param processing
-  const loading = authLoading || mtLoading || isProcessingPreviewParams || impersonationLoading;
-  
-  // Admin in client preview mode can access client routes (based on multi-tenant preview depth)
-  const isAdminPreview =
-    profile?.role === 'admin' &&
-    (previewDepth === 'agency_to_client' || previewDepth === 'client');
-  
-  // Agency in client preview mode can access client routes
-  const isAgencyClientPreview =
-    userType === 'agency' &&
-    (previewDepth === 'agency_to_client' || previewDepth === 'client');
+  // Only wait for auth — NOT impersonation loading
+  const loading = authLoading || mtLoading || isProcessingPreviewParams;
 
-  // Super admin in ANY preview mode gets full access (simplified check)
-  const isSuperAdminInPreview = 
-    userType === 'super_admin' && 
-    (previewDepth !== 'none' && previewDepth !== undefined);
+  // Check if user has access via preview or impersonation (synchronous from sessionStorage)
+  const hasPreviewAccess = (() => {
+    if (previewDepth !== 'none' && previewDepth !== undefined) return true;
+    if (isImpersonating) return true;
+    // Also check bridge values synchronously as fallback
+    const bridgeMode = sessionStorage.getItem('preview_mode');
+    if (bridgeMode) return true;
+    return false;
+  })();
 
-  // Impersonation: full access mode bypasses like preview, view_as_user uses resolved permissions
   const isImpersonationFullAccess = isImpersonating && impersonationMode === 'full_access';
-  const isImpersonationViewAsUser = isImpersonating && impersonationMode === 'view_as_user';
 
   useEffect(() => {
     if (!loading) {
       if (!user) {
-        // Redirect to client login page
         navigate('/client/login');
-      } else if (userType === 'super_admin' && !isImpersonating && (previewDepth === 'none' || previewDepth === undefined)) {
-        // Super admin with no active preview/impersonation — redirect to admin dashboard
-        // Use window.location.href for cross-boundary navigation (client routes → admin routes)
-        window.location.href = '/admin/agencies';
-        return;
+      } else if (userType === 'super_admin' && !hasPreviewAccess) {
+        // Super admin with no active preview/impersonation — go to admin
+        navigate('/admin/agencies', { replace: true });
       } else if (requireAdmin && profile?.role !== 'admin') {
         navigate('/');
-      } else if (requireClient && profile?.role === 'admin' && !isAdminPreview && !isAgencyClientPreview && !isSuperAdminInPreview && !isImpersonationFullAccess) {
-        // Only redirect if NOT in preview mode
+      } else if (requireClient && profile?.role === 'admin' && !hasPreviewAccess && !isImpersonationFullAccess) {
         navigate('/admin/clients');
-      } else if (requiredPage && !isAdminPreview && !isAgencyClientPreview && !isSuperAdminInPreview && !isImpersonationFullAccess) {
-        // Check agent-based permissions for client users
+      } else if (requiredPage && !hasPreviewAccess && !isImpersonationFullAccess) {
         if (profile?.role === 'client' && selectedAgentPermissions) {
           const hasAccess = selectedAgentPermissions[requiredPage as keyof typeof selectedAgentPermissions];
-          
           if (!hasAccess) {
-            // Redirect to first available page
             const redirectOrder = ['conversations', 'transcripts', 'analytics', 'knowledge_base', 'agent_settings', 'specs', 'guides'];
-            
             for (const page of redirectOrder) {
               if (selectedAgentPermissions[page as keyof typeof selectedAgentPermissions]) {
                 const pathMap: Record<string, string> = {
@@ -94,14 +76,12 @@ export function ProtectedRoute({
                 return;
               }
             }
-            
-            // No permissions at all
             navigate('/client/login', { replace: true });
           }
         }
       }
     }
-  }, [user, profile, loading, navigate, requireAdmin, requireClient, requiredPage, selectedAgentPermissions, location.pathname, isAdminPreview, isAgencyClientPreview, isSuperAdminInPreview, isImpersonationFullAccess, userType, isImpersonating, previewDepth]);
+  }, [user, profile, loading, navigate, requireAdmin, requireClient, requiredPage, selectedAgentPermissions, location.pathname, hasPreviewAccess, isImpersonationFullAccess, userType]);
 
   if (loading) {
     return (
@@ -120,12 +100,11 @@ export function ProtectedRoute({
     );
   }
 
-  if (!user || (requireAdmin && profile?.role !== 'admin') || (requireClient && profile?.role === 'admin' && !isAdminPreview && !isAgencyClientPreview && !isSuperAdminInPreview && !isImpersonationFullAccess)) {
+  if (!user || (requireAdmin && profile?.role !== 'admin') || (requireClient && profile?.role === 'admin' && !hasPreviewAccess && !isImpersonationFullAccess)) {
     return null;
   }
 
-  // Check page permissions for client users (skip for admin/agency/super_admin preview)
-  if (requiredPage && profile?.role === 'client' && selectedAgentPermissions && !isAdminPreview && !isAgencyClientPreview && !isSuperAdminInPreview && !isImpersonationFullAccess) {
+  if (requiredPage && profile?.role === 'client' && selectedAgentPermissions && !hasPreviewAccess && !isImpersonationFullAccess) {
     const hasAccess = selectedAgentPermissions[requiredPage as keyof typeof selectedAgentPermissions];
     if (!hasAccess) {
       return null;
