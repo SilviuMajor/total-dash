@@ -1,58 +1,50 @@
 
 
-## Fix: Auto-end impersonation sessions on admin pages
+## Fix: Terminate orphaned impersonation sessions and prevent blank screen on root route
 
 ### Problem
-When a super admin starts an agency impersonation session, bridge `sessionStorage` values (`preview_mode=agency`, `preview_agency=...`) are set. If the user navigates back to `/admin/*` without explicitly ending the session, these bridge values cause `useMultiTenantAuth` to resolve `userType` as `agency` instead of `super_admin`. `AdminProtectedRoute` then redirects to `/admin/login`, producing a blank screen loop.
+There is an active orphaned impersonation session (`b17d9c48...`, type: agency, full_access) in the database that was never ended. When you load `/`, `useImpersonation.restoreSession` finds it, restores it, and sets bridge `sessionStorage` values (`preview_mode=agency`). This puts `useMultiTenantAuth` into preview mode, so `ProtectedRoute` treats you as a super admin in preview — but there is no actual client/agency context loaded, resulting in a blank screen.
 
-There is also an orphaned session in the database right now (`b17d9c48-3ba6-4ff2-ae0c-469cc4633472`) that will be picked up on every page load.
+The auto-end logic only triggers on `/admin/*` routes, not on `/`.
 
-### Solution: Two-layer auto-cleanup
+### Solution
 
-**1. AdminProtectedRoute detects impersonation and auto-ends it**
+**1. End all orphaned sessions immediately (one-time DB cleanup)**
 
-Modify `src/components/AdminProtectedRoute.tsx` to:
-- Import and use `useImpersonation`
-- Wait for `impersonationLoading` before rendering
-- If the user is a super admin AND has an active impersonation session, call `endImpersonation()` automatically and clean up bridge values
-- This ensures navigating to any `/admin/*` route always exits impersonation cleanly
+Run a data update to terminate the orphaned session `b17d9c48-3ba6-4ff2-ae0c-469cc4633472` and any other lingering sessions.
 
-**2. useMultiTenantAuth preserves super_admin identity during impersonation**
+**2. Fix `restoreSession` to handle super admins on non-contextual routes**
 
-The root issue is that bridge values override `userType`. Modify `src/hooks/useMultiTenantAuth.tsx` so that when `preview_mode` is set but the authenticated user is a super admin, `userType` stays `super_admin` (with preview context loaded as overlay data, not as identity replacement). This is a safety net — even if cleanup fails, admin routes still work.
+In `src/hooks/useImpersonation.tsx`, extend the auto-end logic in `restoreSession`: if the user is a super admin and the current route is NOT an agency or client route (i.e., `/` or any route that doesn't match the impersonation context), auto-end the session instead of restoring it. Specifically:
+- If on `/admin/*` → auto-end (already works)
+- If on `/` and user is super admin with no `preview_client` in sessionStorage → auto-end
+- This prevents the "restored session with no actual context" blank screen
 
-**3. Clean up the orphaned DB session**
+**3. Add a fallback redirect in `ProtectedRoute` for super admins without context**
 
-Run a one-time cleanup via the edge function, or have the `restoreSession` logic in `useImpersonation` detect that the user is on `/admin/*` and auto-end the session during restore.
+In `src/components/ProtectedRoute.tsx`, add a guard: if `userType === 'super_admin'` and NOT in any meaningful preview mode (no `previewClient`, no impersonation with a client), redirect to `/admin/agencies` instead of rendering blank client content.
 
 ### Files to change
 
-1. **`src/components/AdminProtectedRoute.tsx`** — Add `useImpersonation` hook, wait for loading, auto-end session when detected on admin routes
-2. **`src/hooks/useImpersonation.tsx`** — Add route-aware cleanup in `restoreSession`: if current path starts with `/admin/` and there's an active session, end it automatically
-3. **`src/hooks/useMultiTenantAuth.tsx`** — Ensure `setUserType('super_admin')` is always called for super admins regardless of preview bridge values (the bridge should set overlay context, not change identity)
+1. **Database** — End the orphaned session via insert/update tool
+2. **`src/hooks/useImpersonation.tsx`** — Broaden auto-end in `restoreSession` to cover super admins on routes that don't match their impersonation context
+3. **`src/components/ProtectedRoute.tsx`** — Add super admin fallback redirect to `/admin/agencies` when no client context exists
 
 ### Technical details
 
-In `AdminProtectedRoute.tsx`:
+In `useImpersonation.tsx` restoreSession (~line 107):
 ```text
-- Import useImpersonation
-- Destructure { isImpersonating, endImpersonation, loading: impersonationLoading }
-- Add loading guard: if (loading || impersonationLoading) show spinner
-- Add auto-end: if (userType === 'super_admin' && isImpersonating) call endImpersonation() in useEffect
-- If userType resolves correctly after cleanup, render children
+- After checking isOnAdminRoute, add: isOnRootWithNoContext check
+- If user is super_admin (check super_admin_users table or pass from auth)
+  and current path is '/' and session.target_type is 'agency' (no client),
+  auto-end the session + cleanup bridge values
+- This covers the case where a super admin lands on '/' with a stale agency session
 ```
 
-In `useImpersonation.tsx` restoreSession:
+In `ProtectedRoute.tsx` (~line 58-67):
 ```text
-- Check window.location.pathname
-- If starts with '/admin' and user is super_admin, auto-end session + cleanup bridge
-- This handles the case where user manually types /admin URL or bookmarks it
-```
-
-In `useMultiTenantAuth.tsx`:
-```text
-- In the user type resolution logic, check super_admin FIRST (already does this)
-- After setUserType('super_admin'), do NOT let the preview bridge override it
-- The bridge event listener should set preview overlay state but never change userType away from super_admin
+- Add early check: if userType === 'super_admin' && !isImpersonating && previewDepth === 'none'
+  → redirect to /admin/agencies
+- This ensures super admins who aren't actively previewing always land on admin pages
 ```
 
