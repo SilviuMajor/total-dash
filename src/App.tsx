@@ -107,15 +107,15 @@ const App = () => (
                       <Sidebar />
                       <div className="flex-1 flex flex-col overflow-hidden">
                         <main className="flex-1 overflow-y-auto">
-                          <Routes>
-                            <Route path="/" element={<Agencies />} />
-                            <Route path="/agencies" element={<Agencies />} />
-                            <Route path="/agencies/:id" element={<AgencyDetails />} />
-                            <Route path="/billing" element={<AgencyBilling />} />
-                            <Route path="/plans" element={<SubscriptionPlans />} />
-                            <Route path="/email-templates" element={<EmailTemplates />} />
-                            <Route path="/users" element={<SuperAdminUsers />} />
-                            <Route path="/settings" element={<AdminSettings />} />
+                        <Routes>
+                            <Route index element={<Agencies />} />
+                            <Route path="agencies" element={<Agencies />} />
+                            <Route path="agencies/:id" element={<AgencyDetails />} />
+                            <Route path="billing" element={<AgencyBilling />} />
+                            <Route path="plans" element={<SubscriptionPlans />} />
+                            <Route path="email-templates" element={<EmailTemplates />} />
+                            <Route path="users" element={<SuperAdminUsers />} />
+                            <Route path="settings" element={<AdminSettings />} />
                           </Routes>
                         </main>
                       </div>
@@ -135,15 +135,15 @@ const App = () => (
                       <div className="flex-1 flex flex-col overflow-hidden">
                         <main className="flex-1 overflow-y-auto">
                           <Routes>
-                            <Route path="/" element={<Navigate to="/agency/clients" replace />} />
-                            <Route path="/clients" element={<AgencyClients />} />
-                            <Route path="/clients/:clientId/:tab" element={<AgencyClientDetails />} />
-                            <Route path="/clients/:clientId" element={<AgencyClientDetails />} />
-                            <Route path="/agents" element={<AgencyAgents />} />
-                            <Route path="/agents/:agentId" element={<AgencyAgentDetails />} />
+                            <Route index element={<Navigate to="/agency/clients" replace />} />
+                            <Route path="clients" element={<AgencyClients />} />
+                            <Route path="clients/:clientId/:tab" element={<AgencyClientDetails />} />
+                            <Route path="clients/:clientId" element={<AgencyClientDetails />} />
+                            <Route path="agents" element={<AgencyAgents />} />
+                            <Route path="agents/:agentId" element={<AgencyAgentDetails />} />
                             
-                            <Route path="/subscription" element={<AgencySubscription />} />
-                            <Route path="/settings" element={<AgencySettings />} />
+                            <Route path="subscription" element={<AgencySubscription />} />
+                            <Route path="settings" element={<AgencySettings />} />
                           </Routes>
                         </main>
                       </div>
