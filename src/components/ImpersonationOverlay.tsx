@@ -288,7 +288,10 @@ export function ImpersonationOverlay({ open, onClose }: ImpersonationOverlayProp
       await startImpersonation({ targetType: "agency", agencyId: agency.id });
       onClose();
       window.location.href = "/agency/clients";
-    } catch (e: any) { console.error(e); }
+    } catch (e: any) {
+      console.error('Agency impersonation failed:', e);
+      alert('Failed to enter agency: ' + (e.message || 'Unknown error'));
+    }
   };
 
   const handleFullAccess = async (client: ClientItem) => {
@@ -296,7 +299,10 @@ export function ImpersonationOverlay({ open, onClose }: ImpersonationOverlayProp
       await startImpersonation({ targetType: "client_full", clientId: client.id, agencyId: client.agency_id });
       onClose();
       window.location.href = "/";
-    } catch (e: any) { console.error(e); }
+    } catch (e: any) {
+      console.error('Client impersonation failed:', e);
+      alert('Failed to enter client: ' + (e.message || 'Unknown error'));
+    }
   };
 
   const handleViewAsUser = async (u: UserItem) => {
@@ -305,7 +311,10 @@ export function ImpersonationOverlay({ open, onClose }: ImpersonationOverlayProp
       await startImpersonation({ targetType: "client_user", targetUserId: u.user_id, clientId: u.client_id, agencyId: client?.agency_id });
       onClose();
       window.location.href = "/";
-    } catch (e: any) { console.error(e); }
+    } catch (e: any) {
+      console.error('User impersonation failed:', e);
+      alert('Failed to view as user: ' + (e.message || 'Unknown error'));
+    }
   };
 
   const handleReEnter = async (session: RecentSession) => {
