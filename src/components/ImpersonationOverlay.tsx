@@ -367,7 +367,8 @@ export function ImpersonationOverlay({ open, onClose }: ImpersonationOverlayProp
       {/* Panel — slides up inside the sidebar column */}
       <div
         ref={panelRef}
-        className="fixed left-0 bottom-0 w-[240px] max-h-[calc(100vh-60px)] bg-background border-r border-t border-border z-50 flex flex-col shadow-xl animate-in slide-in-from-bottom-4 duration-200"
+        className="fixed left-0 w-[240px] bg-background border-r border-t border-border z-50 flex flex-col shadow-xl animate-in slide-in-from-bottom-4 duration-200"
+        style={{ bottom: '120px', maxHeight: 'calc(100vh - 180px)' }}
       >
         {/* Header */}
         <div className="flex-shrink-0 px-3 pt-3 pb-2 space-y-2">
