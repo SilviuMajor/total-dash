@@ -94,6 +94,7 @@ const App = () => (
               <ClientAgentProvider>
                 <BrandingWrapper>
                   <CommandSearch />
+                  <DevSwitch />
               <Routes>
                 {/* Public Routes */}
                 <Route path="/reset-password" element={<ResetPassword />} />
