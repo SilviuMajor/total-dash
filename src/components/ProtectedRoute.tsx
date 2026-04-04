@@ -100,7 +100,7 @@ export function ProtectedRoute({
         }
       }
     }
-  }, [user, profile, loading, navigate, requireAdmin, requireClient, requiredPage, selectedAgentPermissions, location.pathname, isAdminPreview, isAgencyClientPreview, isSuperAdminInPreview, isImpersonationFullAccess]);
+  }, [user, profile, loading, navigate, requireAdmin, requireClient, requiredPage, selectedAgentPermissions, location.pathname, isAdminPreview, isAgencyClientPreview, isSuperAdminInPreview, isImpersonationFullAccess, userType, isImpersonating, previewDepth]);
 
   if (loading) {
     return (
