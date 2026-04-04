@@ -278,10 +278,10 @@ export function Sidebar() {
               const TypeIcon = isAgencyView ? Building2 : isUserView ? User : Users;
 
               const displayName = isAgencyView
-                ? 'Agency'
+                ? (previewAgency?.name || 'Agency')
                 : isUserView
                 ? (targetUserName || 'User')
-                : 'Client';
+                : (previewClient?.name || 'Client');
 
               return (
                 <div

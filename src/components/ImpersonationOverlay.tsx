@@ -288,7 +288,10 @@ export function ImpersonationOverlay({ open, onClose }: ImpersonationOverlayProp
       await startImpersonation({ targetType: "agency", agencyId: agency.id });
       onClose();
       window.location.href = "/agency/clients";
-    } catch (e: any) { console.error(e); }
+    } catch (e: any) {
+      console.error('Agency impersonation failed:', e);
+      alert('Failed to enter agency: ' + (e.message || 'Unknown error'));
+    }
   };
 
   const handleFullAccess = async (client: ClientItem) => {
@@ -296,7 +299,10 @@ export function ImpersonationOverlay({ open, onClose }: ImpersonationOverlayProp
       await startImpersonation({ targetType: "client_full", clientId: client.id, agencyId: client.agency_id });
       onClose();
       window.location.href = "/";
-    } catch (e: any) { console.error(e); }
+    } catch (e: any) {
+      console.error('Client impersonation failed:', e);
+      alert('Failed to enter client: ' + (e.message || 'Unknown error'));
+    }
   };
 
   const handleViewAsUser = async (u: UserItem) => {
@@ -305,7 +311,10 @@ export function ImpersonationOverlay({ open, onClose }: ImpersonationOverlayProp
       await startImpersonation({ targetType: "client_user", targetUserId: u.user_id, clientId: u.client_id, agencyId: client?.agency_id });
       onClose();
       window.location.href = "/";
-    } catch (e: any) { console.error(e); }
+    } catch (e: any) {
+      console.error('User impersonation failed:', e);
+      alert('Failed to view as user: ' + (e.message || 'Unknown error'));
+    }
   };
 
   const handleReEnter = async (session: RecentSession) => {
@@ -367,7 +376,8 @@ export function ImpersonationOverlay({ open, onClose }: ImpersonationOverlayProp
       {/* Panel — slides up inside the sidebar column */}
       <div
         ref={panelRef}
-        className="fixed left-0 bottom-0 w-[240px] max-h-[calc(100vh-60px)] bg-background border-r border-t border-border z-50 flex flex-col shadow-xl animate-in slide-in-from-bottom-4 duration-200"
+        className="fixed left-0 w-[240px] bg-background border-r border-t border-border z-50 flex flex-col shadow-xl animate-in slide-in-from-bottom-4 duration-200"
+        style={{ bottom: '120px', maxHeight: 'calc(100vh - 180px)' }}
       >
         {/* Header */}
         <div className="flex-shrink-0 px-3 pt-3 pb-2 space-y-2">
@@ -384,26 +394,60 @@ export function ImpersonationOverlay({ open, onClose }: ImpersonationOverlayProp
           </div>
 
           {/* Current session */}
-          {isImpersonating && activeSession && (
-            <div className="flex items-center justify-between gap-1 px-2 py-1.5 rounded-md bg-primary/10 border border-primary/20">
-              <div className="flex items-center gap-1.5 min-w-0">
-                <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse flex-shrink-0" />
-                <span className="text-[11px] font-medium text-primary truncate">
-                  {activeSession.target_type === "agency"
-                    ? "Agency view"
-                    : activeSession.target_user_name
-                    ? activeSession.target_user_name
-                    : "Full access"}
-                </span>
+          {isImpersonating && activeSession && (() => {
+            const isAgency = activeSession.target_type === 'agency';
+            const isUser = activeSession.mode === 'view_as_user';
+            const sessionColors = isAgency
+              ? 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800'
+              : isUser
+              ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800'
+              : 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800';
+            const textColor = isAgency ? 'text-red-700 dark:text-red-300' : isUser ? 'text-green-700 dark:text-green-300' : 'text-blue-700 dark:text-blue-300';
+            const subColor = isAgency ? 'text-red-600 dark:text-red-400' : isUser ? 'text-green-600 dark:text-green-400' : 'text-blue-600 dark:text-blue-400';
+            const TypeIcon = isAgency ? Building2 : isUser ? User : Users;
+
+            const elapsed = (() => {
+              const mins = Math.floor((Date.now() - new Date(activeSession.started_at).getTime()) / 60000);
+              if (mins < 1) return '< 1m';
+              if (mins < 60) return `${mins}m`;
+              return `${Math.floor(mins / 60)}h ${mins % 60}m`;
+            })();
+
+            return (
+              <div className={`px-2.5 py-2 rounded-md border ${sessionColors}`}>
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <div className="w-1.5 h-1.5 rounded-full bg-current animate-pulse flex-shrink-0" style={{ color: isAgency ? '#A32D2D' : isUser ? '#3B6D11' : '#185FA5' }} />
+                    <span className={`text-[11px] font-medium truncate ${textColor}`}>
+                      {isAgency ? 'Agency view' : isUser ? 'View as user' : 'Client full access'}
+                    </span>
+                  </div>
+                  <span className={`text-[9px] ${subColor}`}>{elapsed}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1 min-w-0">
+                    <TypeIcon className={`w-3 h-3 flex-shrink-0 ${subColor}`} />
+                    <span className={`text-[10px] font-medium truncate ${textColor}`}>
+                      {isAgency
+                        ? (activeSession.agency_id ? 'Loading...' : 'Agency')
+                        : isUser
+                        ? (activeSession.target_user_name || 'User')
+                        : 'Client'}
+                    </span>
+                  </div>
+                  <button
+                    onClick={handleEndCurrent}
+                    className="text-[9px] px-1.5 py-0.5 rounded bg-red-100 dark:bg-red-950/50 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900 transition-colors flex-shrink-0"
+                  >
+                    End
+                  </button>
+                </div>
+                <div className={`text-[9px] mt-1 ${subColor} opacity-70`}>
+                  {isUser ? 'read-only' : 'full access'} · {elapsed}
+                </div>
               </div>
-              <button
-                onClick={handleEndCurrent}
-                className="text-[9px] px-1.5 py-0.5 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors flex-shrink-0"
-              >
-                End
-              </button>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Search */}
           <div className="relative">
