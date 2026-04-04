@@ -95,12 +95,18 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Restore session on mount
+  // Restore session on mount and when user changes
   useEffect(() => {
     if (!user) {
       setLoading(false);
       return;
     }
+
+    // CRITICAL: Reset loading to true when user becomes available
+    // Without this, the first run (user=null) sets loading=false,
+    // and the second run (user=valid) starts restoreSession async
+    // but loading is already false — route guards proceed too early
+    setLoading(true);
 
     const restoreSession = async () => {
       try {

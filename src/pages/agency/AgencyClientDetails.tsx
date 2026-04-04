@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
+import { useImpersonation } from "@/hooks/useImpersonation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -216,11 +217,12 @@ export default function AgencyClientDetails() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { profile, isPreviewMode, previewAgency } = useMultiTenantAuth();
+  const { activeSession } = useImpersonation();
   const [client, setClient] = useState<ClientData | null>(null);
   const [loading, setLoading] = useState(true);
   const activeTab = tab || "overview";
 
-  const agencyId = isPreviewMode ? previewAgency?.id : profile?.agency?.id;
+  const agencyId = isPreviewMode ? (previewAgency?.id || activeSession?.agency_id) : profile?.agency?.id;
 
   useEffect(() => {
     if (agencyId) {
