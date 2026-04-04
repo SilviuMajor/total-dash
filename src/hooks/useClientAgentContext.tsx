@@ -125,7 +125,7 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
     } else {
       setLoading(false);
     }
-  }, [user, profile, isClientPreviewMode, previewClient, previewDepth, isImpersonating, activeSession?.id, impersonationMode, targetUserId]);
+  }, [user, profile, isClientPreviewMode, previewClient, previewDepth, isImpersonating, activeSession?.id, impersonationMode, targetUserId, impersonationLoading]);
 
   const loadClientAgentsForPreview = async (previewClientId: string) => {
     try {

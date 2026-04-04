@@ -79,6 +79,22 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
   const [elapsedMinutes, setElapsedMinutes] = useState(0);
   const [clientUsers, setClientUsers] = useState<ImpersonationContextType['clientUsers']>([]);
 
+  const cleanupStaleSession = () => {
+    sessionStorage.removeItem(SESSION_STORAGE_KEY);
+    // Clean up ALL bridge values to prevent stale state
+    const hadBridgeValues = sessionStorage.getItem('preview_mode');
+    sessionStorage.removeItem('preview_mode');
+    sessionStorage.removeItem('preview_client');
+    sessionStorage.removeItem('preview_client_agency');
+    sessionStorage.removeItem('preview_agency');
+    sessionStorage.removeItem('preview_token');
+    sessionStorage.removeItem('impersonation_return_url');
+    // If we cleaned up bridge values, notify useMultiTenantAuth to reset
+    if (hadBridgeValues) {
+      window.dispatchEvent(new Event('impersonation-changed'));
+    }
+  };
+
   // Restore session on mount
   useEffect(() => {
     if (!user) {
@@ -91,7 +107,6 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
         const storedSessionId = sessionStorage.getItem(SESSION_STORAGE_KEY);
 
         if (storedSessionId) {
-          // Try to restore from stored session ID
           const { data, error } = await supabase
             .from('impersonation_sessions')
             .select('*')
@@ -104,11 +119,11 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
             setActiveSession(data as ImpersonationSession);
             if (data.client_id) loadClientUsers(data.client_id);
           } else {
-            // Session expired or invalid — clean up
-            sessionStorage.removeItem(SESSION_STORAGE_KEY);
+            // Session expired or invalid — clean up EVERYTHING
+            cleanupStaleSession();
           }
         } else {
-          // Check for any active session in DB (e.g. from another tab)
+          // Check for any active session in DB
           const { data } = await supabase
             .from('impersonation_sessions')
             .select('*')
@@ -122,11 +137,14 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
             setActiveSession(data as ImpersonationSession);
             sessionStorage.setItem(SESSION_STORAGE_KEY, data.id);
             if (data.client_id) loadClientUsers(data.client_id);
+          } else {
+            // No active session anywhere — clean up any stale bridge values
+            cleanupStaleSession();
           }
         }
       } catch (error) {
         console.error('Error restoring impersonation session:', error);
-        sessionStorage.removeItem(SESSION_STORAGE_KEY);
+        cleanupStaleSession();
       } finally {
         setLoading(false);
       }
