@@ -1,57 +1,58 @@
 
-What I found
 
-- This does not look like Lovable being down.
-- The strongest code-level cause is in `src/App.tsx`: the admin routes are rendered inside a parent route at `/admin/*`, but the nested `<Routes>` inside that layout use absolute child paths like `/agencies`, `/billing`, `/plans`.
-- In nested React Router route trees, those should be relative to the parent route (`agencies`, `billing`, `plans`) or use `index` for the default page.
-- Result: the admin shell can render, but the inner admin page route does not match, so the main content area appears blank. That matches “none of the admin pages work”.
-- I also see the same routing pattern in the agency section, so the same bug likely exists there too.
+## Fix: Auto-end impersonation sessions on admin pages
 
-Implementation plan
+### Problem
+When a super admin starts an agency impersonation session, bridge `sessionStorage` values (`preview_mode=agency`, `preview_agency=...`) are set. If the user navigates back to `/admin/*` without explicitly ending the session, these bridge values cause `useMultiTenantAuth` to resolve `userType` as `agency` instead of `super_admin`. `AdminProtectedRoute` then redirects to `/admin/login`, producing a blank screen loop.
 
-1. Fix nested admin route definitions in `src/App.tsx`
-   - Change the default admin route from `path="/"` to `index`
-   - Change:
-     - `/agencies` → `agencies`
-     - `/agencies/:id` → `agencies/:id`
-     - `/billing` → `billing`
-     - `/plans` → `plans`
-     - `/email-templates` → `email-templates`
-     - `/users` → `users`
-     - `/settings` → `settings`
+There is also an orphaned session in the database right now (`b17d9c48-3ba6-4ff2-ae0c-469cc4633472`) that will be picked up on every page load.
 
-2. Fix the same nested route issue in the agency section in `src/App.tsx`
-   - Change the default route to `index`
-   - Change:
-     - `/clients` → `clients`
-     - `/clients/:clientId/:tab` → `clients/:clientId/:tab`
-     - `/clients/:clientId` → `clients/:clientId`
-     - `/agents` → `agents`
-     - `/agents/:agentId` → `agents/:agentId`
-     - `/subscription` → `subscription`
-     - `/settings` → `settings`
+### Solution: Two-layer auto-cleanup
 
-3. Keep the rest of the auth/impersonation code unchanged for now
-   - The current evidence points to route matching, not a backend outage or missing provider
-   - If admin pages still fail after the routing fix, then the next target would be super-admin auth resolution in `useMultiTenantAuth`, but that is not the first thing I would change
+**1. AdminProtectedRoute detects impersonation and auto-ends it**
 
-Validation
+Modify `src/components/AdminProtectedRoute.tsx` to:
+- Import and use `useImpersonation`
+- Wait for `impersonationLoading` before rendering
+- If the user is a super admin AND has an active impersonation session, call `endImpersonation()` automatically and clean up bridge values
+- This ensures navigating to any `/admin/*` route always exits impersonation cleanly
 
-- Open these URLs directly and confirm page content renders:
-  - `/admin/agencies`
-  - `/admin/billing`
-  - `/admin/plans`
-  - `/admin/settings`
-- Refresh each page to confirm deep links still work
-- Verify agency pages too:
-  - `/agency/clients`
-  - `/agency/agents`
-  - `/agency/settings`
+**2. useMultiTenantAuth preserves super_admin identity during impersonation**
 
-Technical details
+The root issue is that bridge values override `userType`. Modify `src/hooks/useMultiTenantAuth.tsx` so that when `preview_mode` is set but the authenticated user is a super admin, `userType` stays `super_admin` (with preview context loaded as overlay data, not as identity replacement). This is a safety net — even if cleanup fails, admin routes still work.
 
-- Why this is likely the bug:
-  - `AdminProtectedRoute` only redirects if `userType !== 'super_admin'`
-  - `ErrorBoundary` would show a fallback if a render error occurred
-  - A blank admin content area with the layout still present is most consistent with inner route mismatch
-- The routing fix is low-risk because it only changes route path declarations in one file and aligns them with React Router’s nested route rules
+**3. Clean up the orphaned DB session**
+
+Run a one-time cleanup via the edge function, or have the `restoreSession` logic in `useImpersonation` detect that the user is on `/admin/*` and auto-end the session during restore.
+
+### Files to change
+
+1. **`src/components/AdminProtectedRoute.tsx`** — Add `useImpersonation` hook, wait for loading, auto-end session when detected on admin routes
+2. **`src/hooks/useImpersonation.tsx`** — Add route-aware cleanup in `restoreSession`: if current path starts with `/admin/` and there's an active session, end it automatically
+3. **`src/hooks/useMultiTenantAuth.tsx`** — Ensure `setUserType('super_admin')` is always called for super admins regardless of preview bridge values (the bridge should set overlay context, not change identity)
+
+### Technical details
+
+In `AdminProtectedRoute.tsx`:
+```text
+- Import useImpersonation
+- Destructure { isImpersonating, endImpersonation, loading: impersonationLoading }
+- Add loading guard: if (loading || impersonationLoading) show spinner
+- Add auto-end: if (userType === 'super_admin' && isImpersonating) call endImpersonation() in useEffect
+- If userType resolves correctly after cleanup, render children
+```
+
+In `useImpersonation.tsx` restoreSession:
+```text
+- Check window.location.pathname
+- If starts with '/admin' and user is super_admin, auto-end session + cleanup bridge
+- This handles the case where user manually types /admin URL or bookmarks it
+```
+
+In `useMultiTenantAuth.tsx`:
+```text
+- In the user type resolution logic, check super_admin FIRST (already does this)
+- After setUserType('super_admin'), do NOT let the preview bridge override it
+- The bridge event listener should set preview overlay state but never change userType away from super_admin
+```
+
