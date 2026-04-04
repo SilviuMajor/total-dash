@@ -81,13 +81,14 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
 
   const cleanupStaleSession = () => {
     sessionStorage.removeItem(SESSION_STORAGE_KEY);
-    // Clean up ALL bridge values to prevent stale state
     const hadBridgeValues = sessionStorage.getItem('preview_mode');
     sessionStorage.removeItem('preview_mode');
     sessionStorage.removeItem('preview_client');
     sessionStorage.removeItem('preview_client_agency');
     sessionStorage.removeItem('preview_agency');
     sessionStorage.removeItem('preview_token');
+    sessionStorage.removeItem('preview_agency_name');
+    sessionStorage.removeItem('preview_client_name');
     sessionStorage.removeItem('impersonation_return_url');
     // If we cleaned up bridge values, notify useMultiTenantAuth to reset
     if (hadBridgeValues) {
