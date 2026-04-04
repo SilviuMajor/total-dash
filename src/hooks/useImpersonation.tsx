@@ -164,7 +164,7 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
           if (data.client_id) loadClientUsers(data.client_id);
         }
       } catch (error) {
-        console.error('[IMPERSONATION RESTORE] Fatal error:', error);
+        console.error('Impersonation restore error:', error);
         cleanupStaleSession();
       } finally {
         console.log('[IMPERSONATION RESTORE] Setting loading = false');
