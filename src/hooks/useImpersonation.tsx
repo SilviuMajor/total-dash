@@ -131,7 +131,7 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        console.log('[IMPERSONATION RESTORE] Querying DB for session:', storedSessionId);
+        
         const { data, error } = await supabase
           .from('impersonation_sessions')
           .select('*')
