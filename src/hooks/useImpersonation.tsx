@@ -131,8 +131,8 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
             .maybeSingle();
 
           if (data && !error) {
-            // If on /admin/* route, auto-end the session instead of restoring it
-            if (isOnAdminRoute) {
+            // Auto-end if on admin route or super admin on non-contextual route
+            if (shouldAutoEnd(currentPath, data)) {
               try {
                 await supabase.functions.invoke('end-impersonation', {
                   body: { sessionId: data.id },
