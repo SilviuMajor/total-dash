@@ -20,7 +20,7 @@ export function ProtectedRoute({
 }: ProtectedRouteProps) {
   const { user, profile, loading: authLoading } = useAuth();
   const { selectedAgentPermissions } = useClientAgentContext();
-  const { isImpersonating, impersonationMode } = useImpersonation();
+  const { isImpersonating, impersonationMode, loading: impersonationLoading } = useImpersonation();
   const { 
     userType, 
     loading: mtLoading,
@@ -34,7 +34,7 @@ export function ProtectedRoute({
   const location = useLocation();
   
   // Combined loading state - wait for both auth contexts and preview param processing
-  const loading = authLoading || mtLoading || isProcessingPreviewParams;
+  const loading = authLoading || mtLoading || isProcessingPreviewParams || impersonationLoading;
   
   // Admin in client preview mode can access client routes (based on multi-tenant preview depth)
   const isAdminPreview =

@@ -83,9 +83,13 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
   const [isImpersonationReadOnly, setIsImpersonationReadOnly] = useState(false);
   const { user, profile } = useAuth();
   const { isClientPreviewMode, previewClient, previewDepth, userType } = useMultiTenantAuth();
-  const { isImpersonating, activeSession, impersonationMode, targetUserId, targetClientId } = useImpersonation();
+  const { isImpersonating, activeSession, impersonationMode, targetUserId, targetClientId, loading: impersonationLoading } = useImpersonation();
 
   useEffect(() => {
+    // Wait for impersonation to finish loading before determining context
+    // This prevents stale bridge sessionStorage values from loading wrong data
+    if (impersonationLoading) return;
+
     // Check for any form of client preview (admin or super_admin), with sessionStorage fallback
     const storedPreviewMode = sessionStorage.getItem('preview_mode');
     const storedPreviewClient = sessionStorage.getItem('preview_client');
@@ -121,7 +125,7 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
     } else {
       setLoading(false);
     }
-  }, [user, profile, isClientPreviewMode, previewClient, previewDepth, isImpersonating, activeSession?.id, impersonationMode, targetUserId]);
+  }, [user, profile, isClientPreviewMode, previewClient, previewDepth, isImpersonating, activeSession?.id, impersonationMode, targetUserId, impersonationLoading]);
 
   const loadClientAgentsForPreview = async (previewClientId: string) => {
     try {
