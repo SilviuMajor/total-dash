@@ -18,9 +18,11 @@ import { useAgencyClients, useClientAgents, useClientUserCounts } from "@/hooks/
 export default function AgencyClients() {
   const { profile, isPreviewMode, previewAgency } = useMultiTenantAuth();
   const { startImpersonation, isImpersonating, activeSession } = useImpersonation();
-  const agencyId = isPreviewMode 
-    ? (previewAgency?.id || activeSession?.agency_id || sessionStorage.getItem('preview_agency')) 
-    : profile?.agency?.id;
+  const agencyId = profile?.agency?.id 
+    || previewAgency?.id 
+    || activeSession?.agency_id 
+    || sessionStorage.getItem('preview_agency') 
+    || undefined;
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();

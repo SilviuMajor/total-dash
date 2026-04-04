@@ -222,7 +222,11 @@ export default function AgencyClientDetails() {
   const [loading, setLoading] = useState(true);
   const activeTab = tab || "overview";
 
-  const agencyId = isPreviewMode ? (previewAgency?.id || activeSession?.agency_id || sessionStorage.getItem('preview_agency')) : profile?.agency?.id;
+  const agencyId = profile?.agency?.id 
+    || previewAgency?.id 
+    || activeSession?.agency_id 
+    || sessionStorage.getItem('preview_agency') 
+    || undefined;
 
   useEffect(() => {
     if (agencyId) {

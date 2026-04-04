@@ -19,7 +19,11 @@ export default function AgencySettings() {
   const { profile, isPreviewMode, previewAgency, userType, previewDepth } = useMultiTenantAuth();
   const { activeSession } = useImpersonation();
   const effectiveIsPreviewMode = userType === 'super_admin' && previewDepth === 'agency';
-  const effectiveAgencyId = effectiveIsPreviewMode ? (previewAgency?.id || activeSession?.agency_id || sessionStorage.getItem('preview_agency')) : profile?.agency?.id;
+  const effectiveAgencyId = profile?.agency?.id 
+    || previewAgency?.id 
+    || activeSession?.agency_id 
+    || sessionStorage.getItem('preview_agency') 
+    || undefined;
   const { toast } = useToast();
   interface AgencyRow {
     id: string;

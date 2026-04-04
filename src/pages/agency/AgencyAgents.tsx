@@ -13,9 +13,11 @@ import { useAgencyAgents } from "@/hooks/queries/useAgencyAgents";
 export default function AgencyAgents() {
   const { profile, isPreviewMode, previewAgency } = useMultiTenantAuth();
   const { activeSession } = useImpersonation();
-  const agencyId = isPreviewMode 
-    ? (previewAgency?.id || activeSession?.agency_id || sessionStorage.getItem('preview_agency')) 
-    : profile?.agency?.id;
+  const agencyId = profile?.agency?.id 
+    || previewAgency?.id 
+    || activeSession?.agency_id 
+    || sessionStorage.getItem('preview_agency') 
+    || undefined;
   const navigate = useNavigate();
   const { toast } = useToast();
   const [canAddMore, setCanAddMore] = useState(true);
