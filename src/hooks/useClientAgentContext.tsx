@@ -83,7 +83,7 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
   const [isImpersonationReadOnly, setIsImpersonationReadOnly] = useState(false);
   const { user, profile } = useAuth();
   const { isClientPreviewMode, previewClient, previewDepth, userType } = useMultiTenantAuth();
-  const { isImpersonating, activeSession, impersonationMode, targetUserId, targetClientId } = useImpersonation();
+  const { isImpersonating, activeSession, impersonationMode, targetUserId, targetClientId, loading: impersonationLoading } = useImpersonation();
 
   useEffect(() => {
     // Check for any form of client preview (admin or super_admin), with sessionStorage fallback
