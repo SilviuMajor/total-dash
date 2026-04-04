@@ -140,7 +140,7 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
           .is('ended_at', null)
           .maybeSingle();
 
-        console.log('[IMPERSONATION RESTORE] DB result:', { data: !!data, error, target_type: data?.target_type, agency_id: data?.agency_id });
+        
 
         if (!data || error) {
           console.log('[IMPERSONATION RESTORE] Session not found or error — cleaning up');
