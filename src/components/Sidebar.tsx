@@ -145,15 +145,18 @@ export function Sidebar() {
   };
 
   const handleImpersonationExit = async () => {
+    // Capture session info BEFORE ending — endImpersonation clears activeSession to null
+    const actorType = activeSession?.actor_type;
     const hasParent = !!activeSession?.parent_session_id;
-    if (hasParent && activeSession?.actor_type === "super_admin") {
+
+    if (hasParent && actorType === "super_admin") {
       await backToAgency();
       window.location.href = "/agency/clients";
     } else {
       await endImpersonation();
-      if (activeSession?.actor_type === "super_admin") {
+      if (actorType === "super_admin") {
         window.location.href = "/admin/agencies";
-      } else if (activeSession?.actor_type === "agency_user") {
+      } else if (actorType === "agency_user") {
         window.location.href = "/agency/clients";
       } else {
         const returnUrl = getReturnUrl();

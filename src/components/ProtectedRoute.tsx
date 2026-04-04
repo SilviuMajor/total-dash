@@ -62,7 +62,8 @@ export function ProtectedRoute({
         navigate('/client/login');
       } else if (userType === 'super_admin' && !isImpersonating && (previewDepth === 'none' || previewDepth === undefined)) {
         // Super admin with no active preview/impersonation — redirect to admin dashboard
-        navigate('/admin/agencies', { replace: true });
+        // Use window.location.href for cross-boundary navigation (client routes → admin routes)
+        window.location.href = '/admin/agencies';
         return;
       } else if (requireAdmin && profile?.role !== 'admin') {
         navigate('/');
