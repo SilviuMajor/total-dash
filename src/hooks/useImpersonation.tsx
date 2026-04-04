@@ -39,6 +39,8 @@ interface ImpersonationContextType {
     agencyId?: string;
     clientId?: string;
     parentSessionId?: string;
+    agencyName?: string;
+    clientName?: string;
   }) => Promise<void>;
   endImpersonation: () => Promise<void>;
   exitAll: () => Promise<void>;
