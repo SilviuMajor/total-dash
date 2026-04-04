@@ -5,13 +5,17 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
+import { useImpersonation } from "@/hooks/useImpersonation";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, AlertCircle } from "lucide-react";
 import { useAgencyAgents } from "@/hooks/queries/useAgencyAgents";
 
 export default function AgencyAgents() {
   const { profile, isPreviewMode, previewAgency } = useMultiTenantAuth();
-  const agencyId = isPreviewMode ? previewAgency?.id : profile?.agency?.id;
+  const { activeSession } = useImpersonation();
+  const agencyId = isPreviewMode 
+    ? (previewAgency?.id || activeSession?.agency_id) 
+    : profile?.agency?.id;
   const navigate = useNavigate();
   const { toast } = useToast();
   const [canAddMore, setCanAddMore] = useState(true);
