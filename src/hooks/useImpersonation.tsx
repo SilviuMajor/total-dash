@@ -111,14 +111,12 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
 
         // EARLY EXIT: No session ID and no bridge values → nothing to restore
         if (!storedSessionId && !hasBridgeValues) {
-          setLoading(false);
           return;
         }
 
         // If we only have stale bridge values but no session ID, clean them up and exit
         if (!storedSessionId && hasBridgeValues) {
           cleanupStaleSession();
-          setLoading(false);
           return;
         }
 
@@ -134,17 +132,24 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
         if (!data || error) {
           // Session expired or invalid — clean up everything
           cleanupStaleSession();
-        } else {
-          // Active session found
-          if (isOnAdminRoute) {
-            // On admin routes, just clean up locally — don't call Edge Function
-            // The bridge values were already cleared by useMultiTenantAuth synchronous init
-            cleanupStaleSession();
-          } else {
-            // On non-admin routes, set the active session
-            setActiveSession(data as ImpersonationSession);
-            if (data.client_id) loadClientUsers(data.client_id);
+        } else if (isOnAdminRoute) {
+          // Active session found on admin route — end it in DB AND clean up locally
+          try {
+            await supabase.functions.invoke('end-impersonation', {
+              body: { sessionId: data.id },
+            });
+          } catch (e) {
+            // Non-blocking: if Edge Function fails, just update DB directly
+            await supabase
+              .from('impersonation_sessions')
+              .update({ ended_at: new Date().toISOString() })
+              .eq('id', data.id);
           }
+          cleanupStaleSession();
+        } else {
+          // Active session found on non-admin route — restore it
+          setActiveSession(data as ImpersonationSession);
+          if (data.client_id) loadClientUsers(data.client_id);
         }
       } catch (error) {
         console.error('Error restoring impersonation session:', error);
@@ -154,7 +159,12 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    restoreSession();
+    // Safety timeout — if restore takes more than 4 seconds, force loading to false
+    const timeout = setTimeout(() => {
+      setLoading(false);
+    }, 4000);
+
+    restoreSession().finally(() => clearTimeout(timeout));
   }, [user]);
 
   // Elapsed time timer

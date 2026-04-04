@@ -86,16 +86,25 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
   const { isImpersonating, activeSession, impersonationMode, targetUserId, targetClientId, loading: impersonationLoading } = useImpersonation();
 
   useEffect(() => {
-    // On admin routes, we don't need client agent context — exit immediately
     const currentPath = window.location.pathname;
+
+    // On admin routes, we never need client agent context
     if (currentPath.startsWith('/admin')) {
       setLoading(false);
       return;
     }
 
     // Wait for impersonation to finish loading before determining context
-    // This prevents stale bridge sessionStorage values from loading wrong data
     if (impersonationLoading) return;
+
+    // On agency routes WITHOUT client impersonation, we don't need client agent context
+    if (currentPath.startsWith('/agency')) {
+      const isClientImpersonation = isImpersonating && activeSession?.client_id;
+      if (!isClientImpersonation) {
+        setLoading(false);
+        return;
+      }
+    }
 
     // Check for any form of client preview (admin or super_admin), with sessionStorage fallback
     const storedPreviewMode = sessionStorage.getItem('preview_mode');
