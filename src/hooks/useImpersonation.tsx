@@ -135,31 +135,13 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
           // Session expired or invalid — clean up everything
           cleanupStaleSession();
         } else {
-          // Active session found — check if we should auto-end it
-          let shouldAutoEnd = false;
-
+          // Active session found
           if (isOnAdminRoute) {
-            shouldAutoEnd = true;
-          } else {
-            // Only call is_super_admin when we actually need it (non-admin route with active session)
-            const { data: isSuperAdmin } = await supabase.rpc('is_super_admin', { _user_id: user.id });
-            if (isSuperAdmin && currentPath === '/' && data.target_type === 'agency' && !data.client_id) {
-              shouldAutoEnd = true;
-            } else if (isSuperAdmin && !currentPath.startsWith('/agency') && !data.client_id) {
-              shouldAutoEnd = true;
-            }
-          }
-
-          if (shouldAutoEnd) {
-            try {
-              await supabase.functions.invoke('end-impersonation', {
-                body: { sessionId: data.id },
-              });
-            } catch (e) {
-              console.error('Failed to auto-end session:', e);
-            }
+            // On admin routes, just clean up locally — don't call Edge Function
+            // The bridge values were already cleared by useMultiTenantAuth synchronous init
             cleanupStaleSession();
           } else {
+            // On non-admin routes, set the active session
             setActiveSession(data as ImpersonationSession);
             if (data.client_id) loadClientUsers(data.client_id);
           }
