@@ -132,7 +132,7 @@ export function ImpersonationOverlay({ open, onClose }: ImpersonationOverlayProp
     catch (e: any) { console.error(e); alert('Failed to enter agency: ' + (e.message || 'Unknown error')); }
   };
   const handleFullAccess = async (client: ClientItem) => {
-    try { await startImpersonation({ targetType: "client_full", clientId: client.id, agencyId: client.agency_id }); onClose(); window.location.href = "/"; }
+    try { await startImpersonation({ targetType: "client_full", clientId: client.id, agencyId: client.agency_id, clientName: client.name }); onClose(); window.location.href = "/"; }
     catch (e: any) { console.error(e); alert('Failed to enter client: ' + (e.message || 'Unknown error')); }
   };
   const handleViewAsUser = async (u: UserItem) => {
