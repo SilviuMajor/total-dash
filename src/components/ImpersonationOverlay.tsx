@@ -128,7 +128,7 @@ export function ImpersonationOverlay({ open, onClose }: ImpersonationOverlayProp
   if (search) { Object.values(usersByClient).flat().forEach((u) => { if (u.full_name.toLowerCase().includes(searchLower)) searchMatchedUsers.push(u); }); }
 
   const handleViewAgency = async (agency: AgencyItem) => {
-    try { await startImpersonation({ targetType: "agency", agencyId: agency.id }); onClose(); window.location.href = "/agency/clients"; }
+    try { await startImpersonation({ targetType: "agency", agencyId: agency.id, agencyName: agency.name }); onClose(); window.location.href = "/agency/clients"; }
     catch (e: any) { console.error(e); alert('Failed to enter agency: ' + (e.message || 'Unknown error')); }
   };
   const handleFullAccess = async (client: ClientItem) => {
