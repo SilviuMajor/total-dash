@@ -472,6 +472,15 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
         console.error('Failed to cleanup preview token:', error);
       }
     }
+
+    // End all active impersonation sessions for this user
+    try {
+      await supabase.functions.invoke('end-impersonation', {
+        body: { endAll: true },
+      });
+    } catch (error) {
+      console.error('Failed to end impersonation sessions on logout:', error);
+    }
     
     await supabase.auth.signOut();
     
