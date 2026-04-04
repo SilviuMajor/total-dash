@@ -274,6 +274,8 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
     agencyId?: string;
     clientId?: string;
     parentSessionId?: string;
+    agencyName?: string;
+    clientName?: string;
   }) => {
     try {
       const { data, error } = await supabase.functions.invoke('start-impersonation', {
