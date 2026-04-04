@@ -205,30 +205,7 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
     }
   }, [elapsedMinutes]);
 
-  // End impersonation session on tab/browser close via sendBeacon
-  // Delay registration by 2s to avoid killing the session during the
-  // hard navigation (window.location.href) that follows startImpersonation.
-  useEffect(() => {
-    if (!activeSession) return;
 
-    let handler: (() => void) | null = null;
-    const timer = setTimeout(() => {
-      handler = () => {
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-        const url = `${supabaseUrl}/functions/v1/end-impersonation`;
-        navigator.sendBeacon(
-          url,
-          JSON.stringify({ sessionId: activeSession.id, beacon: true })
-        );
-      };
-      window.addEventListener('beforeunload', handler);
-    }, 2000);
-
-    return () => {
-      clearTimeout(timer);
-      if (handler) window.removeEventListener('beforeunload', handler);
-    };
-  }, [activeSession?.id]);
 
   const loadClientUsers = async (clientId: string) => {
     const { data } = await supabase
