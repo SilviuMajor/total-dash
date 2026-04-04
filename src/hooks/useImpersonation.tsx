@@ -159,7 +159,7 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
           }
           cleanupStaleSession();
         } else {
-          console.log('[IMPERSONATION RESTORE] Restoring active session:', data.id);
+          
           setActiveSession(data as ImpersonationSession);
           if (data.client_id) loadClientUsers(data.client_id);
         }
