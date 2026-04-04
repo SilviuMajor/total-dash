@@ -310,10 +310,10 @@ export function Sidebar() {
 
                   const TypeIcon = isAgencyView ? Building2 : isUserView ? User : Users;
                   const displayName = isAgencyView
-                    ? (previewAgency?.name || 'Agency')
+                    ? (previewAgency?.name || sessionStorage.getItem('preview_agency_name') || 'Agency')
                     : isUserView
                     ? (targetUserName || 'User')
-                    : (previewClient?.name || 'Client');
+                    : (previewClient?.name || sessionStorage.getItem('preview_client_name') || 'Client');
 
                   return (
                     <div className="cursor-pointer" onClick={() => setOverlayOpen(true)}>

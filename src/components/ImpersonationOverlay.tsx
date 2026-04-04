@@ -128,15 +128,15 @@ export function ImpersonationOverlay({ open, onClose }: ImpersonationOverlayProp
   if (search) { Object.values(usersByClient).flat().forEach((u) => { if (u.full_name.toLowerCase().includes(searchLower)) searchMatchedUsers.push(u); }); }
 
   const handleViewAgency = async (agency: AgencyItem) => {
-    try { await startImpersonation({ targetType: "agency", agencyId: agency.id }); onClose(); window.location.href = "/agency/clients"; }
+    try { await startImpersonation({ targetType: "agency", agencyId: agency.id, agencyName: agency.name }); onClose(); window.location.href = "/agency/clients"; }
     catch (e: any) { console.error(e); alert('Failed to enter agency: ' + (e.message || 'Unknown error')); }
   };
   const handleFullAccess = async (client: ClientItem) => {
-    try { await startImpersonation({ targetType: "client_full", clientId: client.id, agencyId: client.agency_id }); onClose(); window.location.href = "/"; }
+    try { await startImpersonation({ targetType: "client_full", clientId: client.id, agencyId: client.agency_id, clientName: client.name }); onClose(); window.location.href = "/"; }
     catch (e: any) { console.error(e); alert('Failed to enter client: ' + (e.message || 'Unknown error')); }
   };
   const handleViewAsUser = async (u: UserItem) => {
-    try { const client = clients.find((c) => c.id === u.client_id); await startImpersonation({ targetType: "client_user", targetUserId: u.user_id, clientId: u.client_id, agencyId: client?.agency_id }); onClose(); window.location.href = "/"; }
+    try { const client = clients.find((c) => c.id === u.client_id); await startImpersonation({ targetType: "client_user", targetUserId: u.user_id, clientId: u.client_id, agencyId: client?.agency_id, clientName: u.client_name }); onClose(); window.location.href = "/"; }
     catch (e: any) { console.error(e); alert('Failed to view as user: ' + (e.message || 'Unknown error')); }
   };
   const handleReEnter = async (session: RecentSession) => {
