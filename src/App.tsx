@@ -16,6 +16,7 @@ import { AdminProtectedRoute } from "./components/AdminProtectedRoute";
 import { AgencyProtectedRoute } from "./components/AgencyProtectedRoute";
 import { Sidebar } from "./components/Sidebar";
 import { CommandSearch } from "./components/CommandSearch";
+import { DevSwitch } from "./components/DevSwitch";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import ChangePassword from "./pages/ChangePassword";
