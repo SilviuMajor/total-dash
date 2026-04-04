@@ -62,12 +62,20 @@ export function Sidebar() {
   const effectiveProfile = mtProfile || profile;
   const effectiveSignOut = mtProfile ? mtSignOut : signOut;
 
-  // Determine which navigation to show based on preview depth
+  // Determine which navigation to show based on preview depth AND active impersonation
   const { previewDepth } = useMultiTenantAuth();
   let navigation;
   
+  // Also check the current route and impersonation session as fallback
+  // This handles the case where previewDepth hasn't updated yet but we're on agency/client routes
+  const currentPath = window.location.pathname;
+  const isOnAgencyRoute = currentPath.startsWith('/agency');
+  const isOnClientRoute = !currentPath.startsWith('/admin') && !currentPath.startsWith('/agency');
+  const hasAgencySession = isImpersonating && activeSession?.target_type === 'agency';
+  const hasClientSession = isImpersonating && activeSession?.client_id;
+
   // Check preview depth first (highest priority)
-  if (previewDepth === 'agency_to_client' || previewDepth === 'client') {
+  if (previewDepth === 'agency_to_client' || previewDepth === 'client' || hasClientSession) {
     // Client preview mode → show filtered client navigation
     const selectedAgent = agents.find(a => a.id === selectedAgentId);
     navigation = clientNavigation.filter(item => {
@@ -83,7 +91,7 @@ export function Sidebar() {
       }
       return true;
     });
-  } else if (previewDepth === 'agency') {
+  } else if (previewDepth === 'agency' || hasAgencySession || (isOnAgencyRoute && userType === 'super_admin')) {
     // Agency preview mode → show agency navigation
     navigation = agencyNavigation;
   } else if (userType === 'super_admin') {
