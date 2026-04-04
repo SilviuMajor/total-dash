@@ -107,15 +107,15 @@ const App = () => (
                       <Sidebar />
                       <div className="flex-1 flex flex-col overflow-hidden">
                         <main className="flex-1 overflow-y-auto">
-                          <Routes>
-                            <Route path="/" element={<Agencies />} />
-                            <Route path="/agencies" element={<Agencies />} />
-                            <Route path="/agencies/:id" element={<AgencyDetails />} />
-                            <Route path="/billing" element={<AgencyBilling />} />
-                            <Route path="/plans" element={<SubscriptionPlans />} />
-                            <Route path="/email-templates" element={<EmailTemplates />} />
-                            <Route path="/users" element={<SuperAdminUsers />} />
-                            <Route path="/settings" element={<AdminSettings />} />
+                        <Routes>
+                            <Route index element={<Agencies />} />
+                            <Route path="agencies" element={<Agencies />} />
+                            <Route path="agencies/:id" element={<AgencyDetails />} />
+                            <Route path="billing" element={<AgencyBilling />} />
+                            <Route path="plans" element={<SubscriptionPlans />} />
+                            <Route path="email-templates" element={<EmailTemplates />} />
+                            <Route path="users" element={<SuperAdminUsers />} />
+                            <Route path="settings" element={<AdminSettings />} />
                           </Routes>
                         </main>
                       </div>
