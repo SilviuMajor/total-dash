@@ -104,8 +104,22 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
 
     const restoreSession = async () => {
       try {
-        const isOnAdminRoute = window.location.pathname.startsWith('/admin');
+        const currentPath = window.location.pathname;
+        const isOnAdminRoute = currentPath.startsWith('/admin');
         const storedSessionId = sessionStorage.getItem(SESSION_STORAGE_KEY);
+
+        // Check if user is a super admin
+        const { data: isSuperAdmin } = await supabase.rpc('is_super_admin', { _user_id: user.id });
+
+        // Super admins should auto-end sessions on admin routes OR on routes with no matching context
+        const shouldAutoEnd = (route: string, session: any) => {
+          if (isOnAdminRoute) return true;
+          // If super admin is on root '/' with an agency-only session (no client context), auto-end
+          if (isSuperAdmin && route === '/' && session.target_type === 'agency' && !session.client_id) return true;
+          // If super admin is on any non-agency/non-client route with no context, auto-end
+          if (isSuperAdmin && !route.startsWith('/agency') && !session.client_id) return true;
+          return false;
+        };
 
         if (storedSessionId) {
           const { data, error } = await supabase

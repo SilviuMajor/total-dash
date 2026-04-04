@@ -60,6 +60,10 @@ export function ProtectedRoute({
       if (!user) {
         // Redirect to client login page
         navigate('/client/login');
+      } else if (userType === 'super_admin' && !isImpersonating && (previewDepth === 'none' || previewDepth === undefined)) {
+        // Super admin with no active preview/impersonation — redirect to admin dashboard
+        navigate('/admin/agencies', { replace: true });
+        return;
       } else if (requireAdmin && profile?.role !== 'admin') {
         navigate('/');
       } else if (requireClient && profile?.role === 'admin' && !isAdminPreview && !isAgencyClientPreview && !isSuperAdminInPreview && !isImpersonationFullAccess) {
