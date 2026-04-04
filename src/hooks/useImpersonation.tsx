@@ -146,7 +146,7 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
           
           cleanupStaleSession();
         } else if (isOnAdminRoute) {
-          console.log('[IMPERSONATION RESTORE] On admin route — ending session in DB');
+          
           try {
             await supabase.functions.invoke('end-impersonation', {
               body: { sessionId: data.id },
