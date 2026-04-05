@@ -1275,7 +1275,7 @@ export default function Conversations() {
                                   fontVariantNumeric: 'tabular-nums',
                                 }}
                               >
-                                {formatWaitTime(waitSec)}
+                                <Clock className="inline h-2.5 w-2.5 mr-0.5" style={{ verticalAlign: 'middle' }} />{formatWaitTime(waitSec)}
                               </span>
                             );
                           })()}
