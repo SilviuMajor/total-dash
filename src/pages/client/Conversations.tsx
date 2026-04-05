@@ -1420,7 +1420,7 @@ export default function Conversations() {
                     }}>
                       <div className="w-2 h-2 rounded-full" style={{ background: color, boxShadow: `0 0 4px ${color}60` }} />
                       <span className="text-xs text-muted-foreground">
-                        Customer waiting: <strong style={{ color }}>{formatWaitTime(waitSec)}</strong>
+                        <Clock className="inline h-3 w-3 mr-1" style={{ color }} />Customer waiting: <strong style={{ color }}>{formatWaitTime(waitSec)}</strong>
                       </span>
                     </div>
                   );
