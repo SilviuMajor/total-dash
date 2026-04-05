@@ -243,13 +243,9 @@ serve(async (req) => {
           });
 
           // Update last_activity_at and last_customer_message_at
-          await supabaseClient
-            .from("conversations")
-            .update({ 
-              last_activity_at: new Date().toISOString(),
-              last_customer_message_at: new Date().toISOString(),
-            })
-            .eq("id", conversationId);
+          await supabaseClient.rpc('update_customer_message_timestamps', {
+            p_conversation_id: conversationId,
+          });
 
           // Get holding message configuration
           const holdingMessage =
