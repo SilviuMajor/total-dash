@@ -197,13 +197,9 @@ serve(async (req) => {
           });
 
           // Update last_activity_at and last_customer_message_at
-          await supabaseClient
-            .from("conversations")
-            .update({ 
-              last_activity_at: new Date().toISOString(),
-              last_customer_message_at: new Date().toISOString(),
-            })
-            .eq("id", conversationId);
+          await supabaseClient.rpc('update_customer_message_timestamps', {
+            p_conversation_id: conversationId,
+          });
 
           // Also update the handover session's last_activity_at
           await supabaseClient
@@ -247,13 +243,9 @@ serve(async (req) => {
           });
 
           // Update last_activity_at and last_customer_message_at
-          await supabaseClient
-            .from("conversations")
-            .update({ 
-              last_activity_at: new Date().toISOString(),
-              last_customer_message_at: new Date().toISOString(),
-            })
-            .eq("id", conversationId);
+          await supabaseClient.rpc('update_customer_message_timestamps', {
+            p_conversation_id: conversationId,
+          });
 
           // Get holding message configuration
           const holdingMessage =
@@ -509,13 +501,9 @@ serve(async (req) => {
             : {},
       });
 
-      await supabaseClient
-        .from("conversations")
-        .update({ 
-          last_activity_at: new Date().toISOString(),
-          last_customer_message_at: new Date().toISOString(),
-        })
-        .eq("id", currentConversationId);
+      await supabaseClient.rpc('update_customer_message_timestamps', {
+        p_conversation_id: currentConversationId,
+      });
     }
 
     // =============================================
