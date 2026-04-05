@@ -56,6 +56,7 @@ interface Conversation {
   department_id?: string;
   voiceflow_user_id?: string;
   last_customer_message_at?: string;
+  first_unanswered_message_at?: string;
   metadata?: {
     variables?: {
       user_name?: string;
