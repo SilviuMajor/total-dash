@@ -1548,6 +1548,7 @@ export type Database = {
           department_id: string | null
           duration: number | null
           ended_at: string | null
+          first_unanswered_message_at: string | null
           id: string
           is_widget_test: boolean | null
           last_activity_at: string | null
@@ -1565,6 +1566,7 @@ export type Database = {
           department_id?: string | null
           duration?: number | null
           ended_at?: string | null
+          first_unanswered_message_at?: string | null
           id?: string
           is_widget_test?: boolean | null
           last_activity_at?: string | null
@@ -1582,6 +1584,7 @@ export type Database = {
           department_id?: string | null
           duration?: number | null
           ended_at?: string | null
+          first_unanswered_message_at?: string | null
           id?: string
           is_widget_test?: boolean | null
           last_activity_at?: string | null
@@ -2526,6 +2529,10 @@ export type Database = {
         Returns: boolean
       }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      update_customer_message_timestamps: {
+        Args: { p_conversation_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       agency_role: "owner" | "admin" | "user"
