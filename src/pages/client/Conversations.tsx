@@ -56,6 +56,7 @@ interface Conversation {
   department_id?: string;
   voiceflow_user_id?: string;
   last_customer_message_at?: string;
+  first_unanswered_message_at?: string;
   metadata?: {
     variables?: {
       user_name?: string;
@@ -935,21 +936,13 @@ export default function Conversations() {
   };
 
   const getWaitSeconds = (conversation: any) => {
-    if (!conversation.last_customer_message_at) return 0;
-    return Math.floor((Date.now() - new Date(conversation.last_customer_message_at).getTime()) / 1000);
+    if (!conversation.first_unanswered_message_at) return 0;
+    return Math.floor((Date.now() - new Date(conversation.first_unanswered_message_at).getTime()) / 1000);
   };
 
   const shouldShowResponsePill = (conversation: any) => {
     if (conversation.status !== 'in_handover') return false;
-    if (!conversation.last_customer_message_at) return false;
-    // Check if agent has replied since the customer's last message
-    if (conversation.last_activity_at && conversation.last_customer_message_at) {
-      const customerTime = new Date(conversation.last_customer_message_at).getTime();
-      const activityTime = new Date(conversation.last_activity_at).getTime();
-      // If last_activity_at is more than 2 seconds after last_customer_message_at,
-      // it means someone (likely the agent) has responded
-      if (activityTime - customerTime > 2000) return false;
-    }
+    if (!conversation.first_unanswered_message_at) return false;
     return true;
   };
 
@@ -1282,7 +1275,7 @@ export default function Conversations() {
                                   fontVariantNumeric: 'tabular-nums',
                                 }}
                               >
-                                {formatWaitTime(waitSec)}
+                                <Clock className="inline h-2.5 w-2.5 mr-0.5" style={{ verticalAlign: 'middle' }} />{formatWaitTime(waitSec)}
                               </span>
                             );
                           })()}
@@ -1427,7 +1420,7 @@ export default function Conversations() {
                     }}>
                       <div className="w-2 h-2 rounded-full" style={{ background: color, boxShadow: `0 0 4px ${color}60` }} />
                       <span className="text-xs text-muted-foreground">
-                        Customer waiting: <strong style={{ color }}>{formatWaitTime(waitSec)}</strong>
+                        <Clock className="inline h-3 w-3 mr-1" style={{ color }} />Customer waiting: <strong style={{ color }}>{formatWaitTime(waitSec)}</strong>
                       </span>
                     </div>
                   );
