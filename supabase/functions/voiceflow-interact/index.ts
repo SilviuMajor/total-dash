@@ -274,7 +274,7 @@ serve(async (req) => {
           if (shouldSendHolding) {
             await supabaseClient.from("transcripts").insert({
               conversation_id: conversationId,
-              speaker: "system",
+              speaker: "assistant",
               text: holdingMessage,
               metadata: { type: "holding_message", timestamp: new Date().toISOString() },
             });
