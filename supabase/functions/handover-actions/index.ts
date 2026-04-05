@@ -708,7 +708,7 @@ async function handleSendMessage(
   // Update last_activity_at on conversation and handover session
   await supabaseClient
     .from("conversations")
-    .update({ last_activity_at: new Date().toISOString() })
+    .update({ last_activity_at: new Date().toISOString(), first_unanswered_message_at: null })
     .eq("id", conversationId);
 
   await supabaseClient
