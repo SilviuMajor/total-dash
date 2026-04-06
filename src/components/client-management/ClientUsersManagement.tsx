@@ -686,10 +686,20 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
             <p className="text-sm text-muted-foreground">Manage users and their permissions</p>
           </div>
           {!readOnly && (
-            <Button onClick={() => setOpen(true)} className="bg-foreground text-background hover:bg-foreground/90">
-              <UserPlus className="w-4 h-4 mr-2" />
-              Add User
-            </Button>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="show-removed"
+                  checked={showRemovedUsers}
+                  onCheckedChange={setShowRemovedUsers}
+                />
+                <Label htmlFor="show-removed" className="text-xs text-muted-foreground">Show removed users</Label>
+              </div>
+              <Button onClick={() => setOpen(true)} className="bg-foreground text-background hover:bg-foreground/90">
+                <UserPlus className="w-4 h-4 mr-2" />
+                Add User
+              </Button>
+            </div>
           )}
         </div>
 
