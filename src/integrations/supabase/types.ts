@@ -1289,6 +1289,7 @@ export type Database = {
           last_name: string | null
           page_permissions: Json | null
           role_id: string | null
+          status: string
           updated_at: string | null
           user_id: string
         }
@@ -1303,6 +1304,7 @@ export type Database = {
           last_name?: string | null
           page_permissions?: Json | null
           role_id?: string | null
+          status?: string
           updated_at?: string | null
           user_id: string
         }
@@ -1317,6 +1319,7 @@ export type Database = {
           last_name?: string | null
           page_permissions?: Json | null
           role_id?: string | null
+          status?: string
           updated_at?: string | null
           user_id?: string
         }

@@ -80,6 +80,89 @@ serve(async (req) => {
       throw new Error(`Missing required fields: ${missing.join(', ')}`);
     }
 
+    // Check if a removed user with this email already exists on this client
+    const { data: existingProfile } = await supabaseAdmin
+      .from('profiles')
+      .select('id')
+      .eq('email', email)
+      .single();
+
+    if (existingProfile) {
+      // Check if they have a removed client_users row for this client
+      const { data: removedUser } = await supabaseAdmin
+        .from('client_users')
+        .select('id, user_id')
+        .eq('user_id', existingProfile.id)
+        .eq('client_id', clientId)
+        .eq('status', 'removed')
+        .single();
+
+      if (removedUser) {
+        // Reinstate the user instead of creating a new one
+        const fullName = `${firstName} ${lastName}`.trim();
+        await supabaseAdmin
+          .from('client_users')
+          .update({
+            status: 'active',
+            first_name: firstName,
+            last_name: lastName,
+            avatar_url: avatarUrl || null,
+            department_id: departmentId || null,
+          })
+          .eq('id', removedUser.id);
+
+        // Update their profile
+        await supabaseAdmin
+          .from('profiles')
+          .update({
+            first_name: firstName,
+            last_name: lastName,
+            full_name: fullName,
+          })
+          .eq('id', existingProfile.id);
+
+        // Reset their password
+        const temporaryPassword = customPassword || generateSecurePassword();
+        await supabaseAdmin.auth.admin.updateUserById(existingProfile.id, {
+          password: temporaryPassword,
+        });
+
+        // Update password hint + must_change flag
+        await supabaseAdmin
+          .from('user_passwords')
+          .upsert({
+            user_id: existingProfile.id,
+            password_hint: temporaryPassword.substring(0, 2),
+            must_change_password: true,
+          }, { onConflict: 'user_id' });
+
+        // Resolve role
+        let resolvedRoleId = roleId;
+        if (!resolvedRoleId && role) {
+          const { data: roleData } = await supabaseAdmin
+            .from('client_roles')
+            .select('id')
+            .eq('client_id', clientId)
+            .eq('slug', role === 'admin' ? 'admin' : 'agent')
+            .single();
+          resolvedRoleId = roleData?.id;
+        }
+
+        console.log('Reinstated removed user:', existingProfile.id);
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            userId: existingProfile.id,
+            roleId: resolvedRoleId,
+            temporaryPassword,
+            reinstated: true,
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
     // Use custom password if provided, otherwise generate secure password
     const temporaryPassword = customPassword || generateSecurePassword();
 
