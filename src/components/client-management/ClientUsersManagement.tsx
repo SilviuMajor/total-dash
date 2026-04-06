@@ -1482,9 +1482,13 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                   .update({ role_id: newRoleId, has_overrides: true })
                   .eq('user_id', user.user_id)
                   .eq('client_id', clientId);
-                toast({ title: "Role changed", description: "Kept current permissions as overrides" });
                 setRoleChangeModal(null);
+                await loadUserAgentPermissions(user.user_id);
+                await loadUserClientPermissions(user.user_id);
+                const updatedTemplates = await loadRoleTemplates(newRoleId);
+                setRoleTemplates(prev => ({ ...prev, [user.user_id]: updatedTemplates }));
                 loadUsers();
+                toast({ title: "Role changed", description: "Kept current permissions as overrides" });
               }}
             >
               Keep current permissions
@@ -1532,9 +1536,13 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                     .eq('client_id', clientId);
                 }
                 
-                toast({ title: "Role changed", description: "Permissions reset to new role defaults" });
                 setRoleChangeModal(null);
+                await loadUserAgentPermissions(user.user_id);
+                await loadUserClientPermissions(user.user_id);
+                const updatedTemplates2 = await loadRoleTemplates(newRoleId);
+                setRoleTemplates(prev => ({ ...prev, [user.user_id]: updatedTemplates2 }));
                 loadUsers();
+                toast({ title: "Role changed", description: "Permissions reset to new role defaults" });
               }}
             >
               Reset to defaults
