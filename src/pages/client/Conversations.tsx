@@ -1877,30 +1877,6 @@ export default function Conversations() {
                                   {selectedConversation.metadata?.variables?.user_email || 'Not captured yet'}
                                 </span>
                               </div>
-                              <div className="flex justify-between items-center text-sm">
-                                <span className="text-muted-foreground">User ID:</span>
-                                <div className="flex items-center gap-1.5">
-                                  <span className="font-medium font-mono text-xs">
-                                    {selectedConversation.voiceflow_user_id 
-                                      ? (selectedConversation.voiceflow_user_id.length > 12 
-                                          ? '…' + selectedConversation.voiceflow_user_id.slice(-8) 
-                                          : selectedConversation.voiceflow_user_id)
-                                      : selectedConversation.caller_phone || 'Unknown'}
-                                  </span>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      const fullId = selectedConversation.voiceflow_user_id || selectedConversation.caller_phone || '';
-                                      navigator.clipboard.writeText(fullId);
-                                      toast({ title: "Copied", description: "User ID copied to clipboard" });
-                                    }}
-                                    className="p-0.5 rounded hover:bg-muted transition-colors"
-                                    title={selectedConversation.voiceflow_user_id || selectedConversation.caller_phone || ''}
-                                  >
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
-                                  </button>
-                                </div>
-                              </div>
                               {(agentConfig as any)?.custom_tracked_variables?.map((variable: any) => {
                                 const voiceflowName = typeof variable === 'string' ? variable : variable.voiceflow_name;
                                 const displayName = typeof variable === 'string'
