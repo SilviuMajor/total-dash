@@ -1433,38 +1433,18 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
               </div>
             </div>
 
-            {generatedPassword && (
-              <div className="p-4 bg-muted rounded space-y-2">
-                <Label>Generated Password</Label>
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 p-2 bg-background rounded text-sm">
-                    {generatedPassword}
-                  </code>
-                  <Button size="sm" onClick={copyPassword}>
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Save this password. It won't be shown again.
-                </p>
-              </div>
-            )}
-
             <div className="flex justify-end gap-2 pt-4">
               <Button
                 variant="outline"
                 onClick={() => {
                   setOpen(false);
-                  setGeneratedPassword("");
                 }}
               >
-                {generatedPassword ? "Done" : "Cancel"}
+                Cancel
               </Button>
-              {!generatedPassword && (
-                <Button onClick={handleAddUser} disabled={!newUserEmail || !newUserFullName}>
-                  Add User
-                </Button>
-              )}
+              <Button onClick={handleAddUser} disabled={!newUserEmail || !newUserFullName}>
+                Add User
+              </Button>
             </div>
           </div>
         </DialogContent>
