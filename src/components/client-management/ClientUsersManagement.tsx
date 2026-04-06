@@ -831,10 +831,10 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                                 const newEmail = e.target.value.trim();
                                 if (!newEmail || newEmail === user.profiles?.email) return;
                                 try {
-                                  const { error: fnError } = await supabase.functions.invoke('reset-user-password', {
-                                    body: { userId: user.user_id, newEmail },
-                                  });
-                                  await supabase.from('profiles').update({ email: newEmail }).eq('id', user.user_id);
+                                   const { data, error: fnError } = await supabase.functions.invoke('update-user-email', {
+                                     body: { userId: user.user_id, newEmail },
+                                   });
+                                   if (fnError || !data?.success) throw new Error(data?.error || fnError?.message || 'Failed to update email');
                                   toast({ title: "Email updated", description: `Email changed to ${newEmail}` });
                                   loadUsers();
                                 } catch (err: any) {
