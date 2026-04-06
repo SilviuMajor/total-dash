@@ -18,6 +18,7 @@ import { ClientGuidesEditor } from "@/components/client-management/ClientGuidesE
 import { ClientUsersManagement } from "@/components/client-management/ClientUsersManagement";
 import { CannedResponsesSettings } from "@/components/settings/CannedResponsesSettings";
 import { AuditLog } from "@/components/settings/AuditLog";
+import { RolesManagement } from "@/components/settings/RolesManagement";
 
 
 interface ClientData {
@@ -41,6 +42,7 @@ function CompanySettingsPanel({ clientId }: { clientId: string }) {
   const [activeSubTab, setActiveSubTab] = useState("departments");
   const [capabilities, setCapabilities] = useState<Record<string, any>>({});
   const [masterEnabled, setMasterEnabled] = useState(true);
+  const [teamSubTab, setTeamSubTab] = useState<"roles" | "team">("team");
 
   useEffect(() => {
     loadCapabilities();
@@ -147,7 +149,31 @@ function CompanySettingsPanel({ clientId }: { clientId: string }) {
               />
             </div>
           </Card>
-          <ClientUsersManagement clientId={clientId} />
+          <div className="flex gap-2 mb-4">
+              <button
+                onClick={() => setTeamSubTab("roles")}
+                className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                  teamSubTab === "roles"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                }`}
+              >
+                Roles
+              </button>
+              <button
+                onClick={() => setTeamSubTab("team")}
+                className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                  teamSubTab === "team"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                }`}
+              >
+                Team
+              </button>
+            </div>
+
+            {teamSubTab === "roles" && <RolesManagement clientId={clientId} />}
+            {teamSubTab === "team" && <ClientUsersManagement clientId={clientId} />}
         </TabsContent>
 
 
