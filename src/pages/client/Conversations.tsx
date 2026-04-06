@@ -627,7 +627,7 @@ export default function Conversations() {
         console.error('Error loading previous conversations:', error);
         setPreviousConversations([]);
       } else {
-        setPreviousConversations(data || []);
+        setPreviousConversations((data || []) as unknown as Conversation[]);
       }
     };
     loadPreviousConversations();
