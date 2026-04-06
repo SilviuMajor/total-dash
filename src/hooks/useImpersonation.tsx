@@ -126,8 +126,11 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
         }
 
         if (!storedSessionId && hasBridgeValues) {
-          
-          cleanupStaleSession();
+          // DevSwitch sets bridge values without a DB session — don't clean those up
+          const isDevSwitch = sessionStorage.getItem('dev_switch_active') === 'true';
+          if (!isDevSwitch) {
+            cleanupStaleSession();
+          }
           return;
         }
 
