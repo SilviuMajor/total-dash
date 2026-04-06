@@ -1218,11 +1218,9 @@ export default function Conversations() {
                             ) : null;
                           })()}
                         </div>
-                        {/* Row 2: Relative time from last activity */}
+                        {/* Row 2: Last activity date/time */}
                         <p className="text-xs text-muted-foreground truncate pl-6 mb-1.5">
-                          <span title={format(new Date(conv.last_activity_at || conv.started_at), 'PPp')}>
-                            {formatDistanceToNow(new Date(conv.last_activity_at || conv.started_at), { addSuffix: true })}
-                          </span>
+                          {format(new Date(conv.last_activity_at || conv.started_at), 'MMM d, h:mm a')}
                         </p>
                         {/* Row 3: Status badge with owner initials + tags + clock pill */}
                         <div className="flex items-center justify-between pl-6">
@@ -1330,10 +1328,11 @@ export default function Conversations() {
                         return <span title={raw}>{display}</span>;
                       })()}
                     </h3>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
                       Started {format(new Date(selectedConversation.started_at), 'PPp')}
-                      {' · '}
-                      {transcripts.length} msgs
+                      <span className="mx-0.5">·</span>
+                      <MessageSquareText className="inline h-3 w-3" />
+                      {transcripts.length}
                     </p>
                   </div>
                   {selectedConversation.department_id && (() => {
@@ -1712,9 +1711,22 @@ export default function Conversations() {
                       {/* IN HANDOVER — mine */}
                       {selectedConversation.status === 'in_handover' && selectedConversation.owner_id === currentClientUserId && (
                         <div className="space-y-2">
-                          <div className="flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-blue-500" />
-                            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Active Handover</p>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5">
+                              <span className="w-2 h-2 rounded-full bg-blue-500" />
+                              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Active Handover</p>
+                            </div>
+                            {activeSession?.accepted_at && (
+                              <span className="text-[10px] font-medium text-muted-foreground font-mono tabular-nums">
+                                {(() => {
+                                  const secs = Math.floor((Date.now() - new Date(activeSession.accepted_at).getTime()) / 1000);
+                                  const h = Math.floor(secs / 3600);
+                                  const m = Math.floor((secs % 3600) / 60);
+                                  const s = secs % 60;
+                                  return h > 0 ? `${h}h ${m}m` : `${m}m ${s.toString().padStart(2, '0')}s`;
+                                })()}
+                              </span>
+                            )}
                           </div>
                           <p className="text-xs text-muted-foreground">You are handling this conversation</p>
                           <div className="flex gap-2">
@@ -1745,11 +1757,26 @@ export default function Conversations() {
                       {/* IN HANDOVER — someone else */}
                       {selectedConversation.status === 'in_handover' && selectedConversation.owner_id !== currentClientUserId && (
                         <div className="space-y-1.5">
-                          <div className="flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-blue-500" />
-                            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Active Handover</p>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5">
+                              <span className="w-2 h-2 rounded-full bg-blue-500" />
+                              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Active Handover</p>
+                            </div>
+                            {activeSession?.accepted_at && (
+                              <span className="text-[10px] font-medium text-muted-foreground font-mono tabular-nums">
+                                {(() => {
+                                  const secs = Math.floor((Date.now() - new Date(activeSession.accepted_at).getTime()) / 1000);
+                                  const h = Math.floor(secs / 3600);
+                                  const m = Math.floor((secs % 3600) / 60);
+                                  const s = secs % 60;
+                                  return h > 0 ? `${h}h ${m}m` : `${m}m ${s.toString().padStart(2, '0')}s`;
+                                })()}
+                              </span>
+                            )}
                           </div>
-                          <p className="text-xs text-muted-foreground">Being handled by another agent</p>
+                          <p className="text-xs text-muted-foreground">
+                            Being handled by {selectedConversation.owner_name || 'another agent'}
+                          </p>
                         </div>
                       )}
 
@@ -1814,23 +1841,46 @@ export default function Conversations() {
                       )}
                     </Card>
 
-                    {selectedConversation?.metadata?.variables &&
-                      Object.keys(selectedConversation.metadata.variables).length > 0 && (
+                    {selectedConversation && (
                         <div>
                           <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Contact / Captured Info</p>
                           <div className="space-y-2 p-3 bg-muted rounded-lg">
                             <div className="space-y-2">
                               <div className="flex justify-between text-sm">
                                 <span className="text-muted-foreground">Name:</span>
-                                <span className={`font-medium ${!selectedConversation.metadata.variables.user_name ? 'text-muted-foreground italic' : ''}`}>
-                                  {selectedConversation.metadata.variables.user_name || 'Not captured yet'}
+                                <span className={`font-medium ${!selectedConversation.metadata?.variables?.user_name ? 'text-muted-foreground italic' : ''}`}>
+                                  {selectedConversation.metadata?.variables?.user_name || 'Not captured yet'}
                                 </span>
                               </div>
                               <div className="flex justify-between text-sm">
                                 <span className="text-muted-foreground">Email:</span>
-                                <span className={`font-medium ${!selectedConversation.metadata.variables.user_email ? 'text-muted-foreground italic' : ''}`}>
-                                  {selectedConversation.metadata.variables.user_email || 'Not captured yet'}
+                                <span className={`font-medium ${!selectedConversation.metadata?.variables?.user_email ? 'text-muted-foreground italic' : ''}`}>
+                                  {selectedConversation.metadata?.variables?.user_email || 'Not captured yet'}
                                 </span>
+                              </div>
+                              <div className="flex justify-between items-center text-sm">
+                                <span className="text-muted-foreground">User ID:</span>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="font-medium font-mono text-xs">
+                                    {selectedConversation.voiceflow_user_id 
+                                      ? (selectedConversation.voiceflow_user_id.length > 12 
+                                          ? '…' + selectedConversation.voiceflow_user_id.slice(-8) 
+                                          : selectedConversation.voiceflow_user_id)
+                                      : selectedConversation.caller_phone || 'Unknown'}
+                                  </span>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const fullId = selectedConversation.voiceflow_user_id || selectedConversation.caller_phone || '';
+                                      navigator.clipboard.writeText(fullId);
+                                      toast({ title: "Copied", description: "User ID copied to clipboard" });
+                                    }}
+                                    className="p-0.5 rounded hover:bg-muted transition-colors"
+                                    title={selectedConversation.voiceflow_user_id || selectedConversation.caller_phone || ''}
+                                  >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                                  </button>
+                                </div>
                               </div>
                               {(agentConfig as any)?.custom_tracked_variables?.map((variable: any) => {
                                 const voiceflowName = typeof variable === 'string' ? variable : variable.voiceflow_name;
