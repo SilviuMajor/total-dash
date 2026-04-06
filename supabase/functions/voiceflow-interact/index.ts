@@ -391,6 +391,9 @@ serve(async (req) => {
 
     let isConversationEnded = false;
     if (voiceflowData && Array.isArray(voiceflowData)) {
+      // Log ALL trace types from Voiceflow for debugging
+      console.log("Voiceflow trace types:", voiceflowData.map(item => ({ type: item.type, payload: item.payload ? '(has payload)' : '(none)' })));
+      
       for (const item of voiceflowData) {
         if (item.type === "end") {
           isConversationEnded = true;
