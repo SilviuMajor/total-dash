@@ -1325,12 +1325,15 @@ export default function Conversations() {
                     <h3 className="font-semibold text-sm">
                       {(() => {
                         const raw = selectedConversation.metadata?.variables?.user_name || selectedConversation.caller_phone || 'Unknown';
-                        const short = (!selectedConversation.metadata?.variables?.user_name && raw.length > 8) ? raw.slice(0, 8) + '…' : raw;
-                        return <span title={raw}>{short}</span>;
+                        const hasName = !!selectedConversation.metadata?.variables?.user_name;
+                        const display = (!hasName && raw.length > 8) ? '…' + raw.slice(-6) : raw;
+                        return <span title={raw}>{display}</span>;
                       })()}
                     </h3>
                     <p className="text-xs text-muted-foreground">
                       Started {format(new Date(selectedConversation.started_at), 'PPp')}
+                      {' · '}
+                      {transcripts.length} msgs
                     </p>
                   </div>
                   {selectedConversation.department_id && (() => {
