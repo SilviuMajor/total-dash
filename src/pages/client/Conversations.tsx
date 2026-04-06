@@ -1151,7 +1151,8 @@ export default function Conversations() {
                   filteredConversations.map((conv) => {
                     const isChecked = selectedConversationIds.has(conv.id);
                     const isSelected = selectedConversation?.id === conv.id;
-                    const displayName = conv.metadata?.variables?.user_name || conv.caller_phone || 'Unknown';
+                    const rawName = conv.metadata?.variables?.user_name || conv.caller_phone || 'Unknown';
+                    const displayName = (!conv.metadata?.variables?.user_name && rawName.length > 8) ? rawName.slice(0, 8) + '…' : rawName;
 
                     return (
                       <div
