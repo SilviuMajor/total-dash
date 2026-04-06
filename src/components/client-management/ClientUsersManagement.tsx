@@ -1149,16 +1149,20 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                             className="text-xs"
                             onClick={async () => {
                               try {
-                                await supabase.functions.invoke('reinvite-user', {
-                                  body: { userId: user.user_id, userType: 'client', contextId: clientId },
+                                const { error } = await supabase.auth.signInWithOtp({
+                                  email: user.profiles?.email || '',
+                                  options: {
+                                    shouldCreateUser: false,
+                                  },
                                 });
-                                toast({ title: "Sent", description: "Invite resent to " + (user.profiles?.email || "user") });
+                                if (error) throw error;
+                                toast({ title: "Sent", description: "Login link sent to " + (user.profiles?.email || "user") });
                               } catch (e: any) {
                                 toast({ title: "Error", description: e.message, variant: "destructive" });
                               }
                             }}
                           >
-                            Resend invite
+                            Send login link
                           </Button>
                           <Button
                             size="sm"
