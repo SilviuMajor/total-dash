@@ -275,6 +275,65 @@ serve(async (req) => {
       console.error('Password hint storage error:', passwordError);
     }
 
+    // Create initial agent permission rows from role template
+    if (resolvedRoleId) {
+      // Get role templates for this role
+      const { data: templates } = await supabaseAdmin
+        .from('role_permission_templates')
+        .select('agent_id, permissions')
+        .eq('role_id', resolvedRoleId)
+        .eq('client_id', clientId);
+
+      // Get all agents assigned to this client
+      const { data: assignments } = await supabaseAdmin
+        .from('agent_assignments')
+        .select('agent_id')
+        .eq('client_id', clientId);
+
+      const templateMap: Record<string, any> = {};
+      (templates || []).forEach((t: any) => { templateMap[t.agent_id] = t.permissions || {}; });
+
+      // Create a permission row for each assigned agent
+      for (const assignment of (assignments || [])) {
+        const template = templateMap[assignment.agent_id] || {
+          conversations: false, transcripts: false, analytics: false,
+          specs: false, knowledge_base: false, guides: false, agent_settings: false,
+        };
+        const { error: permError } = await supabaseAdmin
+          .from('client_user_agent_permissions')
+          .insert({
+            user_id: authData.user.id,
+            agent_id: assignment.agent_id,
+            client_id: clientId,
+            role_id: resolvedRoleId,
+            has_overrides: false,
+            permissions: template,
+          });
+        if (permError) {
+          console.error('Error creating agent permission row:', permError);
+        }
+      }
+
+      // Create client-scoped permissions from role
+      const { data: roleData2 } = await supabaseAdmin
+        .from('client_roles')
+        .select('client_permissions')
+        .eq('id', resolvedRoleId)
+        .single();
+
+      if (roleData2) {
+        await supabaseAdmin
+          .from('client_user_permissions')
+          .insert({
+            user_id: authData.user.id,
+            client_id: clientId,
+            role_id: resolvedRoleId,
+            client_permissions: roleData2.client_permissions || {},
+            has_overrides: false,
+          });
+      }
+    }
+
     console.log('Client user created successfully');
 
     return new Response(
