@@ -1750,8 +1750,11 @@ function generateWidgetScript(config: any): string {
             messages.push(newMsg);
             hasNewMessages = true;
             
-            // Detect handover end — stop polling after 5s to catch the system message
+            // Detect handover end — stop polling after 3s to catch the system message
             if (transcript.metadata && transcript.metadata.type === 'handover_ended') {
+              if (transcript.metadata.resolved === true) {
+                isConversationEnded = true;
+              }
               setTimeout(() => stopHandoverRealtime(), 3000);
             }
           }
