@@ -52,7 +52,7 @@ export default function Guides() {
       // Get agent provider for showing relevant default guides
       if (selectedAgentId) {
         const { data: agentData } = await supabase
-          .from('agents_safe')
+          .from('agents')
           .select('provider')
           .eq('id', selectedAgentId)
           .single();

@@ -35,7 +35,7 @@ export default function AgentSettings() {
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from("agents_safe")
+        .from("agents")
         .select("id, name, provider, config")
         .eq("id", selectedAgentId)
         .single();

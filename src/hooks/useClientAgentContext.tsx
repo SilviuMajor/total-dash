@@ -566,11 +566,13 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
       const loadAgentPermissions = async () => {
         // Get agent config (ceiling)
         const { data: agentData } = await supabase
-          .from('agents_safe')
+          .from('agents')
           .select('config')
           .eq('id', selectedAgentId)
           .single();
-        const agentConfig = (agentData?.config || {}) as Record<string, any>;
+        const rawConfig = (agentData?.config || {}) as Record<string, any>;
+        // Strip API keys from config for security
+        const { api_key, voiceflow_api_key, retell_api_key, ...agentConfig } = rawConfig as any;
 
         // Get user's permission row
         const { data: userPerm } = await supabase
