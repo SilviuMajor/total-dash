@@ -18,6 +18,7 @@ import { ClientGuidesEditor } from "@/components/client-management/ClientGuidesE
 import { ClientUsersManagement } from "@/components/client-management/ClientUsersManagement";
 import { CannedResponsesSettings } from "@/components/settings/CannedResponsesSettings";
 import { AuditLog } from "@/components/settings/AuditLog";
+import { RolesManagement } from "@/components/settings/RolesManagement";
 
 
 interface ClientData {
