@@ -1271,7 +1271,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                               } catch (error: any) {
                                 toast({ title: "Error", description: error.message || "Failed to save permissions", variant: "destructive" });
                               }
-                            }
+                            }}
                           >
                             Save
                           </Button>
