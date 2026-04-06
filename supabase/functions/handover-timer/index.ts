@@ -165,6 +165,7 @@ serve(async (req) => {
             .from("conversations")
             .update({
               status: "needs_review",
+              needs_review_reason: "timeout",
               last_activity_at: new Date().toISOString(),
             })
             .eq("id", session.conversation_id);
@@ -434,6 +435,7 @@ serve(async (req) => {
               .from("conversations")
               .update({
                 status: "needs_review",
+                needs_review_reason: "inactivity",
                 last_activity_at: new Date().toISOString(),
               })
               .eq("id", session.conversation_id);
