@@ -1048,7 +1048,7 @@ export default function Conversations() {
 
       {/* ── Three-panel workspace ── */}
       <div className="flex-1 min-h-0 overflow-hidden">
-        <div className="grid grid-cols-[380px_minmax(300px,1fr)_340px] h-full">
+        <div className="grid grid-cols-[320px_minmax(300px,1fr)_340px] h-full">
 
           {/* LEFT PANEL: Conversation list */}
           <div className="flex flex-col border-r border-border h-full overflow-hidden">
