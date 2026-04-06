@@ -1711,9 +1711,22 @@ export default function Conversations() {
                       {/* IN HANDOVER — mine */}
                       {selectedConversation.status === 'in_handover' && selectedConversation.owner_id === currentClientUserId && (
                         <div className="space-y-2">
-                          <div className="flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-blue-500" />
-                            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Active Handover</p>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5">
+                              <span className="w-2 h-2 rounded-full bg-blue-500" />
+                              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Active Handover</p>
+                            </div>
+                            {activeSession?.accepted_at && (
+                              <span className="text-[10px] font-medium text-muted-foreground font-mono tabular-nums">
+                                {(() => {
+                                  const secs = Math.floor((Date.now() - new Date(activeSession.accepted_at).getTime()) / 1000);
+                                  const h = Math.floor(secs / 3600);
+                                  const m = Math.floor((secs % 3600) / 60);
+                                  const s = secs % 60;
+                                  return h > 0 ? `${h}h ${m}m` : `${m}m ${s.toString().padStart(2, '0')}s`;
+                                })()}
+                              </span>
+                            )}
                           </div>
                           <p className="text-xs text-muted-foreground">You are handling this conversation</p>
                           <div className="flex gap-2">
