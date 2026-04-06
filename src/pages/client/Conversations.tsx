@@ -1306,7 +1306,11 @@ export default function Conversations() {
                 <div className="px-4 py-3 border-b border-border flex items-start justify-between">
                   <div>
                     <h3 className="font-semibold text-sm">
-                      {selectedConversation.metadata?.variables?.user_name || selectedConversation.caller_phone || 'Unknown'}
+                      {(() => {
+                        const raw = selectedConversation.metadata?.variables?.user_name || selectedConversation.caller_phone || 'Unknown';
+                        const short = (!selectedConversation.metadata?.variables?.user_name && raw.length > 8) ? raw.slice(0, 8) + '…' : raw;
+                        return <span title={raw}>{short}</span>;
+                      })()}
                     </h3>
                     <p className="text-xs text-muted-foreground">
                       Started {format(new Date(selectedConversation.started_at), 'PPp')}
