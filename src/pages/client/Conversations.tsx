@@ -1161,16 +1161,17 @@ export default function Conversations() {
                         className={cn(
                           "group border-l-[3px] px-4 py-3 border-b border-border cursor-pointer transition-colors",
                           conv.status === 'with_ai' && "border-l-green-500",
+                          conv.status === 'waiting' && "border-l-red-500",
                           conv.status === 'in_handover' && "border-l-blue-500",
                           conv.status === 'aftercare' && "border-l-yellow-500",
                           conv.status === 'needs_review' && "border-l-amber-500",
                           conv.status === 'resolved' && "border-l-gray-400",
-                          (!['with_ai', 'in_handover', 'aftercare', 'needs_review', 'resolved'].includes(conv.status)) && "border-l-border",
-                          pendingConversationIds.has(conv.id) && "bg-red-50/80 dark:bg-red-950/20 border-l-red-500",
-                          !pendingConversationIds.has(conv.id) && isMine && conv.status === 'in_handover' && "bg-blue-50/70 dark:bg-blue-950/20",
-                          !pendingConversationIds.has(conv.id) && isMine && conv.status === 'aftercare' && "bg-yellow-50/70 dark:bg-yellow-950/20",
-                          !pendingConversationIds.has(conv.id) && isMine && conv.status === 'needs_review' && "bg-amber-50/70 dark:bg-amber-950/20",
-                          !pendingConversationIds.has(conv.id) && isMine && conv.status === 'resolved' && "bg-gray-50/70 dark:bg-gray-950/20",
+                          (!['with_ai', 'waiting', 'in_handover', 'aftercare', 'needs_review', 'resolved'].includes(conv.status)) && "border-l-border",
+                          (pendingConversationIds.has(conv.id) || conv.status === 'waiting') && "bg-red-50/80 dark:bg-red-950/20 border-l-red-500",
+                          !pendingConversationIds.has(conv.id) && conv.status !== 'waiting' && isMine && conv.status === 'in_handover' && "bg-blue-50/70 dark:bg-blue-950/20",
+                          !pendingConversationIds.has(conv.id) && conv.status !== 'waiting' && isMine && conv.status === 'aftercare' && "bg-yellow-50/70 dark:bg-yellow-950/20",
+                          !pendingConversationIds.has(conv.id) && conv.status !== 'waiting' && isMine && conv.status === 'needs_review' && "bg-amber-50/70 dark:bg-amber-950/20",
+                          !pendingConversationIds.has(conv.id) && conv.status !== 'waiting' && isMine && conv.status === 'resolved' && "bg-gray-50/70 dark:bg-gray-950/20",
                           isSelected ? "bg-primary/5" : pendingConversationIds.has(conv.id) ? "" : isMine ? "" : "hover:bg-muted/40"
                         )}
                       >
