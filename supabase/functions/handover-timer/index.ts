@@ -362,11 +362,17 @@ serve(async (req) => {
             .limit(1)
             .maybeSingle();
 
-          if (!lastUserMsg) continue; // No customer messages yet — skip
+          // Use the LATER of: last customer message OR session accepted_at
+          // This prevents immediate re-timeout when an agent takes over a needs_review conversation
+          // where the last customer message is old (from before the previous timeout)
+          const lastCustomerTime = lastUserMsg ? new Date(lastUserMsg.timestamp).getTime() : 0;
+          const sessionAcceptedTime = session.accepted_at ? new Date(session.accepted_at).getTime() : 0;
+          const inactivityBaseline = Math.max(lastCustomerTime, sessionAcceptedTime);
 
-          const lastCustomerTime = new Date(lastUserMsg.timestamp).getTime();
+          if (inactivityBaseline === 0) continue; // No customer messages and no accepted_at — skip
+
           const now = Date.now();
-          const minutesSinceCustomer = (now - lastCustomerTime) / 60000;
+          const minutesSinceCustomer = (now - inactivityBaseline) / 60000;
 
           // --- NUDGE CHECK ---
           if (nudgeEnabled && minutesSinceCustomer >= nudgeDelayMinutes) {
