@@ -508,7 +508,6 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
           departmentId: newUserDepartment === "none" ? null : newUserDepartment || null,
           avatarUrl: newUserAvatar || null,
           pagePermissions: null,
-          customPassword: newUserPassword || undefined,
         },
       });
 
