@@ -1110,6 +1110,27 @@ function generateWidgetScript(config: any): string {
       flex-shrink: 0;
     }
     
+    .vf-new-conversation-btn {
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: 24px;
+      border: none;
+      background: \${CONFIG.appearance.primaryColor};
+      color: white;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: opacity 0.2s;
+    }
+
+    .vf-new-conversation-btn:hover {
+      opacity: 0.9;
+    }
+
     .vf-input-row {
       display: flex;
       align-items: center;
@@ -1346,6 +1367,7 @@ function generateWidgetScript(config: any): string {
   let clickedButtonIds = new Set();
   let clickedButtonSelections = {};
   let isInHandover = false;
+  let isConversationEnded = false;
   let realtimeSubscription = null;
   
   // Helper to get the Voiceflow user ID (combined with session ID)
@@ -1473,18 +1495,24 @@ function generateWidgetScript(config: any): string {
       
       \${isInActiveChat ? \`
         <div class="vf-input-area">
-          <div class="vf-input-row">
-            \${CONFIG.functions.fileUploadEnabled ? \`
-              <input type="file" id="vf-file-input" accept="image/*,application/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx" style="display: none;" />
-              <button class="vf-input-attach" onclick="window.vfAttachFile()">
-                \${icons.paperclip}
-              </button>
-            \` : ''}
-            <input type="text" class="vf-input" id="vf-input" placeholder="Type your message..." />
-            <button class="vf-send-button" onclick="window.vfSendMessage()">
-              \${icons.send}
+          \${isConversationEnded ? \`
+            <button class="vf-new-conversation-btn" onclick="window.vfStartNewChat()">
+              + New Conversation
             </button>
-          </div>
+          \` : \`
+            <div class="vf-input-row">
+              \${CONFIG.functions.fileUploadEnabled ? \`
+                <input type="file" id="vf-file-input" accept="image/*,application/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx" style="display: none;" />
+                <button class="vf-input-attach" onclick="window.vfAttachFile()">
+                  \${icons.paperclip}
+                </button>
+              \` : ''}
+              <input type="text" class="vf-input" id="vf-input" placeholder="Type your message..." />
+              <button class="vf-send-button" onclick="window.vfSendMessage()">
+                \${icons.send}
+              </button>
+            </div>
+          \`}
         </div>
       \` : ''}
       
@@ -1722,8 +1750,11 @@ function generateWidgetScript(config: any): string {
             messages.push(newMsg);
             hasNewMessages = true;
             
-            // Detect handover end — stop polling after 5s to catch the system message
+            // Detect handover end — stop polling after 3s to catch the system message
             if (transcript.metadata && transcript.metadata.type === 'handover_ended') {
+              if (transcript.metadata.resolved === true) {
+                isConversationEnded = true;
+              }
               setTimeout(() => stopHandoverRealtime(), 3000);
             }
           }
@@ -2076,6 +2107,7 @@ function generateWidgetScript(config: any): string {
       // Show conversation ended indicator
       if (data.conversationEnded) {
         isTyping = false;
+        isConversationEnded = true;
         const endMsg = {
           id: 'msg_end_' + Date.now(),
           speaker: 'system',
@@ -2101,6 +2133,7 @@ function generateWidgetScript(config: any): string {
     stopHandoverRealtime();
     messages = [];
     conversationId = null;
+    isConversationEnded = false;
     currentVoiceflowSessionId = 'sess_' + Math.random().toString(36).substr(2, 9);
     clickedButtonIds.clear();
     SessionManager.startNewConversation();
@@ -2277,6 +2310,7 @@ function generateWidgetScript(config: any): string {
       // Show conversation ended indicator
       if (data.conversationEnded) {
         isTyping = false;
+        isConversationEnded = true;
         const endMsg = {
           id: 'msg_end_' + Date.now(),
           speaker: 'system',
