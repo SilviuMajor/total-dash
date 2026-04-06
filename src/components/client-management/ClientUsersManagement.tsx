@@ -709,7 +709,12 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
           </div>
         ) : (
           <div className="space-y-2">
-            {users.map((user) => {
+            {users
+              .filter(user => {
+                if (user.status === 'removed') return showRemovedUsers;
+                return true;
+              })
+              .map((user) => {
               const isExpanded = expandedUserId === user.user_id;
 
               return (
