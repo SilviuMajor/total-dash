@@ -129,7 +129,7 @@ export default function Conversations() {
   const [pendingSession, setPendingSession] = useState<any>(null);
   const [activeSession, setActiveSession] = useState<any>(null);
   const [currentClientUserId, setCurrentClientUserId] = useState<string | null>(null);
-  const [pendingConversationIds, setPendingConversationIds] = useState<Set<string>>(new Set());
+  const [pendingConversationIds, setPendingConversationIds] = useState<Map<string, string>>(new Map());
   const [responseTick, setResponseTick] = useState(0);
 
   // Canned responses state
