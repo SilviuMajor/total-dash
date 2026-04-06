@@ -13,13 +13,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Trash2, UserPlus, Copy, AlertCircle, Loader2, ChevronDown, ChevronRight, Eye } from "lucide-react";
+import { Trash2, UserPlus, AlertCircle, Loader2, ChevronDown, ChevronRight, Eye } from "lucide-react";
 import { useImpersonation } from "@/hooks/useImpersonation";
 import { useNavigate } from "react-router-dom";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AvatarUpload } from "@/components/AvatarUpload";
-import { PasswordDisplay } from "@/components/PasswordDisplay";
+
 
 interface ClientUser {
   id: string;
@@ -99,7 +99,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
   const [open, setOpen] = useState(false);
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
   const [userToRemove, setUserToRemove] = useState<ClientUser | null>(null);
-  const [generatedPassword, setGeneratedPassword] = useState<string>("");
+  
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
   const [roleChangeModal, setRoleChangeModal] = useState<{ user: ClientUser; newRoleId: string } | null>(null);
   const [showRemovedUsers, setShowRemovedUsers] = useState(false);
@@ -115,7 +115,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
   const [newUserDepartment, setNewUserDepartment] = useState<string>("none");
   const [newUserRoleId, setNewUserRoleId] = useState<string>("");
   const [newUserAvatar, setNewUserAvatar] = useState("");
-  const [newUserPassword, setNewUserPassword] = useState("");
+  
   const [newUserAgentPermissions, setNewUserAgentPermissions] = useState<Record<string, AgentPermission>>({});
   const [selectedUserAgentPermissions, setSelectedUserAgentPermissions] = useState<Record<string, AgentPermission>>({});
 
@@ -508,7 +508,6 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
           departmentId: newUserDepartment === "none" ? null : newUserDepartment || null,
           avatarUrl: newUserAvatar || null,
           pagePermissions: null,
-          customPassword: newUserPassword || undefined,
         },
       });
 
@@ -541,15 +540,13 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
       }
 
       if (data.success) {
-        setGeneratedPassword(data.temporaryPassword);
-        toast({ title: "Success", description: "User created successfully" });
+        toast({ title: "Success", description: "User created. A password setup email has been sent to their email address." });
         loadUsers();
         setOpen(false);
         setNewUserEmail("");
         setNewUserFullName("");
         setNewUserDepartment("none");
         setNewUserAvatar("");
-        setNewUserPassword("");
         
         const defaultRole = roles.find(r => r.is_default) || roles.find(r => !r.is_admin_tier);
         setNewUserRoleId(defaultRole?.id || "");
@@ -615,10 +612,6 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
     }
   };
 
-  const copyPassword = () => {
-    navigator.clipboard.writeText(generatedPassword);
-    toast({ title: "Copied", description: "Password copied to clipboard" });
-  };
 
   const toggleAgentPermission = (agentId: string, field: keyof AgentPermission, value: boolean, isNewUser: boolean = true) => {
     if (isNewUser) {
@@ -769,7 +762,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                     {user.departments?.name && (
                       <span className="text-xs text-muted-foreground">{user.departments.name}</span>
                     )}
-                    <PasswordDisplay userId={user.user_id} />
+                    
                     {isExpanded ? (
                       <ChevronDown className="h-4 w-4 text-muted-foreground" />
                     ) : (
@@ -827,6 +820,30 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                               ))}
                             </SelectContent>
                           </Select>
+                        </div>
+                        <div className="flex-1 space-y-1">
+                          <Label className="text-xs text-muted-foreground">Email</Label>
+                          <div className="flex gap-2">
+                            <Input
+                              className="h-9 text-sm"
+                              defaultValue={user.profiles?.email || ''}
+                              onBlur={async (e) => {
+                                const newEmail = e.target.value.trim();
+                                if (!newEmail || newEmail === user.profiles?.email) return;
+                                try {
+                                  const { error: fnError } = await supabase.functions.invoke('reset-user-password', {
+                                    body: { userId: user.user_id, newEmail },
+                                  });
+                                  await supabase.from('profiles').update({ email: newEmail }).eq('id', user.user_id);
+                                  toast({ title: "Email updated", description: `Email changed to ${newEmail}` });
+                                  loadUsers();
+                                } catch (err: any) {
+                                  toast({ title: "Error", description: err.message, variant: "destructive" });
+                                  e.target.value = user.profiles?.email || '';
+                                }
+                              }}
+                            />
+                          </div>
                         </div>
                       </div>
 
@@ -1132,16 +1149,20 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                             className="text-xs"
                             onClick={async () => {
                               try {
-                                await supabase.functions.invoke('reinvite-user', {
-                                  body: { userId: user.user_id, userType: 'client', contextId: clientId },
+                                const { error } = await supabase.auth.signInWithOtp({
+                                  email: user.profiles?.email || '',
+                                  options: {
+                                    shouldCreateUser: false,
+                                  },
                                 });
-                                toast({ title: "Sent", description: "Invite resent to " + (user.profiles?.email || "user") });
+                                if (error) throw error;
+                                toast({ title: "Sent", description: "Login link sent to " + (user.profiles?.email || "user") });
                               } catch (e: any) {
                                 toast({ title: "Error", description: e.message, variant: "destructive" });
                               }
                             }}
                           >
-                            Resend invite
+                            Send login link
                           </Button>
                           <Button
                             size="sm"
@@ -1294,27 +1315,15 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
             <DialogTitle>Add New User</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={newUserEmail}
-                  onChange={(e) => setNewUserEmail(e.target.value)}
-                  placeholder="user@example.com"
-                />
-              </div>
-              <div>
-                <Label htmlFor="password">Password (optional)</Label>
-                <Input
-                  id="password"
-                  type="text"
-                  value={newUserPassword}
-                  onChange={(e) => setNewUserPassword(e.target.value)}
-                  placeholder="Leave empty to auto-generate"
-                />
-              </div>
+            <div>
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={newUserEmail}
+                onChange={(e) => setNewUserEmail(e.target.value)}
+                placeholder="user@example.com"
+              />
             </div>
             <div>
               <Label htmlFor="fullName">Full Name</Label>
@@ -1424,38 +1433,18 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
               </div>
             </div>
 
-            {generatedPassword && (
-              <div className="p-4 bg-muted rounded space-y-2">
-                <Label>Generated Password</Label>
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 p-2 bg-background rounded text-sm">
-                    {generatedPassword}
-                  </code>
-                  <Button size="sm" onClick={copyPassword}>
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Save this password. It won't be shown again.
-                </p>
-              </div>
-            )}
-
             <div className="flex justify-end gap-2 pt-4">
               <Button
                 variant="outline"
                 onClick={() => {
                   setOpen(false);
-                  setGeneratedPassword("");
                 }}
               >
-                {generatedPassword ? "Done" : "Cancel"}
+                Cancel
               </Button>
-              {!generatedPassword && (
-                <Button onClick={handleAddUser} disabled={!newUserEmail || !newUserFullName}>
-                  Add User
-                </Button>
-              )}
+              <Button onClick={handleAddUser} disabled={!newUserEmail || !newUserFullName}>
+                Add User
+              </Button>
             </div>
           </div>
         </DialogContent>
