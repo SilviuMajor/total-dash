@@ -358,6 +358,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
           const role = roleInfo.role_id ? roleMap[roleInfo.role_id] : null;
           return {
             id: u.id,
+            status: (u as any).status || 'active',
             user_id: u.user_id,
             full_name: u.full_name,
             avatar_url: u.avatar_url,
