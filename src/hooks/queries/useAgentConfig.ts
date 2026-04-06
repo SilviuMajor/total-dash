@@ -18,7 +18,7 @@ export function useAgentConfig(agentId: string | null) {
     queryKey: ['agent-config', agentId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('agents_safe')
+        .from('agents')
         .select('config')
         .eq('id', agentId!)
         .single();
