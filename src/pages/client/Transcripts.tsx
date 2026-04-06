@@ -73,7 +73,7 @@ export default function Transcripts() {
   const loadAgentConfig = async () => {
     try {
       const { data, error } = await supabase
-        .from('agents')
+        .from('agents_safe')
         .select('config')
         .eq('id', selectedAgentId!)
         .single();

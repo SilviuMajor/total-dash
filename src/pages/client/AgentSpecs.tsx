@@ -61,7 +61,7 @@ export default function AgentSpecs() {
     try {
       // Load agent details
       const { data: agentData } = await supabase
-        .from('agents')
+        .from('agents_safe')
         .select('id, name, status')
         .eq('id', selectedAgentId)
         .single();

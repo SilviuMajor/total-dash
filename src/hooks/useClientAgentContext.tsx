@@ -566,7 +566,7 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
       const loadAgentPermissions = async () => {
         // Get agent config (ceiling)
         const { data: agentData } = await supabase
-          .from('agents')
+          .from('agents_safe')
           .select('config')
           .eq('id', selectedAgentId)
           .single();
