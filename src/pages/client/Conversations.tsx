@@ -1215,7 +1215,7 @@ export default function Conversations() {
 
                         {/* Row 2: Message preview */}
                         <p className="text-xs text-muted-foreground truncate pl-6 mb-1.5">
-                          Started {format(new Date(conv.started_at), 'MMM d, h:mm a')}
+                          <span title={format(new Date(conv.started_at), 'PPp')}>{formatDistanceToNow(new Date(conv.started_at), { addSuffix: true })}</span>
                         </p>
 
                         {/* Row 3: Status badge + tags (left), response time pill (right) */}
