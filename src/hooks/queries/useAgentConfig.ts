@@ -21,7 +21,7 @@ export function useAgentConfig(agentId: string | null) {
         .from('agents_safe' as any)
         .select('config')
         .eq('id', agentId!)
-        .single();
+        .single() as { data: { config: any } | null; error: any };
       if (error) throw error;
       return (data?.config || {}) as AgentConfig;
     },

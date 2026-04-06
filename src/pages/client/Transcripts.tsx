@@ -76,7 +76,7 @@ export default function Transcripts() {
         .from('agents_safe' as any)
         .select('config')
         .eq('id', selectedAgentId!)
-        .single();
+        .single() as { data: { config: any } | null; error: any };
       
       if (error) throw error;
       setAgentConfig(data?.config || {});

@@ -81,7 +81,7 @@ export function CannedResponsesSettings({ readOnly, clientId: propClientId }: { 
     setPersonalEnabled(enabled);
     if (!selectedAgentId) return;
     // Get current config
-    const { data: agent } = await supabase.from("agents_safe" as any).select("config").eq("id", selectedAgentId).single();
+    const { data: agent } = await supabase.from("agents_safe" as any).select("config").eq("id", selectedAgentId).single() as { data: { config: any } | null };
     const currentConfig = (agent?.config as Record<string, any>) || {};
     await supabase.from("agents").update({
       config: { ...currentConfig, canned_responses_personal_enabled: enabled }
