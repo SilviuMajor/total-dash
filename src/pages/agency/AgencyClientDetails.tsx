@@ -42,6 +42,7 @@ function CompanySettingsPanel({ clientId }: { clientId: string }) {
   const [activeSubTab, setActiveSubTab] = useState("departments");
   const [capabilities, setCapabilities] = useState<Record<string, any>>({});
   const [masterEnabled, setMasterEnabled] = useState(true);
+  const [teamSubTab, setTeamSubTab] = useState<"roles" | "team">("team");
 
   useEffect(() => {
     loadCapabilities();
