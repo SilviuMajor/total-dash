@@ -391,6 +391,9 @@ serve(async (req) => {
 
     let isConversationEnded = false;
     if (voiceflowData && Array.isArray(voiceflowData)) {
+      // Log ALL trace types from Voiceflow for debugging
+      console.log("Voiceflow trace types:", voiceflowData.map(item => ({ type: item.type, payload: item.payload ? '(has payload)' : '(none)' })));
+      
       for (const item of voiceflowData) {
         if (item.type === "end") {
           isConversationEnded = true;
@@ -528,10 +531,13 @@ serve(async (req) => {
         // Look up the requested department (or fall back to Global)
         let department = null;
         if (handoverDepartmentCode) {
+          console.log("Looking up department:", { clientId, code: handoverDepartmentCode });
           department = await getDepartmentByCode(supabaseClient, clientId, handoverDepartmentCode);
+          console.log("Department lookup result:", department ? { id: department.id, name: department.name, code: department.code } : "NOT FOUND - will fall back to Global");
         }
         if (!department) {
           department = await getGlobalDepartment(supabaseClient, clientId);
+          console.log("Using Global department:", department ? { id: department.id, name: department.name } : "NOT FOUND");
         }
 
         if (department) {
