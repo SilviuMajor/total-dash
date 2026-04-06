@@ -2046,7 +2046,8 @@ function generateWidgetScript(config: any): string {
       
       const data = await response.json();
       
-      if (!conversationId && data.conversationId) {
+      if (data.conversationId && data.conversationId !== conversationId) {
+        console.log('[VF Widget] Conversation ID updated:', conversationId, '->', data.conversationId);
         conversationId = data.conversationId;
       }
       
@@ -2257,6 +2258,11 @@ function generateWidgetScript(config: any): string {
       
       const data = await response.json();
       
+      if (data.conversationId && data.conversationId !== conversationId) {
+        console.log('[VF Widget] Conversation ID updated:', conversationId, '->', data.conversationId);
+        conversationId = data.conversationId;
+      }
+
       // Handle handover state
       if (data.handoverActive || data.handoverPending) {
         // Display Voiceflow bot responses that came before the handover action
