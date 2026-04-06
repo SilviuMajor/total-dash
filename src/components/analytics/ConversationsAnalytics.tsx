@@ -101,7 +101,7 @@ export function ConversationsAnalytics({ agentId, dateRange }: ConversationsAnal
       const endReasons: Record<string, number> = {};
       for (const c of conversations) {
         const status = c.status || "active";
-        const label = status === "resolved" ? "Resolved" : status === "with_ai" ? "Active (AI)" : status === "in_handover" ? "Active (Handover)" : status === "aftercare" ? "Aftercare" : status === "needs_review" ? "Needs Review" : status;
+        const label = status === "resolved" ? "Resolved" : status === "with_ai" ? "Active (AI)" : status === "waiting" ? "Waiting" : status === "in_handover" ? "Active (Handover)" : status === "aftercare" ? "Aftercare" : status === "needs_review" ? "Needs Review" : status;
         endReasons[label] = (endReasons[label] || 0) + 1;
       }
       const endReasonData = Object.entries(endReasons).map(([name, value]) => ({ name, value }));

@@ -25,6 +25,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 const STATUS_LABELS: Record<string, string> = {
   with_ai: "With AI",
+  waiting: "Waiting",
   in_handover: "In Handover",
   aftercare: "Aftercare",
   needs_review: "Needs Review",
