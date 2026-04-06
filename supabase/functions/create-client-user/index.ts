@@ -343,6 +343,17 @@ serve(async (req) => {
       }
     }
 
+    // Auto-send "set your password" email to the new user
+    try {
+      await supabaseAdmin.auth.resetPasswordForEmail(email, {
+        redirectTo: `${Deno.env.get('SITE_URL') || Deno.env.get('SUPABASE_URL')?.replace('.supabase.co', '.lovable.app') || 'https://total-dash.com'}/change-password`,
+      });
+      console.log('Password setup email sent to:', email);
+    } catch (emailError) {
+      console.error('Failed to send password setup email:', emailError);
+      // Don't throw - user was created successfully
+    }
+
     console.log('Client user created successfully');
 
     return new Response(
@@ -350,7 +361,6 @@ serve(async (req) => {
         success: true, 
         userId: authData.user.id,
         roleId: resolvedRoleId,
-        temporaryPassword 
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
