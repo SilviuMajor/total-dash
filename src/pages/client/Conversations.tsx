@@ -635,7 +635,7 @@ export default function Conversations() {
     };
     loadPreviousConversations();
     setShowPreviousConversations(false);
-  }, [selectedConversation?.id, selectedConversation?.voiceflow_user_id]);
+  }, [selectedConversation?.id]);
 
   // Periodic handover timer check
   useEffect(() => {
