@@ -942,11 +942,6 @@ export default function Conversations() {
     return Math.floor((Date.now() - new Date(conversation.first_unanswered_message_at).getTime()) / 1000);
   };
 
-  const shouldShowResponsePill = (conversation: any) => {
-    if (conversation.status !== 'in_handover') return false;
-    if (!conversation.first_unanswered_message_at) return false;
-    return true;
-  };
 
   if (agents.length === 0) {
     return <NoAgentsAssigned />;
