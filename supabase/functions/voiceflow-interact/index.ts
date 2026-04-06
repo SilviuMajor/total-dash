@@ -140,7 +140,7 @@ serve(async (req) => {
   }
 
   try {
-    const { agentId, userId, message, action, conversationId, isTestMode } = await req.json();
+    const { agentId, userId, message, action, conversationId, isTestMode, baseUserId } = await req.json();
 
     console.log("Voiceflow interact request:", { agentId, userId, action, isTestMode });
 
