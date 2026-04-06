@@ -2133,6 +2133,7 @@ function generateWidgetScript(config: any): string {
     stopHandoverRealtime();
     messages = [];
     conversationId = null;
+    isConversationEnded = false;
     currentVoiceflowSessionId = 'sess_' + Math.random().toString(36).substr(2, 9);
     clickedButtonIds.clear();
     SessionManager.startNewConversation();
