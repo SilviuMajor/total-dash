@@ -16,6 +16,7 @@ interface OverviewAnalyticsProps {
 
 const STATUS_COLORS: Record<string, string> = {
   with_ai: "#22c55e",
+  waiting: "#ef4444",
   in_handover: "#3b82f6",
   aftercare: "#f59e0b",
   needs_review: "#ef4444",
