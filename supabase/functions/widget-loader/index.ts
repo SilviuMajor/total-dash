@@ -1752,9 +1752,6 @@ function generateWidgetScript(config: any): string {
             
             // Detect handover end — stop polling after 3s to catch the system message
             if (transcript.metadata && transcript.metadata.type === 'handover_ended') {
-              if (transcript.metadata.resolved === true) {
-                isConversationEnded = true;
-              }
               setTimeout(() => stopHandoverRealtime(), 3000);
             }
           }
@@ -2039,6 +2036,7 @@ function generateWidgetScript(config: any): string {
         body: JSON.stringify({
           agentId: CONFIG.agentId,
           userId: getVoiceflowUserId(),
+          baseUserId: userId,
           message: text,
           action: 'text',
           conversationId,
@@ -2153,6 +2151,7 @@ function generateWidgetScript(config: any): string {
         body: JSON.stringify({
           agentId: CONFIG.agentId,
           userId: getVoiceflowUserId(),
+          baseUserId: userId,
           action: 'reset'
         })
       });
@@ -2169,6 +2168,7 @@ function generateWidgetScript(config: any): string {
         body: JSON.stringify({
           agentId: CONFIG.agentId,
           userId: getVoiceflowUserId(),
+          baseUserId: userId,
           action: 'launch',
           conversationId: null,
           isTestMode: false
@@ -2247,6 +2247,7 @@ function generateWidgetScript(config: any): string {
         body: JSON.stringify({
           agentId: CONFIG.agentId,
           userId: getVoiceflowUserId(),
+          baseUserId: userId,
           message: JSON.stringify(button.payload),
           action: 'button',
           conversationId,
