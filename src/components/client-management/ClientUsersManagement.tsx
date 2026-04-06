@@ -1536,9 +1536,13 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                     .eq('client_id', clientId);
                 }
                 
-                toast({ title: "Role changed", description: "Permissions reset to new role defaults" });
                 setRoleChangeModal(null);
+                await loadUserAgentPermissions(user.user_id);
+                await loadUserClientPermissions(user.user_id);
+                const updatedTemplates2 = await loadRoleTemplates(newRoleId);
+                setRoleTemplates(prev => ({ ...prev, [user.user_id]: updatedTemplates2 }));
                 loadUsers();
+                toast({ title: "Role changed", description: "Permissions reset to new role defaults" });
               }}
             >
               Reset to defaults
