@@ -134,6 +134,7 @@ async function handleAcceptHandover(
     .update({
       status: "in_handover",
       owner_id: clientUserId,
+      owner_name: clientUserName,
       last_activity_at: new Date().toISOString(),
     })
     .eq("id", conversationId);
