@@ -102,6 +102,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
   const [generatedPassword, setGeneratedPassword] = useState<string>("");
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
   const [roleChangeModal, setRoleChangeModal] = useState<{ user: ClientUser; newRoleId: string } | null>(null);
+  const [showRemovedUsers, setShowRemovedUsers] = useState(false);
   const [roleTemplates, setRoleTemplates] = useState<Record<string, Record<string, any>>>({});
   const [agentCeilings, setAgentCeilings] = useState<Record<string, Record<string, any>>>({});
   const [clientCaps, setClientCaps] = useState<Record<string, any>>({});
