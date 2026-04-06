@@ -1048,7 +1048,7 @@ export default function Conversations() {
 
       {/* ── Three-panel workspace ── */}
       <div className="flex-1 min-h-0 overflow-hidden">
-        <div className="grid grid-cols-[380px_minmax(300px,1fr)_340px] h-full">
+        <div className="grid grid-cols-[320px_minmax(300px,1fr)_340px] h-full">
 
           {/* LEFT PANEL: Conversation list */}
           <div className="flex flex-col border-r border-border h-full overflow-hidden">
@@ -1151,7 +1151,8 @@ export default function Conversations() {
                   filteredConversations.map((conv) => {
                     const isChecked = selectedConversationIds.has(conv.id);
                     const isSelected = selectedConversation?.id === conv.id;
-                    const displayName = conv.metadata?.variables?.user_name || conv.caller_phone || 'Unknown';
+                    const rawName = conv.metadata?.variables?.user_name || conv.caller_phone || 'Unknown';
+                    const displayName = (!conv.metadata?.variables?.user_name && rawName.length > 8) ? rawName.slice(0, 8) + '…' : rawName;
 
                     return (
                       <div
@@ -1187,7 +1188,7 @@ export default function Conversations() {
                                 isChecked ? "opacity-100" : "opacity-0 group-hover:opacity-100"
                               )}
                             />
-                            <span className="text-[13px] font-medium truncate">{displayName}</span>
+                            <span className="text-[13px] font-medium truncate" title={rawName}>{displayName}</span>
                             {conv.is_widget_test && (
                               <Badge variant="outline" className="text-[10px] shrink-0 px-1 py-0">🧪</Badge>
                             )}
@@ -1214,7 +1215,7 @@ export default function Conversations() {
 
                         {/* Row 2: Message preview */}
                         <p className="text-xs text-muted-foreground truncate pl-6 mb-1.5">
-                          Started {format(new Date(conv.started_at), 'MMM d, h:mm a')}
+                          <span title={format(new Date(conv.started_at), 'PPp')}>{formatDistanceToNow(new Date(conv.started_at), { addSuffix: true })}</span>
                         </p>
 
                         {/* Row 3: Status badge + tags (left), response time pill (right) */}
@@ -1305,7 +1306,11 @@ export default function Conversations() {
                 <div className="px-4 py-3 border-b border-border flex items-start justify-between">
                   <div>
                     <h3 className="font-semibold text-sm">
-                      {selectedConversation.metadata?.variables?.user_name || selectedConversation.caller_phone || 'Unknown'}
+                      {(() => {
+                        const raw = selectedConversation.metadata?.variables?.user_name || selectedConversation.caller_phone || 'Unknown';
+                        const short = (!selectedConversation.metadata?.variables?.user_name && raw.length > 8) ? raw.slice(0, 8) + '…' : raw;
+                        return <span title={raw}>{short}</span>;
+                      })()}
                     </h3>
                     <p className="text-xs text-muted-foreground">
                       Started {format(new Date(selectedConversation.started_at), 'PPp')}
