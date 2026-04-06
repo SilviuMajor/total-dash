@@ -132,6 +132,10 @@ export default function Conversations() {
   const [pendingConversationIds, setPendingConversationIds] = useState<Map<string, string>>(new Map());
   const [responseTick, setResponseTick] = useState(0);
 
+  // Previous conversations
+  const [previousConversations, setPreviousConversations] = useState<Conversation[]>([]);
+  const [showPreviousConversations, setShowPreviousConversations] = useState(false);
+
   // Canned responses state
   const [showCannedDropdown, setShowCannedDropdown] = useState(false);
   const [cannedTab, setCannedTab] = useState<'org' | 'personal'>('org');
