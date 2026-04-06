@@ -562,7 +562,7 @@ serve(async (req) => {
               // Update conversation status
               await supabaseClient
                 .from("conversations")
-                .update({ status: "needs_review", department_id: department.id })
+                .update({ status: "needs_review", department_id: department.id, needs_review_reason: "department_closed" })
                 .eq("id", currentConversationId);
 
               // Resume Voiceflow with department_closed path
