@@ -1160,14 +1160,36 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                           >
                             Reset password
                           </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
-                            onClick={() => { setUserToRemove(user); setRemoveDialogOpen(true); }}
-                          >
-                            Remove user
-                          </Button>
+                          {user.status === 'active' && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-xs text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                              onClick={() => handleSuspendUser(user)}
+                            >
+                              Suspend user
+                            </Button>
+                          )}
+                          {user.status === 'suspended' && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-xs text-green-600 hover:text-green-700 hover:bg-green-50"
+                              onClick={() => handleReactivateUser(user)}
+                            >
+                              Reactivate
+                            </Button>
+                          )}
+                          {user.status !== 'removed' && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={() => { setUserToRemove(user); setRemoveDialogOpen(true); }}
+                            >
+                              Remove user
+                            </Button>
+                          )}
                           <Button
                             size="sm"
                             onClick={async () => {
