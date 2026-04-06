@@ -1811,7 +1811,15 @@ export default function Conversations() {
                             <span className="w-2 h-2 rounded-full bg-amber-500" />
                             <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Needs Review</p>
                           </div>
-                          <p className="text-xs text-muted-foreground">This conversation needs attention</p>
+                          <p className="text-xs text-muted-foreground">
+                            {(selectedConversation as any).needs_review_reason === 'timeout'
+                              ? 'No agents were available to accept this handover'
+                              : (selectedConversation as any).needs_review_reason === 'department_closed'
+                              ? 'Handover was requested outside of opening hours'
+                              : (selectedConversation as any).needs_review_reason === 'inactivity'
+                              ? 'Closed due to customer inactivity during handover'
+                              : 'This conversation needs attention'}
+                          </p>
                           <Button
                             size="sm"
                             className="w-full bg-foreground text-background hover:bg-foreground/90"
