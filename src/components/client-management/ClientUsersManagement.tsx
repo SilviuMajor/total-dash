@@ -1536,7 +1536,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
           <AlertDialogHeader>
             <AlertDialogTitle>Remove User</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to remove this user from the client? This action cannot be undone.
+              Are you sure you want to remove {userToRemove?.full_name || 'this user'}? They will no longer be able to log in. Their conversation history and audit trail will be preserved. You can reinstate them later by adding a user with the same email address.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
