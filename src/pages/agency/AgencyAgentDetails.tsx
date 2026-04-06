@@ -41,8 +41,13 @@ interface AssignedClient {
 export default function AgencyAgentDetails() {
   const { agentId } = useParams();
   const navigate = useNavigate();
-  const { profile, isPreviewMode, previewAgency } = useMultiTenantAuth();
-  const agencyId = isPreviewMode ? previewAgency?.id : profile?.agency?.id;
+  const { profile, previewAgency } = useMultiTenantAuth();
+  const { activeSession } = useImpersonation();
+  const agencyId = profile?.agency?.id
+    || previewAgency?.id
+    || activeSession?.agency_id
+    || sessionStorage.getItem('preview_agency')
+    || undefined;
   const { toast } = useToast();
   const [agent, setAgent] = useState<Agent | null>(null);
   const [assignedClients, setAssignedClients] = useState<AssignedClient[]>([]);
