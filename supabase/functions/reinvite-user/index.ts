@@ -6,6 +6,27 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+function generateSecurePassword(): string {
+  const length = 12;
+  const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+  const numbers = '0123456789';
+  const symbols = '!@#$%^&*';
+  const allChars = uppercase + lowercase + numbers + symbols;
+  
+  let password = '';
+  password += uppercase[Math.floor(Math.random() * uppercase.length)];
+  password += lowercase[Math.floor(Math.random() * lowercase.length)];
+  password += numbers[Math.floor(Math.random() * numbers.length)];
+  password += symbols[Math.floor(Math.random() * symbols.length)];
+  
+  for (let i = password.length; i < length; i++) {
+    password += allChars[Math.floor(Math.random() * allChars.length)];
+  }
+  
+  return password.split('').sort(() => Math.random() - 0.5).join('');
+}
+
 interface ReinviteRequest {
   userId: string;
   userType: 'agency' | 'client' | 'super_admin';
@@ -41,21 +62,32 @@ serve(async (req) => {
       throw new Error('User not found');
     }
 
-    // Get current password
-    const { data: passwordData, error: passwordError } = await supabase
-      .from('user_passwords')
-      .select('password_text')
-      .eq('user_id', userId)
-      .single();
-
-    if (passwordError || !passwordData) {
-      throw new Error('Password not found for user');
+    // Generate a new temporary password and update the user's auth credentials
+    const newPassword = generateSecurePassword();
+    
+    const { error: updateAuthError } = await supabase.auth.admin.updateUserById(userId, {
+      password: newPassword,
+    });
+    
+    if (updateAuthError) {
+      console.error('Failed to update auth password:', updateAuthError);
+      throw new Error('Failed to reset user password');
     }
+
+    // Update password hint and set must_change_password flag
+    await supabase
+      .from('user_passwords')
+      .upsert({
+        user_id: userId,
+        password_hint: newPassword.substring(0, 2),
+        must_change_password: true,
+      }, { onConflict: 'user_id' });
 
     // Get context-specific data
     let agencyName = null;
     let clientName = null;
-    let dashboardUrl = `${Deno.env.get('SUPABASE_URL')?.replace('supabase.co', 'lovable.app') || window.location.origin}/`;
+    const siteUrl = Deno.env.get('SITE_URL') || Deno.env.get('SUPABASE_URL')?.replace('.supabase.co', '.lovable.app') || 'https://total-dash.com';
+    let dashboardUrl = `${siteUrl}/`;
 
     if (userType === 'agency' && contextId) {
       const { data: agency } = await supabase
@@ -65,7 +97,7 @@ serve(async (req) => {
         .single();
       
       agencyName = agency?.name;
-      dashboardUrl = `${window.location.origin}/agency`;
+      dashboardUrl = `${siteUrl}/agency`;
     } else if (userType === 'client' && contextId) {
       const { data: client } = await supabase
         .from('clients')
@@ -74,9 +106,9 @@ serve(async (req) => {
         .single();
       
       clientName = client?.name;
-      dashboardUrl = `${window.location.origin}/`;
+      dashboardUrl = `${siteUrl}/`;
     } else if (userType === 'super_admin') {
-      dashboardUrl = `${window.location.origin}/admin`;
+      dashboardUrl = `${siteUrl}/admin`;
     }
 
     // Get platform branding
@@ -110,7 +142,7 @@ serve(async (req) => {
         variables: {
           user_name: profile.full_name || profile.email.split('@')[0],
           email: profile.email,
-          password: passwordData.password_text,
+          password: newPassword,
           dashboard_url: dashboardUrl,
           platform_name: platformName,
           agency_name: agencyName,
@@ -125,11 +157,7 @@ serve(async (req) => {
       throw new Error('Failed to send invitation email');
     }
 
-    // Update password timestamp
-    await supabase
-      .from('user_passwords')
-      .update({ updated_at: new Date().toISOString() })
-      .eq('user_id', userId);
+    // Timestamp already updated by the upsert above
 
     return new Response(
       JSON.stringify({ 
