@@ -480,7 +480,7 @@ async function handleEndHandover(
               versionID: "production",
             },
             body: JSON.stringify({
-              action: { type: "success" },
+              action: { type: resolve ? "success" : "aftercare" },
               config: { tts: false, stripSSML: true },
             }),
           }
