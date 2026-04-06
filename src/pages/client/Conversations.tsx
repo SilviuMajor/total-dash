@@ -1436,7 +1436,7 @@ export default function Conversations() {
                 {/* Customer waiting indicator */}
                 {selectedConversation.status === 'in_handover' && 
                  selectedConversation.owner_id === currentClientUserId && 
-                 shouldShowResponsePill(selectedConversation) && (() => {
+                 selectedConversation.first_unanswered_message_at && (() => {
                   const waitSec = getWaitSeconds(selectedConversation);
                   const { color } = getResponseTimeColor(waitSec);
                   return (
