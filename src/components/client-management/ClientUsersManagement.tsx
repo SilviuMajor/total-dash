@@ -570,35 +570,46 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
   const handleRemoveUser = async () => {
     if (!userToRemove) return;
     try {
-      await supabase
-        .from('client_user_agent_permissions')
-        .delete()
-        .eq('user_id', userToRemove.user_id)
-        .eq('client_id', clientId);
-
-      await supabase
-        .from('client_user_departments')
-        .delete()
-        .eq('client_user_id', userToRemove.id);
-
-      await supabase
-        .from('user_roles')
-        .delete()
-        .eq('user_id', userToRemove.user_id)
-        .eq('client_id', clientId);
-
       const { error } = await supabase
         .from('client_users')
-        .delete()
+        .update({ status: 'removed' })
         .eq('id', userToRemove.id);
 
       if (error) throw error;
 
-      toast({ title: "Removed", description: "User removed successfully" });
+      toast({ title: "Removed", description: "User has been removed. Their conversation history is preserved." });
       loadUsers();
       setRemoveDialogOpen(false);
       setUserToRemove(null);
       setExpandedUserId(null);
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  };
+
+  const handleSuspendUser = async (user: ClientUser) => {
+    try {
+      const { error } = await supabase
+        .from('client_users')
+        .update({ status: 'suspended' })
+        .eq('id', user.id);
+      if (error) throw error;
+      toast({ title: "Suspended", description: `${user.full_name || 'User'} has been suspended and cannot log in.` });
+      loadUsers();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  };
+
+  const handleReactivateUser = async (user: ClientUser) => {
+    try {
+      const { error } = await supabase
+        .from('client_users')
+        .update({ status: 'active' })
+        .eq('id', user.id);
+      if (error) throw error;
+      toast({ title: "Reactivated", description: `${user.full_name || 'User'} is now active again.` });
+      loadUsers();
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     }
