@@ -1315,27 +1315,15 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
             <DialogTitle>Add New User</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={newUserEmail}
-                  onChange={(e) => setNewUserEmail(e.target.value)}
-                  placeholder="user@example.com"
-                />
-              </div>
-              <div>
-                <Label htmlFor="password">Password (optional)</Label>
-                <Input
-                  id="password"
-                  type="text"
-                  value={newUserPassword}
-                  onChange={(e) => setNewUserPassword(e.target.value)}
-                  placeholder="Leave empty to auto-generate"
-                />
-              </div>
+            <div>
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={newUserEmail}
+                onChange={(e) => setNewUserEmail(e.target.value)}
+                placeholder="user@example.com"
+              />
             </div>
             <div>
               <Label htmlFor="fullName">Full Name</Label>
