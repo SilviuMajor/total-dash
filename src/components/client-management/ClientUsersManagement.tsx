@@ -307,6 +307,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
           full_name,
           avatar_url,
           department_id,
+          status,
           profiles:profiles(email),
           departments:departments(name, color)
         `)
