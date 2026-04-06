@@ -291,6 +291,7 @@ async function handleTakeOver(
     .update({
       status: "in_handover",
       owner_id: clientUserId,
+      owner_name: clientUserName,
       department_id: departmentId,
       last_activity_at: new Date().toISOString(),
     })
