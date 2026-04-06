@@ -57,8 +57,10 @@ export function DevSwitch() {
     sessionStorage.removeItem("preview_token");
     sessionStorage.removeItem("impersonation_session_id");
     sessionStorage.removeItem("impersonation_return_url");
+    sessionStorage.setItem('dev_switch_active', 'true');
 
     if (target === "admin") {
+      sessionStorage.removeItem('dev_switch_active');
       window.dispatchEvent(new Event("impersonation-changed"));
       navigate("/admin/agencies");
     } else if (target.type === "agency") {
