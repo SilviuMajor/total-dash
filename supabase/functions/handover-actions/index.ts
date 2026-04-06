@@ -128,6 +128,13 @@ async function handleAcceptHandover(
     );
   }
 
+  // Get current conversation status before updating
+  const { data: convBeforeAccept } = await supabaseClient
+    .from("conversations")
+    .select("status")
+    .eq("id", conversationId)
+    .single();
+
   // Update conversation status and owner
   await supabaseClient
     .from("conversations")
@@ -142,7 +149,7 @@ async function handleAcceptHandover(
   // Log status change
   await supabaseClient.from("conversation_status_history").insert({
     conversation_id: conversationId,
-    from_status: "with_ai",
+    from_status: convBeforeAccept?.status || "waiting",
     to_status: "in_handover",
     changed_by_type: "client_user",
     changed_by_id: clientUserId,
