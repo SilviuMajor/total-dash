@@ -1150,7 +1150,7 @@ export default function Conversations() {
                     const isSelected = selectedConversation?.id === conv.id;
                     const rawName = conv.metadata?.variables?.user_name || conv.caller_phone || 'Unknown';
                     const hasRealName = !!conv.metadata?.variables?.user_name;
-                    const displayName = (!hasRealName && rawName.length > 8) ? '…' + rawName.slice(-6) : rawName;
+                    const displayName = (!hasRealName && rawName.length > 8) ? 'User…' + rawName.slice(-4) : rawName;
                     const isMine = !!currentClientUserId && conv.owner_id === currentClientUserId;
 
                     return (
