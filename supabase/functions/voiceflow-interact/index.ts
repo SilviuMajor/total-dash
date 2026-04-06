@@ -178,14 +178,14 @@ serve(async (req) => {
       // Fetch conversation status (we need this anyway for last_activity_at)
       const { data: existingConv } = await supabaseClient
         .from("conversations")
-        .select("id, status, owner_id, agent_id, voiceflow_user_id")
+        .select("id, status, owner_id, agent_id, voiceflow_user_id, ended_at")
         .eq("id", conversationId)
         .single();
 
       if (existingConv) {
-        // --- RESOLVED: Skip this conversation, create a new one below ---
-        if (existingConv.status === "resolved") {
-          console.log("Conversation is resolved, will create new conversation:", conversationId);
+        // --- ENDED: Only skip if conversation has truly ended (VF End block reached) ---
+        if (existingConv.ended_at) {
+          console.log("Conversation has ended (ended_at set), will create new conversation:", conversationId);
           conversationResolved = true;
         }
 
