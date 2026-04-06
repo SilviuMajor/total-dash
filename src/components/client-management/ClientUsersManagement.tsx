@@ -762,7 +762,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                     {user.departments?.name && (
                       <span className="text-xs text-muted-foreground">{user.departments.name}</span>
                     )}
-                    <PasswordDisplay userId={user.user_id} />
+                    
                     {isExpanded ? (
                       <ChevronDown className="h-4 w-4 text-muted-foreground" />
                     ) : (
