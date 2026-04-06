@@ -1230,13 +1230,15 @@ export default function Conversations() {
                             <span className={cn(
                               "inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold border",
                               conv.status === 'with_ai' && "bg-green-50 text-green-600 border-green-200",
+                              conv.status === 'waiting' && "bg-red-50 text-red-600 border-red-200",
                               conv.status === 'in_handover' && "bg-blue-50 text-blue-600 border-blue-200",
                               conv.status === 'aftercare' && "bg-yellow-50 text-yellow-600 border-yellow-200",
                               conv.status === 'needs_review' && "bg-amber-50 text-amber-600 border-amber-200",
                               conv.status === 'resolved' && "bg-gray-100 text-gray-500 border-gray-200",
-                              (!['with_ai', 'in_handover', 'aftercare', 'needs_review', 'resolved'].includes(conv.status)) && "bg-muted text-muted-foreground border-border"
+                              (!['with_ai', 'waiting', 'in_handover', 'aftercare', 'needs_review', 'resolved'].includes(conv.status)) && "bg-muted text-muted-foreground border-border"
                             )}>
                               {conv.status === 'with_ai' ? 'With AI'
+                                : conv.status === 'waiting' ? 'Waiting'
                                 : conv.status === 'in_handover' ? 'In Handover'
                                 : conv.status === 'aftercare' ? 'Aftercare'
                                 : conv.status === 'needs_review' ? 'Needs Review'
@@ -1245,7 +1247,7 @@ export default function Conversations() {
                                 : conv.status === 'completed' ? 'Completed'
                                 : conv.status === 'owned' ? 'Owned (Legacy)'
                                 : conv.status.charAt(0).toUpperCase() + conv.status.slice(1)}
-                              {conv.owner_name && ['in_handover', 'aftercare', 'needs_review', 'resolved'].includes(conv.status) && (
+                              {conv.owner_name && ['in_handover', 'aftercare', 'needs_review', 'resolved', 'waiting'].includes(conv.status) && (
                                 `: ${conv.owner_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}`
                               )}
                             </span>
