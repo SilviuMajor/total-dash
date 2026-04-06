@@ -148,7 +148,31 @@ function CompanySettingsPanel({ clientId }: { clientId: string }) {
               />
             </div>
           </Card>
-          <ClientUsersManagement clientId={clientId} />
+          <div className="flex gap-2 mb-4">
+              <button
+                onClick={() => setTeamSubTab("roles")}
+                className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                  teamSubTab === "roles"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                }`}
+              >
+                Roles
+              </button>
+              <button
+                onClick={() => setTeamSubTab("team")}
+                className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                  teamSubTab === "team"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                }`}
+              >
+                Team
+              </button>
+            </div>
+
+            {teamSubTab === "roles" && <RolesManagement clientId={clientId} />}
+            {teamSubTab === "team" && <ClientUsersManagement clientId={clientId} />}
         </TabsContent>
 
 
