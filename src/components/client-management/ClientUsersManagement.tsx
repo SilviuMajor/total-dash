@@ -540,15 +540,13 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
       }
 
       if (data.success) {
-        setGeneratedPassword(data.temporaryPassword);
-        toast({ title: "Success", description: "User created successfully" });
+        toast({ title: "Success", description: "User created. A password setup email has been sent to their email address." });
         loadUsers();
         setOpen(false);
         setNewUserEmail("");
         setNewUserFullName("");
         setNewUserDepartment("none");
         setNewUserAvatar("");
-        setNewUserPassword("");
         
         const defaultRole = roles.find(r => r.is_default) || roles.find(r => !r.is_admin_tier);
         setNewUserRoleId(defaultRole?.id || "");
