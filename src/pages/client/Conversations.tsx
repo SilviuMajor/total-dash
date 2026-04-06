@@ -1673,8 +1673,8 @@ export default function Conversations() {
                       "p-3",
                       pendingSession && "border-red-300 bg-red-50 dark:bg-red-950/20 dark:border-red-800"
                     )}>
-                      {/* WITH AI — no pending request */}
-                      {selectedConversation.status === 'with_ai' && !pendingSession && (
+                      {/* WITH AI or WAITING with no pending session (edge case fallback) */}
+                      {(selectedConversation.status === 'with_ai' || (selectedConversation.status === 'waiting' && !pendingSession)) && !pendingSession && (
                         <div className="space-y-2">
                           <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Handover</p>
                           <Button
