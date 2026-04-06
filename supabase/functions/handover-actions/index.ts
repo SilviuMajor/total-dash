@@ -128,6 +128,13 @@ async function handleAcceptHandover(
     );
   }
 
+  // Get current conversation status before updating
+  const { data: convBeforeAccept } = await supabaseClient
+    .from("conversations")
+    .select("status")
+    .eq("id", conversationId)
+    .single();
+
   // Update conversation status and owner
   await supabaseClient
     .from("conversations")
@@ -142,7 +149,7 @@ async function handleAcceptHandover(
   // Log status change
   await supabaseClient.from("conversation_status_history").insert({
     conversation_id: conversationId,
-    from_status: "with_ai",
+    from_status: convBeforeAccept?.status || "waiting",
     to_status: "in_handover",
     changed_by_type: "client_user",
     changed_by_id: clientUserId,
@@ -227,6 +234,9 @@ async function handleTakeOver(
   if (conv.status === "in_handover") {
     throw new Error("Conversation is already in handover");
   }
+
+  // If conversation is in "waiting" (pending handover), takeover is allowed —
+  // the pending session will be completed below and a new active one created.
 
   // Complete any existing pending sessions for this conversation
   // (e.g., if a proactive takeover happens while a handover request is pending)
