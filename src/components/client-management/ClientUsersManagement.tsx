@@ -756,6 +756,16 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                         {user.role_name}
                       </span>
                     )}
+                    {user.status === 'suspended' && (
+                      <span className="text-xs px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300">
+                        Suspended
+                      </span>
+                    )}
+                    {user.status === 'removed' && (
+                      <span className="text-xs px-2.5 py-1 rounded-full bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300">
+                        Removed
+                      </span>
+                    )}
                     {user.departments?.name && (
                       <span className="text-xs text-muted-foreground">{user.departments.name}</span>
                     )}
