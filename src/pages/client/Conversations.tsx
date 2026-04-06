@@ -1908,50 +1908,6 @@ export default function Conversations() {
                         </div>
                       )}
 
-                    <div>
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Status</p>
-                      <Select
-                        value={selectedConversation?.status || 'with_ai'}
-                        onValueChange={updateStatus}
-                        disabled={updatingStatus}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="with_ai">
-                            <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 rounded-full bg-green-500" />
-                              <span>With AI</span>
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="in_handover">
-                            <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 rounded-full bg-blue-500" />
-                              <span>In Handover</span>
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="aftercare">
-                            <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 rounded-full bg-yellow-500" />
-                              <span>Aftercare</span>
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="needs_review">
-                            <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 rounded-full bg-amber-500" />
-                              <span>Needs Review</span>
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="resolved">
-                            <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 rounded-full bg-gray-400" />
-                              <span>Resolved</span>
-                            </div>
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
 
                     <div>
                       <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Tags</p>
