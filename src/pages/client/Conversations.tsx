@@ -1328,10 +1328,11 @@ export default function Conversations() {
                         return <span title={raw}>{display}</span>;
                       })()}
                     </h3>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
                       Started {format(new Date(selectedConversation.started_at), 'PPp')}
-                      {' · '}
-                      {transcripts.length} msgs
+                      <span className="mx-0.5">·</span>
+                      <MessageSquareText className="inline h-3 w-3" />
+                      {transcripts.length}
                     </p>
                   </div>
                   {selectedConversation.department_id && (() => {
