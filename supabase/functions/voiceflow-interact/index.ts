@@ -531,10 +531,13 @@ serve(async (req) => {
         // Look up the requested department (or fall back to Global)
         let department = null;
         if (handoverDepartmentCode) {
+          console.log("Looking up department:", { clientId, code: handoverDepartmentCode });
           department = await getDepartmentByCode(supabaseClient, clientId, handoverDepartmentCode);
+          console.log("Department lookup result:", department ? { id: department.id, name: department.name, code: department.code } : "NOT FOUND - will fall back to Global");
         }
         if (!department) {
           department = await getGlobalDepartment(supabaseClient, clientId);
+          console.log("Using Global department:", department ? { id: department.id, name: department.name } : "NOT FOUND");
         }
 
         if (department) {
