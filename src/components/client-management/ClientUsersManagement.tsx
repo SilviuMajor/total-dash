@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
@@ -22,6 +23,7 @@ import { PasswordDisplay } from "@/components/PasswordDisplay";
 
 interface ClientUser {
   id: string;
+  status: string;
   user_id: string;
   full_name: string | null;
   avatar_url: string | null;
@@ -100,6 +102,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
   const [generatedPassword, setGeneratedPassword] = useState<string>("");
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
   const [roleChangeModal, setRoleChangeModal] = useState<{ user: ClientUser; newRoleId: string } | null>(null);
+  const [showRemovedUsers, setShowRemovedUsers] = useState(false);
   const [roleTemplates, setRoleTemplates] = useState<Record<string, Record<string, any>>>({});
   const [agentCeilings, setAgentCeilings] = useState<Record<string, Record<string, any>>>({});
   const [clientCaps, setClientCaps] = useState<Record<string, any>>({});
@@ -274,6 +277,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
           const role = roleInfo.role_id ? roleMap[roleInfo.role_id] : null;
           return {
             id: u.id,
+            status: u.status || 'active',
             user_id: u.user_id,
             full_name: u.full_name,
             avatar_url: u.avatar_url,
@@ -303,6 +307,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
           full_name,
           avatar_url,
           department_id,
+          status,
           profiles:profiles(email),
           departments:departments(name, color)
         `)
@@ -353,6 +358,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
           const role = roleInfo.role_id ? roleMap[roleInfo.role_id] : null;
           return {
             id: u.id,
+            status: (u as any).status || 'active',
             user_id: u.user_id,
             full_name: u.full_name,
             avatar_url: u.avatar_url,
@@ -564,35 +570,46 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
   const handleRemoveUser = async () => {
     if (!userToRemove) return;
     try {
-      await supabase
-        .from('client_user_agent_permissions')
-        .delete()
-        .eq('user_id', userToRemove.user_id)
-        .eq('client_id', clientId);
-
-      await supabase
-        .from('client_user_departments')
-        .delete()
-        .eq('client_user_id', userToRemove.id);
-
-      await supabase
-        .from('user_roles')
-        .delete()
-        .eq('user_id', userToRemove.user_id)
-        .eq('client_id', clientId);
-
       const { error } = await supabase
         .from('client_users')
-        .delete()
+        .update({ status: 'removed' })
         .eq('id', userToRemove.id);
 
       if (error) throw error;
 
-      toast({ title: "Removed", description: "User removed successfully" });
+      toast({ title: "Removed", description: "User has been removed. Their conversation history is preserved." });
       loadUsers();
       setRemoveDialogOpen(false);
       setUserToRemove(null);
       setExpandedUserId(null);
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  };
+
+  const handleSuspendUser = async (user: ClientUser) => {
+    try {
+      const { error } = await supabase
+        .from('client_users')
+        .update({ status: 'suspended' })
+        .eq('id', user.id);
+      if (error) throw error;
+      toast({ title: "Suspended", description: `${user.full_name || 'User'} has been suspended and cannot log in.` });
+      loadUsers();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  };
+
+  const handleReactivateUser = async (user: ClientUser) => {
+    try {
+      const { error } = await supabase
+        .from('client_users')
+        .update({ status: 'active' })
+        .eq('id', user.id);
+      if (error) throw error;
+      toast({ title: "Reactivated", description: `${user.full_name || 'User'} is now active again.` });
+      loadUsers();
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     }
@@ -669,10 +686,20 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
             <p className="text-sm text-muted-foreground">Manage users and their permissions</p>
           </div>
           {!readOnly && (
-            <Button onClick={() => setOpen(true)} className="bg-foreground text-background hover:bg-foreground/90">
-              <UserPlus className="w-4 h-4 mr-2" />
-              Add User
-            </Button>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="show-removed"
+                  checked={showRemovedUsers}
+                  onCheckedChange={setShowRemovedUsers}
+                />
+                <Label htmlFor="show-removed" className="text-xs text-muted-foreground">Show removed users</Label>
+              </div>
+              <Button onClick={() => setOpen(true)} className="bg-foreground text-background hover:bg-foreground/90">
+                <UserPlus className="w-4 h-4 mr-2" />
+                Add User
+              </Button>
+            </div>
           )}
         </div>
 
@@ -682,7 +709,12 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
           </div>
         ) : (
           <div className="space-y-2">
-            {users.map((user) => {
+            {users
+              .filter(user => {
+                if (user.status === 'removed') return showRemovedUsers;
+                return true;
+              })
+              .map((user) => {
               const isExpanded = expandedUserId === user.user_id;
 
               return (
@@ -722,6 +754,16 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                           : 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
                       }`}>
                         {user.role_name}
+                      </span>
+                    )}
+                    {user.status === 'suspended' && (
+                      <span className="text-xs px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300">
+                        Suspended
+                      </span>
+                    )}
+                    {user.status === 'removed' && (
+                      <span className="text-xs px-2.5 py-1 rounded-full bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300">
+                        Removed
                       </span>
                     )}
                     {user.departments?.name && (
@@ -1118,14 +1160,36 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                           >
                             Reset password
                           </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
-                            onClick={() => { setUserToRemove(user); setRemoveDialogOpen(true); }}
-                          >
-                            Remove user
-                          </Button>
+                          {user.status === 'active' && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-xs text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                              onClick={() => handleSuspendUser(user)}
+                            >
+                              Suspend user
+                            </Button>
+                          )}
+                          {user.status === 'suspended' && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-xs text-green-600 hover:text-green-700 hover:bg-green-50"
+                              onClick={() => handleReactivateUser(user)}
+                            >
+                              Reactivate
+                            </Button>
+                          )}
+                          {user.status !== 'removed' && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={() => { setUserToRemove(user); setRemoveDialogOpen(true); }}
+                            >
+                              Remove user
+                            </Button>
+                          )}
                           <Button
                             size="sm"
                             onClick={async () => {
@@ -1472,7 +1536,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
           <AlertDialogHeader>
             <AlertDialogTitle>Remove User</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to remove this user from the client? This action cannot be undone.
+              Are you sure you want to remove {userToRemove?.full_name || 'this user'}? They will no longer be able to log in. Their conversation history and audit trail will be preserved. You can reinstate them later by adding a user with the same email address.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
