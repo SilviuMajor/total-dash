@@ -110,11 +110,12 @@ async function getClientIdForAgent(supabaseClient: any, agentId: string): Promis
 
 // Helper: look up department by code for a client
 async function getDepartmentByCode(supabaseClient: any, clientId: string, code: string): Promise<any | null> {
+  // Case-insensitive match — VF action payload might not match exact DB casing
   const { data, error } = await supabaseClient
     .from("departments")
     .select("*")
     .eq("client_id", clientId)
-    .eq("code", code)
+    .ilike("code", code)
     .is("deleted_at", null)
     .single();
   if (error || !data) return null;
