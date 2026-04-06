@@ -961,7 +961,7 @@ export default function Conversations() {
 
         {/* Row 2: Status filters + sort */}
         <div className="px-4 py-2 flex items-center gap-1">
-          {(['all', 'with_ai', 'in_handover', 'aftercare', 'needs_review', 'resolved'] as const).map(s => (
+          {(['all', 'with_ai', 'waiting', 'in_handover', 'aftercare', 'needs_review', 'resolved'] as const).map(s => (
             <Button
               key={s}
               size="sm"
@@ -973,13 +973,14 @@ export default function Conversations() {
                 <span className={cn(
                   "w-1.5 h-1.5 rounded-full mr-1.5",
                   s === 'with_ai' && 'bg-green-500',
+                  s === 'waiting' && 'bg-red-500',
                   s === 'in_handover' && 'bg-blue-500',
                   s === 'aftercare' && 'bg-yellow-500',
                   s === 'needs_review' && 'bg-amber-500',
                   s === 'resolved' && 'bg-gray-400'
                 )} />
               )}
-              {s === 'all' ? 'All' : s === 'with_ai' ? 'With AI' : s === 'in_handover' ? 'In Handover' : s === 'aftercare' ? 'Aftercare' : s === 'needs_review' ? 'Needs Review' : 'Resolved'}
+              {s === 'all' ? 'All' : s === 'with_ai' ? 'With AI' : s === 'waiting' ? 'Waiting' : s === 'in_handover' ? 'In Handover' : s === 'aftercare' ? 'Aftercare' : s === 'needs_review' ? 'Needs Review' : 'Resolved'}
             </Button>
           ))}
           <div className="flex-1" />
@@ -1080,15 +1081,6 @@ export default function Conversations() {
                     <Button variant="outline" size="sm" className="h-6 text-xs px-2">Status</Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
-                    <DropdownMenuItem onClick={() => bulkUpdateStatus('with_ai')}>
-                      <span className="w-2 h-2 rounded-full bg-green-500 mr-2" />With AI
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => bulkUpdateStatus('in_handover')}>
-                      <span className="w-2 h-2 rounded-full bg-blue-500 mr-2" />In Handover
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => bulkUpdateStatus('aftercare')}>
-                      <span className="w-2 h-2 rounded-full bg-yellow-500 mr-2" />Aftercare
-                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => bulkUpdateStatus('needs_review')}>
                       <span className="w-2 h-2 rounded-full bg-amber-500 mr-2" />Needs Review
                     </DropdownMenuItem>
@@ -1160,16 +1152,17 @@ export default function Conversations() {
                         className={cn(
                           "group border-l-[3px] px-4 py-3 border-b border-border cursor-pointer transition-colors",
                           conv.status === 'with_ai' && "border-l-green-500",
+                          conv.status === 'waiting' && "border-l-red-500",
                           conv.status === 'in_handover' && "border-l-blue-500",
                           conv.status === 'aftercare' && "border-l-yellow-500",
                           conv.status === 'needs_review' && "border-l-amber-500",
                           conv.status === 'resolved' && "border-l-gray-400",
-                          (!['with_ai', 'in_handover', 'aftercare', 'needs_review', 'resolved'].includes(conv.status)) && "border-l-border",
-                          pendingConversationIds.has(conv.id) && "bg-red-50/80 dark:bg-red-950/20 border-l-red-500",
-                          !pendingConversationIds.has(conv.id) && isMine && conv.status === 'in_handover' && "bg-blue-50/70 dark:bg-blue-950/20",
-                          !pendingConversationIds.has(conv.id) && isMine && conv.status === 'aftercare' && "bg-yellow-50/70 dark:bg-yellow-950/20",
-                          !pendingConversationIds.has(conv.id) && isMine && conv.status === 'needs_review' && "bg-amber-50/70 dark:bg-amber-950/20",
-                          !pendingConversationIds.has(conv.id) && isMine && conv.status === 'resolved' && "bg-gray-50/70 dark:bg-gray-950/20",
+                          (!['with_ai', 'waiting', 'in_handover', 'aftercare', 'needs_review', 'resolved'].includes(conv.status)) && "border-l-border",
+                          (pendingConversationIds.has(conv.id) || conv.status === 'waiting') && "bg-red-50/80 dark:bg-red-950/20 border-l-red-500",
+                          !pendingConversationIds.has(conv.id) && conv.status !== 'waiting' && isMine && conv.status === 'in_handover' && "bg-blue-50/70 dark:bg-blue-950/20",
+                          !pendingConversationIds.has(conv.id) && conv.status !== 'waiting' && isMine && conv.status === 'aftercare' && "bg-yellow-50/70 dark:bg-yellow-950/20",
+                          !pendingConversationIds.has(conv.id) && conv.status !== 'waiting' && isMine && conv.status === 'needs_review' && "bg-amber-50/70 dark:bg-amber-950/20",
+                          !pendingConversationIds.has(conv.id) && conv.status !== 'waiting' && isMine && conv.status === 'resolved' && "bg-gray-50/70 dark:bg-gray-950/20",
                           isSelected ? "bg-primary/5" : pendingConversationIds.has(conv.id) ? "" : isMine ? "" : "hover:bg-muted/40"
                         )}
                       >
@@ -1228,13 +1221,15 @@ export default function Conversations() {
                             <span className={cn(
                               "inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold border",
                               conv.status === 'with_ai' && "bg-green-50 text-green-600 border-green-200",
+                              conv.status === 'waiting' && "bg-red-50 text-red-600 border-red-200",
                               conv.status === 'in_handover' && "bg-blue-50 text-blue-600 border-blue-200",
                               conv.status === 'aftercare' && "bg-yellow-50 text-yellow-600 border-yellow-200",
                               conv.status === 'needs_review' && "bg-amber-50 text-amber-600 border-amber-200",
                               conv.status === 'resolved' && "bg-gray-100 text-gray-500 border-gray-200",
-                              (!['with_ai', 'in_handover', 'aftercare', 'needs_review', 'resolved'].includes(conv.status)) && "bg-muted text-muted-foreground border-border"
+                              (!['with_ai', 'waiting', 'in_handover', 'aftercare', 'needs_review', 'resolved'].includes(conv.status)) && "bg-muted text-muted-foreground border-border"
                             )}>
                               {conv.status === 'with_ai' ? 'With AI'
+                                : conv.status === 'waiting' ? 'Waiting'
                                 : conv.status === 'in_handover' ? 'In Handover'
                                 : conv.status === 'aftercare' ? 'Aftercare'
                                 : conv.status === 'needs_review' ? 'Needs Review'
@@ -1243,7 +1238,7 @@ export default function Conversations() {
                                 : conv.status === 'completed' ? 'Completed'
                                 : conv.status === 'owned' ? 'Owned (Legacy)'
                                 : conv.status.charAt(0).toUpperCase() + conv.status.slice(1)}
-                              {conv.owner_name && ['in_handover', 'aftercare', 'needs_review', 'resolved'].includes(conv.status) && (
+                              {conv.owner_name && ['in_handover', 'aftercare', 'needs_review', 'resolved', 'waiting'].includes(conv.status) && (
                                 `: ${conv.owner_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}`
                               )}
                             </span>
@@ -1669,8 +1664,8 @@ export default function Conversations() {
                       "p-3",
                       pendingSession && "border-red-300 bg-red-50 dark:bg-red-950/20 dark:border-red-800"
                     )}>
-                      {/* WITH AI — no pending request */}
-                      {selectedConversation.status === 'with_ai' && !pendingSession && (
+                      {/* WITH AI or WAITING with no pending session (edge case fallback) */}
+                      {(selectedConversation.status === 'with_ai' || (selectedConversation.status === 'waiting' && !pendingSession)) && !pendingSession && (
                         <div className="space-y-2">
                           <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Handover</p>
                           <Button
@@ -1807,7 +1802,15 @@ export default function Conversations() {
                             <span className="w-2 h-2 rounded-full bg-amber-500" />
                             <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Needs Review</p>
                           </div>
-                          <p className="text-xs text-muted-foreground">This conversation needs attention</p>
+                          <p className="text-xs text-muted-foreground">
+                            {(selectedConversation as any).needs_review_reason === 'timeout'
+                              ? 'No agents were available to accept this handover'
+                              : (selectedConversation as any).needs_review_reason === 'department_closed'
+                              ? 'Handover was requested outside of opening hours'
+                              : (selectedConversation as any).needs_review_reason === 'inactivity'
+                              ? 'Closed due to customer inactivity during handover'
+                              : 'This conversation needs attention'}
+                          </p>
                           <Button
                             size="sm"
                             className="w-full bg-foreground text-background hover:bg-foreground/90"
@@ -1896,50 +1899,6 @@ export default function Conversations() {
                         </div>
                       )}
 
-                    <div>
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Status</p>
-                      <Select
-                        value={selectedConversation?.status || 'with_ai'}
-                        onValueChange={updateStatus}
-                        disabled={updatingStatus}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="with_ai">
-                            <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 rounded-full bg-green-500" />
-                              <span>With AI</span>
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="in_handover">
-                            <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 rounded-full bg-blue-500" />
-                              <span>In Handover</span>
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="aftercare">
-                            <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 rounded-full bg-yellow-500" />
-                              <span>Aftercare</span>
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="needs_review">
-                            <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 rounded-full bg-amber-500" />
-                              <span>Needs Review</span>
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="resolved">
-                            <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 rounded-full bg-gray-400" />
-                              <span>Resolved</span>
-                            </div>
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
 
                     <div>
                       <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Tags</p>
