@@ -134,6 +134,7 @@ async function handleAcceptHandover(
     .update({
       status: "in_handover",
       owner_id: clientUserId,
+      owner_name: clientUserName,
       last_activity_at: new Date().toISOString(),
     })
     .eq("id", conversationId);
@@ -290,6 +291,7 @@ async function handleTakeOver(
     .update({
       status: "in_handover",
       owner_id: clientUserId,
+      owner_name: clientUserName,
       department_id: departmentId,
       last_activity_at: new Date().toISOString(),
     })
@@ -644,10 +646,12 @@ async function handleTransfer(
     },
   });
 
-  // Update conversation department
+  // Clear ownership — conversation is now pending for new department
   await supabaseClient
     .from("conversations")
     .update({
+      owner_id: null,
+      owner_name: null,
       department_id: targetDepartmentId,
       last_activity_at: new Date().toISOString(),
     })

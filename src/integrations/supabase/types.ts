@@ -1558,6 +1558,7 @@ export type Database = {
           last_customer_message_at: string | null
           metadata: Json | null
           owner_id: string | null
+          owner_name: string | null
           sentiment: string | null
           started_at: string | null
           status: string
@@ -1576,6 +1577,7 @@ export type Database = {
           last_customer_message_at?: string | null
           metadata?: Json | null
           owner_id?: string | null
+          owner_name?: string | null
           sentiment?: string | null
           started_at?: string | null
           status?: string
@@ -1594,6 +1596,7 @@ export type Database = {
           last_customer_message_at?: string | null
           metadata?: Json | null
           owner_id?: string | null
+          owner_name?: string | null
           sentiment?: string | null
           started_at?: string | null
           status?: string
