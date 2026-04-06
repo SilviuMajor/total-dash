@@ -1487,7 +1487,11 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                 await loadUserClientPermissions(user.user_id);
                 const updatedTemplates = await loadRoleTemplates(newRoleId);
                 setRoleTemplates(prev => ({ ...prev, [user.user_id]: updatedTemplates }));
-                loadUsers();
+                setUsers(prev => prev.map(u => 
+                  u.user_id === user.user_id 
+                    ? { ...u, role_id: newRoleId, role_name: roles.find(r => r.id === newRoleId)?.name || null, role_slug: roles.find(r => r.id === newRoleId)?.slug || null, is_admin_tier: roles.find(r => r.id === newRoleId)?.is_admin_tier || false }
+                    : u
+                ));
                 toast({ title: "Role changed", description: "Kept current permissions as overrides" });
               }}
             >
