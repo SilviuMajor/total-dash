@@ -235,6 +235,9 @@ async function handleTakeOver(
     throw new Error("Conversation is already in handover");
   }
 
+  // If conversation is in "waiting" (pending handover), takeover is allowed —
+  // the pending session will be completed below and a new active one created.
+
   // Complete any existing pending sessions for this conversation
   // (e.g., if a proactive takeover happens while a handover request is pending)
   await supabaseClient
