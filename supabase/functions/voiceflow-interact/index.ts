@@ -652,7 +652,7 @@ serve(async (req) => {
           // Update conversation with department
           await supabaseClient
             .from("conversations")
-            .update({ department_id: department.id, voiceflow_user_id: userId })
+            .update({ status: "waiting", department_id: department.id, voiceflow_user_id: userId })
             .eq("id", currentConversationId);
 
           // Store bot responses that came with this handover (e.g. "Let me connect you to our team")
