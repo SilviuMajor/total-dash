@@ -606,6 +606,34 @@ export default function Conversations() {
     }
   }, [selectedConversation?.id, selectedConversation?.status]);
 
+  // Load previous conversations for the same customer
+  useEffect(() => {
+    const loadPreviousConversations = async () => {
+      if (!selectedConversation?.voiceflow_user_id || !selectedConversation?.id) {
+        setPreviousConversations([]);
+        setShowPreviousConversations(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('conversations')
+        .select('*')
+        .eq('voiceflow_user_id', selectedConversation.voiceflow_user_id)
+        .neq('id', selectedConversation.id)
+        .order('started_at', { ascending: false })
+        .limit(20);
+
+      if (error) {
+        console.error('Error loading previous conversations:', error);
+        setPreviousConversations([]);
+      } else {
+        setPreviousConversations(data || []);
+      }
+    };
+    loadPreviousConversations();
+    setShowPreviousConversations(false);
+  }, [selectedConversation?.id, selectedConversation?.voiceflow_user_id]);
+
   // Periodic handover timer check
   useEffect(() => {
     const runTimer = async () => {
