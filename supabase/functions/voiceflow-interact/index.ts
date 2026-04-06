@@ -444,8 +444,8 @@ serve(async (req) => {
       }
     }
 
-    // Create or get conversation
-    let currentConversationId = conversationId;
+    // Create or get conversation (skip resolved — force new)
+    let currentConversationId = conversationResolved ? null : conversationId;
 
     if (!currentConversationId) {
       const { data: newConversation, error: convError } = await supabaseClient
