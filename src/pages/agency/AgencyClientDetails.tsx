@@ -167,7 +167,7 @@ function CompanySettingsPanel({ clientId }: { clientId: string }) {
               />
             </div>
           </Card>
-          <CannedResponsesSettings />
+          <CannedResponsesSettings clientId={clientId} />
         </TabsContent>
 
         <TabsContent value="general">
