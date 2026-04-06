@@ -172,6 +172,8 @@ serve(async (req) => {
     // HANDOVER CHECK: If conversation exists, check its status
     // before calling Voiceflow. This is the three-way routing.
     // =============================================
+    let conversationResolved = false;
+
     if (conversationId && (action === "text" || action === "button")) {
       // Fetch conversation status (we need this anyway for last_activity_at)
       const { data: existingConv } = await supabaseClient
@@ -181,8 +183,14 @@ serve(async (req) => {
         .single();
 
       if (existingConv) {
+        // --- RESOLVED: Skip this conversation, create a new one below ---
+        if (existingConv.status === "resolved") {
+          console.log("Conversation is resolved, will create new conversation:", conversationId);
+          conversationResolved = true;
+        }
+
         // --- PATH 1: Active handover (human is chatting) ---
-        if (existingConv.status === "in_handover") {
+        else if (existingConv.status === "in_handover") {
           console.log("Conversation in handover, routing to dashboard:", conversationId);
 
           // Store the customer's message in transcripts
@@ -436,8 +444,8 @@ serve(async (req) => {
       }
     }
 
-    // Create or get conversation
-    let currentConversationId = conversationId;
+    // Create or get conversation (skip resolved — force new)
+    let currentConversationId = conversationResolved ? null : conversationId;
 
     if (!currentConversationId) {
       const { data: newConversation, error: convError } = await supabaseClient
