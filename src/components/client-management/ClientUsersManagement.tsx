@@ -19,7 +19,7 @@ import { useNavigate } from "react-router-dom";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AvatarUpload } from "@/components/AvatarUpload";
-import { PasswordDisplay } from "@/components/PasswordDisplay";
+
 
 interface ClientUser {
   id: string;
