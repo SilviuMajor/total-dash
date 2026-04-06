@@ -1346,6 +1346,7 @@ function generateWidgetScript(config: any): string {
   let clickedButtonIds = new Set();
   let clickedButtonSelections = {};
   let isInHandover = false;
+  let isConversationEnded = false;
   let realtimeSubscription = null;
   
   // Helper to get the Voiceflow user ID (combined with session ID)
