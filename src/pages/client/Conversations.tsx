@@ -1188,7 +1188,7 @@ export default function Conversations() {
                                 isChecked ? "opacity-100" : "opacity-0 group-hover:opacity-100"
                               )}
                             />
-                            <span className="text-[13px] font-medium truncate">{displayName}</span>
+                            <span className="text-[13px] font-medium truncate" title={rawName}>{displayName}</span>
                             {conv.is_widget_test && (
                               <Badge variant="outline" className="text-[10px] shrink-0 px-1 py-0">🧪</Badge>
                             )}
