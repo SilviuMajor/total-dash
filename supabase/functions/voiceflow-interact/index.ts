@@ -140,7 +140,7 @@ serve(async (req) => {
   }
 
   try {
-    const { agentId, userId, message, action, conversationId, isTestMode } = await req.json();
+    const { agentId, userId, message, action, conversationId, isTestMode, baseUserId } = await req.json();
 
     console.log("Voiceflow interact request:", { agentId, userId, action, isTestMode });
 
@@ -456,6 +456,7 @@ serve(async (req) => {
           status: "with_ai",
           is_widget_test: isTestMode,
           voiceflow_user_id: userId,
+          customer_base_id: baseUserId || null,
           metadata: {
             source: isTestMode ? "widget_test" : "widget",
             variables: {},

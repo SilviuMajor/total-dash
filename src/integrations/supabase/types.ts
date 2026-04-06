@@ -1548,6 +1548,7 @@ export type Database = {
         Row: {
           agent_id: string
           caller_phone: string | null
+          customer_base_id: string | null
           department_id: string | null
           duration: number | null
           ended_at: string | null
@@ -1568,6 +1569,7 @@ export type Database = {
         Insert: {
           agent_id: string
           caller_phone?: string | null
+          customer_base_id?: string | null
           department_id?: string | null
           duration?: number | null
           ended_at?: string | null
@@ -1588,6 +1590,7 @@ export type Database = {
         Update: {
           agent_id?: string
           caller_phone?: string | null
+          customer_base_id?: string | null
           department_id?: string | null
           duration?: number | null
           ended_at?: string | null
