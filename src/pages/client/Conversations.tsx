@@ -615,10 +615,13 @@ export default function Conversations() {
         return;
       }
 
+      // Link by customer_base_id (persistent across sessions) if available, fall back to voiceflow_user_id
+      const linkId = (selectedConversation as any).customer_base_id || selectedConversation.voiceflow_user_id;
+      const linkField = (selectedConversation as any).customer_base_id ? 'customer_base_id' : 'voiceflow_user_id';
       const { data, error } = await supabase
         .from('conversations')
         .select('*')
-        .eq('voiceflow_user_id', selectedConversation.voiceflow_user_id)
+        .eq(linkField, linkId)
         .neq('id', selectedConversation.id)
         .order('started_at', { ascending: false })
         .limit(20);
