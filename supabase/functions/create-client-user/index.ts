@@ -150,12 +150,21 @@ serve(async (req) => {
 
         console.log('Reinstated removed user:', existingProfile.id);
 
+        // Auto-send "set your password" email to the reinstated user
+        try {
+          await supabaseAdmin.auth.resetPasswordForEmail(email, {
+            redirectTo: `${Deno.env.get('SITE_URL') || Deno.env.get('SUPABASE_URL')?.replace('.supabase.co', '.lovable.app') || 'https://total-dash.com'}/change-password`,
+          });
+          console.log('Password setup email sent to:', email);
+        } catch (emailError) {
+          console.error('Failed to send password setup email:', emailError);
+        }
+
         return new Response(
           JSON.stringify({
             success: true,
             userId: existingProfile.id,
             roleId: resolvedRoleId,
-            temporaryPassword,
             reinstated: true,
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
