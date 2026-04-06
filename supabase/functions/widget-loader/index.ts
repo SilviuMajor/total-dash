@@ -2306,6 +2306,7 @@ function generateWidgetScript(config: any): string {
       // Show conversation ended indicator
       if (data.conversationEnded) {
         isTyping = false;
+        isConversationEnded = true;
         const endMsg = {
           id: 'msg_end_' + Date.now(),
           speaker: 'system',
