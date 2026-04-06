@@ -99,7 +99,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
   const [open, setOpen] = useState(false);
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
   const [userToRemove, setUserToRemove] = useState<ClientUser | null>(null);
-  const [generatedPassword, setGeneratedPassword] = useState<string>("");
+  
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
   const [roleChangeModal, setRoleChangeModal] = useState<{ user: ClientUser; newRoleId: string } | null>(null);
   const [showRemovedUsers, setShowRemovedUsers] = useState(false);
