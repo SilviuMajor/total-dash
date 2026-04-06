@@ -1218,11 +1218,9 @@ export default function Conversations() {
                             ) : null;
                           })()}
                         </div>
-                        {/* Row 2: Relative time from last activity */}
+                        {/* Row 2: Last activity date/time */}
                         <p className="text-xs text-muted-foreground truncate pl-6 mb-1.5">
-                          <span title={format(new Date(conv.last_activity_at || conv.started_at), 'PPp')}>
-                            {formatDistanceToNow(new Date(conv.last_activity_at || conv.started_at), { addSuffix: true })}
-                          </span>
+                          {format(new Date(conv.last_activity_at || conv.started_at), 'MMM d, h:mm a')}
                         </p>
                         {/* Row 3: Status badge with owner initials + tags + clock pill */}
                         <div className="flex items-center justify-between pl-6">
