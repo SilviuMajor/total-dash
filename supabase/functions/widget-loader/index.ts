@@ -2247,6 +2247,7 @@ function generateWidgetScript(config: any): string {
         body: JSON.stringify({
           agentId: CONFIG.agentId,
           userId: getVoiceflowUserId(),
+          baseUserId: userId,
           message: JSON.stringify(button.payload),
           action: 'button',
           conversationId,
