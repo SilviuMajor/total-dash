@@ -132,6 +132,10 @@ export default function Conversations() {
   const [pendingConversationIds, setPendingConversationIds] = useState<Map<string, string>>(new Map());
   const [responseTick, setResponseTick] = useState(0);
 
+  // Previous conversations
+  const [previousConversations, setPreviousConversations] = useState<Conversation[]>([]);
+  const [showPreviousConversations, setShowPreviousConversations] = useState(false);
+
   // Canned responses state
   const [showCannedDropdown, setShowCannedDropdown] = useState(false);
   const [cannedTab, setCannedTab] = useState<'org' | 'personal'>('org');
@@ -601,6 +605,34 @@ export default function Conversations() {
       return () => { sessionChannel.unsubscribe(); };
     }
   }, [selectedConversation?.id, selectedConversation?.status]);
+
+  // Load previous conversations for the same customer
+  useEffect(() => {
+    const loadPreviousConversations = async () => {
+      if (!selectedConversation?.voiceflow_user_id || !selectedConversation?.id) {
+        setPreviousConversations([]);
+        setShowPreviousConversations(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('conversations')
+        .select('*')
+        .eq('voiceflow_user_id', selectedConversation.voiceflow_user_id)
+        .neq('id', selectedConversation.id)
+        .order('started_at', { ascending: false })
+        .limit(20);
+
+      if (error) {
+        console.error('Error loading previous conversations:', error);
+        setPreviousConversations([]);
+      } else {
+        setPreviousConversations((data || []) as unknown as Conversation[]);
+      }
+    };
+    loadPreviousConversations();
+    setShowPreviousConversations(false);
+  }, [selectedConversation?.id, selectedConversation?.voiceflow_user_id]);
 
   // Periodic handover timer check
   useEffect(() => {
@@ -1899,6 +1931,69 @@ export default function Conversations() {
                         </div>
                       )}
 
+                    {/* Previous conversations from same customer */}
+                    {previousConversations.length > 0 && (
+                      <div>
+                        <button
+                          onClick={() => setShowPreviousConversations(!showPreviousConversations)}
+                          className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors w-full mb-2"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="10"
+                            height="10"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className={cn("transition-transform", showPreviousConversations && "rotate-90")}
+                          >
+                            <polyline points="9 18 15 12 9 6" />
+                          </svg>
+                          {previousConversations.length} Previous Conversation{previousConversations.length !== 1 ? 's' : ''}
+                        </button>
+                        {showPreviousConversations && (
+                          <div className="space-y-1 mb-2">
+                            {previousConversations.map(conv => (
+                              <button
+                                key={conv.id}
+                                onClick={() => {
+                                  setSelectedConversation(conv);
+                                  setShowPreviousConversations(false);
+                                }}
+                                className="w-full flex items-center justify-between p-2 rounded-md bg-muted/50 hover:bg-muted transition-colors text-left"
+                              >
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <span className={cn(
+                                    "w-1.5 h-1.5 rounded-full shrink-0",
+                                    conv.status === 'with_ai' && "bg-green-500",
+                                    conv.status === 'waiting' && "bg-red-500",
+                                    conv.status === 'in_handover' && "bg-blue-500",
+                                    conv.status === 'aftercare' && "bg-yellow-500",
+                                    conv.status === 'needs_review' && "bg-amber-500",
+                                    conv.status === 'resolved' && "bg-gray-400"
+                                  )} />
+                                  <span className="text-xs truncate">
+                                    {conv.status === 'with_ai' ? 'With AI'
+                                      : conv.status === 'waiting' ? 'Waiting'
+                                      : conv.status === 'in_handover' ? 'In Handover'
+                                      : conv.status === 'aftercare' ? 'Aftercare'
+                                      : conv.status === 'needs_review' ? 'Needs Review'
+                                      : conv.status === 'resolved' ? 'Resolved'
+                                      : conv.status}
+                                  </span>
+                                </div>
+                                <span className="text-[10px] text-muted-foreground shrink-0 ml-2">
+                                  {conv.last_activity_at ? new Date(conv.last_activity_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     <div>
                       <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Tags</p>
