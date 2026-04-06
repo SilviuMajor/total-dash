@@ -1110,6 +1110,27 @@ function generateWidgetScript(config: any): string {
       flex-shrink: 0;
     }
     
+    .vf-new-conversation-btn {
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: 24px;
+      border: none;
+      background: \${CONFIG.appearance.primaryColor};
+      color: white;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: opacity 0.2s;
+    }
+
+    .vf-new-conversation-btn:hover {
+      opacity: 0.9;
+    }
+
     .vf-input-row {
       display: flex;
       align-items: center;
