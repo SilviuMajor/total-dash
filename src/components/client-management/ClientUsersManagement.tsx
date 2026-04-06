@@ -612,10 +612,6 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
     }
   };
 
-  const copyPassword = () => {
-    navigator.clipboard.writeText(generatedPassword);
-    toast({ title: "Copied", description: "Password copied to clipboard" });
-  };
 
   const toggleAgentPermission = (agentId: string, field: keyof AgentPermission, value: boolean, isNewUser: boolean = true) => {
     if (isNewUser) {
