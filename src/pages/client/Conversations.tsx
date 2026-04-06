@@ -446,10 +446,10 @@ export default function Conversations() {
       if (!selectedAgentId) return;
       const { data } = await supabase
         .from('handover_sessions')
-        .select('conversation_id')
+        .select('conversation_id, created_at')
         .eq('status', 'pending');
       if (data) {
-        setPendingConversationIds(new Set(data.map(d => d.conversation_id)));
+        setPendingConversationIds(new Map(data.map(d => [d.conversation_id, d.created_at])));
       }
     };
     loadPendingIds();
