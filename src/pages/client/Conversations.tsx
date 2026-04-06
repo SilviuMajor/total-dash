@@ -53,10 +53,12 @@ interface Conversation {
   duration: number;
   is_widget_test?: boolean;
   owner_id?: string;
+  owner_name?: string;
   department_id?: string;
   voiceflow_user_id?: string;
   last_customer_message_at?: string;
   first_unanswered_message_at?: string;
+  last_activity_at?: string;
   metadata?: {
     variables?: {
       user_name?: string;
