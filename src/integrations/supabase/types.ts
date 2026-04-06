@@ -1557,6 +1557,7 @@ export type Database = {
           last_activity_at: string | null
           last_customer_message_at: string | null
           metadata: Json | null
+          needs_review_reason: string | null
           owner_id: string | null
           owner_name: string | null
           sentiment: string | null
@@ -1576,6 +1577,7 @@ export type Database = {
           last_activity_at?: string | null
           last_customer_message_at?: string | null
           metadata?: Json | null
+          needs_review_reason?: string | null
           owner_id?: string | null
           owner_name?: string | null
           sentiment?: string | null
@@ -1595,6 +1597,7 @@ export type Database = {
           last_activity_at?: string | null
           last_customer_message_at?: string | null
           metadata?: Json | null
+          needs_review_reason?: string | null
           owner_id?: string | null
           owner_name?: string | null
           sentiment?: string | null

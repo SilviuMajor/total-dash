@@ -562,7 +562,7 @@ serve(async (req) => {
               // Update conversation status
               await supabaseClient
                 .from("conversations")
-                .update({ status: "needs_review", department_id: department.id })
+                .update({ status: "needs_review", department_id: department.id, needs_review_reason: "department_closed" })
                 .eq("id", currentConversationId);
 
               // Resume Voiceflow with department_closed path
@@ -652,7 +652,7 @@ serve(async (req) => {
           // Update conversation with department
           await supabaseClient
             .from("conversations")
-            .update({ department_id: department.id, voiceflow_user_id: userId })
+            .update({ status: "waiting", department_id: department.id, voiceflow_user_id: userId })
             .eq("id", currentConversationId);
 
           // Store bot responses that came with this handover (e.g. "Let me connect you to our team")
