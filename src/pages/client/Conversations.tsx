@@ -1149,7 +1149,9 @@ export default function Conversations() {
                     const isChecked = selectedConversationIds.has(conv.id);
                     const isSelected = selectedConversation?.id === conv.id;
                     const rawName = conv.metadata?.variables?.user_name || conv.caller_phone || 'Unknown';
-                    const displayName = (!conv.metadata?.variables?.user_name && rawName.length > 8) ? rawName.slice(0, 8) + '…' : rawName;
+                    const hasRealName = !!conv.metadata?.variables?.user_name;
+                    const displayName = (!hasRealName && rawName.length > 8) ? '…' + rawName.slice(-6) : rawName;
+                    const isMine = !!currentClientUserId && conv.owner_id === currentClientUserId;
 
                     return (
                       <div
