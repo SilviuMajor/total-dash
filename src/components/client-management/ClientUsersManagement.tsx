@@ -1193,71 +1193,84 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                           <Button
                             size="sm"
                             onClick={async () => {
-                              // Save agent-scoped permissions
-                              for (const agent of agents) {
-                                const hasAccess = selectedUserAgentAccess[agent.id] ?? !!selectedUserAgentPermissions[agent.id];
-                                const hadAccess = !!user.agent_permissions[agent.id];
-
-                                if (hasAccess && hadAccess) {
-                                  const perms = selectedUserAgentPermissions[agent.id];
-                                  if (perms) {
-                                    const templatePerms = roleTemplates[user.user_id]?.[agent.id] || {};
-                                    const hasOverrides = Object.keys(perms).some(
-                                      k => k !== 'agent_id' && (perms as any)[k] !== (templatePerms[k] ?? false)
-                                    );
-                                    await supabase
+                              try {
+                                const errors: string[] = [];
+                                // Save agent-scoped permissions
+                                for (const agent of agents) {
+                                  const hasAccess = selectedUserAgentAccess[agent.id] ?? !!selectedUserAgentPermissions[agent.id];
+                                  const hadAccess = !!user.agent_permissions[agent.id];
+                                  if (hasAccess && hadAccess) {
+                                    const perms = selectedUserAgentPermissions[agent.id];
+                                    if (perms) {
+                                      const templatePerms = roleTemplates[user.user_id]?.[agent.id] || {};
+                                      const { agent_id: _stripId, ...cleanPerms } = perms as any;
+                                      const hasOverrides = Object.keys(cleanPerms).some(
+                                        k => cleanPerms[k] !== (templatePerms[k] ?? false)
+                                      );
+                                      const { error } = await supabase
+                                        .from('client_user_agent_permissions')
+                                        .update({
+                                          permissions: cleanPerms,
+                                          has_overrides: hasOverrides,
+                                        })
+                                        .eq('user_id', user.user_id)
+                                        .eq('agent_id', agent.id)
+                                        .eq('client_id', clientId);
+                                      if (error) errors.push(`Update ${agent.name}: ${error.message}`);
+                                    }
+                                  } else if (hasAccess && !hadAccess) {
+                                    const perms = selectedUserAgentPermissions[agent.id];
+                                    if (perms) {
+                                      const { error } = await supabase
+                                        .from('client_user_agent_permissions')
+                                        .insert({
+                                          user_id: user.user_id,
+                                          agent_id: agent.id,
+                                          client_id: clientId,
+                                          role_id: user.role_id,
+                                          has_overrides: false,
+                                          permissions: {
+                                            conversations: perms.conversations,
+                                            transcripts: perms.transcripts,
+                                            analytics: perms.analytics,
+                                            specs: perms.specs,
+                                            knowledge_base: perms.knowledge_base,
+                                            guides: perms.guides,
+                                            agent_settings: perms.agent_settings,
+                                          },
+                                        });
+                                      if (error) errors.push(`Grant ${agent.name}: ${error.message}`);
+                                    }
+                                  } else if (!hasAccess && hadAccess) {
+                                    const { error } = await supabase
                                       .from('client_user_agent_permissions')
-                                      .update({
-                                        permissions: perms as unknown as Record<string, any>,
-                                        has_overrides: hasOverrides,
-                                      })
+                                      .delete()
                                       .eq('user_id', user.user_id)
                                       .eq('agent_id', agent.id)
                                       .eq('client_id', clientId);
+                                    if (error) errors.push(`Revoke ${agent.name}: ${error.message}`);
                                   }
-                                } else if (hasAccess && !hadAccess) {
-                                  const perms = selectedUserAgentPermissions[agent.id];
-                                  if (perms) {
-                                    await supabase
-                                      .from('client_user_agent_permissions')
-                                      .insert({
-                                        user_id: user.user_id,
-                                        agent_id: agent.id,
-                                        client_id: clientId,
-                                        role_id: user.role_id,
-                                        has_overrides: false,
-                                        permissions: {
-                                          conversations: perms.conversations,
-                                          transcripts: perms.transcripts,
-                                          analytics: perms.analytics,
-                                          specs: perms.specs,
-                                          knowledge_base: perms.knowledge_base,
-                                          guides: perms.guides,
-                                          agent_settings: perms.agent_settings,
-                                        },
-                                      });
-                                  }
-                                } else if (!hasAccess && hadAccess) {
-                                  await supabase
-                                    .from('client_user_agent_permissions')
-                                    .delete()
-                                    .eq('user_id', user.user_id)
-                                    .eq('agent_id', agent.id)
-                                    .eq('client_id', clientId);
                                 }
+                                // Save client-scoped permissions
+                                const { error: clientPermError } = await supabase
+                                  .from('client_user_permissions')
+                                  .upsert({
+                                    user_id: user.user_id,
+                                    client_id: clientId,
+                                    role_id: user.role_id,
+                                    client_permissions: selectedUserClientPerms,
+                                    has_overrides: Object.keys(selectedUserClientPerms).length > 0,
+                                  }, { onConflict: 'user_id,client_id' });
+                                if (clientPermError) errors.push(`Company settings: ${clientPermError.message}`);
+                                if (errors.length > 0) {
+                                  toast({ title: "Error saving permissions", description: errors.join('. '), variant: "destructive" });
+                                } else {
+                                  toast({ title: "Saved", description: "User permissions updated" });
+                                }
+                                loadUsers();
+                              } catch (error: any) {
+                                toast({ title: "Error", description: error.message || "Failed to save permissions", variant: "destructive" });
                               }
-                              // Save client-scoped permissions
-                              await supabase
-                                .from('client_user_permissions')
-                                .upsert({
-                                  user_id: user.user_id,
-                                  client_id: clientId,
-                                  role_id: user.role_id,
-                                  client_permissions: selectedUserClientPerms,
-                                  has_overrides: Object.keys(selectedUserClientPerms).length > 0,
-                                }, { onConflict: 'user_id,client_id' });
-                              toast({ title: "Saved", description: "User permissions updated" });
-                              loadUsers();
                             }}
                           >
                             Save
