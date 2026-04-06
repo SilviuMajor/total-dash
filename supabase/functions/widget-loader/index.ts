@@ -1495,18 +1495,24 @@ function generateWidgetScript(config: any): string {
       
       \${isInActiveChat ? \`
         <div class="vf-input-area">
-          <div class="vf-input-row">
-            \${CONFIG.functions.fileUploadEnabled ? \`
-              <input type="file" id="vf-file-input" accept="image/*,application/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx" style="display: none;" />
-              <button class="vf-input-attach" onclick="window.vfAttachFile()">
-                \${icons.paperclip}
-              </button>
-            \` : ''}
-            <input type="text" class="vf-input" id="vf-input" placeholder="Type your message..." />
-            <button class="vf-send-button" onclick="window.vfSendMessage()">
-              \${icons.send}
+          \${isConversationEnded ? \`
+            <button class="vf-new-conversation-btn" onclick="window.vfStartNewChat()">
+              + New Conversation
             </button>
-          </div>
+          \` : \`
+            <div class="vf-input-row">
+              \${CONFIG.functions.fileUploadEnabled ? \`
+                <input type="file" id="vf-file-input" accept="image/*,application/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx" style="display: none;" />
+                <button class="vf-input-attach" onclick="window.vfAttachFile()">
+                  \${icons.paperclip}
+                </button>
+              \` : ''}
+              <input type="text" class="vf-input" id="vf-input" placeholder="Type your message..." />
+              <button class="vf-send-button" onclick="window.vfSendMessage()">
+                \${icons.send}
+              </button>
+            </div>
+          \`}
         </div>
       \` : ''}
       
