@@ -1324,7 +1324,7 @@ export default function Conversations() {
                       {(() => {
                         const raw = selectedConversation.metadata?.variables?.user_name || selectedConversation.caller_phone || 'Unknown';
                         const hasName = !!selectedConversation.metadata?.variables?.user_name;
-                        const display = (!hasName && raw.length > 8) ? '…' + raw.slice(-6) : raw;
+                        const display = (!hasName && raw.length > 8) ? 'User…' + raw.slice(-4) : raw;
                         return <span title={raw}>{display}</span>;
                       })()}
                     </h3>
