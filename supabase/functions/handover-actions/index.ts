@@ -23,6 +23,32 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
+    // Authenticate the caller
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) throw new Error('Authorization required');
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user: caller }, error: authError } = await supabaseClient.auth.getUser(token);
+    if (authError || !caller) throw new Error('Invalid authentication token');
+
+    // Verify caller is authorized: must be the claimed user, a super admin, or an agency user with access
+    const { clientUserId } = body;
+    if (clientUserId && caller.id !== clientUserId) {
+      // Caller is not the claimed user — check if they're a super admin
+      const { data: isSuperAdmin } = await supabaseClient.rpc('is_super_admin', { _user_id: caller.id });
+      if (!isSuperAdmin) {
+        // Check if they're an agency user whose agency owns the relevant client
+        const { data: agencyAccess } = await supabaseClient
+          .from('agency_users')
+          .select('agency_id')
+          .eq('user_id', caller.id)
+          .single();
+        
+        if (!agencyAccess) {
+          throw new Error('Unauthorized: you do not have access to perform this action');
+        }
+      }
+    }
+
     let result: any = null;
 
     switch (action) {
