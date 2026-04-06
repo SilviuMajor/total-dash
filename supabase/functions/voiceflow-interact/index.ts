@@ -456,6 +456,7 @@ serve(async (req) => {
           status: "with_ai",
           is_widget_test: isTestMode,
           voiceflow_user_id: userId,
+          customer_base_id: baseUserId || null,
           metadata: {
             source: isTestMode ? "widget_test" : "widget",
             variables: {},
