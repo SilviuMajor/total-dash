@@ -646,10 +646,12 @@ async function handleTransfer(
     },
   });
 
-  // Update conversation department
+  // Clear ownership — conversation is now pending for new department
   await supabaseClient
     .from("conversations")
     .update({
+      owner_id: null,
+      owner_name: null,
       department_id: targetDepartmentId,
       last_activity_at: new Date().toISOString(),
     })
