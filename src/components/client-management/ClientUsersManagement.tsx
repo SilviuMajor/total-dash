@@ -821,6 +821,30 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                             </SelectContent>
                           </Select>
                         </div>
+                        <div className="flex-1 space-y-1">
+                          <Label className="text-xs text-muted-foreground">Email</Label>
+                          <div className="flex gap-2">
+                            <Input
+                              className="h-9 text-sm"
+                              defaultValue={user.profiles?.email || ''}
+                              onBlur={async (e) => {
+                                const newEmail = e.target.value.trim();
+                                if (!newEmail || newEmail === user.profiles?.email) return;
+                                try {
+                                  const { error: fnError } = await supabase.functions.invoke('reset-user-password', {
+                                    body: { userId: user.user_id, newEmail },
+                                  });
+                                  await supabase.from('profiles').update({ email: newEmail }).eq('id', user.user_id);
+                                  toast({ title: "Email updated", description: `Email changed to ${newEmail}` });
+                                  loadUsers();
+                                } catch (err: any) {
+                                  toast({ title: "Error", description: err.message, variant: "destructive" });
+                                  e.target.value = user.profiles?.email || '';
+                                }
+                              }}
+                            />
+                          </div>
+                        </div>
                       </div>
 
                       {/* Page access grid */}
