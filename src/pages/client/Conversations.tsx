@@ -101,9 +101,9 @@ export default function Conversations() {
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   // Filters
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilters, setStatusFilters] = useState<string[]>([]);
   const [tagFilters, setTagFilters] = useState<string[]>([]);
-  const [departmentFilter, setDepartmentFilter] = useState<string | null>(null);
+  const [departmentFilters, setDepartmentFilters] = useState<string[]>([]);
   
 
   // Bulk select
@@ -166,7 +166,7 @@ export default function Conversations() {
     isFetchingNextPage,
     fetchNextPage,
     hasNextPage,
-  } = useConversations(selectedAgentId, { status: statusFilter });
+  } = useConversations(selectedAgentId, { statuses: statusFilters });
 
   const { data: agentConfig } = useAgentConfig(selectedAgentId);
 
@@ -187,7 +187,7 @@ export default function Conversations() {
   // Reset selection on filter/agent change
   useEffect(() => {
     setSelectedConversationIds(new Set());
-  }, [selectedAgentId, statusFilter, tagFilters, departmentFilter]);
+  }, [selectedAgentId, statusFilters, tagFilters, departmentFilters]);
 
   // Response time tick (every second for live updates)
   useEffect(() => {
@@ -285,7 +285,7 @@ export default function Conversations() {
           filter: `agent_id=eq.${selectedAgentId}`
         },
         (payload) => {
-          const queryKey = ['conversations', selectedAgentId, { status: statusFilter }];
+          const queryKey = ['conversations', selectedAgentId, { statuses: statusFilters }];
           if (payload.eventType === 'INSERT') {
             queryClient.setQueryData(queryKey, (old: any) => {
               if (!old) return old;
@@ -320,7 +320,7 @@ export default function Conversations() {
       });
 
     return () => { channel.unsubscribe(); };
-  }, [selectedAgentId, selectedConversation?.id, statusFilter, queryClient]);
+  }, [selectedAgentId, selectedConversation?.id, statusFilters, queryClient]);
 
   // Real-time subscriptions for transcripts
   useEffect(() => {
@@ -544,9 +544,10 @@ export default function Conversations() {
       if (!effectiveClientId) return;
       const { data } = await supabase
         .from('departments')
-        .select('id, name, code, color')
+        .select('id, name, code, color, is_global')
         .eq('client_id', effectiveClientId)
         .is('deleted_at', null)
+        .order('is_global', { ascending: false })
         .order('name');
       if (data) setDepartments(data);
     };
@@ -935,7 +936,7 @@ export default function Conversations() {
 
   const availableTags = (agentConfig as any)?.widget_settings?.functions?.conversation_tags?.filter((t: any) => t.enabled) || [];
 
-  // Department counts (computed before department filter, so all counts stay visible)
+  // Department counts (before department filter so all counts stay visible)
   const departmentCounts = useMemo(() => {
     const counts = new Map<string, number>();
     for (const c of conversations) {
@@ -949,8 +950,8 @@ export default function Conversations() {
   // Client-side filtering (department + tags) + pinning
   const filteredConversations = useMemo(() => {
     let result = conversations;
-    if (departmentFilter) {
-      result = result.filter(c => c.department_id === departmentFilter);
+    if (departmentFilters.length > 0) {
+      result = result.filter(c => c.department_id && departmentFilters.includes(c.department_id));
     }
     if (tagFilters.length > 0) {
       result = result.filter(c =>
@@ -968,7 +969,7 @@ export default function Conversations() {
       return aTier - bTier;
     });
     return result;
-  }, [conversations, tagFilters, departmentFilter, pendingConversationIds]);
+  }, [conversations, tagFilters, departmentFilters, pendingConversationIds]);
 
   const allSelected = filteredConversations.length > 0 &&
     filteredConversations.every(c => selectedConversationIds.has(c.id));
@@ -1011,17 +1012,31 @@ export default function Conversations() {
           </span>
         </div>
 
-        {/* Row 2: Status filters + sort */}
+        {/* Row 2: Status filters (multi-select toggle) */}
         <div className="px-4 py-2 flex items-center gap-1">
-          {(['all', 'with_ai', 'waiting', 'in_handover', 'aftercare', 'needs_review', 'resolved'] as const).map(s => (
-            <Button
-              key={s}
-              size="sm"
-              variant={statusFilter === s ? 'default' : 'ghost'}
-              onClick={() => setStatusFilter(s)}
-              className="h-7 text-xs px-3"
-            >
-              {s !== 'all' && (
+          <Button
+            size="sm"
+            variant={statusFilters.length === 0 ? 'default' : 'ghost'}
+            onClick={() => setStatusFilters([])}
+            className="h-7 text-xs px-3"
+          >
+            All
+          </Button>
+          {(['with_ai', 'waiting', 'in_handover', 'aftercare', 'needs_review', 'resolved'] as const).map(s => {
+            const isActive = statusFilters.includes(s);
+            return (
+              <Button
+                key={s}
+                size="sm"
+                variant={isActive ? 'default' : 'ghost'}
+                onClick={() => {
+                  setStatusFilters(prev => {
+                    const next = isActive ? prev.filter(x => x !== s) : [...prev, s];
+                    return next.length === 6 ? [] : next;
+                  });
+                }}
+                className="h-7 text-xs px-3"
+              >
                 <span className={cn(
                   "w-1.5 h-1.5 rounded-full mr-1.5",
                   s === 'with_ai' && 'bg-green-500',
@@ -1031,62 +1046,49 @@ export default function Conversations() {
                   s === 'needs_review' && 'bg-amber-500',
                   s === 'resolved' && 'bg-gray-400'
                 )} />
-              )}
-              {s === 'all' ? 'All' : s === 'with_ai' ? 'With AI' : s === 'waiting' ? 'Waiting' : s === 'in_handover' ? 'In Handover' : s === 'aftercare' ? 'Aftercare' : s === 'needs_review' ? 'Needs Review' : 'Resolved'}
-            </Button>
-          ))}
+                {s === 'with_ai' ? 'With AI' : s === 'waiting' ? 'Waiting' : s === 'in_handover' ? 'In Handover' : s === 'aftercare' ? 'Aftercare' : s === 'needs_review' ? 'Needs Review' : 'Resolved'}
+              </Button>
+            );
+          })}
         </div>
 
-        {/* Row 2b: Department filter chips (hidden for single department) */}
+        {/* Row 2b: Department filters (multi-select toggle, hidden for single department) */}
         {departments.length > 1 && (
           <div className="px-4 py-1 flex items-center gap-1.5 flex-wrap">
-            <button
-              onClick={() => setDepartmentFilter(null)}
-              className={cn(
-                "text-[11px] px-2.5 py-1 rounded-full font-medium transition-colors",
-                departmentFilter === null
-                  ? "bg-foreground text-background"
-                  : "text-muted-foreground hover:bg-muted"
-              )}
+            <Button
+              size="sm"
+              variant={departmentFilters.length === 0 ? 'default' : 'ghost'}
+              onClick={() => setDepartmentFilters([])}
+              className="h-7 text-xs px-3"
             >
               All ({conversations.length})
-            </button>
+            </Button>
             {departments.map(dept => {
               const count = departmentCounts.get(dept.id) || 0;
-              const isActive = departmentFilter === dept.id;
-              const color = dept.color || '#6B7280';
+              const isActive = departmentFilters.includes(dept.id);
               return (
-                <button
+                <Button
                   key={dept.id}
-                  onClick={() => setDepartmentFilter(isActive ? null : dept.id)}
-                  className={cn(
-                    "text-[11px] px-2.5 py-1 rounded-full font-medium transition-colors inline-flex items-center gap-1.5",
-                    isActive
-                      ? "border"
-                      : count === 0
-                        ? "text-muted-foreground/50 border border-dashed border-border/50"
-                        : "border border-dashed hover:border-solid"
-                  )}
-                  style={isActive ? {
-                    backgroundColor: `${color}15`,
-                    borderColor: `${color}40`,
-                    color: color,
-                  } : count > 0 ? {
-                    borderColor: `${color}40`,
-                    color: color,
-                  } : undefined}
+                  size="sm"
+                  variant={isActive ? 'default' : 'ghost'}
+                  onClick={() => {
+                    setDepartmentFilters(prev => {
+                      const next = isActive ? prev.filter(x => x !== dept.id) : [...prev, dept.id];
+                      return next.length === departments.length ? [] : next;
+                    });
+                  }}
+                  className={cn("h-7 text-xs px-3", count === 0 && !isActive && "opacity-40")}
                 >
                   <span
-                    className="w-1.5 h-1.5 rounded-full"
-                    style={{ backgroundColor: count > 0 || isActive ? color : undefined }}
+                    className="w-1.5 h-1.5 rounded-full mr-1.5"
+                    style={{ backgroundColor: dept.color || '#6B7280' }}
                   />
                   {dept.name} ({count})
-                </button>
+                </Button>
               );
             })}
           </div>
         )}
-
         {/* Row 3: Filter chips */}
         <div className="px-4 pb-2 flex items-center gap-1.5 border-b border-border flex-wrap">
           {/* Active tag filter chips */}
