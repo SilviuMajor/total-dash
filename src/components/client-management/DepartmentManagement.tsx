@@ -48,6 +48,7 @@ interface Department {
   is_global: boolean;
   fallback_to_global: boolean;
   fallback_out_of_hours: boolean;
+  always_open: boolean;
   timezone: string;
   opening_hours_type: string;
   opening_hours: any;
@@ -87,6 +88,7 @@ const DEFAULT_ADVANCED_HOURS = Object.fromEntries(
 
 function isDepartmentOpen(dept: Department): boolean {
   try {
+    if (dept.always_open) return true;
     const now = new Date();
     const formatter = new Intl.DateTimeFormat("en-US", {
       timeZone: dept.timezone || "UTC",
@@ -144,6 +146,7 @@ export function DepartmentManagement({ clientId, readOnly }: { clientId: string;
   const [advancedHours, setAdvancedHours] = useState(DEFAULT_ADVANCED_HOURS);
   const [fallbackToGlobal, setFallbackToGlobal] = useState(true);
   const [fallbackOutOfHours, setFallbackOutOfHours] = useState(true);
+  const [alwaysOpen, setAlwaysOpen] = useState(false);
 
   const { toast } = useToast();
 
@@ -184,6 +187,7 @@ export function DepartmentManagement({ clientId, readOnly }: { clientId: string;
     setAdvancedHours(DEFAULT_ADVANCED_HOURS);
     setFallbackToGlobal(true);
     setFallbackOutOfHours(true);
+    setAlwaysOpen(false);
   };
 
   const handleOpenDialog = (department?: Department) => {
@@ -207,6 +211,7 @@ export function DepartmentManagement({ clientId, readOnly }: { clientId: string;
       }
       setFallbackToGlobal(department.fallback_to_global ?? true);
       setFallbackOutOfHours(department.fallback_out_of_hours ?? true);
+      setAlwaysOpen(department.always_open ?? false);
     } else {
       setEditingDepartment(null);
       resetForm();
@@ -250,6 +255,7 @@ export function DepartmentManagement({ clientId, readOnly }: { clientId: string;
         opening_hours: buildOpeningHours(),
         fallback_to_global: fallbackToGlobal,
         fallback_out_of_hours: fallbackOutOfHours,
+        always_open: alwaysOpen,
       };
 
       if (editingDepartment) {
@@ -345,6 +351,9 @@ export function DepartmentManagement({ clientId, readOnly }: { clientId: string;
                         <span className="font-medium text-sm text-foreground">{dept.name}</span>
                         {dept.is_global && (
                           <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Global</Badge>
+                        )}
+                        {dept.always_open && (
+                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300 border-0">24/7</Badge>
                         )}
                       </div>
                     </div>
@@ -507,7 +516,15 @@ export function DepartmentManagement({ clientId, readOnly }: { clientId: string;
                 </div>
               </div>
 
-              <div>
+              <div className="flex items-center justify-between p-3 rounded-lg border border-border/50 bg-muted/30">
+                <div>
+                  <Label htmlFor="always-open" className="cursor-pointer">Always open</Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">Bypass operating hours — handover always available</p>
+                </div>
+                <Switch id="always-open" checked={alwaysOpen} onCheckedChange={setAlwaysOpen} />
+              </div>
+
+              <div className={cn(alwaysOpen && "opacity-40 pointer-events-none")}>
                 <Label htmlFor="dept-timezone">Timezone</Label>
                 <Select value={timezone} onValueChange={setTimezone}>
                   <SelectTrigger className="mt-1">
@@ -521,7 +538,9 @@ export function DepartmentManagement({ clientId, readOnly }: { clientId: string;
                 </Select>
               </div>
 
-              <div>
+              </div>
+
+              <div className={cn(alwaysOpen && "opacity-40 pointer-events-none")}>
                 <Label>Opening Hours</Label>
                 <RadioGroup
                   value={openingHoursType}
