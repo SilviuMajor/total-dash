@@ -1641,6 +1641,7 @@ export type Database = {
       }
       departments: {
         Row: {
+          always_open: boolean | null
           client_id: string
           code: string | null
           color: string | null
@@ -1659,6 +1660,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          always_open?: boolean | null
           client_id: string
           code?: string | null
           color?: string | null
@@ -1677,6 +1679,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          always_open?: boolean | null
           client_id?: string
           code?: string | null
           color?: string | null
