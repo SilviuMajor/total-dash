@@ -2559,6 +2559,10 @@ export type Database = {
         Returns: boolean
       }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      update_agent_config: {
+        Args: { p_agent_id: string; p_config_updates: Json }
+        Returns: undefined
+      }
       update_customer_message_timestamps: {
         Args: { p_conversation_id: string }
         Returns: undefined
