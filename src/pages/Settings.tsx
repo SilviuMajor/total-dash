@@ -102,11 +102,10 @@ export default function Settings() {
   const canManageGeneral = !isImpersonationViewAsUser && (isInPreview || companySettingsPermissions?.settings_general_manage === true);
 
   const getDefaultTab = () => {
-    if (showDepartments) return "departments";
     if (showTeam) return "team-permissions";
     if (showCannedResponses) return "canned-responses";
     if (showGeneral) return "general";
-    return "departments";
+    return "team-permissions";
   };
 
   return (
