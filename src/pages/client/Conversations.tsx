@@ -1114,36 +1114,51 @@ export default function Conversations() {
         {/* Row 2b: Department filters (multi-select toggle, hidden for single department) */}
         {departments.length > 1 && (
           <div className="px-4 py-1 flex items-center gap-1.5 flex-wrap">
-            <Button
-              size="sm"
-              variant={departmentFilters.length === 0 ? 'default' : 'ghost'}
+            <button
               onClick={() => setDepartmentFilters([])}
-              className="h-7 text-xs px-3"
+              className={cn(
+                "h-7 text-xs px-3 font-medium inline-flex items-center transition-colors",
+                "rounded-sm border",
+                departmentFilters.length === 0
+                  ? "bg-muted border-border text-foreground"
+                  : "border-transparent text-muted-foreground hover:bg-muted/50"
+              )}
             >
               All ({conversations.length})
-            </Button>
+            </button>
             {departments.map(dept => {
               const count = departmentCounts.get(dept.id) || 0;
               const isActive = departmentFilters.includes(dept.id);
+              const color = dept.color || '#6B7280';
               return (
-                <Button
+                <button
                   key={dept.id}
-                  size="sm"
-                  variant={isActive ? 'default' : 'ghost'}
                   onClick={() => {
                     setDepartmentFilters(prev => {
                       const next = isActive ? prev.filter(x => x !== dept.id) : [...prev, dept.id];
                       return next.length === departments.length ? [] : next;
                     });
                   }}
-                  className={cn("h-7 text-xs px-3", count === 0 && !isActive && "opacity-40")}
+                  className={cn(
+                    "h-7 text-xs px-3 font-medium inline-flex items-center transition-colors rounded-sm",
+                    count === 0 && !isActive && "opacity-40"
+                  )}
+                  style={isActive ? {
+                    backgroundColor: `${color}30`,
+                    border: `1px solid ${color}`,
+                    color: color,
+                  } : {
+                    backgroundColor: `${color}15`,
+                    border: `0.5px solid ${color}40`,
+                    color: color,
+                  }}
                 >
                   <span
                     className="w-1.5 h-1.5 rounded-full mr-1.5"
-                    style={{ backgroundColor: dept.color || '#6B7280' }}
+                    style={{ backgroundColor: color }}
                   />
                   {dept.name} ({count})
-                </Button>
+                </button>
               );
             })}
           </div>
@@ -2155,31 +2170,42 @@ export default function Conversations() {
                                   setSelectedConversation(conv);
                                   setShowAllPreviousConversations(false);
                                 }}
-                                className="w-full flex items-center justify-between p-2 rounded-md bg-muted/50 hover:bg-muted transition-colors text-left"
+                                className="w-full p-2 rounded-md bg-muted/50 hover:bg-muted transition-colors text-left"
                               >
-                                <div className="flex items-center gap-2 min-w-0">
-                                  <span className={cn(
-                                    "w-1.5 h-1.5 rounded-full shrink-0",
-                                    conv.status === 'with_ai' && "bg-green-500",
-                                    conv.status === 'waiting' && "bg-red-500",
-                                    conv.status === 'in_handover' && "bg-blue-500",
-                                    conv.status === 'aftercare' && "bg-yellow-500",
-                                    conv.status === 'needs_review' && "bg-amber-500",
-                                    conv.status === 'resolved' && "bg-gray-400"
-                                  )} />
-                                  <span className="text-xs truncate">
-                                    {conv.status === 'with_ai' ? 'With AI'
-                                      : conv.status === 'waiting' ? 'Waiting'
-                                      : conv.status === 'in_handover' ? 'In Handover'
-                                      : conv.status === 'aftercare' ? 'Aftercare'
-                                      : conv.status === 'needs_review' ? 'Needs Review'
-                                      : conv.status === 'resolved' ? 'Resolved'
-                                      : conv.status}
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <span className={cn(
+                                      "w-1.5 h-1.5 rounded-full shrink-0",
+                                      conv.status === 'with_ai' && "bg-green-500",
+                                      conv.status === 'waiting' && "bg-red-500",
+                                      conv.status === 'in_handover' && "bg-blue-500",
+                                      conv.status === 'aftercare' && "bg-yellow-500",
+                                      conv.status === 'needs_review' && "bg-amber-500",
+                                      conv.status === 'resolved' && "bg-gray-400"
+                                    )} />
+                                    <span className="text-xs truncate">
+                                      {conv.status === 'with_ai' ? 'With AI'
+                                        : conv.status === 'waiting' ? 'Waiting'
+                                        : conv.status === 'in_handover' ? 'In Handover'
+                                        : conv.status === 'aftercare' ? 'Aftercare'
+                                        : conv.status === 'needs_review' ? 'Needs Review'
+                                        : conv.status === 'resolved' ? `Resolved${conv.resolution_reason ? ` — ${conv.resolution_reason}` : ''}`
+                                        : conv.status}
+                                    </span>
+                                  </div>
+                                  <span className="text-[10px] text-muted-foreground shrink-0 ml-2">
+                                    {conv.last_activity_at ? new Date(conv.last_activity_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}
                                   </span>
                                 </div>
-                                <span className="text-[10px] text-muted-foreground shrink-0 ml-2">
-                                  {conv.last_activity_at ? new Date(conv.last_activity_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}
-                                </span>
+                                {conv.department_id && (() => {
+                                  const dept = departments.find(d => d.id === conv.department_id);
+                                  return dept ? (
+                                    <div className="flex items-center gap-1 mt-1 pl-[14px]">
+                                      <span className="w-1 h-1 rounded-full" style={{ backgroundColor: dept.color || '#6B7280' }} />
+                                      <span className="text-[10px] text-muted-foreground">{dept.name}</span>
+                                    </div>
+                                  ) : null;
+                                })()}
                               </button>
                             ))}
                             {previousConversations.length > 2 && (
