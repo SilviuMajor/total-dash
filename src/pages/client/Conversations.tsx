@@ -101,9 +101,9 @@ export default function Conversations() {
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   // Filters
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilters, setStatusFilters] = useState<string[]>([]);
   const [tagFilters, setTagFilters] = useState<string[]>([]);
-  const [departmentFilter, setDepartmentFilter] = useState<string | null>(null);
+  const [departmentFilters, setDepartmentFilters] = useState<string[]>([]);
   
 
   // Bulk select
@@ -166,7 +166,7 @@ export default function Conversations() {
     isFetchingNextPage,
     fetchNextPage,
     hasNextPage,
-  } = useConversations(selectedAgentId, { status: statusFilter });
+  } = useConversations(selectedAgentId, { statuses: statusFilters });
 
   const { data: agentConfig } = useAgentConfig(selectedAgentId);
 
@@ -187,7 +187,7 @@ export default function Conversations() {
   // Reset selection on filter/agent change
   useEffect(() => {
     setSelectedConversationIds(new Set());
-  }, [selectedAgentId, statusFilter, tagFilters, departmentFilter]);
+  }, [selectedAgentId, statusFilters, tagFilters, departmentFilters]);
 
   // Response time tick (every second for live updates)
   useEffect(() => {
@@ -285,7 +285,7 @@ export default function Conversations() {
           filter: `agent_id=eq.${selectedAgentId}`
         },
         (payload) => {
-          const queryKey = ['conversations', selectedAgentId, { status: statusFilter }];
+          const queryKey = ['conversations', selectedAgentId, { statuses: statusFilters }];
           if (payload.eventType === 'INSERT') {
             queryClient.setQueryData(queryKey, (old: any) => {
               if (!old) return old;
@@ -320,7 +320,7 @@ export default function Conversations() {
       });
 
     return () => { channel.unsubscribe(); };
-  }, [selectedAgentId, selectedConversation?.id, statusFilter, queryClient]);
+  }, [selectedAgentId, selectedConversation?.id, statusFilters, queryClient]);
 
   // Real-time subscriptions for transcripts
   useEffect(() => {
@@ -544,9 +544,10 @@ export default function Conversations() {
       if (!effectiveClientId) return;
       const { data } = await supabase
         .from('departments')
-        .select('id, name, code, color')
+        .select('id, name, code, color, is_global')
         .eq('client_id', effectiveClientId)
         .is('deleted_at', null)
+        .order('is_global', { ascending: false })
         .order('name');
       if (data) setDepartments(data);
     };
@@ -935,7 +936,7 @@ export default function Conversations() {
 
   const availableTags = (agentConfig as any)?.widget_settings?.functions?.conversation_tags?.filter((t: any) => t.enabled) || [];
 
-  // Department counts (computed before department filter, so all counts stay visible)
+  // Department counts (before department filter so all counts stay visible)
   const departmentCounts = useMemo(() => {
     const counts = new Map<string, number>();
     for (const c of conversations) {
@@ -949,8 +950,8 @@ export default function Conversations() {
   // Client-side filtering (department + tags) + pinning
   const filteredConversations = useMemo(() => {
     let result = conversations;
-    if (departmentFilter) {
-      result = result.filter(c => c.department_id === departmentFilter);
+    if (departmentFilters.length > 0) {
+      result = result.filter(c => c.department_id && departmentFilters.includes(c.department_id));
     }
     if (tagFilters.length > 0) {
       result = result.filter(c =>
@@ -968,7 +969,7 @@ export default function Conversations() {
       return aTier - bTier;
     });
     return result;
-  }, [conversations, tagFilters, departmentFilter, pendingConversationIds]);
+  }, [conversations, tagFilters, departmentFilters, pendingConversationIds]);
 
   const allSelected = filteredConversations.length > 0 &&
     filteredConversations.every(c => selectedConversationIds.has(c.id));
