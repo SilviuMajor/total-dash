@@ -15,10 +15,13 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Pencil, Trash2, Plus, Lock, ChevronDown, ChevronRight, X } from "lucide-react";
+import { Pencil, Trash2, Plus, Lock, ChevronDown, ChevronRight, X, GripVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
+import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 const DEPARTMENT_COLORS = [
   { value: '#3b82f6', label: 'Blue' },
@@ -54,6 +57,7 @@ interface Department {
   timezone: string;
   opening_hours_type: string;
   opening_hours: any;
+  sort_order: number;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -168,6 +172,7 @@ export function DepartmentManagement({ clientId, readOnly }: { clientId: string;
         .eq("client_id", clientId)
         .is("deleted_at", null)
         .order("is_global", { ascending: false })
+        .order("sort_order")
         .order("name");
 
       if (error) throw error;
@@ -247,6 +252,30 @@ export function DepartmentManagement({ clientId, readOnly }: { clientId: string;
       loadDeptUsers();
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  };
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const nonGlobal = departments.filter(d => !d.is_global);
+    const oldIndex = nonGlobal.findIndex(d => d.id === active.id);
+    const newIndex = nonGlobal.findIndex(d => d.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const reordered = arrayMove(nonGlobal, oldIndex, newIndex);
+    const globalDepts = departments.filter(d => d.is_global);
+    setDepartments([...globalDepts, ...reordered]);
+
+    // Save new sort order
+    for (let i = 0; i < reordered.length; i++) {
+      await supabase
+        .from('departments')
+        .update({ sort_order: i + 1 })
+        .eq('id', reordered[i].id);
     }
   };
 
@@ -409,6 +438,8 @@ export function DepartmentManagement({ clientId, readOnly }: { clientId: string;
             No departments created yet.
           </div>
         ) : (
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={departments.filter(d => !d.is_global).map(d => d.id)} strategy={verticalListSortingStrategy}>
           <div className="space-y-2">
             {departments.map((dept) => {
               const isOpen = isDepartmentOpen(dept);
@@ -429,6 +460,7 @@ export function DepartmentManagement({ clientId, readOnly }: { clientId: string;
                       ) : (
                         <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                       )}
+                      <SortableDeptHandle id={dept.id} disabled={dept.is_global || !!readOnly} />
                       <span
                         className="inline-block w-4 h-4 rounded-full flex-shrink-0"
                         style={{ backgroundColor: dept.color || "#3b82f6" }}

@@ -222,7 +222,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
     try {
       const { data, error } = await supabase
         .from('client_user_departments')
-        .select('id, client_user_id, department_id, departments(name, color)')
+        .select('id, client_user_id, department_id, departments(name, color, sort_order)')
         .in('client_user_id', users.map(u => u.id));
       if (error) throw error;
       const grouped: Record<string, any[]> = {};
@@ -234,6 +234,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
           department_id: row.department_id,
           name: row.departments?.name || 'Unknown',
           color: row.departments?.color || '#6B7280',
+          sort_order: row.departments?.sort_order ?? 999,
         });
       });
       setUserDepts(grouped);
@@ -537,6 +538,8 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
         .from('departments')
         .select('*')
         .eq('client_id', clientId)
+        .order('is_global', { ascending: false })
+        .order('sort_order')
         .order('name');
       if (error) throw error;
       setDepartments(data || []);
@@ -947,7 +950,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                       </span>
                     </div>
                     <div className="flex items-center gap-1 flex-wrap">
-                      {(userDepts[user.id] || []).map(d => (
+                      {(userDepts[user.id] || []).sort((a: any, b: any) => a.sort_order - b.sort_order).map(d => (
                         <span key={d.junction_id} className="text-[10px] px-2 py-0.5 rounded-full border" style={{ borderColor: `${d.color}40`, color: d.color, backgroundColor: `${d.color}15` }}>
                           {d.name}
                         </span>
@@ -1089,7 +1092,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                         <div className="flex-1 space-y-1">
                           <Label className="text-xs text-muted-foreground">Departments</Label>
                           <div className="flex items-center gap-1.5 flex-wrap min-h-[36px] px-2 py-1.5 border rounded-md bg-background">
-                            {(userDepts[user.id] || []).map(d => (
+                            {(userDepts[user.id] || []).sort((a: any, b: any) => a.sort_order - b.sort_order).map(d => (
                               <span key={d.junction_id} className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border" style={{ borderColor: `${d.color}40`, color: d.color, backgroundColor: `${d.color}15` }}>
                                 {d.name}
                                 {!readOnly && (

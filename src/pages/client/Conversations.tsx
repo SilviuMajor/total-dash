@@ -554,10 +554,11 @@ export default function Conversations() {
       if (!effectiveClientId) return;
       const { data } = await supabase
         .from('departments')
-        .select('id, name, code, color, is_global')
+        .select('id, name, code, color, is_global, sort_order')
         .eq('client_id', effectiveClientId)
         .is('deleted_at', null)
         .order('is_global', { ascending: false })
+        .order('sort_order')
         .order('name');
       if (data) setDepartments(data);
     };
