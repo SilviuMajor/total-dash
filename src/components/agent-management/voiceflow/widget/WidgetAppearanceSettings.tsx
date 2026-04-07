@@ -92,15 +92,12 @@ export function WidgetAppearanceSettings({ agent, onUpdate }: WidgetAppearanceSe
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const { error } = await supabase
-        .from('agents')
-        .update({
-          config: {
-            ...agent.config,
-            widget_settings: formData
-          }
-        })
-        .eq('id', agent.id);
+      const { error } = await supabase.rpc('update_agent_config', {
+        p_agent_id: agent.id,
+        p_config_updates: {
+          widget_settings: formData
+        },
+      });
 
       if (error) throw error;
       
