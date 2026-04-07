@@ -1117,11 +1117,10 @@ export default function Conversations() {
             <button
               onClick={() => setDepartmentFilters([])}
               className={cn(
-                "h-7 text-xs px-3 font-medium inline-flex items-center transition-colors",
-                "rounded-sm border",
+                "h-7 text-xs px-3 font-medium inline-flex items-center rounded-full border transition-colors",
                 departmentFilters.length === 0
-                  ? "bg-muted border-border text-foreground"
-                  : "border-transparent text-muted-foreground hover:bg-muted/50"
+                  ? "bg-foreground text-background border-foreground"
+                  : "border-border text-muted-foreground hover:bg-muted/50"
               )}
             >
               All ({conversations.length})
@@ -1140,23 +1139,19 @@ export default function Conversations() {
                     });
                   }}
                   className={cn(
-                    "h-7 text-xs px-3 font-medium inline-flex items-center transition-colors rounded-sm",
+                    "h-7 text-xs px-3 font-medium inline-flex items-center rounded-full border transition-colors",
                     count === 0 && !isActive && "opacity-40"
                   )}
                   style={isActive ? {
-                    backgroundColor: `${color}30`,
-                    border: `1px solid ${color}`,
+                    backgroundColor: `${color}25`,
+                    borderColor: color,
                     color: color,
                   } : {
                     backgroundColor: `${color}15`,
-                    border: `0.5px solid ${color}40`,
+                    borderColor: `${color}40`,
                     color: color,
                   }}
                 >
-                  <span
-                    className="w-1.5 h-1.5 rounded-full mr-1.5"
-                    style={{ backgroundColor: color }}
-                  />
                   {dept.name} ({count})
                 </button>
               );
