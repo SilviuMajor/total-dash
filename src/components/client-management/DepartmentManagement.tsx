@@ -124,6 +124,16 @@ function isDepartmentOpen(dept: Department): boolean {
   }
 }
 
+function SortableDeptHandle({ id, disabled }: { id: string; disabled: boolean }) {
+  const { attributes, listeners, setNodeRef } = useSortable({ id, disabled });
+  if (disabled) return null;
+  return (
+    <span ref={setNodeRef} {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+      <GripVertical className="w-4 h-4" />
+    </span>
+  );
+}
+
 function generateCode(name: string): string {
   return name.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "");
 }
