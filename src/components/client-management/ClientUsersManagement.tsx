@@ -106,6 +106,65 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
   const [overlayUser, setOverlayUser] = useState<ClientUser | null>(null);
   const [userDepts, setUserDepts] = useState<Record<string, any[]>>({});
+  const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
+
+  const toggleUserSelection = (userId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedUserIds(prev => {
+      const next = new Set(prev);
+      if (next.has(userId)) next.delete(userId);
+      else next.add(userId);
+      return next;
+    });
+  };
+
+  const clearSelection = () => setSelectedUserIds(new Set());
+
+  const bulkAssignDept = async (deptId: string) => {
+    try {
+      const inserts = Array.from(selectedUserIds).map(userId => ({
+        client_user_id: userId,
+        department_id: deptId,
+      }));
+      const { error } = await supabase.from('client_user_departments').upsert(inserts, { onConflict: 'client_user_id,department_id', ignoreDuplicates: true });
+      if (error) throw error;
+      toast({ title: "Done", description: `Department assigned to ${selectedUserIds.size} users` });
+      clearSelection();
+      loadUserDepts();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  };
+
+  const bulkChangeRole = async (roleId: string) => {
+    try {
+      for (const userId of selectedUserIds) {
+        await supabase.from('client_user_agent_permissions').update({ role_id: roleId }).eq('client_id', clientId).eq('user_id', users.find(u => u.id === userId)?.user_id || '');
+      }
+      toast({ title: "Done", description: `Role changed for ${selectedUserIds.size} users` });
+      clearSelection();
+      loadUsers();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  };
+
+  const bulkSuspend = async () => {
+    try {
+      for (const userId of selectedUserIds) {
+        const user = users.find(u => u.id === userId);
+        if (user && user.status === 'active') {
+          await supabase.from('client_users').update({ status: 'suspended' }).eq('id', userId);
+        }
+      }
+      toast({ title: "Done", description: `${selectedUserIds.size} users suspended` });
+      clearSelection();
+      loadUsers();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  };
+
   const [roleChangeModal, setRoleChangeModal] = useState<{ user: ClientUser; newRoleId: string } | null>(null);
   const [showRemovedUsers, setShowRemovedUsers] = useState(false);
   const [roleTemplates, setRoleTemplates] = useState<Record<string, Record<string, any>>>({});
@@ -805,6 +864,14 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                     className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors"
                     onClick={() => openUserOverlay(user)}
                   >
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 rounded shrink-0"
+                      checked={selectedUserIds.has(user.id)}
+                      onClick={(e) => toggleUserSelection(user.id, e)}
+                      onChange={() => {}}
+                      style={{ accentColor: 'hsl(var(--primary))' }}
+                    />
                     <Avatar className="h-9 w-9">
                       <AvatarImage src={user.avatar_url || undefined} />
                       <AvatarFallback className="text-xs">{getInitials(user.full_name)}</AvatarFallback>
