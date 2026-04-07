@@ -130,14 +130,14 @@ export default function Conversations() {
   const [pendingSession, setPendingSession] = useState<any>(null);
   const [activeSession, setActiveSession] = useState<any>(null);
   const [handoverHistory, setHandoverHistory] = useState<any[]>([]);
-  const [showHandoverHistory, setShowHandoverHistory] = useState(false);
+  
   const [currentClientUserId, setCurrentClientUserId] = useState<string | null>(null);
   const [pendingConversationIds, setPendingConversationIds] = useState<Map<string, string>>(new Map());
   const [responseTick, setResponseTick] = useState(0);
 
   // Previous conversations
   const [previousConversations, setPreviousConversations] = useState<Conversation[]>([]);
-  const [showPreviousConversations, setShowPreviousConversations] = useState(false);
+  const [showAllPreviousConversations, setShowAllPreviousConversations] = useState(false);
 
   // Canned responses state
   const [showCannedDropdown, setShowCannedDropdown] = useState(false);
@@ -625,7 +625,7 @@ export default function Conversations() {
     const loadPreviousConversations = async () => {
       if (!selectedConversation?.voiceflow_user_id || !selectedConversation?.id) {
         setPreviousConversations([]);
-        setShowPreviousConversations(false);
+        setShowAllPreviousConversations(false);
         return;
       }
 
@@ -648,7 +648,7 @@ export default function Conversations() {
       }
     };
     loadPreviousConversations();
-    setShowPreviousConversations(false);
+    setShowAllPreviousConversations(false);
   }, [selectedConversation?.id]);
 
   // Periodic handover timer check
@@ -1745,8 +1745,8 @@ export default function Conversations() {
           </div>
 
           {/* RIGHT PANEL: Details */}
-          <div className="flex flex-col h-full">
-            <ScrollArea className="flex-1">
+          <div className="flex flex-col h-full overflow-hidden">
+            <ScrollArea className="flex-1 min-h-0">
               <div className="p-4 space-y-4">
                 {selectedConversation ? (
                   <>
@@ -1949,6 +1949,54 @@ export default function Conversations() {
                           <p className="text-xs text-muted-foreground">This conversation has been resolved</p>
                         </div>
                       )}
+
+                      {/* Previous handover history (inside the card) */}
+                      {handoverHistory.length > 0 && (
+                        <div className="border-t border-border/50 mt-2 pt-2">
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
+                            {handoverHistory.length === 1 ? 'Previous handover' : `Previous handovers (${handoverHistory.length})`}
+                          </p>
+                          <div className="space-y-1.5">
+                            {handoverHistory.map((session: any) => {
+                              const duration = session.accepted_at && session.completed_at
+                                ? Math.floor((new Date(session.completed_at).getTime() - new Date(session.accepted_at).getTime()) / 1000)
+                                : null;
+                              const durationStr = duration !== null
+                                ? duration >= 3600
+                                  ? `${Math.floor(duration / 3600)}h ${Math.floor((duration % 3600) / 60)}m`
+                                  : duration >= 60
+                                    ? `${Math.floor(duration / 60)}m ${(duration % 60).toString().padStart(2, '0')}s`
+                                    : `${duration}s`
+                                : null;
+                              return (
+                                <div key={session.id} className="bg-white dark:bg-background rounded-md p-2 border border-border/30">
+                                  <div className="flex items-center justify-between mb-0.5">
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: session.departments?.color || '#6B7280' }} />
+                                      <span className="text-[11px] font-medium">{session.departments?.name || 'Unknown'}</span>
+                                      <span className={cn(
+                                        "text-[9px] px-1.5 py-0.5 rounded",
+                                        session.completion_method === 'transfer'
+                                          ? "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
+                                          : "bg-yellow-100 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-300"
+                                      )}>
+                                        {session.completion_method === 'transfer' ? 'Transferred' : 'Handback'}
+                                      </span>
+                                    </div>
+                                    {durationStr && <span className="text-[10px] text-muted-foreground">{durationStr}</span>}
+                                  </div>
+                                  <p className="text-[10px] text-muted-foreground">
+                                    {session.agent_name || 'Unknown agent'} · {new Date(session.completed_at).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' })}, {new Date(session.completed_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                                  </p>
+                                  {session.transfer_note && (
+                                    <p className="text-[10px] text-foreground mt-1 italic">"{session.transfer_note}"</p>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </Card>
 
                     {selectedConversation && (
@@ -2006,143 +2054,56 @@ export default function Conversations() {
                         </div>
                       )}
 
-                    {/* Handover History */}
-                    {handoverHistory.length > 0 && (
-                      <div>
-                        <button
-                          onClick={() => setShowHandoverHistory(!showHandoverHistory)}
-                          className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors mb-2"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="10"
-                            height="10"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className={cn("transition-transform", showHandoverHistory && "rotate-90")}
-                          >
-                            <polyline points="9 18 15 12 9 6" />
-                          </svg>
-                          {handoverHistory.length} Previous Handover{handoverHistory.length !== 1 ? 's' : ''}
-                        </button>
-                        {showHandoverHistory && (
-                          <div className="space-y-1.5 mb-3">
-                            {handoverHistory.map((session: any) => {
-                              const duration = session.accepted_at && session.completed_at
-                                ? Math.floor((new Date(session.completed_at).getTime() - new Date(session.accepted_at).getTime()) / 1000)
-                                : null;
-                              const durationStr = duration !== null
-                                ? duration >= 3600
-                                  ? `${Math.floor(duration / 3600)}h ${Math.floor((duration % 3600) / 60)}m`
-                                  : duration >= 60
-                                    ? `${Math.floor(duration / 60)}m ${(duration % 60).toString().padStart(2, '0')}s`
-                                    : `${duration}s`
-                                : null;
-                              return (
-                                <div key={session.id} className="bg-muted/50 rounded-lg p-2.5 space-y-1">
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-1.5">
-                                      <span
-                                        className="w-1.5 h-1.5 rounded-full"
-                                        style={{ backgroundColor: session.departments?.color || '#6B7280' }}
-                                      />
-                                      <span className="text-xs font-medium">{session.departments?.name || 'Unknown'}</span>
-                                    </div>
-                                    {durationStr && (
-                                      <span className="text-[10px] text-muted-foreground">{durationStr}</span>
-                                    )}
-                                  </div>
-                                  {session.agent_name && (
-                                    <p className="text-[11px] text-muted-foreground">
-                                      Handled by <span className="font-medium">{session.agent_name}</span>
-                                    </p>
-                                  )}
-                                  <div className="flex items-center gap-2">
-                                    <span className={cn(
-                                      "text-[10px] px-1.5 py-0.5 rounded",
-                                      session.completion_method === 'transfer'
-                                        ? "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
-                                        : "bg-yellow-100 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-300"
-                                    )}>
-                                      {session.completion_method === 'transfer' ? 'Transferred' : 'Handback'}
-                                    </span>
-                                    <span className="text-[10px] text-muted-foreground">
-                                      {new Date(session.completed_at).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' })}, {new Date(session.completed_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
-                                    </span>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
                     {/* Previous conversations from same customer */}
                     {previousConversations.length > 0 && (
                       <div>
-                        <button
-                          onClick={() => setShowPreviousConversations(!showPreviousConversations)}
-                          className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors w-full mb-2"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="10"
-                            height="10"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className={cn("transition-transform", showPreviousConversations && "rotate-90")}
-                          >
-                            <polyline points="9 18 15 12 9 6" />
-                          </svg>
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
                           {previousConversations.length} Previous Conversation{previousConversations.length !== 1 ? 's' : ''}
-                        </button>
-                        {showPreviousConversations && (
-                          <div className="space-y-1 mb-2">
-                            {previousConversations.map(conv => (
-                              <button
-                                key={conv.id}
-                                onClick={() => {
-                                  setSelectedConversation(conv);
-                                  setShowPreviousConversations(false);
-                                }}
-                                className="w-full flex items-center justify-between p-2 rounded-md bg-muted/50 hover:bg-muted transition-colors text-left"
-                              >
-                                <div className="flex items-center gap-2 min-w-0">
-                                  <span className={cn(
-                                    "w-1.5 h-1.5 rounded-full shrink-0",
-                                    conv.status === 'with_ai' && "bg-green-500",
-                                    conv.status === 'waiting' && "bg-red-500",
-                                    conv.status === 'in_handover' && "bg-blue-500",
-                                    conv.status === 'aftercare' && "bg-yellow-500",
-                                    conv.status === 'needs_review' && "bg-amber-500",
-                                    conv.status === 'resolved' && "bg-gray-400"
-                                  )} />
-                                  <span className="text-xs truncate">
-                                    {conv.status === 'with_ai' ? 'With AI'
-                                      : conv.status === 'waiting' ? 'Waiting'
-                                      : conv.status === 'in_handover' ? 'In Handover'
-                                      : conv.status === 'aftercare' ? 'Aftercare'
-                                      : conv.status === 'needs_review' ? 'Needs Review'
-                                      : conv.status === 'resolved' ? 'Resolved'
-                                      : conv.status}
-                                  </span>
-                                </div>
-                                <span className="text-[10px] text-muted-foreground shrink-0 ml-2">
-                                  {conv.last_activity_at ? new Date(conv.last_activity_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}
+                        </p>
+                        <div className="space-y-1">
+                          {(showAllPreviousConversations ? previousConversations : previousConversations.slice(0, 2)).map((conv: any) => (
+                            <button
+                              key={conv.id}
+                              onClick={() => {
+                                setSelectedConversation(conv);
+                                setShowAllPreviousConversations(false);
+                              }}
+                              className="w-full flex items-center justify-between p-2 rounded-md bg-muted/50 hover:bg-muted transition-colors text-left"
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className={cn(
+                                  "w-1.5 h-1.5 rounded-full shrink-0",
+                                  conv.status === 'with_ai' && "bg-green-500",
+                                  conv.status === 'waiting' && "bg-red-500",
+                                  conv.status === 'in_handover' && "bg-blue-500",
+                                  conv.status === 'aftercare' && "bg-yellow-500",
+                                  conv.status === 'needs_review' && "bg-amber-500",
+                                  conv.status === 'resolved' && "bg-gray-400"
+                                )} />
+                                <span className="text-xs truncate">
+                                  {conv.status === 'with_ai' ? 'With AI'
+                                    : conv.status === 'waiting' ? 'Waiting'
+                                    : conv.status === 'in_handover' ? 'In Handover'
+                                    : conv.status === 'aftercare' ? 'Aftercare'
+                                    : conv.status === 'needs_review' ? 'Needs Review'
+                                    : conv.status === 'resolved' ? 'Resolved'
+                                    : conv.status}
                                 </span>
-                              </button>
-                            ))}
-                          </div>
-                        )}
+                              </div>
+                              <span className="text-[10px] text-muted-foreground shrink-0 ml-2">
+                                {conv.last_activity_at ? new Date(conv.last_activity_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}
+                              </span>
+                            </button>
+                          ))}
+                          {!showAllPreviousConversations && previousConversations.length > 2 && (
+                            <button
+                              onClick={() => setShowAllPreviousConversations(true)}
+                              className="w-full text-center py-1.5 rounded-md border border-dashed border-border text-[11px] text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors"
+                            >
+                              Show {previousConversations.length - 2} more
+                            </button>
+                          )}
+                        </div>
                       </div>
                     )}
 
