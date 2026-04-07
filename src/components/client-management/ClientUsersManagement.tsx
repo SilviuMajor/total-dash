@@ -105,6 +105,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
   
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
   const [overlayUser, setOverlayUser] = useState<ClientUser | null>(null);
+  const [userDepts, setUserDepts] = useState<Record<string, any[]>>({});
   const [roleChangeModal, setRoleChangeModal] = useState<{ user: ClientUser; newRoleId: string } | null>(null);
   const [showRemovedUsers, setShowRemovedUsers] = useState(false);
   const [roleTemplates, setRoleTemplates] = useState<Record<string, Record<string, any>>>({});
