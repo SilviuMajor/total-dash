@@ -69,6 +69,8 @@ interface Conversation {
     tags?: string[];
     [key: string]: any;
   };
+  resolution_reason?: string;
+  resolution_note?: string;
 }
 
 interface Transcript {
@@ -122,6 +124,10 @@ export default function Conversations() {
   const [sendingMessage, setSendingMessage] = useState(false);
   const [handoverLoading, setHandoverLoading] = useState<string | null>(null);
   const [endHandoverOpen, setEndHandoverOpen] = useState(false);
+  const [resolveModalOpen, setResolveModalOpen] = useState(false);
+  const [resolveAction, setResolveAction] = useState<'end_handover' | 'mark_resolved'>('end_handover');
+  const [resolveReason, setResolveReason] = useState('');
+  const [resolveNote, setResolveNote] = useState('');
   const [transferOpen, setTransferOpen] = useState(false);
   const [transferNote, setTransferNote] = useState("");
   const [transferDeptId, setTransferDeptId] = useState("");
@@ -932,7 +938,44 @@ export default function Conversations() {
 
   const handleEndHandover = async (resolve: boolean) => {
     setEndHandoverOpen(false);
-    await callHandoverAction('end_handover', { resolve });
+    if (resolve) {
+      handleResolveWithReason('end_handover');
+    } else {
+      await callHandoverAction('end_handover', { resolve: false });
+    }
+  };
+
+  const handleResolveWithReason = (action: 'end_handover' | 'mark_resolved') => {
+    if (resolutionReasons.length > 0) {
+      setResolveAction(action);
+      setResolveReason('');
+      setResolveNote('');
+      setResolveModalOpen(true);
+    } else {
+      if (action === 'end_handover') {
+        callHandoverAction('end_handover', { resolve: true });
+      } else {
+        callHandoverAction('mark_resolved');
+      }
+    }
+  };
+
+  const handleSubmitResolution = async () => {
+    const selectedReason = resolutionReasons.find(r => r.id === resolveReason);
+    if (selectedReason?.note_required && !resolveNote.trim()) return;
+    setResolveModalOpen(false);
+    if (resolveAction === 'end_handover') {
+      await callHandoverAction('end_handover', {
+        resolve: true,
+        resolution_reason: selectedReason?.label || null,
+        resolution_note: resolveNote.trim() || null,
+      });
+    } else {
+      await callHandoverAction('mark_resolved', {
+        resolution_reason: selectedReason?.label || null,
+        resolution_note: resolveNote.trim() || null,
+      });
+    }
   };
 
   const handleTransfer = async () => {
@@ -949,6 +992,8 @@ export default function Conversations() {
   };
 
   const availableTags = (agentConfig as any)?.widget_settings?.functions?.conversation_tags?.filter((t: any) => t.enabled) || [];
+
+  const resolutionReasons: Array<{ id: string; label: string; note_required: boolean }> = (agentConfig as any)?.resolution_reasons || [];
 
   // Department counts (before department filter so all counts stay visible)
   const departmentCounts = useMemo(() => {
@@ -1899,10 +1944,10 @@ export default function Conversations() {
                           <Button
                             size="sm"
                             className="w-full"
-                            onClick={() => callHandoverAction('mark_resolved')}
-                            disabled={handoverLoading === 'mark_resolved'}
+                            onClick={() => handleResolveWithReason('mark_resolved')}
+                            disabled={!!handoverLoading}
                           >
-                            {handoverLoading === 'mark_resolved' ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle className="h-4 w-4 mr-2" />}
+                            {handoverLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle className="h-4 w-4 mr-2" />}
                             Mark as Resolved
                           </Button>
                         </div>
@@ -1936,10 +1981,10 @@ export default function Conversations() {
                           <Button
                             size="sm"
                             className="w-full"
-                            onClick={() => callHandoverAction('mark_resolved')}
-                            disabled={handoverLoading === 'mark_resolved'}
+                            onClick={() => handleResolveWithReason('mark_resolved')}
+                            disabled={!!handoverLoading}
                           >
-                            {handoverLoading === 'mark_resolved' ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                            {handoverLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                             Mark as Resolved
                           </Button>
                         </div>
@@ -1950,9 +1995,15 @@ export default function Conversations() {
                         <div className="space-y-1.5">
                           <div className="flex items-center gap-1.5">
                             <CheckCircle className="h-4 w-4 text-green-500" />
-                            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Resolved</p>
+                            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                              Resolved{selectedConversation.resolution_reason ? ` — ${selectedConversation.resolution_reason}` : ''}
+                            </p>
                           </div>
-                          <p className="text-xs text-muted-foreground">This conversation has been resolved</p>
+                          {selectedConversation.resolution_note ? (
+                            <p className="text-xs text-muted-foreground italic">"{selectedConversation.resolution_note}"</p>
+                          ) : !selectedConversation.resolution_reason ? (
+                            <p className="text-xs text-muted-foreground">This conversation has been resolved</p>
+                          ) : null}
                         </div>
                       )}
 
@@ -2210,6 +2261,64 @@ export default function Conversations() {
 
         </div>
       </div>
+
+      {/* Resolution Reason Modal */}
+      <Dialog open={resolveModalOpen} onOpenChange={(open) => { if (!open) setResolveModalOpen(false); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Resolve conversation</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">Select a reason for resolving this conversation</p>
+          <div className="space-y-1.5 my-2">
+            {resolutionReasons.map((reason) => (
+              <label
+                key={reason.id}
+                onClick={() => setResolveReason(reason.id)}
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition-colors",
+                  resolveReason === reason.id
+                    ? "border-foreground bg-muted"
+                    : "border-border hover:bg-muted/50"
+                )}
+              >
+                <span className={cn(
+                  "w-4 h-4 rounded-full border-2 shrink-0",
+                  resolveReason === reason.id ? "border-[5px] border-foreground" : "border-muted-foreground/30"
+                )} />
+                <span className="text-sm flex-1">{reason.label}</span>
+                {reason.note_required && (
+                  <span className="text-[10px] text-muted-foreground">Note required</span>
+                )}
+              </label>
+            ))}
+          </div>
+          {resolveReason && (() => {
+            const selected = resolutionReasons.find(r => r.id === resolveReason);
+            return selected ? (
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">
+                  Note {selected.note_required ? <span className="text-muted-foreground/60">(required)</span> : <span className="text-muted-foreground/60">(optional)</span>}
+                </label>
+                <textarea
+                  value={resolveNote}
+                  onChange={(e) => setResolveNote(e.target.value)}
+                  placeholder="Add a note about this resolution..."
+                  className="w-full min-h-[60px] px-3 py-2 text-sm border rounded-lg resize-none bg-background"
+                />
+              </div>
+            ) : null;
+          })()}
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setResolveModalOpen(false)}>Cancel</Button>
+            <Button
+              onClick={handleSubmitResolution}
+              disabled={!resolveReason || (resolutionReasons.find(r => r.id === resolveReason)?.note_required && !resolveNote.trim())}
+            >
+              Resolve
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* End Handover Modal */}
       <Dialog open={endHandoverOpen} onOpenChange={setEndHandoverOpen}>
