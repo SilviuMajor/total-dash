@@ -69,6 +69,8 @@ interface Conversation {
     tags?: string[];
     [key: string]: any;
   };
+  resolution_reason?: string;
+  resolution_note?: string;
 }
 
 interface Transcript {
@@ -122,6 +124,10 @@ export default function Conversations() {
   const [sendingMessage, setSendingMessage] = useState(false);
   const [handoverLoading, setHandoverLoading] = useState<string | null>(null);
   const [endHandoverOpen, setEndHandoverOpen] = useState(false);
+  const [resolveModalOpen, setResolveModalOpen] = useState(false);
+  const [resolveAction, setResolveAction] = useState<'end_handover' | 'mark_resolved'>('end_handover');
+  const [resolveReason, setResolveReason] = useState('');
+  const [resolveNote, setResolveNote] = useState('');
   const [transferOpen, setTransferOpen] = useState(false);
   const [transferNote, setTransferNote] = useState("");
   const [transferDeptId, setTransferDeptId] = useState("");
@@ -932,7 +938,44 @@ export default function Conversations() {
 
   const handleEndHandover = async (resolve: boolean) => {
     setEndHandoverOpen(false);
-    await callHandoverAction('end_handover', { resolve });
+    if (resolve) {
+      handleResolveWithReason('end_handover');
+    } else {
+      await callHandoverAction('end_handover', { resolve: false });
+    }
+  };
+
+  const handleResolveWithReason = (action: 'end_handover' | 'mark_resolved') => {
+    if (resolutionReasons.length > 0) {
+      setResolveAction(action);
+      setResolveReason('');
+      setResolveNote('');
+      setResolveModalOpen(true);
+    } else {
+      if (action === 'end_handover') {
+        callHandoverAction('end_handover', { resolve: true });
+      } else {
+        callHandoverAction('mark_resolved');
+      }
+    }
+  };
+
+  const handleSubmitResolution = async () => {
+    const selectedReason = resolutionReasons.find(r => r.id === resolveReason);
+    if (selectedReason?.note_required && !resolveNote.trim()) return;
+    setResolveModalOpen(false);
+    if (resolveAction === 'end_handover') {
+      await callHandoverAction('end_handover', {
+        resolve: true,
+        resolution_reason: selectedReason?.label || null,
+        resolution_note: resolveNote.trim() || null,
+      });
+    } else {
+      await callHandoverAction('mark_resolved', {
+        resolution_reason: selectedReason?.label || null,
+        resolution_note: resolveNote.trim() || null,
+      });
+    }
   };
 
   const handleTransfer = async () => {
@@ -949,6 +992,8 @@ export default function Conversations() {
   };
 
   const availableTags = (agentConfig as any)?.widget_settings?.functions?.conversation_tags?.filter((t: any) => t.enabled) || [];
+
+  const resolutionReasons: Array<{ id: string; label: string; note_required: boolean }> = (agentConfig as any)?.resolution_reasons || [];
 
   // Department counts (before department filter so all counts stay visible)
   const departmentCounts = useMemo(() => {
