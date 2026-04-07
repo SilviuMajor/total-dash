@@ -623,6 +623,7 @@ export function DepartmentManagement({ clientId, readOnly }: { clientId: string;
                   })}
                 </div>
               )}
+              </div>
             </TabsContent>
           </Tabs>
 
