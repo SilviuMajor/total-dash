@@ -1949,6 +1949,54 @@ export default function Conversations() {
                           <p className="text-xs text-muted-foreground">This conversation has been resolved</p>
                         </div>
                       )}
+
+                      {/* Previous handover history (inside the card) */}
+                      {handoverHistory.length > 0 && (
+                        <div className="border-t border-border/50 mt-2 pt-2">
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
+                            {handoverHistory.length === 1 ? 'Previous handover' : `Previous handovers (${handoverHistory.length})`}
+                          </p>
+                          <div className="space-y-1.5">
+                            {handoverHistory.map((session: any) => {
+                              const duration = session.accepted_at && session.completed_at
+                                ? Math.floor((new Date(session.completed_at).getTime() - new Date(session.accepted_at).getTime()) / 1000)
+                                : null;
+                              const durationStr = duration !== null
+                                ? duration >= 3600
+                                  ? `${Math.floor(duration / 3600)}h ${Math.floor((duration % 3600) / 60)}m`
+                                  : duration >= 60
+                                    ? `${Math.floor(duration / 60)}m ${(duration % 60).toString().padStart(2, '0')}s`
+                                    : `${duration}s`
+                                : null;
+                              return (
+                                <div key={session.id} className="bg-white dark:bg-background rounded-md p-2 border border-border/30">
+                                  <div className="flex items-center justify-between mb-0.5">
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: session.departments?.color || '#6B7280' }} />
+                                      <span className="text-[11px] font-medium">{session.departments?.name || 'Unknown'}</span>
+                                      <span className={cn(
+                                        "text-[9px] px-1.5 py-0.5 rounded",
+                                        session.completion_method === 'transfer'
+                                          ? "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
+                                          : "bg-yellow-100 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-300"
+                                      )}>
+                                        {session.completion_method === 'transfer' ? 'Transferred' : 'Handback'}
+                                      </span>
+                                    </div>
+                                    {durationStr && <span className="text-[10px] text-muted-foreground">{durationStr}</span>}
+                                  </div>
+                                  <p className="text-[10px] text-muted-foreground">
+                                    {session.agent_name || 'Unknown agent'} · {new Date(session.completed_at).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' })}, {new Date(session.completed_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                                  </p>
+                                  {session.transfer_note && (
+                                    <p className="text-[10px] text-foreground mt-1 italic">"{session.transfer_note}"</p>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </Card>
 
                     {selectedConversation && (
