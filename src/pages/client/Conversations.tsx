@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ConversationsSkeleton } from "@/components/skeletons";
-import { Phone, Clock, CheckCircle, MessageSquare, ArrowDown, ArrowUpDown, X, Plus, Tag, Users, Building2, Send, UserCheck, PhoneOff, ArrowRightLeft, Lock, Loader2, AlertTriangle, Timer, MessageSquareText, Trash2, FolderOpen, Sparkles, Check } from "lucide-react";
+import { Phone, Clock, CheckCircle, MessageSquare, ArrowDown, X, Plus, Tag, Users, Building2, Send, UserCheck, PhoneOff, ArrowRightLeft, Lock, Loader2, AlertTriangle, Timer, MessageSquareText, Trash2, FolderOpen, Sparkles, Check } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -103,7 +103,7 @@ export default function Conversations() {
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [tagFilters, setTagFilters] = useState<string[]>([]);
-  const [sortOrder, setSortOrder] = useState<"desc" | "asc" | "duration">("desc");
+  
 
   // Bulk select
   const [selectedConversationIds, setSelectedConversationIds] = useState<Set<string>>(new Set());
@@ -165,7 +165,7 @@ export default function Conversations() {
     isFetchingNextPage,
     fetchNextPage,
     hasNextPage,
-  } = useConversations(selectedAgentId, { status: statusFilter, sortOrder });
+  } = useConversations(selectedAgentId, { status: statusFilter });
 
   const { data: agentConfig } = useAgentConfig(selectedAgentId);
 
@@ -186,7 +186,7 @@ export default function Conversations() {
   // Reset selection on filter/agent change
   useEffect(() => {
     setSelectedConversationIds(new Set());
-  }, [selectedAgentId, statusFilter, tagFilters, sortOrder]);
+  }, [selectedAgentId, statusFilter, tagFilters]);
 
   // Response time tick (every second for live updates)
   useEffect(() => {
@@ -284,7 +284,7 @@ export default function Conversations() {
           filter: `agent_id=eq.${selectedAgentId}`
         },
         (payload) => {
-          const queryKey = ['conversations', selectedAgentId, { status: statusFilter, sortOrder }];
+          const queryKey = ['conversations', selectedAgentId, { status: statusFilter }];
           if (payload.eventType === 'INSERT') {
             queryClient.setQueryData(queryKey, (old: any) => {
               if (!old) return old;
@@ -319,7 +319,7 @@ export default function Conversations() {
       });
 
     return () => { channel.unsubscribe(); };
-  }, [selectedAgentId, selectedConversation?.id, statusFilter, sortOrder, queryClient]);
+  }, [selectedAgentId, selectedConversation?.id, statusFilter, queryClient]);
 
   // Real-time subscriptions for transcripts
   useEffect(() => {
@@ -942,13 +942,15 @@ export default function Conversations() {
         tagFilters.some(tag => c.metadata?.tags?.includes(tag))
       );
     }
-    // Pin pending handover requests to the top
+    // Pin priority: Tier 1 = pending/waiting, Tier 2 = in_handover with unanswered message
     result = [...result].sort((a, b) => {
-      const aPending = pendingConversationIds.has(a.id);
-      const bPending = pendingConversationIds.has(b.id);
-      if (aPending && !bPending) return -1;
-      if (!aPending && bPending) return 1;
-      return 0;
+      const aTier = pendingConversationIds.has(a.id) ? 1
+        : (a.status === 'in_handover' && a.first_unanswered_message_at) ? 2
+        : 3;
+      const bTier = pendingConversationIds.has(b.id) ? 1
+        : (b.status === 'in_handover' && b.first_unanswered_message_at) ? 2
+        : 3;
+      return aTier - bTier;
     });
     return result;
   }, [conversations, tagFilters, pendingConversationIds]);
@@ -956,7 +958,7 @@ export default function Conversations() {
   const allSelected = filteredConversations.length > 0 &&
     filteredConversations.every(c => selectedConversationIds.has(c.id));
 
-  const sortLabel = sortOrder === 'asc' ? 'Oldest' : sortOrder === 'duration' ? 'Longest' : 'Newest';
+  
 
   const getResponseTimeColor = (seconds: number) => {
     const greenMax = (agentConfig as any)?.response_thresholds?.green_seconds || 60;
@@ -1018,26 +1020,6 @@ export default function Conversations() {
               {s === 'all' ? 'All' : s === 'with_ai' ? 'With AI' : s === 'waiting' ? 'Waiting' : s === 'in_handover' ? 'In Handover' : s === 'aftercare' ? 'Aftercare' : s === 'needs_review' ? 'Needs Review' : 'Resolved'}
             </Button>
           ))}
-          <div className="flex-1" />
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-7 px-2.5 gap-1.5 text-xs text-muted-foreground shrink-0">
-                <ArrowUpDown className="h-3 w-3" />
-                {sortLabel}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setSortOrder('desc')}>
-                {sortOrder === 'desc' && <span className="mr-1">✓</span>}Newest first
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSortOrder('asc')}>
-                {sortOrder === 'asc' && <span className="mr-1">✓</span>}Oldest first
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSortOrder('duration')}>
-                {sortOrder === 'duration' && <span className="mr-1">✓</span>}Longest duration
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
 
         {/* Row 3: Filter chips */}

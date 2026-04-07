@@ -5,33 +5,23 @@ const PAGE_SIZE = 30;
 
 interface ConversationFilters {
   status?: string;
-  sortOrder?: 'desc' | 'asc' | 'duration';
 }
 
 export function useConversations(agentId: string | null, filters?: ConversationFilters) {
   const status = filters?.status ?? 'all';
-  const sortOrder = filters?.sortOrder ?? 'desc';
 
   return useInfiniteQuery({
-    queryKey: ['conversations', agentId, { status, sortOrder }],
+    queryKey: ['conversations', agentId, { status }],
     queryFn: async ({ pageParam }: { pageParam: string | undefined }) => {
       let query = supabase
         .from('conversations')
         .select('*')
         .eq('agent_id', agentId!)
-        .limit(PAGE_SIZE);
+        .limit(PAGE_SIZE)
+        .order('last_activity_at', { ascending: false });
 
-      if (sortOrder === 'duration') {
-        query = query.order('duration', { ascending: false });
-      } else {
-        query = query.order('started_at', { ascending: sortOrder === 'asc' });
-        if (pageParam) {
-          if (sortOrder === 'asc') {
-            query = query.gt('started_at', pageParam);
-          } else {
-            query = query.lt('started_at', pageParam);
-          }
-        }
+      if (pageParam) {
+        query = query.lt('last_activity_at', pageParam);
       }
 
       if (status !== 'all') {
@@ -43,9 +33,8 @@ export function useConversations(agentId: string | null, filters?: ConversationF
       return (data || []) as any[];
     },
     getNextPageParam: (lastPage: any[]) => {
-      if (sortOrder === 'duration') return undefined;
       if (lastPage.length < PAGE_SIZE) return undefined;
-      return lastPage[lastPage.length - 1]?.started_at;
+      return lastPage[lastPage.length - 1]?.last_activity_at;
     },
     initialPageParam: undefined as string | undefined,
     enabled: !!agentId,
