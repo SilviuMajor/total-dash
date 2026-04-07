@@ -130,14 +130,14 @@ export default function Conversations() {
   const [pendingSession, setPendingSession] = useState<any>(null);
   const [activeSession, setActiveSession] = useState<any>(null);
   const [handoverHistory, setHandoverHistory] = useState<any[]>([]);
-  const [showHandoverHistory, setShowHandoverHistory] = useState(false);
+  
   const [currentClientUserId, setCurrentClientUserId] = useState<string | null>(null);
   const [pendingConversationIds, setPendingConversationIds] = useState<Map<string, string>>(new Map());
   const [responseTick, setResponseTick] = useState(0);
 
   // Previous conversations
   const [previousConversations, setPreviousConversations] = useState<Conversation[]>([]);
-  const [showPreviousConversations, setShowPreviousConversations] = useState(false);
+  const [showAllPreviousConversations, setShowAllPreviousConversations] = useState(false);
 
   // Canned responses state
   const [showCannedDropdown, setShowCannedDropdown] = useState(false);
@@ -625,7 +625,7 @@ export default function Conversations() {
     const loadPreviousConversations = async () => {
       if (!selectedConversation?.voiceflow_user_id || !selectedConversation?.id) {
         setPreviousConversations([]);
-        setShowPreviousConversations(false);
+        setShowAllPreviousConversations(false);
         return;
       }
 
@@ -648,7 +648,7 @@ export default function Conversations() {
       }
     };
     loadPreviousConversations();
-    setShowPreviousConversations(false);
+    setShowAllPreviousConversations(false);
   }, [selectedConversation?.id]);
 
   // Periodic handover timer check
@@ -1745,8 +1745,8 @@ export default function Conversations() {
           </div>
 
           {/* RIGHT PANEL: Details */}
-          <div className="flex flex-col h-full">
-            <ScrollArea className="flex-1">
+          <div className="flex flex-col h-full overflow-hidden">
+            <ScrollArea className="flex-1 min-h-0">
               <div className="p-4 space-y-4">
                 {selectedConversation ? (
                   <>
