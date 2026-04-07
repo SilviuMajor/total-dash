@@ -13,7 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Trash2, UserPlus, AlertCircle, Loader2, ChevronDown, ChevronRight, Eye, Settings, Send } from "lucide-react";
+import { Trash2, UserPlus, AlertCircle, Loader2, ChevronDown, ChevronRight, Eye, Settings, Send, X, Plus } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { useImpersonation } from "@/hooks/useImpersonation";
 import { useNavigate } from "react-router-dom";
@@ -153,6 +154,62 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
     if (user.role_id) {
       const templates = await loadRoleTemplates(user.role_id);
       setRoleTemplates(prev => ({ ...prev, [user.user_id]: templates }));
+    }
+  };
+
+  const loadUserDepts = async () => {
+    if (!clientId) return;
+    try {
+      const { data, error } = await supabase
+        .from('client_user_departments')
+        .select('id, client_user_id, department_id, departments(name, color)')
+        .in('client_user_id', users.map(u => u.id));
+      if (error) throw error;
+      const grouped: Record<string, any[]> = {};
+      (data || []).forEach((row: any) => {
+        const cuId = row.client_user_id;
+        if (!grouped[cuId]) grouped[cuId] = [];
+        grouped[cuId].push({
+          junction_id: row.id,
+          department_id: row.department_id,
+          name: row.departments?.name || 'Unknown',
+          color: row.departments?.color || '#6B7280',
+        });
+      });
+      setUserDepts(grouped);
+    } catch (error: any) {
+      console.error('Error loading user departments:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (users.length > 0) {
+      loadUserDepts();
+    }
+  }, [users]);
+
+  const addUserDept = async (userId: string, deptId: string) => {
+    try {
+      const { error } = await supabase.from('client_user_departments').insert({
+        client_user_id: userId,
+        department_id: deptId,
+      });
+      if (error) throw error;
+      toast({ title: "Added", description: "Department assigned" });
+      loadUserDepts();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  };
+
+  const removeUserDept = async (junctionId: string) => {
+    try {
+      const { error } = await supabase.from('client_user_departments').delete().eq('id', junctionId);
+      if (error) throw error;
+      toast({ title: "Removed", description: "Department removed" });
+      loadUserDepts();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     }
   };
 
@@ -775,11 +832,16 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                         {user.profiles?.email || 'No email'} · {formatLastActive(user.profiles?.last_sign_in_at)}
                       </span>
                     </div>
-                    {user.departments?.name && (
-                      <span className="text-xs text-muted-foreground">
-                        {user.departments.name}
-                      </span>
-                    )}
+                    <div className="flex items-center gap-1 flex-wrap">
+                      {(userDepts[user.id] || []).map(d => (
+                        <span key={d.junction_id} className="text-[10px] px-2 py-0.5 rounded-full border" style={{ borderColor: `${d.color}40`, color: d.color, backgroundColor: `${d.color}15` }}>
+                          {d.name}
+                        </span>
+                      ))}
+                      {(userDepts[user.id] || []).length === 0 && (
+                        <span className="text-[10px] text-muted-foreground/50">No depts</span>
+                      )}
+                    </div>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -911,26 +973,48 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                           </Select>
                         </div>
                         <div className="flex-1 space-y-1">
-                          <Label className="text-xs text-muted-foreground">Department</Label>
-                          <Select
-                            value={user.department_id || "none"}
-                            onValueChange={async (value) => {
-                              if (readOnly) return;
-                              await supabase
-                                .from('client_users')
-                                .update({ department_id: value === "none" ? null : value })
-                                .eq('id', user.id);
-                              loadUsers();
-                            }}
-                          >
-                            <SelectTrigger><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="none">None</SelectItem>
-                              {departments.map(d => (
-                                <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <Label className="text-xs text-muted-foreground">Departments</Label>
+                          <div className="flex items-center gap-1.5 flex-wrap min-h-[36px] px-2 py-1.5 border rounded-md bg-background">
+                            {(userDepts[user.id] || []).map(d => (
+                              <span key={d.junction_id} className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border" style={{ borderColor: `${d.color}40`, color: d.color, backgroundColor: `${d.color}15` }}>
+                                {d.name}
+                                {!readOnly && (
+                                  <button onClick={() => removeUserDept(d.junction_id)} className="hover:opacity-70">
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                )}
+                              </span>
+                            ))}
+                            {!readOnly && (
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <button className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border border-dashed border-border text-muted-foreground hover:bg-muted/50">
+                                    <Plus className="h-3 w-3" />
+                                    Add
+                                  </button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-48 p-2" align="start">
+                                  <div className="space-y-1">
+                                    {departments
+                                      .filter(d => !(userDepts[user.id] || []).some(ud => ud.department_id === d.id))
+                                      .map(d => (
+                                        <button
+                                          key={d.id}
+                                          className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm hover:bg-muted text-left"
+                                          onClick={() => addUserDept(user.id, d.id)}
+                                        >
+                                          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: (d as any).color || '#6B7280' }} />
+                                          {d.name}
+                                        </button>
+                                      ))}
+                                    {departments.filter(d => !(userDepts[user.id] || []).some(ud => ud.department_id === d.id)).length === 0 && (
+                                      <p className="text-xs text-muted-foreground text-center py-2">All departments assigned</p>
+                                    )}
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                            )}
+                          </div>
                         </div>
                       </div>
 
