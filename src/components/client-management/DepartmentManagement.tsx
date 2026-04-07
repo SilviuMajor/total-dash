@@ -15,7 +15,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Pencil, Trash2, Plus, Copy, Check, Lock } from "lucide-react";
+import { Pencil, Trash2, Plus, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const DEPARTMENT_COLORS = [
@@ -127,7 +127,7 @@ export function DepartmentManagement({ clientId, readOnly }: { clientId: string;
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
   const [departmentToDelete, setDepartmentToDelete] = useState<Department | null>(null);
-  const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  
   const [saving, setSaving] = useState(false);
 
   // Form state
@@ -293,11 +293,6 @@ export function DepartmentManagement({ clientId, readOnly }: { clientId: string;
     }
   };
 
-  const copyCode = async (code: string) => {
-    await navigator.clipboard.writeText(code);
-    setCopiedCode(code);
-    setTimeout(() => setCopiedCode(null), 2000);
-  };
 
   if (loading) {
     return (
@@ -352,21 +347,6 @@ export function DepartmentManagement({ clientId, readOnly }: { clientId: string;
                           <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Global</Badge>
                         )}
                       </div>
-                      {dept.code && (
-                        <div className="flex items-center gap-1 mt-0.5">
-                          <code className="text-xs text-muted-foreground font-mono">{dept.code}</code>
-                          <button
-                            onClick={() => copyCode(dept.code!)}
-                            className="p-0.5 rounded hover:bg-muted transition-colors"
-                          >
-                            {copiedCode === dept.code ? (
-                              <Check className="w-3 h-3 text-green-500" />
-                            ) : (
-                              <Copy className="w-3 h-3 text-muted-foreground" />
-                            )}
-                          </button>
-                        </div>
-                      )}
                     </div>
                   </div>
 
