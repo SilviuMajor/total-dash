@@ -13,7 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Trash2, UserPlus, AlertCircle, Loader2, ChevronDown, ChevronRight, Eye } from "lucide-react";
+import { Trash2, UserPlus, AlertCircle, Loader2, ChevronDown, ChevronRight, Eye, Settings, Send } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useImpersonation } from "@/hooks/useImpersonation";
 import { useNavigate } from "react-router-dom";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -35,6 +36,7 @@ interface ClientUser {
   has_overrides: boolean;
   profiles: {
     email: string;
+    last_sign_in_at?: string;
   };
   departments?: {
     name: string;
@@ -101,6 +103,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
   const [userToRemove, setUserToRemove] = useState<ClientUser | null>(null);
   
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
+  const [overlayUser, setOverlayUser] = useState<ClientUser | null>(null);
   const [roleChangeModal, setRoleChangeModal] = useState<{ user: ClientUser; newRoleId: string } | null>(null);
   const [showRemovedUsers, setShowRemovedUsers] = useState(false);
   const [roleTemplates, setRoleTemplates] = useState<Record<string, Record<string, any>>>({});
@@ -127,6 +130,30 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
     const parts = src.trim().split(/\s+/);
     if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  };
+
+  const formatLastActive = (dateStr?: string | null) => {
+    if (!dateStr) return 'Never logged in';
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'Active now';
+    if (mins < 60) return `Active ${mins}m ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `Active ${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 30) return `Active ${days}d ago`;
+    return `Active ${Math.floor(days / 30)}mo ago`;
+  };
+
+  const openUserOverlay = async (user: ClientUser) => {
+    setOverlayUser(user);
+    setExpandedUserId(user.user_id);
+    await loadUserAgentPermissions(user.user_id);
+    await loadUserClientPermissions(user.user_id);
+    if (user.role_id) {
+      const templates = await loadRoleTemplates(user.role_id);
+      setRoleTemplates(prev => ({ ...prev, [user.user_id]: templates }));
+    }
   };
 
   useEffect(() => {
@@ -308,7 +335,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
           avatar_url,
           department_id,
           status,
-          profiles:profiles(email),
+          profiles:profiles(email, last_sign_in_at),
           departments:departments(name, color)
         `)
         .eq('client_id', clientId);
@@ -715,59 +742,73 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                   key={user.id}
                   className={`border rounded-lg overflow-hidden transition-colors ${isExpanded ? 'border-border' : 'border-border/50'}`}
                 >
-                  {/* User header row */}
+                  {/* User card row */}
                   <div
                     className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={async () => {
-                      if (isExpanded) {
-                        setExpandedUserId(null);
-                      } else {
-                        setExpandedUserId(user.user_id);
-                        await loadUserAgentPermissions(user.user_id);
-                        await loadUserClientPermissions(user.user_id);
-                        if (user.role_id) {
-                          const templates = await loadRoleTemplates(user.role_id);
-                          setRoleTemplates(prev => ({ ...prev, [user.user_id]: templates }));
-                        }
-                      }
-                    }}
+                    onClick={() => openUserOverlay(user)}
                   >
                     <Avatar className="h-9 w-9">
                       <AvatarImage src={user.avatar_url || undefined} />
                       <AvatarFallback className="text-xs">{getInitials(user.full_name)}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <span className="text-sm font-medium">{user.full_name || "Unnamed"}</span>
-                      <span className="text-xs text-muted-foreground block">{user.profiles?.email || 'No email'}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">{user.full_name || "Unnamed"}</span>
+                        {user.role_name && (
+                          <span className={cn(
+                            "text-[10px] px-2 py-0.5 rounded-full",
+                            user.is_admin_tier
+                              ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                              : 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                          )}>
+                            {user.role_name}
+                          </span>
+                        )}
+                        {user.status === 'suspended' && (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300">Suspended</span>
+                        )}
+                        {user.status === 'removed' && (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300">Removed</span>
+                        )}
+                      </div>
+                      <span className="text-xs text-muted-foreground block">
+                        {user.profiles?.email || 'No email'} · {formatLastActive(user.profiles?.last_sign_in_at)}
+                      </span>
                     </div>
-                    {user.role_name && (
-                      <span className={`text-xs px-2.5 py-1 rounded-full ${
-                        user.is_admin_tier
-                          ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
-                          : 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
-                      }`}>
-                        {user.role_name}
-                      </span>
-                    )}
-                    {user.status === 'suspended' && (
-                      <span className="text-xs px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300">
-                        Suspended
-                      </span>
-                    )}
-                    {user.status === 'removed' && (
-                      <span className="text-xs px-2.5 py-1 rounded-full bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300">
-                        Removed
-                      </span>
-                    )}
                     {user.departments?.name && (
-                      <span className="text-xs text-muted-foreground">{user.departments.name}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {user.departments.name}
+                      </span>
                     )}
-                    
-                    {isExpanded ? (
-                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs gap-1"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        supabase.auth.signInWithOtp({
+                          email: user.profiles?.email || '',
+                          options: { shouldCreateUser: false },
+                        }).then(({ error }) => {
+                          if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
+                          else toast({ title: "Sent", description: "Login link sent to " + (user.profiles?.email || "user") });
+                        });
+                      }}
+                    >
+                      <Send className="h-3 w-3" />
+                      Login
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openUserOverlay(user);
+                      }}
+                    >
+                      <Settings className="h-4 w-4" />
+                    </Button>
                   </div>
 
                   {/* Expanded body */}
