@@ -24,6 +24,7 @@ interface ConvData {
   byDayOfWeek: { day: string; count: number }[];
   durationDist: { range: string; count: number }[];
   endReasonData: { name: string; value: number }[];
+  reasonDist: { name: string; value: number }[];
 }
 
 const END_COLORS = ["#22c55e", "#3b82f6", "#8b5cf6", "#f59e0b", "#ef4444", "#6b7280"];
@@ -39,7 +40,7 @@ export function ConversationsAnalytics({ agentId, dateRange }: ConversationsAnal
     try {
       const { data: convs } = await supabase
         .from("conversations")
-        .select("id, status, started_at, ended_at, duration, metadata, department_id")
+        .select("id, status, started_at, ended_at, duration, metadata, department_id, resolution_reason")
         .eq("agent_id", agentId)
         .gte("started_at", dateRange.from.toISOString())
         .lte("started_at", dateRange.to.toISOString());
@@ -106,9 +107,18 @@ export function ConversationsAnalytics({ agentId, dateRange }: ConversationsAnal
       }
       const endReasonData = Object.entries(endReasons).map(([name, value]) => ({ name, value }));
 
+      // Resolution reason breakdown
+      const reasonCounts: Record<string, number> = {};
+      conversations.filter(c => c.status === 'resolved' && c.resolution_reason).forEach(c => {
+        reasonCounts[c.resolution_reason] = (reasonCounts[c.resolution_reason] || 0) + 1;
+      });
+      const reasonDist = Object.entries(reasonCounts)
+        .sort((a, b) => b[1] - a[1])
+        .map(([reason, count]) => ({ name: reason, value: count }));
+
       setData({
         total, completed, completionRate, avgDuration, avgMessages,
-        volumeData, granularity, showDow, byDayOfWeek, durationDist, endReasonData,
+        volumeData, granularity, showDow, byDayOfWeek, durationDist, endReasonData, reasonDist,
       });
     } catch (e) {
       console.error("Error loading conversation analytics:", e);
@@ -204,6 +214,22 @@ export function ConversationsAnalytics({ agentId, dateRange }: ConversationsAnal
             </ResponsiveContainer>
           ) : <p className="text-sm text-muted-foreground py-10 text-center">No data</p>}
         </Card>
+        {data.reasonDist && data.reasonDist.length > 0 && (
+          <Card className="p-4">
+            <p className="text-sm font-medium mb-3">Resolution reasons</p>
+            <ResponsiveContainer width="100%" height={220}>
+              <PieChart>
+                <Pie data={data.reasonDist} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}>
+                  {data.reasonDist.map((_: any, i: number) => (
+                    <Cell key={i} fill={END_COLORS[i % END_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </Card>
+        )}
       </div>
     </div>
   );
