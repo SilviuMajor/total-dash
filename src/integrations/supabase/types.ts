@@ -1788,6 +1788,7 @@ export type Database = {
       handover_sessions: {
         Row: {
           accepted_at: string | null
+          agent_name: string | null
           client_user_id: string | null
           completed_at: string | null
           completion_method: string | null
@@ -1804,11 +1805,14 @@ export type Database = {
           takeover_type: string
           timeout_duration: number | null
           transfer_note: string | null
+          transferred_from_agent_name: string | null
+          transferred_from_department_name: string | null
           updated_at: string | null
           voiceflow_user_id: string
         }
         Insert: {
           accepted_at?: string | null
+          agent_name?: string | null
           client_user_id?: string | null
           completed_at?: string | null
           completion_method?: string | null
@@ -1825,11 +1829,14 @@ export type Database = {
           takeover_type: string
           timeout_duration?: number | null
           transfer_note?: string | null
+          transferred_from_agent_name?: string | null
+          transferred_from_department_name?: string | null
           updated_at?: string | null
           voiceflow_user_id: string
         }
         Update: {
           accepted_at?: string | null
+          agent_name?: string | null
           client_user_id?: string | null
           completed_at?: string | null
           completion_method?: string | null
@@ -1846,6 +1853,8 @@ export type Database = {
           takeover_type?: string
           timeout_duration?: number | null
           transfer_note?: string | null
+          transferred_from_agent_name?: string | null
+          transferred_from_department_name?: string | null
           updated_at?: string | null
           voiceflow_user_id?: string
         }
