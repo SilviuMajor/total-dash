@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Switch } from "@/components/ui/switch";
+import { X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -20,6 +22,11 @@ export function VoiceflowConversationSettings({ agent, onUpdate }: Props) {
   const [autoEndMode, setAutoEndMode] = useState<'since_start' | 'since_last_message'>(agent.config?.auto_end_mode || 'since_last_message');
   const [greenSeconds, setGreenSeconds] = useState(agent.config?.response_thresholds?.green_seconds || 60);
   const [amberSeconds, setAmberSeconds] = useState(agent.config?.response_thresholds?.amber_seconds || 300);
+  const [resolutionReasons, setResolutionReasons] = useState<Array<{ id: string; label: string; note_required: boolean }>>(
+    agent.config?.resolution_reasons || []
+  );
+  const [newReasonLabel, setNewReasonLabel] = useState('');
+  const [newReasonNoteRequired, setNewReasonNoteRequired] = useState(false);
 
   const handleSave = async () => {
     setLoading(true);
@@ -30,6 +37,7 @@ export function VoiceflowConversationSettings({ agent, onUpdate }: Props) {
           auto_end_hours: autoEndHours,
           auto_end_mode: autoEndMode,
           response_thresholds: { green_seconds: greenSeconds, amber_seconds: amberSeconds },
+          resolution_reasons: resolutionReasons,
         },
       }).eq("id", agent.id);
       if (error) throw error;
@@ -97,6 +105,67 @@ export function VoiceflowConversationSettings({ agent, onUpdate }: Props) {
             <div className="space-y-1">
               <Label className="text-xs">🔴 Red after</Label>
             </div>
+          </div>
+        </div>
+
+        <div className="space-y-4 p-4 border rounded-lg">
+          <div>
+            <Label className="text-sm font-medium">Resolution Reasons</Label>
+            <p className="text-xs text-muted-foreground">
+              When agents resolve a conversation, they'll be asked to select one of these reasons. Leave empty to allow resolving without a reason.
+            </p>
+          </div>
+
+          {resolutionReasons.length > 0 && (
+            <div className="space-y-2">
+              {resolutionReasons.map((reason) => (
+                <div key={reason.id} className="flex items-center justify-between p-2 rounded-md bg-muted/50 border border-border/30">
+                  <span className="text-sm">{reason.label}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-muted-foreground">
+                      {reason.note_required ? 'Note required' : 'Note optional'}
+                    </span>
+                    <button
+                      onClick={() => setResolutionReasons(prev => prev.filter(r => r.id !== reason.id))}
+                      className="p-1 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="flex items-center gap-2">
+            <Input
+              value={newReasonLabel}
+              onChange={(e) => setNewReasonLabel(e.target.value)}
+              placeholder="Add new reason..."
+              className="flex-1"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && newReasonLabel.trim()) {
+                  setResolutionReasons(prev => [...prev, { id: crypto.randomUUID(), label: newReasonLabel.trim(), note_required: newReasonNoteRequired }]);
+                  setNewReasonLabel('');
+                  setNewReasonNoteRequired(false);
+                }
+              }}
+            />
+            <Label htmlFor="new-reason-note" className="text-xs text-muted-foreground whitespace-nowrap cursor-pointer">Require note</Label>
+            <Switch id="new-reason-note" checked={newReasonNoteRequired} onCheckedChange={setNewReasonNoteRequired} />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                if (newReasonLabel.trim()) {
+                  setResolutionReasons(prev => [...prev, { id: crypto.randomUUID(), label: newReasonLabel.trim(), note_required: newReasonNoteRequired }]);
+                  setNewReasonLabel('');
+                  setNewReasonNoteRequired(false);
+                }
+              }}
+            >
+              Add
+            </Button>
           </div>
         </div>
 
