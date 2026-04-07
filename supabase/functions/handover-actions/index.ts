@@ -360,10 +360,12 @@ async function handleEndHandover(
     conversationId: string;
     clientUserId: string;
     clientUserName: string;
-    resolve: boolean; // true = End & Resolve, false = End — Aftercare
+    resolve: boolean;
+    resolution_reason?: string;
+    resolution_note?: string;
   }
 ) {
-  const { conversationId, clientUserId, clientUserName, resolve } = body;
+  const { conversationId, clientUserId, clientUserName, resolve, resolution_reason, resolution_note } = body;
   const newStatus = resolve ? "resolved" : "aftercare";
   console.log("Ending handover:", { conversationId, resolve, newStatus });
 
@@ -393,12 +395,17 @@ async function handleEndHandover(
     .eq("id", session.id);
 
   // Update conversation status
+  const convUpdate: Record<string, any> = {
+    status: newStatus,
+    last_activity_at: new Date().toISOString(),
+  };
+  if (resolve && resolution_reason) {
+    convUpdate.resolution_reason = resolution_reason;
+    convUpdate.resolution_note = resolution_note || null;
+  }
   await supabaseClient
     .from("conversations")
-    .update({
-      status: newStatus,
-      last_activity_at: new Date().toISOString(),
-    })
+    .update(convUpdate)
     .eq("id", conversationId);
 
   // Log status change
@@ -794,9 +801,11 @@ async function handleMarkResolved(
   body: {
     conversationId: string;
     clientUserId: string;
+    resolution_reason?: string;
+    resolution_note?: string;
   }
 ) {
-  const { conversationId, clientUserId } = body;
+  const { conversationId, clientUserId, resolution_reason, resolution_note } = body;
   console.log("Marking as resolved:", conversationId);
 
   const { data: conv } = await supabaseClient
@@ -815,12 +824,17 @@ async function handleMarkResolved(
     );
   }
 
+  const convUpdate: Record<string, any> = {
+    status: "resolved",
+    last_activity_at: new Date().toISOString(),
+  };
+  if (resolution_reason) {
+    convUpdate.resolution_reason = resolution_reason;
+    convUpdate.resolution_note = resolution_note || null;
+  }
   await supabaseClient
     .from("conversations")
-    .update({
-      status: "resolved",
-      last_activity_at: new Date().toISOString(),
-    })
+    .update(convUpdate)
     .eq("id", conversationId);
 
   // Log status change
