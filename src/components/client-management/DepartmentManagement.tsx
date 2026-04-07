@@ -15,11 +15,11 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Pencil, Trash2, Plus, Lock, ChevronDown, ChevronRight, X, GripVertical } from "lucide-react";
+import { Settings, Trash2, Plus, Lock, ChevronDown, ChevronRight, X, GripVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent, DragOverlay, DragStartEvent } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
@@ -126,11 +126,29 @@ function isDepartmentOpen(dept: Department): boolean {
 
 function SortableDeptHandle({ id, disabled }: { id: string; disabled: boolean }) {
   const { attributes, listeners, setNodeRef } = useSortable({ id, disabled });
-  if (disabled) return null;
+  if (disabled) return <div className="w-4 flex-shrink-0" />;
   return (
     <span ref={setNodeRef} {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground flex-shrink-0" onClick={(e) => e.stopPropagation()}>
       <GripVertical className="w-4 h-4" />
     </span>
+  );
+}
+
+function SortableDeptCard({ id, disabled, children }: { id: string; disabled: boolean; children: React.ReactNode }) {
+  const { setNodeRef, transform, transition, isDragging, isOver } = useSortable({ id, disabled });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    position: 'relative' as const,
+  };
+  return (
+    <div ref={setNodeRef} style={style}>
+      {isOver && !isDragging && (
+        <div className="absolute inset-x-0 top-0 h-0.5 bg-primary rounded-full z-10" />
+      )}
+      {children}
+    </div>
   );
 }
 
@@ -151,6 +169,7 @@ export function DepartmentManagement({ clientId, readOnly }: { clientId: string;
   const [deptUsers, setDeptUsers] = useState<Record<string, any[]>>({});
   const [allClientUsers, setAllClientUsers] = useState<{ id: string; full_name: string | null; avatar_url: string | null; user_id: string }[]>([]);
   const [addUserOpen, setAddUserOpen] = useState<string | null>(null);
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
 
   // Form state
   const [name, setName] = useState("");
@@ -267,6 +286,10 @@ export function DepartmentManagement({ clientId, readOnly }: { clientId: string;
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveDragId(event.active.id as string);
+  };
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
@@ -287,6 +310,7 @@ export function DepartmentManagement({ clientId, readOnly }: { clientId: string;
         .update({ sort_order: i + 1 })
         .eq('id', reordered[i].id);
     }
+    setActiveDragId(null);
   };
 
   const resetForm = () => {
@@ -448,14 +472,14 @@ export function DepartmentManagement({ clientId, readOnly }: { clientId: string;
             No departments created yet.
           </div>
         ) : (
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
             <SortableContext items={departments.filter(d => !d.is_global).map(d => d.id)} strategy={verticalListSortingStrategy}>
           <div className="space-y-2">
             {departments.map((dept) => {
               const isOpen = isDepartmentOpen(dept);
               return (
+                <SortableDeptCard key={dept.id} id={dept.id} disabled={dept.is_global || !!readOnly}>
                 <div
-                  key={dept.id}
                   className="rounded-lg border border-border/50 bg-card overflow-hidden"
                 >
                   {/* Department header row */}
@@ -465,11 +489,6 @@ export function DepartmentManagement({ clientId, readOnly }: { clientId: string;
                   >
                     {/* Left */}
                     <div className="flex items-center gap-3 min-w-0">
-                      {expandedDeptId === dept.id ? (
-                        <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                      ) : (
-                        <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                      )}
                       <SortableDeptHandle id={dept.id} disabled={dept.is_global || !!readOnly} />
                       <span
                         className="inline-block w-4 h-4 rounded-full flex-shrink-0"
@@ -502,7 +521,7 @@ export function DepartmentManagement({ clientId, readOnly }: { clientId: string;
                       {!readOnly && (
                         <>
                           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); handleOpenDialog(dept); }}>
-                            <Pencil className="w-3.5 h-3.5" />
+                            <Settings className="w-3.5 h-3.5" />
                           </Button>
                           {!dept.is_global && (
                             <Button
@@ -577,10 +596,24 @@ export function DepartmentManagement({ clientId, readOnly }: { clientId: string;
                     </div>
                   )}
                 </div>
+                </SortableDeptCard>
               );
             })}
           </div>
             </SortableContext>
+            <DragOverlay>
+              {activeDragId ? (() => {
+                const dept = departments.find(d => d.id === activeDragId);
+                if (!dept) return null;
+                return (
+                  <div className="flex items-center gap-3 px-4 py-3 rounded-lg border border-primary/30 bg-card shadow-lg opacity-90">
+                    <GripVertical className="w-4 h-4 text-muted-foreground" />
+                    <span className="inline-block w-4 h-4 rounded-full" style={{ backgroundColor: dept.color || '#3b82f6' }} />
+                    <span className="font-medium text-sm">{dept.name}</span>
+                  </div>
+                );
+              })() : null}
+            </DragOverlay>
           </DndContext>
         )}
       </Card>
