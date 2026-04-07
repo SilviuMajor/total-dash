@@ -106,6 +106,65 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
   const [overlayUser, setOverlayUser] = useState<ClientUser | null>(null);
   const [userDepts, setUserDepts] = useState<Record<string, any[]>>({});
+  const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
+
+  const toggleUserSelection = (userId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedUserIds(prev => {
+      const next = new Set(prev);
+      if (next.has(userId)) next.delete(userId);
+      else next.add(userId);
+      return next;
+    });
+  };
+
+  const clearSelection = () => setSelectedUserIds(new Set());
+
+  const bulkAssignDept = async (deptId: string) => {
+    try {
+      const inserts = Array.from(selectedUserIds).map(userId => ({
+        client_user_id: userId,
+        department_id: deptId,
+      }));
+      const { error } = await supabase.from('client_user_departments').upsert(inserts, { onConflict: 'client_user_id,department_id', ignoreDuplicates: true });
+      if (error) throw error;
+      toast({ title: "Done", description: `Department assigned to ${selectedUserIds.size} users` });
+      clearSelection();
+      loadUserDepts();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  };
+
+  const bulkChangeRole = async (roleId: string) => {
+    try {
+      for (const userId of selectedUserIds) {
+        await supabase.from('client_user_agent_permissions').update({ role_id: roleId }).eq('client_id', clientId).eq('user_id', users.find(u => u.id === userId)?.user_id || '');
+      }
+      toast({ title: "Done", description: `Role changed for ${selectedUserIds.size} users` });
+      clearSelection();
+      loadUsers();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  };
+
+  const bulkSuspend = async () => {
+    try {
+      for (const userId of selectedUserIds) {
+        const user = users.find(u => u.id === userId);
+        if (user && user.status === 'active') {
+          await supabase.from('client_users').update({ status: 'suspended' }).eq('id', userId);
+        }
+      }
+      toast({ title: "Done", description: `${selectedUserIds.size} users suspended` });
+      clearSelection();
+      loadUsers();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  };
+
   const [roleChangeModal, setRoleChangeModal] = useState<{ user: ClientUser; newRoleId: string } | null>(null);
   const [showRemovedUsers, setShowRemovedUsers] = useState(false);
   const [roleTemplates, setRoleTemplates] = useState<Record<string, Record<string, any>>>({});
@@ -781,6 +840,52 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
           )}
         </div>
 
+        {selectedUserIds.size > 0 && !readOnly && (
+          <div className="flex items-center gap-2 mb-4 p-3 bg-muted/50 rounded-lg flex-wrap">
+            <span className="text-sm font-medium">{selectedUserIds.size} selected</span>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="text-xs">Assign dept</Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-48 p-2" align="start">
+                <div className="space-y-1">
+                  {departments.map(d => (
+                    <button
+                      key={d.id}
+                      className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm hover:bg-muted text-left"
+                      onClick={() => bulkAssignDept(d.id)}
+                    >
+                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: (d as any).color || '#6B7280' }} />
+                      {d.name}
+                    </button>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="text-xs">Change role</Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-48 p-2" align="start">
+                <div className="space-y-1">
+                  {roles.map(r => (
+                    <button
+                      key={r.id}
+                      className="w-full px-2 py-1.5 rounded text-sm hover:bg-muted text-left"
+                      onClick={() => bulkChangeRole(r.id)}
+                    >
+                      {r.name}
+                    </button>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+            <Button variant="outline" size="sm" className="text-xs text-amber-600" onClick={bulkSuspend}>Suspend</Button>
+            <div className="flex-1" />
+            <Button variant="ghost" size="sm" className="text-xs" onClick={clearSelection}>Clear</Button>
+          </div>
+        )}
+
         {users.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             No users assigned to this client yet.
@@ -805,6 +910,14 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                     className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors"
                     onClick={() => openUserOverlay(user)}
                   >
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 rounded shrink-0"
+                      checked={selectedUserIds.has(user.id)}
+                      onClick={(e) => toggleUserSelection(user.id, e)}
+                      onChange={() => {}}
+                      style={{ accentColor: 'hsl(var(--primary))' }}
+                    />
                     <Avatar className="h-9 w-9">
                       <AvatarImage src={user.avatar_url || undefined} />
                       <AvatarFallback className="text-xs">{getInitials(user.full_name)}</AvatarFallback>
@@ -1487,74 +1600,77 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
             <DialogTitle>Add New User</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={newUserEmail}
-                onChange={(e) => setNewUserEmail(e.target.value)}
-                placeholder="user@example.com"
+            {/* Profile section — matching overlay format */}
+            <div className="flex items-start gap-4 pb-4 border-b border-border">
+              <AvatarUpload
+                currentUrl={newUserAvatar}
+                onUploadComplete={(url) => setNewUserAvatar(url)}
               />
+              <div className="flex-1 space-y-3">
+                <div className="grid grid-cols-1 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Full Name</Label>
+                    <Input
+                      className="h-9 text-sm"
+                      value={newUserFullName}
+                      onChange={(e) => setNewUserFullName(e.target.value)}
+                      placeholder="John Doe"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Email</Label>
+                  <Input
+                    className="h-9 text-sm"
+                    type="email"
+                    value={newUserEmail}
+                    onChange={(e) => setNewUserEmail(e.target.value)}
+                    placeholder="user@example.com"
+                  />
+                </div>
+              </div>
             </div>
-            <div>
-              <Label htmlFor="fullName">Full Name</Label>
-              <Input
-                id="fullName"
-                value={newUserFullName}
-                onChange={(e) => setNewUserFullName(e.target.value)}
-                placeholder="John Doe"
-              />
-            </div>
-            <div>
-              <Label htmlFor="department">Department</Label>
-              <Select value={newUserDepartment} onValueChange={setNewUserDepartment}>
-                <SelectTrigger id="department">
-                  <SelectValue placeholder="Select department" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
-                  {departments.map((dept) => (
-                    <SelectItem key={dept.id} value={dept.id}>
-                      {dept.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="role">Role</Label>
-              <Select value={newUserRoleId} onValueChange={(value) => {
-                setNewUserRoleId(value);
-                populatePermissionsFromRole(value);
-              }}>
-                <SelectTrigger id="role">
-                  <SelectValue placeholder="Select role" />
-                </SelectTrigger>
-                <SelectContent>
-                  {roles.map(r => (
-                    <SelectItem key={r.id} value={r.id}>
-                      {r.name}
-                      {r.is_system && " (system)"}
-                      {r.is_default && " (default)"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground mt-1">
-                {roles.find(r => r.id === newUserRoleId)?.is_admin_tier
-                  ? "Full access to all agency-enabled features"
-                  : "Permissions auto-populated from role template — customise below"}
-              </p>
-            </div>
-            <AvatarUpload
-              currentUrl={newUserAvatar}
-              onUploadComplete={(url) => setNewUserAvatar(url)}
-            />
 
-            {/* Agent permissions */}
-            <div>
-              <h3 className="text-sm font-semibold mb-2">Agent Access</h3>
+            {/* Role + Department — matching overlay format */}
+            <div className="flex gap-3">
+              <div className="flex-1 space-y-1">
+                <Label className="text-xs text-muted-foreground">Role</Label>
+                <Select value={newUserRoleId} onValueChange={(value) => {
+                  setNewUserRoleId(value);
+                  populatePermissionsFromRole(value);
+                }}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {roles.map(r => (
+                      <SelectItem key={r.id} value={r.id}>
+                        {r.name}{r.is_system ? " (system)" : ""}{r.is_default ? " (default)" : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {roles.find(r => r.id === newUserRoleId)?.is_admin_tier
+                    ? "Full access to all agency-enabled features"
+                    : "Permissions auto-populated from role template"}
+                </p>
+              </div>
+              <div className="flex-1 space-y-1">
+                <Label className="text-xs text-muted-foreground">Department</Label>
+                <Select value={newUserDepartment} onValueChange={setNewUserDepartment}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {departments.map(d => (
+                      <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Agent permissions — keeping existing logic */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold">Agent Access</h3>
               <div className="space-y-2 max-h-64 overflow-y-auto">
                 {agents.map((agent) => {
                   const perms = newUserAgentPermissions[agent.id];
@@ -1605,19 +1721,10 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-4">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setOpen(false);
-                }}
-              >
-                Cancel
-              </Button>
-              <Button onClick={handleAddUser} disabled={!newUserEmail || !newUserFullName}>
-                Add User
-              </Button>
-            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+              <Button onClick={handleAddUser} disabled={!newUserEmail || !newUserFullName}>Add User</Button>
+            </DialogFooter>
           </div>
         </DialogContent>
       </Dialog>
