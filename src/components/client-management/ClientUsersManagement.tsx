@@ -6,7 +6,7 @@ import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
 import { useSuperAdminStatus } from "@/hooks/useSuperAdminStatus";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -811,12 +811,82 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                     </Button>
                   </div>
 
-                  {/* Expanded body */}
-                  {isExpanded && (
-                    <div className="border-t px-4 py-4 space-y-4">
+                  {/* User settings overlay */}
+                  <Dialog open={isExpanded && overlayUser?.user_id === user.user_id} onOpenChange={(open) => { if (!open) { setOverlayUser(null); setExpandedUserId(null); } }}>
+                    <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                      <DialogHeader>
+                        <DialogTitle>User settings</DialogTitle>
+                      </DialogHeader>
+
+                      {/* Profile section */}
+                      <div className="flex items-start gap-4 pb-4 border-b border-border">
+                        <Avatar className="h-14 w-14">
+                          <AvatarImage src={user.avatar_url || undefined} />
+                          <AvatarFallback className="text-sm">{getInitials(user.full_name)}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 space-y-3">
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1">
+                              <Label className="text-xs text-muted-foreground">First name</Label>
+                              <Input
+                                className="h-9 text-sm"
+                                defaultValue={user.full_name?.split(' ')[0] || ''}
+                                onBlur={async (e) => {
+                                  const firstName = e.target.value.trim();
+                                  const lastName = user.full_name?.split(' ').slice(1).join(' ') || '';
+                                  const newFullName = `${firstName} ${lastName}`.trim();
+                                  if (newFullName === user.full_name) return;
+                                  await supabase.from('client_users').update({ full_name: newFullName }).eq('id', user.id);
+                                  await supabase.from('profiles').update({ full_name: newFullName }).eq('id', user.user_id);
+                                  loadUsers();
+                                }}
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs text-muted-foreground">Last name</Label>
+                              <Input
+                                className="h-9 text-sm"
+                                defaultValue={user.full_name?.split(' ').slice(1).join(' ') || ''}
+                                onBlur={async (e) => {
+                                  const firstName = user.full_name?.split(' ')[0] || '';
+                                  const lastName = e.target.value.trim();
+                                  const newFullName = `${firstName} ${lastName}`.trim();
+                                  if (newFullName === user.full_name) return;
+                                  await supabase.from('client_users').update({ full_name: newFullName }).eq('id', user.id);
+                                  await supabase.from('profiles').update({ full_name: newFullName }).eq('id', user.user_id);
+                                  loadUsers();
+                                }}
+                              />
+                            </div>
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">Email</Label>
+                            <Input
+                              className="h-9 text-sm"
+                              defaultValue={user.profiles?.email || ''}
+                              onBlur={async (e) => {
+                                const newEmail = e.target.value.trim();
+                                if (!newEmail || newEmail === user.profiles?.email) return;
+                                try {
+                                  const { data, error: fnError } = await supabase.functions.invoke('update-user-email', {
+                                    body: { userId: user.user_id, newEmail },
+                                  });
+                                  if (fnError || !data?.success) throw new Error(data?.error || fnError?.message || 'Failed to update email');
+                                  toast({ title: "Email updated", description: `Email changed to ${newEmail}` });
+                                  loadUsers();
+                                } catch (err: any) {
+                                  toast({ title: "Error", description: err.message, variant: "destructive" });
+                                  e.target.value = user.profiles?.email || '';
+                                }
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
                       {readOnly && (
                         <div className="text-xs text-muted-foreground bg-muted/50 rounded-md px-3 py-2">
-                          View only — you don't have manage permissions for Team & Permissions.
+                          View only — you don't have manage permissions.
                         </div>
                       )}
                       {/* Role + Department dropdowns */}
@@ -861,30 +931,6 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                               ))}
                             </SelectContent>
                           </Select>
-                        </div>
-                        <div className="flex-1 space-y-1">
-                          <Label className="text-xs text-muted-foreground">Email</Label>
-                          <div className="flex gap-2">
-                            <Input
-                              className="h-9 text-sm"
-                              defaultValue={user.profiles?.email || ''}
-                              onBlur={async (e) => {
-                                const newEmail = e.target.value.trim();
-                                if (!newEmail || newEmail === user.profiles?.email) return;
-                                try {
-                                   const { data, error: fnError } = await supabase.functions.invoke('update-user-email', {
-                                     body: { userId: user.user_id, newEmail },
-                                   });
-                                   if (fnError || !data?.success) throw new Error(data?.error || fnError?.message || 'Failed to update email');
-                                  toast({ title: "Email updated", description: `Email changed to ${newEmail}` });
-                                  loadUsers();
-                                } catch (err: any) {
-                                  toast({ title: "Error", description: err.message, variant: "destructive" });
-                                  e.target.value = user.profiles?.email || '';
-                                }
-                              }}
-                            />
-                          </div>
                         </div>
                       </div>
 
@@ -1340,8 +1386,8 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                         </div>
                       </div>
                       )}
-                    </div>
-                  )}
+                    </DialogContent>
+                  </Dialog>
                 </div>
               );
             })}
