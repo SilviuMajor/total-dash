@@ -138,6 +138,8 @@ export default function Conversations() {
   // Previous conversations
   const [previousConversations, setPreviousConversations] = useState<Conversation[]>([]);
   const [showAllPreviousConversations, setShowAllPreviousConversations] = useState(false);
+  const [showPreviousConversations, setShowPreviousConversations] = useState(true);
+  const [showAllHandoverHistory, setShowAllHandoverHistory] = useState(false);
 
   // Canned responses state
   const [showCannedDropdown, setShowCannedDropdown] = useState(false);
@@ -1753,7 +1755,11 @@ export default function Conversations() {
                     {/* Handover Control Card */}
                     <Card className={cn(
                       "p-3",
-                      pendingSession && "border-red-300 bg-red-50 dark:bg-red-950/20 dark:border-red-800"
+                      pendingSession && "border-red-300 bg-red-50 dark:bg-red-950/20 dark:border-red-800",
+                      !pendingSession && selectedConversation.status === 'in_handover' && "border-blue-300 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-800",
+                      !pendingSession && selectedConversation.status === 'aftercare' && "border-yellow-300 bg-yellow-50 dark:bg-yellow-950/20 dark:border-yellow-800",
+                      !pendingSession && selectedConversation.status === 'needs_review' && "border-amber-300 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800",
+                      !pendingSession && selectedConversation.status === 'resolved' && "border-gray-300 bg-gray-50 dark:bg-gray-950/20 dark:border-gray-700"
                     )}>
                       {/* WITH AI or WAITING with no pending session (edge case fallback) */}
                       {(selectedConversation.status === 'with_ai' || (selectedConversation.status === 'waiting' && !pendingSession)) && !pendingSession && (
@@ -1957,7 +1963,7 @@ export default function Conversations() {
                             {handoverHistory.length === 1 ? 'Previous handover' : `Previous handovers (${handoverHistory.length})`}
                           </p>
                           <div className="space-y-1.5">
-                            {handoverHistory.map((session: any) => {
+                            {(showAllHandoverHistory ? handoverHistory : handoverHistory.slice(0, 1)).map((session: any) => {
                               const duration = session.accepted_at && session.completed_at
                                 ? Math.floor((new Date(session.completed_at).getTime() - new Date(session.accepted_at).getTime()) / 1000)
                                 : null;
@@ -1994,6 +2000,14 @@ export default function Conversations() {
                                 </div>
                               );
                             })}
+                            {handoverHistory.length > 1 && (
+                              <button
+                                onClick={() => setShowAllHandoverHistory(!showAllHandoverHistory)}
+                                className="w-full text-center py-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                              >
+                                {showAllHandoverHistory ? 'Show less' : `Show ${handoverHistory.length - 1} more`}
+                              </button>
+                            )}
                           </div>
                         </div>
                       )}
@@ -2057,53 +2071,76 @@ export default function Conversations() {
                     {/* Previous conversations from same customer */}
                     {previousConversations.length > 0 && (
                       <div>
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                          {previousConversations.length} Previous Conversation{previousConversations.length !== 1 ? 's' : ''}
-                        </p>
-                        <div className="space-y-1">
-                          {(showAllPreviousConversations ? previousConversations : previousConversations.slice(0, 2)).map((conv: any) => (
-                            <button
-                              key={conv.id}
-                              onClick={() => {
-                                setSelectedConversation(conv);
-                                setShowAllPreviousConversations(false);
-                              }}
-                              className="w-full flex items-center justify-between p-2 rounded-md bg-muted/50 hover:bg-muted transition-colors text-left"
-                            >
-                              <div className="flex items-center gap-2 min-w-0">
-                                <span className={cn(
-                                  "w-1.5 h-1.5 rounded-full shrink-0",
-                                  conv.status === 'with_ai' && "bg-green-500",
-                                  conv.status === 'waiting' && "bg-red-500",
-                                  conv.status === 'in_handover' && "bg-blue-500",
-                                  conv.status === 'aftercare' && "bg-yellow-500",
-                                  conv.status === 'needs_review' && "bg-amber-500",
-                                  conv.status === 'resolved' && "bg-gray-400"
-                                )} />
-                                <span className="text-xs truncate">
-                                  {conv.status === 'with_ai' ? 'With AI'
-                                    : conv.status === 'waiting' ? 'Waiting'
-                                    : conv.status === 'in_handover' ? 'In Handover'
-                                    : conv.status === 'aftercare' ? 'Aftercare'
-                                    : conv.status === 'needs_review' ? 'Needs Review'
-                                    : conv.status === 'resolved' ? 'Resolved'
-                                    : conv.status}
+                        <button
+                          onClick={() => {
+                            setShowPreviousConversations(!showPreviousConversations);
+                            if (showPreviousConversations) setShowAllPreviousConversations(false);
+                          }}
+                          className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors w-full mb-2"
+                        >
+                          <MessageSquareText className="w-3 h-3" />
+                          {previousConversations.length} Conversation{previousConversations.length !== 1 ? 's' : ''}
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="10"
+                            height="10"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className={cn("transition-transform ml-auto", showPreviousConversations && "rotate-90")}
+                          >
+                            <polyline points="9 18 15 12 9 6" />
+                          </svg>
+                        </button>
+                        {showPreviousConversations && (
+                          <div className="space-y-1">
+                            {(showAllPreviousConversations ? previousConversations : previousConversations.slice(0, 2)).map((conv: any) => (
+                              <button
+                                key={conv.id}
+                                onClick={() => {
+                                  setSelectedConversation(conv);
+                                  setShowAllPreviousConversations(false);
+                                }}
+                                className="w-full flex items-center justify-between p-2 rounded-md bg-muted/50 hover:bg-muted transition-colors text-left"
+                              >
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <span className={cn(
+                                    "w-1.5 h-1.5 rounded-full shrink-0",
+                                    conv.status === 'with_ai' && "bg-green-500",
+                                    conv.status === 'waiting' && "bg-red-500",
+                                    conv.status === 'in_handover' && "bg-blue-500",
+                                    conv.status === 'aftercare' && "bg-yellow-500",
+                                    conv.status === 'needs_review' && "bg-amber-500",
+                                    conv.status === 'resolved' && "bg-gray-400"
+                                  )} />
+                                  <span className="text-xs truncate">
+                                    {conv.status === 'with_ai' ? 'With AI'
+                                      : conv.status === 'waiting' ? 'Waiting'
+                                      : conv.status === 'in_handover' ? 'In Handover'
+                                      : conv.status === 'aftercare' ? 'Aftercare'
+                                      : conv.status === 'needs_review' ? 'Needs Review'
+                                      : conv.status === 'resolved' ? 'Resolved'
+                                      : conv.status}
+                                  </span>
+                                </div>
+                                <span className="text-[10px] text-muted-foreground shrink-0 ml-2">
+                                  {conv.last_activity_at ? new Date(conv.last_activity_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}
                                 </span>
-                              </div>
-                              <span className="text-[10px] text-muted-foreground shrink-0 ml-2">
-                                {conv.last_activity_at ? new Date(conv.last_activity_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}
-                              </span>
-                            </button>
-                          ))}
-                          {!showAllPreviousConversations && previousConversations.length > 2 && (
-                            <button
-                              onClick={() => setShowAllPreviousConversations(true)}
-                              className="w-full text-center py-1.5 rounded-md border border-dashed border-border text-[11px] text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors"
-                            >
-                              Show {previousConversations.length - 2} more
-                            </button>
-                          )}
-                        </div>
+                              </button>
+                            ))}
+                            {previousConversations.length > 2 && (
+                              <button
+                                onClick={() => setShowAllPreviousConversations(!showAllPreviousConversations)}
+                                className="w-full text-center py-1.5 rounded-md border border-dashed border-border text-[11px] text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors"
+                              >
+                                {showAllPreviousConversations ? 'Show less' : `Show ${previousConversations.length - 2} more`}
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </div>
                     )}
 
