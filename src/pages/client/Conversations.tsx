@@ -1995,9 +1995,15 @@ export default function Conversations() {
                         <div className="space-y-1.5">
                           <div className="flex items-center gap-1.5">
                             <CheckCircle className="h-4 w-4 text-green-500" />
-                            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Resolved</p>
+                            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                              Resolved{selectedConversation.resolution_reason ? ` — ${selectedConversation.resolution_reason}` : ''}
+                            </p>
                           </div>
-                          <p className="text-xs text-muted-foreground">This conversation has been resolved</p>
+                          {selectedConversation.resolution_note ? (
+                            <p className="text-xs text-muted-foreground italic">"{selectedConversation.resolution_note}"</p>
+                          ) : !selectedConversation.resolution_reason ? (
+                            <p className="text-xs text-muted-foreground">This conversation has been resolved</p>
+                          ) : null}
                         </div>
                       )}
 
