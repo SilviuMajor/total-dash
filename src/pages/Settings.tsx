@@ -23,7 +23,7 @@ export default function Settings() {
   const [clientId, setClientId] = useState<string | null>(null);
   const [capabilities, setCapabilities] = useState<Record<string, any>>({});
   const [client, setClient] = useState<any>(null);
-  const [teamSubTab, setTeamSubTab] = useState<"roles" | "team">("roles");
+  const [teamSubTab, setTeamSubTab] = useState<"departments" | "team" | "roles">("departments");
 
   useEffect(() => {
     const isInPreview = isClientPreviewMode || previewDepth === 'agency_to_client' || previewDepth === 'client';
@@ -118,22 +118,35 @@ export default function Settings() {
 
       <Tabs defaultValue={getDefaultTab()} className="w-full">
         <TabsList>
-          {showDepartments && <TabsTrigger value="departments">Departments</TabsTrigger>}
-          {showTeam && <TabsTrigger value="team-permissions">Team & Permissions</TabsTrigger>}
+          {showTeam && <TabsTrigger value="team-permissions">Users & Departments</TabsTrigger>}
           {showCannedResponses && <TabsTrigger value="canned-responses">Canned Responses</TabsTrigger>}
           {showGeneral && <TabsTrigger value="general">General</TabsTrigger>}
           {showAuditLog && <TabsTrigger value="audit-log">Audit Log</TabsTrigger>}
         </TabsList>
 
-        {showDepartments && (
-          <TabsContent value="departments" className="space-y-6">
-            <DepartmentManagement clientId={clientId} readOnly={!canManageDepartments} />
-          </TabsContent>
-        )}
-
         {showTeam && (
           <TabsContent value="team-permissions" className="space-y-6">
             <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1 w-fit">
+              <button
+                onClick={() => setTeamSubTab("departments")}
+                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                  teamSubTab === "departments"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                Departments
+              </button>
+              <button
+                onClick={() => setTeamSubTab("team")}
+                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                  teamSubTab === "team"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                Users
+              </button>
               <button
                 onClick={() => setTeamSubTab("roles")}
                 className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
@@ -144,20 +157,11 @@ export default function Settings() {
               >
                 Roles
               </button>
-              <button
-                onClick={() => setTeamSubTab("team")}
-                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                  teamSubTab === "team"
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-muted"
-                }`}
-              >
-                Team
-              </button>
             </div>
 
-            {teamSubTab === "roles" && <RolesManagement clientId={clientId} />}
+            {teamSubTab === "departments" && <DepartmentManagement clientId={clientId} readOnly={!canManageDepartments} />}
             {teamSubTab === "team" && <ClientUsersManagement clientId={clientId} readOnly={!canManageTeam} />}
+            {teamSubTab === "roles" && <RolesManagement clientId={clientId} />}
           </TabsContent>
         )}
 
