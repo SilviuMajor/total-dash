@@ -15,8 +15,10 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Pencil, Trash2, Plus, Lock } from "lucide-react";
+import { Pencil, Trash2, Plus, Lock, ChevronDown, ChevronRight, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 const DEPARTMENT_COLORS = [
   { value: '#3b82f6', label: 'Blue' },
@@ -131,6 +133,10 @@ export function DepartmentManagement({ clientId, readOnly }: { clientId: string;
   const [departmentToDelete, setDepartmentToDelete] = useState<Department | null>(null);
   
   const [saving, setSaving] = useState(false);
+  const [expandedDeptId, setExpandedDeptId] = useState<string | null>(null);
+  const [deptUsers, setDeptUsers] = useState<Record<string, any[]>>({});
+  const [allClientUsers, setAllClientUsers] = useState<{ id: string; full_name: string | null; avatar_url: string | null; user_id: string }[]>([]);
+  const [addUserOpen, setAddUserOpen] = useState<string | null>(null);
 
   // Form state
   const [name, setName] = useState("");
@@ -170,6 +176,77 @@ export function DepartmentManagement({ clientId, readOnly }: { clientId: string;
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadDeptUsers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('client_user_departments')
+        .select('id, department_id, client_user_id, client_users(id, full_name, avatar_url)')
+        .in('department_id', departments.map(d => d.id));
+      if (error) throw error;
+      const grouped: Record<string, any[]> = {};
+      (data || []).forEach((row: any) => {
+        const deptId = row.department_id;
+        if (!grouped[deptId]) grouped[deptId] = [];
+        grouped[deptId].push({
+          id: row.id,
+          client_user_id: row.client_user_id,
+          full_name: row.client_users?.full_name || 'Unnamed',
+          avatar_url: row.client_users?.avatar_url || null,
+        });
+      });
+      setDeptUsers(grouped);
+    } catch (error: any) {
+      console.error('Error loading dept users:', error);
+    }
+  };
+
+  const loadAllClientUsers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('client_users')
+        .select('id, full_name, avatar_url, user_id')
+        .eq('client_id', clientId)
+        .eq('status', 'active');
+      if (error) throw error;
+      setAllClientUsers(data || []);
+    } catch (error: any) {
+      console.error('Error loading client users:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (departments.length > 0) {
+      loadDeptUsers();
+      loadAllClientUsers();
+    }
+  }, [departments]);
+
+  const addUserToDept = async (deptId: string, clientUserId: string) => {
+    try {
+      const { error } = await supabase.from('client_user_departments').insert({
+        department_id: deptId,
+        client_user_id: clientUserId,
+      });
+      if (error) throw error;
+      toast({ title: "Added", description: "User added to department" });
+      loadDeptUsers();
+      setAddUserOpen(null);
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  };
+
+  const removeUserFromDept = async (junctionId: string) => {
+    try {
+      const { error } = await supabase.from('client_user_departments').delete().eq('id', junctionId);
+      if (error) throw error;
+      toast({ title: "Removed", description: "User removed from department" });
+      loadDeptUsers();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     }
   };
 
@@ -338,53 +415,125 @@ export function DepartmentManagement({ clientId, readOnly }: { clientId: string;
               return (
                 <div
                   key={dept.id}
-                  className="flex items-center justify-between px-4 py-3 rounded-lg border border-border/50 bg-card hover:bg-muted/30 transition-colors"
+                  className="rounded-lg border border-border/50 bg-card overflow-hidden"
                 >
-                  {/* Left */}
-                  <div className="flex items-center gap-3 min-w-0">
-                    <span
-                      className="inline-block w-4 h-4 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: dept.color || "#3b82f6" }}
-                    />
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-sm text-foreground">{dept.name}</span>
-                        {dept.is_global && (
-                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Global</Badge>
+                  {/* Department header row */}
+                  <button
+                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors text-left"
+                    onClick={() => setExpandedDeptId(expandedDeptId === dept.id ? null : dept.id)}
+                  >
+                    {/* Left */}
+                    <div className="flex items-center gap-3 min-w-0">
+                      {expandedDeptId === dept.id ? (
+                        <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                      ) : (
+                        <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                      )}
+                      <span
+                        className="inline-block w-4 h-4 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: dept.color || "#3b82f6" }}
+                      />
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-sm text-foreground">{dept.name}</span>
+                          {dept.is_global && (
+                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Global</Badge>
+                          )}
+                          {dept.always_open && (
+                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300 border-0">24/7</Badge>
+                          )}
+                        </div>
+                        <span className="text-[11px] text-muted-foreground">
+                          {(deptUsers[dept.id] || []).length} {(deptUsers[dept.id] || []).length === 1 ? 'user' : 'users'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Right */}
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                      <span className="text-xs text-muted-foreground hidden sm:block">{dept.timeout_seconds || 60}s</span>
+                      <span className="text-xs text-muted-foreground hidden md:block">{dept.timezone || "UTC"}</span>
+                      <div className="flex items-center gap-1">
+                        <span className={cn("w-2 h-2 rounded-full", isOpen ? "bg-green-500" : "bg-red-400")} />
+                        <span className="text-xs text-muted-foreground hidden lg:block">{isOpen ? "Open" : "Closed"}</span>
+                      </div>
+                      {!readOnly && (
+                        <>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); handleOpenDialog(dept); }}>
+                            <Pencil className="w-3.5 h-3.5" />
+                          </Button>
+                          {!dept.is_global && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={(e) => { e.stopPropagation(); setDepartmentToDelete(dept); setDeleteDialogOpen(true); }}
+                            >
+                              <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                            </Button>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </button>
+
+                  {/* Expanded user list */}
+                  {expandedDeptId === dept.id && (
+                    <div className="px-4 pb-3 border-t border-border/50">
+                      <div className="flex flex-wrap items-center gap-2 pt-3">
+                        {(deptUsers[dept.id] || []).map(u => (
+                          <div key={u.id} className="flex items-center gap-1.5 bg-muted/50 rounded-full pl-1 pr-2 py-1 text-xs">
+                            <Avatar className="h-5 w-5">
+                              <AvatarFallback className="text-[10px]">{(u.full_name || '?')[0]}</AvatarFallback>
+                            </Avatar>
+                            {u.full_name}
+                            {!readOnly && (
+                              <button
+                                onClick={() => removeUserFromDept(u.id)}
+                                className="ml-0.5 text-muted-foreground hover:text-destructive"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                        {(deptUsers[dept.id] || []).length === 0 && (
+                          <span className="text-xs text-muted-foreground">No users assigned</span>
                         )}
-                        {dept.always_open && (
-                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300 border-0">24/7</Badge>
+                        {!readOnly && (
+                          <Popover open={addUserOpen === dept.id} onOpenChange={(open) => setAddUserOpen(open ? dept.id : null)}>
+                            <PopoverTrigger asChild>
+                              <button className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground bg-muted/50 rounded-full px-2.5 py-1 transition-colors">
+                                <Plus className="w-3 h-3" />
+                                Add user
+                              </button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-56 p-2" align="start">
+                              <div className="space-y-1 max-h-48 overflow-y-auto">
+                                {allClientUsers
+                                  .filter(u => !(deptUsers[dept.id] || []).some(du => du.client_user_id === u.id))
+                                  .map(u => (
+                                    <button
+                                      key={u.id}
+                                      className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted text-sm text-left"
+                                      onClick={() => addUserToDept(dept.id, u.id)}
+                                    >
+                                      <Avatar className="h-5 w-5">
+                                        <AvatarFallback className="text-[10px]">{(u.full_name || '?')[0]}</AvatarFallback>
+                                      </Avatar>
+                                      {u.full_name || 'Unnamed'}
+                                    </button>
+                                  ))}
+                                {allClientUsers.filter(u => !(deptUsers[dept.id] || []).some(du => du.client_user_id === u.id)).length === 0 && (
+                                  <p className="text-xs text-muted-foreground text-center py-2">All users assigned</p>
+                                )}
+                              </div>
+                            </PopoverContent>
+                          </Popover>
                         )}
                       </div>
                     </div>
-                  </div>
-
-                  {/* Right */}
-                  <div className="flex items-center gap-3 flex-shrink-0">
-                    <span className="text-xs text-muted-foreground hidden sm:block">{dept.timeout_seconds || 60}s</span>
-                    <span className="text-xs text-muted-foreground hidden md:block">{dept.timezone || "UTC"}</span>
-                    <div className="flex items-center gap-1">
-                      <span className={cn("w-2 h-2 rounded-full", isOpen ? "bg-green-500" : "bg-red-400")} />
-                      <span className="text-xs text-muted-foreground hidden lg:block">{isOpen ? "Open" : "Closed"}</span>
-                    </div>
-                    {!readOnly && (
-                      <>
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleOpenDialog(dept)}>
-                          <Pencil className="w-3.5 h-3.5" />
-                        </Button>
-                        {!dept.is_global && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => { setDepartmentToDelete(dept); setDeleteDialogOpen(true); }}
-                          >
-                            <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                          </Button>
-                        )}
-                      </>
-                    )}
-                  </div>
+                  )}
                 </div>
               );
             })}
