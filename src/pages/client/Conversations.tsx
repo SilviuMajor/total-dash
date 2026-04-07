@@ -129,6 +129,8 @@ export default function Conversations() {
   const [departments, setDepartments] = useState<Array<{ id: string; name: string; code: string | null; color: string | null }>>([]);
   const [pendingSession, setPendingSession] = useState<any>(null);
   const [activeSession, setActiveSession] = useState<any>(null);
+  const [handoverHistory, setHandoverHistory] = useState<any[]>([]);
+  const [showHandoverHistory, setShowHandoverHistory] = useState(false);
   const [currentClientUserId, setCurrentClientUserId] = useState<string | null>(null);
   const [pendingConversationIds, setPendingConversationIds] = useState<Map<string, string>>(new Map());
   const [responseTick, setResponseTick] = useState(0);
@@ -560,6 +562,7 @@ export default function Conversations() {
       if (!selectedConversation?.id) {
         setPendingSession(null);
         setActiveSession(null);
+        setHandoverHistory([]);
         return;
       }
 
@@ -587,6 +590,15 @@ export default function Conversations() {
         console.error('[Handover] Error loading active session:', activeError);
       }
       setActiveSession(active);
+
+      // Load completed handover sessions for history
+      const { data: history } = await supabase
+        .from('handover_sessions')
+        .select('*, departments:department_id(name, color)')
+        .eq('conversation_id', selectedConversation.id)
+        .eq('status', 'completed')
+        .order('completed_at', { ascending: false });
+      setHandoverHistory(history || []);
     };
     loadSessions();
 
@@ -1763,21 +1775,37 @@ export default function Conversations() {
                       {pendingSession && (
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
-                            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Handover Request</p>
+                            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                              {pendingSession.takeover_type === 'transfer' ? 'Transfer Request' : 'Handover Request'}
+                            </p>
                             <div className="flex items-center gap-1 text-xs text-muted-foreground">
                               <Timer className="h-3 w-3" />
                               {pendingSession.departments?.timeout_seconds || 300}s
                             </div>
                           </div>
-                          <p className="text-xs text-muted-foreground">Customer requested a human agent</p>
+                          {pendingSession.takeover_type === 'transfer' ? (
+                            <>
+                              <p className="text-xs text-muted-foreground">
+                                Transferred from <span className="font-medium text-foreground">{pendingSession.transferred_from_department_name || 'another department'}</span> by <span className="font-medium text-foreground">{pendingSession.transferred_from_agent_name || 'an agent'}</span>
+                              </p>
+                              {pendingSession.transfer_note && (
+                                <div className="bg-white dark:bg-background rounded-md p-2 border border-red-200 dark:border-red-800">
+                                  <p className="text-[10px] font-semibold text-muted-foreground mb-0.5">Transfer note:</p>
+                                  <p className="text-xs text-foreground">{pendingSession.transfer_note}</p>
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            <p className="text-xs text-muted-foreground">Customer requested a human agent</p>
+                          )}
                           <Button
                             size="sm"
                             className="w-full bg-red-600 hover:bg-red-700 text-white"
-                            onClick={() => callHandoverAction('accept_handover')}
-                            disabled={handoverLoading === 'accept_handover'}
+                            onClick={() => callHandoverAction(pendingSession.takeover_type === 'transfer' ? 'accept_transfer' : 'accept_handover')}
+                            disabled={!!handoverLoading}
                           >
-                            {handoverLoading === 'accept_handover' ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <UserCheck className="h-4 w-4 mr-2" />}
-                            Accept Handover
+                            {handoverLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <UserCheck className="h-4 w-4 mr-2" />}
+                            {pendingSession.takeover_type === 'transfer' ? 'Accept Transfer' : 'Accept Handover'}
                           </Button>
                         </div>
                       )}
@@ -1977,6 +2005,82 @@ export default function Conversations() {
                           </div>
                         </div>
                       )}
+
+                    {/* Handover History */}
+                    {handoverHistory.length > 0 && (
+                      <div>
+                        <button
+                          onClick={() => setShowHandoverHistory(!showHandoverHistory)}
+                          className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors mb-2"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="10"
+                            height="10"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className={cn("transition-transform", showHandoverHistory && "rotate-90")}
+                          >
+                            <polyline points="9 18 15 12 9 6" />
+                          </svg>
+                          {handoverHistory.length} Previous Handover{handoverHistory.length !== 1 ? 's' : ''}
+                        </button>
+                        {showHandoverHistory && (
+                          <div className="space-y-1.5 mb-3">
+                            {handoverHistory.map((session: any) => {
+                              const duration = session.accepted_at && session.completed_at
+                                ? Math.floor((new Date(session.completed_at).getTime() - new Date(session.accepted_at).getTime()) / 1000)
+                                : null;
+                              const durationStr = duration !== null
+                                ? duration >= 3600
+                                  ? `${Math.floor(duration / 3600)}h ${Math.floor((duration % 3600) / 60)}m`
+                                  : duration >= 60
+                                    ? `${Math.floor(duration / 60)}m ${(duration % 60).toString().padStart(2, '0')}s`
+                                    : `${duration}s`
+                                : null;
+                              return (
+                                <div key={session.id} className="bg-muted/50 rounded-lg p-2.5 space-y-1">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-1.5">
+                                      <span
+                                        className="w-1.5 h-1.5 rounded-full"
+                                        style={{ backgroundColor: session.departments?.color || '#6B7280' }}
+                                      />
+                                      <span className="text-xs font-medium">{session.departments?.name || 'Unknown'}</span>
+                                    </div>
+                                    {durationStr && (
+                                      <span className="text-[10px] text-muted-foreground">{durationStr}</span>
+                                    )}
+                                  </div>
+                                  {session.agent_name && (
+                                    <p className="text-[11px] text-muted-foreground">
+                                      Handled by <span className="font-medium">{session.agent_name}</span>
+                                    </p>
+                                  )}
+                                  <div className="flex items-center gap-2">
+                                    <span className={cn(
+                                      "text-[10px] px-1.5 py-0.5 rounded",
+                                      session.completion_method === 'transfer'
+                                        ? "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
+                                        : "bg-yellow-100 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-300"
+                                    )}>
+                                      {session.completion_method === 'transfer' ? 'Transferred' : 'Handback'}
+                                    </span>
+                                    <span className="text-[10px] text-muted-foreground">
+                                      {new Date(session.completed_at).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' })}, {new Date(session.completed_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {/* Previous conversations from same customer */}
                     {previousConversations.length > 0 && (
