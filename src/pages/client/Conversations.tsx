@@ -1944,10 +1944,10 @@ export default function Conversations() {
                           <Button
                             size="sm"
                             className="w-full"
-                            onClick={() => callHandoverAction('mark_resolved')}
-                            disabled={handoverLoading === 'mark_resolved'}
+                            onClick={() => handleResolveWithReason('mark_resolved')}
+                            disabled={!!handoverLoading}
                           >
-                            {handoverLoading === 'mark_resolved' ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle className="h-4 w-4 mr-2" />}
+                            {handoverLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle className="h-4 w-4 mr-2" />}
                             Mark as Resolved
                           </Button>
                         </div>
@@ -1981,10 +1981,10 @@ export default function Conversations() {
                           <Button
                             size="sm"
                             className="w-full"
-                            onClick={() => callHandoverAction('mark_resolved')}
-                            disabled={handoverLoading === 'mark_resolved'}
+                            onClick={() => handleResolveWithReason('mark_resolved')}
+                            disabled={!!handoverLoading}
                           >
-                            {handoverLoading === 'mark_resolved' ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                            {handoverLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                             Mark as Resolved
                           </Button>
                         </div>
