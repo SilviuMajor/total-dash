@@ -2262,6 +2262,64 @@ export default function Conversations() {
         </div>
       </div>
 
+      {/* Resolution Reason Modal */}
+      <Dialog open={resolveModalOpen} onOpenChange={(open) => { if (!open) setResolveModalOpen(false); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Resolve conversation</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">Select a reason for resolving this conversation</p>
+          <div className="space-y-1.5 my-2">
+            {resolutionReasons.map((reason) => (
+              <label
+                key={reason.id}
+                onClick={() => setResolveReason(reason.id)}
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition-colors",
+                  resolveReason === reason.id
+                    ? "border-foreground bg-muted"
+                    : "border-border hover:bg-muted/50"
+                )}
+              >
+                <span className={cn(
+                  "w-4 h-4 rounded-full border-2 shrink-0",
+                  resolveReason === reason.id ? "border-[5px] border-foreground" : "border-muted-foreground/30"
+                )} />
+                <span className="text-sm flex-1">{reason.label}</span>
+                {reason.note_required && (
+                  <span className="text-[10px] text-muted-foreground">Note required</span>
+                )}
+              </label>
+            ))}
+          </div>
+          {resolveReason && (() => {
+            const selected = resolutionReasons.find(r => r.id === resolveReason);
+            return selected ? (
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">
+                  Note {selected.note_required ? <span className="text-muted-foreground/60">(required)</span> : <span className="text-muted-foreground/60">(optional)</span>}
+                </label>
+                <textarea
+                  value={resolveNote}
+                  onChange={(e) => setResolveNote(e.target.value)}
+                  placeholder="Add a note about this resolution..."
+                  className="w-full min-h-[60px] px-3 py-2 text-sm border rounded-lg resize-none bg-background"
+                />
+              </div>
+            ) : null;
+          })()}
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setResolveModalOpen(false)}>Cancel</Button>
+            <Button
+              onClick={handleSubmitResolution}
+              disabled={!resolveReason || (resolutionReasons.find(r => r.id === resolveReason)?.note_required && !resolveNote.trim())}
+            >
+              Resolve
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* End Handover Modal */}
       <Dialog open={endHandoverOpen} onOpenChange={setEndHandoverOpen}>
         <DialogContent>
