@@ -525,38 +525,37 @@ export function DepartmentManagement({ clientId, readOnly }: { clientId: string;
               </div>
 
               <div className={cn(alwaysOpen && "opacity-40 pointer-events-none")}>
-                <Label htmlFor="dept-timezone">Timezone</Label>
-                <Select value={timezone} onValueChange={setTimezone}>
-                  <SelectTrigger className="mt-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {TIMEZONES.map(tz => (
-                      <SelectItem key={tz} value={tz}>{tz}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                <div>
+                  <Label htmlFor="dept-timezone">Timezone</Label>
+                  <Select value={timezone} onValueChange={setTimezone}>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TIMEZONES.map(tz => (
+                        <SelectItem key={tz} value={tz}>{tz}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              </div>
-
-              <div className={cn(alwaysOpen && "opacity-40 pointer-events-none")}>
-                <Label>Opening Hours</Label>
-                <RadioGroup
-                  value={openingHoursType}
-                  onValueChange={(v) => setOpeningHoursType(v as "simple" | "advanced")}
-                  className="flex gap-4 mt-2"
-                >
-                  <div className="flex items-center gap-1.5">
-                    <RadioGroupItem value="simple" id="oh-simple" />
-                    <Label htmlFor="oh-simple" className="font-normal cursor-pointer">Simple</Label>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <RadioGroupItem value="advanced" id="oh-advanced" />
-                    <Label htmlFor="oh-advanced" className="font-normal cursor-pointer">Advanced</Label>
-                  </div>
-                </RadioGroup>
-              </div>
+                <div className="mt-5">
+                  <Label>Opening Hours</Label>
+                  <RadioGroup
+                    value={openingHoursType}
+                    onValueChange={(v) => setOpeningHoursType(v as "simple" | "advanced")}
+                    className="flex gap-4 mt-2"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <RadioGroupItem value="simple" id="oh-simple" />
+                      <Label htmlFor="oh-simple" className="font-normal cursor-pointer">Simple</Label>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <RadioGroupItem value="advanced" id="oh-advanced" />
+                      <Label htmlFor="oh-advanced" className="font-normal cursor-pointer">Advanced</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
 
               {openingHoursType === "simple" ? (
                 <div className="grid grid-cols-2 gap-3">
