@@ -840,6 +840,52 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
           )}
         </div>
 
+        {selectedUserIds.size > 0 && !readOnly && (
+          <div className="flex items-center gap-2 mb-4 p-3 bg-muted/50 rounded-lg flex-wrap">
+            <span className="text-sm font-medium">{selectedUserIds.size} selected</span>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="text-xs">Assign dept</Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-48 p-2" align="start">
+                <div className="space-y-1">
+                  {departments.map(d => (
+                    <button
+                      key={d.id}
+                      className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm hover:bg-muted text-left"
+                      onClick={() => bulkAssignDept(d.id)}
+                    >
+                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: (d as any).color || '#6B7280' }} />
+                      {d.name}
+                    </button>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="text-xs">Change role</Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-48 p-2" align="start">
+                <div className="space-y-1">
+                  {roles.map(r => (
+                    <button
+                      key={r.id}
+                      className="w-full px-2 py-1.5 rounded text-sm hover:bg-muted text-left"
+                      onClick={() => bulkChangeRole(r.id)}
+                    >
+                      {r.name}
+                    </button>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+            <Button variant="outline" size="sm" className="text-xs text-amber-600" onClick={bulkSuspend}>Suspend</Button>
+            <div className="flex-1" />
+            <Button variant="ghost" size="sm" className="text-xs" onClick={clearSelection}>Clear</Button>
+          </div>
+        )}
+
         {users.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             No users assigned to this client yet.
