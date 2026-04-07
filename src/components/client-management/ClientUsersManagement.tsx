@@ -1600,74 +1600,77 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
             <DialogTitle>Add New User</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={newUserEmail}
-                onChange={(e) => setNewUserEmail(e.target.value)}
-                placeholder="user@example.com"
+            {/* Profile section — matching overlay format */}
+            <div className="flex items-start gap-4 pb-4 border-b border-border">
+              <AvatarUpload
+                currentUrl={newUserAvatar}
+                onUploadComplete={(url) => setNewUserAvatar(url)}
               />
+              <div className="flex-1 space-y-3">
+                <div className="grid grid-cols-1 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Full Name</Label>
+                    <Input
+                      className="h-9 text-sm"
+                      value={newUserFullName}
+                      onChange={(e) => setNewUserFullName(e.target.value)}
+                      placeholder="John Doe"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Email</Label>
+                  <Input
+                    className="h-9 text-sm"
+                    type="email"
+                    value={newUserEmail}
+                    onChange={(e) => setNewUserEmail(e.target.value)}
+                    placeholder="user@example.com"
+                  />
+                </div>
+              </div>
             </div>
-            <div>
-              <Label htmlFor="fullName">Full Name</Label>
-              <Input
-                id="fullName"
-                value={newUserFullName}
-                onChange={(e) => setNewUserFullName(e.target.value)}
-                placeholder="John Doe"
-              />
-            </div>
-            <div>
-              <Label htmlFor="department">Department</Label>
-              <Select value={newUserDepartment} onValueChange={setNewUserDepartment}>
-                <SelectTrigger id="department">
-                  <SelectValue placeholder="Select department" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
-                  {departments.map((dept) => (
-                    <SelectItem key={dept.id} value={dept.id}>
-                      {dept.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="role">Role</Label>
-              <Select value={newUserRoleId} onValueChange={(value) => {
-                setNewUserRoleId(value);
-                populatePermissionsFromRole(value);
-              }}>
-                <SelectTrigger id="role">
-                  <SelectValue placeholder="Select role" />
-                </SelectTrigger>
-                <SelectContent>
-                  {roles.map(r => (
-                    <SelectItem key={r.id} value={r.id}>
-                      {r.name}
-                      {r.is_system && " (system)"}
-                      {r.is_default && " (default)"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground mt-1">
-                {roles.find(r => r.id === newUserRoleId)?.is_admin_tier
-                  ? "Full access to all agency-enabled features"
-                  : "Permissions auto-populated from role template — customise below"}
-              </p>
-            </div>
-            <AvatarUpload
-              currentUrl={newUserAvatar}
-              onUploadComplete={(url) => setNewUserAvatar(url)}
-            />
 
-            {/* Agent permissions */}
-            <div>
-              <h3 className="text-sm font-semibold mb-2">Agent Access</h3>
+            {/* Role + Department — matching overlay format */}
+            <div className="flex gap-3">
+              <div className="flex-1 space-y-1">
+                <Label className="text-xs text-muted-foreground">Role</Label>
+                <Select value={newUserRoleId} onValueChange={(value) => {
+                  setNewUserRoleId(value);
+                  populatePermissionsFromRole(value);
+                }}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {roles.map(r => (
+                      <SelectItem key={r.id} value={r.id}>
+                        {r.name}{r.is_system ? " (system)" : ""}{r.is_default ? " (default)" : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {roles.find(r => r.id === newUserRoleId)?.is_admin_tier
+                    ? "Full access to all agency-enabled features"
+                    : "Permissions auto-populated from role template"}
+                </p>
+              </div>
+              <div className="flex-1 space-y-1">
+                <Label className="text-xs text-muted-foreground">Department</Label>
+                <Select value={newUserDepartment} onValueChange={setNewUserDepartment}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {departments.map(d => (
+                      <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Agent permissions — keeping existing logic */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold">Agent Access</h3>
               <div className="space-y-2 max-h-64 overflow-y-auto">
                 {agents.map((agent) => {
                   const perms = newUserAgentPermissions[agent.id];
@@ -1718,19 +1721,10 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-4">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setOpen(false);
-                }}
-              >
-                Cancel
-              </Button>
-              <Button onClick={handleAddUser} disabled={!newUserEmail || !newUserFullName}>
-                Add User
-              </Button>
-            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+              <Button onClick={handleAddUser} disabled={!newUserEmail || !newUserFullName}>Add User</Button>
+            </DialogFooter>
           </div>
         </DialogContent>
       </Dialog>
