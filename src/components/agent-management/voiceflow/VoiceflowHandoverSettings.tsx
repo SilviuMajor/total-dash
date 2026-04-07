@@ -30,9 +30,9 @@ export function VoiceflowHandoverSettings({ agent, onUpdate }: Props) {
   const handleSave = async () => {
     setLoading(true);
     try {
-      const { error } = await supabase.from("agents").update({
-        config: {
-          ...agent.config,
+      const { error } = await supabase.rpc('update_agent_config', {
+        p_agent_id: agent.id,
+        p_config_updates: {
           handover_inactivity: {
             nudge_enabled: nudgeEnabled,
             nudge_delay_minutes: nudgeDelay,
@@ -43,7 +43,7 @@ export function VoiceflowHandoverSettings({ agent, onUpdate }: Props) {
             hard_timeout_minutes: hardMinutes,
           },
         },
-      }).eq("id", agent.id);
+      });
       if (error) throw error;
       toast({ title: "Success", description: "Handover settings saved" });
       onUpdate();

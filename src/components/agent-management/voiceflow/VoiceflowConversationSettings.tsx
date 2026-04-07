@@ -31,15 +31,15 @@ export function VoiceflowConversationSettings({ agent, onUpdate }: Props) {
   const handleSave = async () => {
     setLoading(true);
     try {
-      const { error } = await supabase.from("agents").update({
-        config: {
-          ...agent.config,
+      const { error } = await supabase.rpc('update_agent_config', {
+        p_agent_id: agent.id,
+        p_config_updates: {
           auto_end_hours: autoEndHours,
           auto_end_mode: autoEndMode,
           response_thresholds: { green_seconds: greenSeconds, amber_seconds: amberSeconds },
           resolution_reasons: resolutionReasons,
         },
-      }).eq("id", agent.id);
+      });
       if (error) throw error;
       toast({ title: "Success", description: "Conversation settings saved" });
       onUpdate();
