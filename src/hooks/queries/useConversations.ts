@@ -4,14 +4,14 @@ import { supabase } from '@/integrations/supabase/client';
 const PAGE_SIZE = 30;
 
 interface ConversationFilters {
-  status?: string;
+  statuses?: string[];
 }
 
 export function useConversations(agentId: string | null, filters?: ConversationFilters) {
-  const status = filters?.status ?? 'all';
+  const statuses = filters?.statuses ?? [];
 
   return useInfiniteQuery({
-    queryKey: ['conversations', agentId, { status }],
+    queryKey: ['conversations', agentId, { statuses }],
     queryFn: async ({ pageParam }: { pageParam: string | undefined }) => {
       let query = supabase
         .from('conversations')
@@ -24,8 +24,8 @@ export function useConversations(agentId: string | null, filters?: ConversationF
         query = query.lt('last_activity_at', pageParam);
       }
 
-      if (status !== 'all') {
-        query = query.eq('status', status);
+      if (statuses.length > 0) {
+        query = query.in('status', statuses);
       }
 
       const { data, error } = await query;
