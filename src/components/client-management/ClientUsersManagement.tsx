@@ -933,7 +933,6 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                           </Select>
                         </div>
                       </div>
-                      </div>
 
                       {/* Page access grid */}
                       <div>
