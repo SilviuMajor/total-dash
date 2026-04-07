@@ -103,6 +103,7 @@ export default function Conversations() {
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [tagFilters, setTagFilters] = useState<string[]>([]);
+  const [departmentFilter, setDepartmentFilter] = useState<string | null>(null);
   
 
   // Bulk select
@@ -186,7 +187,7 @@ export default function Conversations() {
   // Reset selection on filter/agent change
   useEffect(() => {
     setSelectedConversationIds(new Set());
-  }, [selectedAgentId, statusFilter, tagFilters]);
+  }, [selectedAgentId, statusFilter, tagFilters, departmentFilter]);
 
   // Response time tick (every second for live updates)
   useEffect(() => {
@@ -934,9 +935,23 @@ export default function Conversations() {
 
   const availableTags = (agentConfig as any)?.widget_settings?.functions?.conversation_tags?.filter((t: any) => t.enabled) || [];
 
-  // Client-side tag filtering + pending pinning
+  // Department counts (computed before department filter, so all counts stay visible)
+  const departmentCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const c of conversations) {
+      if (c.department_id) {
+        counts.set(c.department_id, (counts.get(c.department_id) || 0) + 1);
+      }
+    }
+    return counts;
+  }, [conversations]);
+
+  // Client-side filtering (department + tags) + pinning
   const filteredConversations = useMemo(() => {
     let result = conversations;
+    if (departmentFilter) {
+      result = result.filter(c => c.department_id === departmentFilter);
+    }
     if (tagFilters.length > 0) {
       result = result.filter(c =>
         tagFilters.some(tag => c.metadata?.tags?.includes(tag))
@@ -953,7 +968,7 @@ export default function Conversations() {
       return aTier - bTier;
     });
     return result;
-  }, [conversations, tagFilters, pendingConversationIds]);
+  }, [conversations, tagFilters, departmentFilter, pendingConversationIds]);
 
   const allSelected = filteredConversations.length > 0 &&
     filteredConversations.every(c => selectedConversationIds.has(c.id));
@@ -1022,6 +1037,56 @@ export default function Conversations() {
           ))}
         </div>
 
+        {/* Row 2b: Department filter chips (hidden for single department) */}
+        {departments.length > 1 && (
+          <div className="px-4 py-1 flex items-center gap-1.5 flex-wrap">
+            <button
+              onClick={() => setDepartmentFilter(null)}
+              className={cn(
+                "text-[11px] px-2.5 py-1 rounded-full font-medium transition-colors",
+                departmentFilter === null
+                  ? "bg-foreground text-background"
+                  : "text-muted-foreground hover:bg-muted"
+              )}
+            >
+              All ({conversations.length})
+            </button>
+            {departments.map(dept => {
+              const count = departmentCounts.get(dept.id) || 0;
+              const isActive = departmentFilter === dept.id;
+              const color = dept.color || '#6B7280';
+              return (
+                <button
+                  key={dept.id}
+                  onClick={() => setDepartmentFilter(isActive ? null : dept.id)}
+                  className={cn(
+                    "text-[11px] px-2.5 py-1 rounded-full font-medium transition-colors inline-flex items-center gap-1.5",
+                    isActive
+                      ? "border"
+                      : count === 0
+                        ? "text-muted-foreground/50 border border-dashed border-border/50"
+                        : "border border-dashed hover:border-solid"
+                  )}
+                  style={isActive ? {
+                    backgroundColor: `${color}15`,
+                    borderColor: `${color}40`,
+                    color: color,
+                  } : count > 0 ? {
+                    borderColor: `${color}40`,
+                    color: color,
+                  } : undefined}
+                >
+                  <span
+                    className="w-1.5 h-1.5 rounded-full"
+                    style={{ backgroundColor: count > 0 || isActive ? color : undefined }}
+                  />
+                  {dept.name} ({count})
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {/* Row 3: Filter chips */}
         <div className="px-4 pb-2 flex items-center gap-1.5 border-b border-border flex-wrap">
           {/* Active tag filter chips */}
@@ -1049,11 +1114,6 @@ export default function Conversations() {
               {tag.label}
             </button>
           ))}
-          {/* Placeholder filter chips */}
-          <button className="text-xs px-2 py-0.5 rounded border border-dashed border-border text-muted-foreground flex items-center gap-1 cursor-pointer hover:border-foreground/30">
-            <Plus className="w-2.5 h-2.5" />
-            Department
-          </button>
           <button className="text-xs px-2 py-0.5 rounded border border-dashed border-border text-muted-foreground flex items-center gap-1 cursor-pointer hover:border-foreground/30">
             <Plus className="w-2.5 h-2.5" />
             Assigned
@@ -1212,7 +1272,7 @@ export default function Conversations() {
                               <AlertTriangle className="w-3 h-3 text-amber-500 shrink-0" />
                             )}
                           </div>
-                          {conv.department_id && (() => {
+                          {departments.length > 1 && conv.department_id && (() => {
                             const dept = departments.find(d => d.id === conv.department_id);
                             return dept ? (
                               <span
@@ -1347,7 +1407,7 @@ export default function Conversations() {
                       {transcripts.length}
                     </p>
                   </div>
-                  {selectedConversation.department_id && (() => {
+                  {departments.length > 1 && selectedConversation.department_id && (() => {
                     const dept = departments.find(d => d.id === selectedConversation.department_id);
                     return dept ? (
                       <span
