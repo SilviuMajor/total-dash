@@ -1661,6 +1661,7 @@ export type Database = {
           name: string
           opening_hours: Json | null
           opening_hours_type: string | null
+          sort_order: number | null
           timeout_seconds: number | null
           timezone: string | null
           updated_at: string
@@ -1680,6 +1681,7 @@ export type Database = {
           name: string
           opening_hours?: Json | null
           opening_hours_type?: string | null
+          sort_order?: number | null
           timeout_seconds?: number | null
           timezone?: string | null
           updated_at?: string
@@ -1699,6 +1701,7 @@ export type Database = {
           name?: string
           opening_hours?: Json | null
           opening_hours_type?: string | null
+          sort_order?: number | null
           timeout_seconds?: number | null
           timezone?: string | null
           updated_at?: string
