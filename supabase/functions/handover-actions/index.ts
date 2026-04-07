@@ -113,6 +113,7 @@ async function handleAcceptHandover(
     .update({
       status: "active",
       client_user_id: clientUserId,
+      agent_name: clientUserName,
       accepted_at: new Date().toISOString(),
       last_activity_at: new Date().toISOString(),
     })
@@ -280,6 +281,7 @@ async function handleTakeOver(
       department_id: departmentId,
       original_department_id: departmentId,
       client_user_id: clientUserId,
+      agent_name: clientUserName,
       takeover_type: "proactive",
       status: "active",
       timeout_duration: 0,
@@ -564,7 +566,7 @@ async function handleTransfer(
   // Get the current active session
   const { data: currentSession } = await supabaseClient
     .from("handover_sessions")
-    .select("*")
+    .select("*, departments:department_id(name)")
     .eq("conversation_id", conversationId)
     .eq("status", "active")
     .single();
@@ -609,6 +611,8 @@ async function handleTransfer(
       timeout_duration: targetDept.timeout_seconds || 300,
       requested_at: new Date().toISOString(),
       transfer_note: transferNote,
+      transferred_from_agent_name: clientUserName,
+      transferred_from_department_name: currentSession.departments?.name || null,
       last_activity_at: new Date().toISOString(),
     })
     .select()
@@ -660,6 +664,7 @@ async function handleTransfer(
   await supabaseClient
     .from("conversations")
     .update({
+      status: "waiting",
       owner_id: null,
       owner_name: null,
       department_id: targetDepartmentId,
