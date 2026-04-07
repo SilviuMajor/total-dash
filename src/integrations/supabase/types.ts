@@ -1561,6 +1561,8 @@ export type Database = {
           needs_review_reason: string | null
           owner_id: string | null
           owner_name: string | null
+          resolution_note: string | null
+          resolution_reason: string | null
           sentiment: string | null
           started_at: string | null
           status: string
@@ -1582,6 +1584,8 @@ export type Database = {
           needs_review_reason?: string | null
           owner_id?: string | null
           owner_name?: string | null
+          resolution_note?: string | null
+          resolution_reason?: string | null
           sentiment?: string | null
           started_at?: string | null
           status?: string
@@ -1603,6 +1607,8 @@ export type Database = {
           needs_review_reason?: string | null
           owner_id?: string | null
           owner_name?: string | null
+          resolution_note?: string | null
+          resolution_reason?: string | null
           sentiment?: string | null
           started_at?: string | null
           status?: string
