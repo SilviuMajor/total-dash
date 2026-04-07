@@ -67,6 +67,7 @@ async function createTranscriptForConversation(
 // Helper: check if a department is currently open based on its timezone and hours
 function isDepartmentOpen(dept: any): boolean {
   try {
+    if (dept.always_open) return true;
     const now = new Date();
     const formatter = new Intl.DateTimeFormat("en-US", {
       timeZone: dept.timezone || "UTC",
