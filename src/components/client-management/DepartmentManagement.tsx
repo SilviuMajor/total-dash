@@ -570,6 +570,8 @@ export function DepartmentManagement({ clientId, readOnly }: { clientId: string;
               );
             })}
           </div>
+            </SortableContext>
+          </DndContext>
         )}
       </Card>
 
