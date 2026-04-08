@@ -86,8 +86,7 @@ export default function SuperAdminLogin() {
             </div>
           )}
           <h1 className="text-xl font-semibold text-foreground">Admin</h1>
-            <p className="text-xs text-muted-foreground">Platform administration</p>
-          </div>
+          <p className="text-sm text-muted-foreground mt-1">Platform administration</p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-4">
