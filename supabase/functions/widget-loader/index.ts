@@ -14,6 +14,9 @@ serve(async (req) => {
   try {
     const url = new URL(req.url);
     const agentId = url.searchParams.get('agentId');
+    const format = url.searchParams.get('format'); // 'html' for embedded iframe mode
+    const embedded = url.searchParams.get('embedded') === 'true';
+    const testMode = url.searchParams.get('testMode') === 'true';
 
     if (!agentId) {
       throw new Error('agentId parameter is required');
@@ -97,17 +100,35 @@ serve(async (req) => {
         typingDelayMs: functions.typing_delay_ms || 500,
         notificationSoundEnabled: functions.notification_sound_enabled || false,
         fileUploadEnabled: functions.file_upload_enabled || false
-      }
+      },
+      isEmbedded: embedded,
+      isTestMode: testMode
     };
 
     // Generate the standalone JavaScript widget
     const widgetScript = generateWidgetScript(config);
 
+    // Embedded HTML mode (for iframe preview in admin panel)
+    if (format === 'html') {
+      const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>*{margin:0;padding:0;box-sizing:border-box}html,body{height:100%;overflow:hidden;font-family:${config.appearance.fontFamily || 'Inter'},system-ui,sans-serif}</style>
+</head><body><script>${widgetScript}<\/script></body></html>`;
+      return new Response(html, {
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'text/html; charset=utf-8',
+          'Cache-Control': 'no-store, no-cache, must-revalidate',
+        },
+        status: 200,
+      });
+    }
+
     return new Response(widgetScript, {
       headers: {
         ...corsHeaders,
         'Content-Type': 'application/javascript',
-        'Cache-Control': 'no-store, no-cache, must-revalidate', // No caching for instant updates
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
       },
       status: 200,
     });
@@ -1412,21 +1433,31 @@ function generateWidgetScript(config: any): string {
   const container = document.createElement('div');
   const hasCustomIcon = !!CONFIG.appearance.chatIconUrl;
   
-  container.innerHTML = \`
-    <button class="vf-widget-button \${hasCustomIcon ? 'has-custom-icon' : 'default-icon'}">
-      \${hasCustomIcon 
-        ? \`<img src="\${CONFIG.appearance.chatIconUrl}" alt="Chat" />\`
-        : icons.messageSquare
-      }
-    </button>
-    <div class="vf-widget-panel hidden">
-      <div id="vf-panel-content"></div>
-    </div>
-  \`;
-  document.body.appendChild(container);
+  if (CONFIG.isEmbedded) {
+    // Embedded mode: no floating button, panel fills container
+    container.innerHTML = \`
+      <div class="vf-widget-panel" style="position:relative;width:100%;height:100vh;border-radius:0;box-shadow:none;">
+        <div id="vf-panel-content"></div>
+      </div>
+    \`;
+    document.body.appendChild(container);
+  } else {
+    container.innerHTML = \`
+      <button class="vf-widget-button \${hasCustomIcon ? 'has-custom-icon' : 'default-icon'}">
+        \${hasCustomIcon 
+          ? \`<img src="\${CONFIG.appearance.chatIconUrl}" alt="Chat" />\`
+          : icons.messageSquare
+        }
+      </button>
+      <div class="vf-widget-panel hidden">
+        <div id="vf-panel-content"></div>
+      </div>
+    \`;
+    document.body.appendChild(container);
+  }
   
   // Elements
-  const chatButton = container.querySelector('.vf-widget-button');
+  const chatButton = CONFIG.isEmbedded ? null : container.querySelector('.vf-widget-button');
   const chatPanel = container.querySelector('.vf-widget-panel');
   const panelContent = document.getElementById('vf-panel-content');
   
@@ -2040,7 +2071,7 @@ function generateWidgetScript(config: any): string {
           message: text,
           action: 'text',
           conversationId,
-          isTestMode: false
+          isTestMode: CONFIG.isTestMode || false
         })
       });
       
@@ -2172,7 +2203,7 @@ function generateWidgetScript(config: any): string {
           baseUserId: userId,
           action: 'launch',
           conversationId: null,
-          isTestMode: false
+          isTestMode: CONFIG.isTestMode || false
         })
       });
       
@@ -2252,7 +2283,7 @@ function generateWidgetScript(config: any): string {
           message: JSON.stringify(button.payload),
           action: 'button',
           conversationId,
-          isTestMode: false
+          isTestMode: CONFIG.isTestMode || false
         })
       });
       
@@ -2457,18 +2488,24 @@ function generateWidgetScript(config: any): string {
   // Create welcome bubble
   createWelcomeBubble();
   
-  // Event listeners
-  chatButton.addEventListener('click', () => {
-    isOpen = !isOpen;
-    chatPanel.classList.toggle('hidden');
-    if (isOpen) {
-      hideWelcomeBubble();
-      renderPanel();
-    }
-  });
-  
-  // Show welcome bubble after delay
-  showWelcomeBubble();
+  if (CONFIG.isEmbedded) {
+    // Embedded mode: auto-open, no button, no welcome bubble
+    isOpen = true;
+    renderPanel();
+  } else {
+    // Event listeners
+    chatButton.addEventListener('click', () => {
+      isOpen = !isOpen;
+      chatPanel.classList.toggle('hidden');
+      if (isOpen) {
+        hideWelcomeBubble();
+        renderPanel();
+      }
+    });
+    
+    // Show welcome bubble after delay
+    showWelcomeBubble();
+  }
   
   console.log('[VF Widget] Widget loaded successfully');
   }
