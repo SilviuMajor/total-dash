@@ -109,6 +109,8 @@ export function WidgetAppearanceSettings({ agent, onUpdate }: WidgetAppearanceSe
         description: "Widget appearance saved successfully"
       });
       
+      window.dispatchEvent(new Event('widget-settings-updated'));
+      
       // Trigger parent update to reload agent data
       onUpdate();
     } catch (error) {

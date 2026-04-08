@@ -74,6 +74,8 @@ export function WidgetFunctionsSettings({ agent, onUpdate }: WidgetFunctionsSett
         description: "Widget functions saved successfully"
       });
       
+      window.dispatchEvent(new Event('widget-settings-updated'));
+      
       onUpdate();
     } catch (error) {
       console.error('Save error:', error);
