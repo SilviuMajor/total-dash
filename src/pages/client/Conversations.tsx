@@ -97,6 +97,8 @@ export default function Conversations() {
   const [assignedTags, setAssignedTags] = useState<string[]>([]);
   const [savingNote, setSavingNote] = useState(false);
   const [updatingTags, setUpdatingTags] = useState(false);
+  const [tagSearchInput, setTagSearchInput] = useState('');
+  const [tagDropdownOpen, setTagDropdownOpen] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [showJumpToLatest, setShowJumpToLatest] = useState(false);
 
@@ -734,6 +736,36 @@ export default function Conversations() {
     }
   };
 
+  const addAdhocTag = async (label: string) => {
+    if (!selectedConversation || updatingTags) return;
+    const trimmed = label.trim();
+    if (!trimmed) return;
+    const newTags = assignedTags.includes(trimmed) ? assignedTags : [...assignedTags, trimmed];
+    setUpdatingTags(true);
+    try {
+      await toggleTagMutation.mutateAsync({
+        id: selectedConversation.id,
+        metadata: selectedConversation.metadata,
+        newTags,
+      });
+      setAssignedTags(newTags);
+      setSelectedConversation(prev => prev ? { ...prev, metadata: { ...prev.metadata, tags: newTags } } : null);
+      if (!availableTags.some(t => t.label.toLowerCase() === trimmed.toLowerCase())) {
+        const updatedTags = [...availableTags, { id: crypto.randomUUID(), label: trimmed }];
+        await supabase.rpc('update_agent_config', {
+          p_agent_id: selectedAgentId,
+          p_config_updates: { conversation_tags: updatedTags },
+        });
+      }
+      setTagSearchInput('');
+      setTagDropdownOpen(false);
+    } catch {
+      toast({ title: "Error", description: "Failed to update tags", variant: "destructive" });
+    } finally {
+      setUpdatingTags(false);
+    }
+  };
+
   const handleTranscriptScroll = (event: React.UIEvent<HTMLDivElement>) => {
     const target = event.currentTarget;
     const isNearBottom = target.scrollHeight - target.scrollTop - target.clientHeight < 100;
@@ -992,7 +1024,13 @@ export default function Conversations() {
     await callHandoverAction('take_over');
   };
 
-  const availableTags = (agentConfig as any)?.widget_settings?.functions?.conversation_tags?.filter((t: any) => t.enabled) || [];
+  // Read tags from top-level config.conversation_tags, fall back to legacy widget_settings path
+  const availableTags: Array<{ id: string; label: string }> = (
+    (agentConfig as any)?.conversation_tags ||
+    (agentConfig as any)?.widget_settings?.functions?.conversation_tags?.map((t: any) => ({ id: t.id, label: t.label })) ||
+    []
+  );
+  const allowAdhocTags: boolean = (agentConfig as any)?.allow_adhoc_tags ?? false;
 
   const resolutionReasons: Array<{ id: string; label: string; note_required: boolean }> = (agentConfig as any)?.resolution_reasons || [];
 
@@ -1159,38 +1197,38 @@ export default function Conversations() {
             })}
           </div>
         )}
-        {/* Row 3: Filter chips */}
-        <div className="px-4 pb-2 flex items-center gap-1.5 border-b border-border flex-wrap">
-          {/* Active tag filter chips */}
-          {tagFilters.map(tf => {
-            const tagConfig = availableTags.find((t: any) => t.label === tf);
-            return (
+        {/* Row 3: Tag filter chips — hidden when no tags exist */}
+        {availableTags.length > 0 && (
+          <div className="px-4 pb-2 flex items-center gap-1.5 border-b border-border flex-wrap">
+            {tagFilters.length > 0 && (
+              <button
+                onClick={() => setTagFilters([])}
+                className="text-[10px] px-1.5 py-0.5 rounded text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Clear
+              </button>
+            )}
+            {tagFilters.map(tf => (
               <button
                 key={tf}
                 onClick={() => toggleTagFilter(tf)}
-                className="text-xs px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 flex items-center gap-1"
+                className="text-xs px-2 py-0.5 rounded-full bg-muted border border-border/50 text-muted-foreground flex items-center gap-1 font-medium"
               >
                 {tf}
-                <X className="w-2.5 h-2.5" />
+                <X className="w-2.5 h-2.5 opacity-50" />
               </button>
-            );
-          })}
-          {/* Available tag filter chips (inactive) */}
-          {availableTags.filter((t: any) => !tagFilters.includes(t.label)).map((tag: any) => (
-            <button
-              key={tag.id}
-              onClick={() => toggleTagFilter(tag.label)}
-              className="text-xs px-2 py-0.5 rounded border border-dashed border-border text-muted-foreground flex items-center gap-1 cursor-pointer hover:border-foreground/30"
-              style={{ borderColor: tag.color, color: tag.color }}
-            >
-              {tag.label}
-            </button>
-          ))}
-          <button className="text-xs px-2 py-0.5 rounded border border-dashed border-border text-muted-foreground flex items-center gap-1 cursor-pointer hover:border-foreground/30">
-            <Plus className="w-2.5 h-2.5" />
-            Assigned
-          </button>
-        </div>
+            ))}
+            {availableTags.filter((t: any) => !tagFilters.includes(t.label)).map((tag: any) => (
+              <button
+                key={tag.id}
+                onClick={() => toggleTagFilter(tag.label)}
+                className="text-xs px-2 py-0.5 rounded-full border border-dashed border-border/50 text-muted-foreground/60 hover:text-muted-foreground hover:border-border transition-colors"
+              >
+                {tag.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* ── Three-panel workspace ── */}
@@ -1391,24 +1429,14 @@ export default function Conversations() {
                                 `: ${conv.owner_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}`
                               )}
                             </span>
-                            {conv.metadata?.tags?.map((tag: string) => {
-                              const tagConfig = (agentConfig as any)?.widget_settings?.functions?.conversation_tags?.find(
-                                (t: any) => t.label === tag
-                              );
-                              return tagConfig ? (
-                                <span
-                                  key={tag}
-                                  className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium border"
-                                  style={{
-                                    backgroundColor: `${tagConfig.color}20`,
-                                    borderColor: tagConfig.color,
-                                    color: tagConfig.color
-                                  }}
-                                >
-                                  {tag}
-                                </span>
-                              ) : null;
-                            })}
+                            {conv.metadata?.tags?.map((tag: string) => (
+                              <span
+                                key={tag}
+                                className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium bg-muted border border-border/50 text-muted-foreground"
+                              >
+                                {tag}
+                              </span>
+                            ))}
                           </div>
                           {/* Clock pill — show for in_handover with unanswered msg OR pending handover */}
                           {(() => {
@@ -2219,34 +2247,90 @@ export default function Conversations() {
 
                     <div>
                       <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Tags</p>
-                      <div className="flex flex-wrap gap-2">
-                        {(agentConfig as any)?.widget_settings?.functions?.conversation_tags
-                          ?.filter((tag: any) => tag.enabled)
-                          .map((tag: any) => {
-                            const isAssigned = assignedTags.includes(tag.label);
-                            return (
-                              <Button
-                                key={tag.id}
-                                size="sm"
-                                variant={isAssigned ? "default" : "outline"}
-                                onClick={() => toggleTag(tag.label)}
+                      {/* Applied tags as grey pills */}
+                      {assignedTags.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mb-2">
+                          {assignedTags.map((tag: string) => (
+                            <span
+                              key={tag}
+                              className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-muted border border-border/50 text-muted-foreground"
+                            >
+                              {tag}
+                              <button
+                                onClick={() => toggleTag(tag)}
                                 disabled={updatingTags}
-                                style={isAssigned ? {
-                                  backgroundColor: tag.color,
-                                  borderColor: tag.color,
-                                  color: '#ffffff'
-                                } : {
-                                  borderColor: tag.color,
-                                  color: tag.color,
-                                  backgroundColor: 'transparent'
-                                }}
+                                className="hover:text-foreground transition-colors"
                               >
-                                {tag.label}
-                              </Button>
-                            );
-                          })}
-                        {(!(agentConfig as any)?.widget_settings?.functions?.conversation_tags?.length) && (
-                          <p className="text-sm text-muted-foreground">No tags configured</p>
+                                <X className="w-2.5 h-2.5" />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {/* Autocomplete input */}
+                      <div className="relative">
+                        <Input
+                          value={tagSearchInput}
+                          onChange={(e) => {
+                            setTagSearchInput(e.target.value);
+                            setTagDropdownOpen(true);
+                          }}
+                          onFocus={() => setTagDropdownOpen(true)}
+                          onBlur={() => setTimeout(() => setTagDropdownOpen(false), 200)}
+                          placeholder="Search or create tag..."
+                          className="h-8 text-sm"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && tagSearchInput.trim()) {
+                              e.preventDefault();
+                              const exactMatch = availableTags.find(t => t.label.toLowerCase() === tagSearchInput.trim().toLowerCase());
+                              if (exactMatch) {
+                                toggleTag(exactMatch.label);
+                                setTagSearchInput('');
+                                setTagDropdownOpen(false);
+                              } else if (allowAdhocTags) {
+                                addAdhocTag(tagSearchInput.trim());
+                              }
+                            }
+                            if (e.key === 'Escape') {
+                              setTagSearchInput('');
+                              setTagDropdownOpen(false);
+                            }
+                          }}
+                        />
+                        {tagDropdownOpen && (
+                          <div className="absolute top-full left-0 right-0 mt-1 bg-background border border-border rounded-md shadow-sm z-20 max-h-48 overflow-y-auto">
+                            {availableTags
+                              .filter(t => !assignedTags.includes(t.label))
+                              .filter(t => !tagSearchInput.trim() || t.label.toLowerCase().includes(tagSearchInput.trim().toLowerCase()))
+                              .map(tag => (
+                                <button
+                                  key={tag.id}
+                                  className="w-full text-left px-3 py-1.5 text-sm hover:bg-muted transition-colors"
+                                  onMouseDown={(e) => e.preventDefault()}
+                                  onClick={() => {
+                                    toggleTag(tag.label);
+                                    setTagSearchInput('');
+                                    setTagDropdownOpen(false);
+                                  }}
+                                >
+                                  {tag.label}
+                                </button>
+                              ))}
+                            {tagSearchInput.trim() && !availableTags.some(t => t.label.toLowerCase() === tagSearchInput.trim().toLowerCase()) && allowAdhocTags && (
+                              <button
+                                className="w-full text-left px-3 py-1.5 text-sm hover:bg-muted transition-colors border-t border-border text-muted-foreground"
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() => addAdhocTag(tagSearchInput.trim())}
+                              >
+                                + Create "{tagSearchInput.trim()}"
+                              </button>
+                            )}
+                            {availableTags.filter(t => !assignedTags.includes(t.label)).filter(t => !tagSearchInput.trim() || t.label.toLowerCase().includes(tagSearchInput.trim().toLowerCase())).length === 0 && !(tagSearchInput.trim() && allowAdhocTags) && (
+                              <p className="px-3 py-2 text-xs text-muted-foreground">
+                                {availableTags.length === 0 ? 'No tags configured' : 'No matching tags'}
+                              </p>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>
