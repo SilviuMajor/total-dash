@@ -618,7 +618,7 @@ export default function AgencySettings() {
               </p>
               <div className="p-3 bg-muted rounded font-mono text-sm">
                 <div className="line-through text-muted-foreground">total-dash.com/{agency?.original_slug}</div>
-                <div className="text-foreground font-semibold mt-1">total-dash.com/{pendingSlug}</div>
+                <div className="text-foreground font-semibold mt-1">total-dash.com/{agency?.slug}</div>
               </div>
               <p className="text-destructive font-semibold">
                 ⚠️ This will affect all links and bookmarks to your agency dashboard. Make sure to update any saved links.
@@ -626,7 +626,9 @@ export default function AgencySettings() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setPendingSlug("")}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => {
+              setAgency({ ...agency!, slug: agency?.original_slug || '' });
+            }}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={confirmSlugChange} disabled={!!slugValidationError || checkingSlug}>
               Confirm Change
             </AlertDialogAction>
