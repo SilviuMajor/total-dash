@@ -14,7 +14,7 @@ serve(async (req) => {
   try {
     const url = new URL(req.url);
     const agentId = url.searchParams.get('agentId');
-    const format = url.searchParams.get('format'); // 'html' for embedded iframe mode
+    
     const embedded = url.searchParams.get('embedded') === 'true';
     const testMode = url.searchParams.get('testMode') === 'true';
 
@@ -108,20 +108,6 @@ serve(async (req) => {
     // Generate the standalone JavaScript widget
     const widgetScript = generateWidgetScript(config);
 
-    // Embedded HTML mode (for iframe preview in admin panel)
-    if (format === 'html') {
-      const supabasePublicUrl = Deno.env.get('SUPABASE_URL') ?? '';
-      const scriptUrl = supabasePublicUrl + '/functions/v1/widget-loader?agentId=' + agentId + '&embedded=true&testMode=' + testMode;
-      const html = '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{margin:0;padding:0;box-sizing:border-box}html,body{height:100%;overflow:hidden;font-family:' + (config.appearance.fontFamily || 'Inter') + ',system-ui,sans-serif}</style></head><body><script src="' + scriptUrl + '"></script></body></html>';
-      return new Response(html, {
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'text/html; charset=utf-8',
-          'Cache-Control': 'no-store, no-cache, must-revalidate',
-        },
-        status: 200,
-      });
-    }
 
     return new Response(widgetScript, {
       headers: {
