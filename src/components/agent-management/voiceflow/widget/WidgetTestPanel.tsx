@@ -89,7 +89,7 @@ export function WidgetTestPanel({ agent, children }: WidgetTestPanelProps) {
             src={iframeSrc}
             className="w-full h-full border-0"
             title="Widget Preview"
-            sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+            
           />
         )}
       </div>
