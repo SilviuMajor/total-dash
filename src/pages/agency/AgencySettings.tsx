@@ -640,7 +640,7 @@ export default function AgencySettings() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setPendingSlug("")}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmSlugChange}>
+            <AlertDialogAction onClick={confirmSlugChange} disabled={!!slugValidationError || checkingSlug}>
               Confirm Change
             </AlertDialogAction>
           </AlertDialogFooter>
