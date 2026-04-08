@@ -1111,7 +1111,7 @@ export default function Conversations() {
         </div>
 
         {/* Row 2: Status filters (multi-select toggle) */}
-        <div className="px-4 py-2 flex items-center gap-1">
+        <div className="px-4 py-1.5 flex items-center gap-1">
           <Button
             size="sm"
             variant={statusFilters.length === 0 ? 'default' : 'ghost'}
@@ -1152,7 +1152,7 @@ export default function Conversations() {
 
         {/* Row 2b: Department filters (multi-select toggle, hidden for single department) */}
         {departments.length > 1 && (
-          <div className="px-4 py-1 flex items-center gap-1.5 flex-wrap">
+          <div className="px-4 py-1.5 flex items-center gap-1.5 flex-wrap">
             <button
               onClick={() => setDepartmentFilters([])}
               className={cn(
@@ -1199,7 +1199,7 @@ export default function Conversations() {
         )}
         {/* Row 3: Tag filter chips — hidden when no tags exist */}
         {availableTags.length > 0 && (
-          <div className="px-4 pb-2 flex items-center gap-1.5 border-b border-border flex-wrap">
+          <div className="px-4 py-1.5 flex items-center gap-1.5 border-b border-border flex-wrap">
             {tagFilters.length > 0 && (
               <button
                 onClick={() => setTagFilters([])}
