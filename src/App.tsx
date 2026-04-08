@@ -38,6 +38,7 @@ import AgencyClientDetails from "./pages/agency/AgencyClientDetails";
 import AgencyAgentDetails from "./pages/agency/AgencyAgentDetails";
 import SubscriptionRequired from "./pages/agency/SubscriptionRequired";
 import SlugBasedAuth from "./pages/SlugBasedAuth";
+import ClientLoginRedirect from "./pages/ClientLoginRedirect";
 import Settings from "./pages/Settings";
 import Conversations from "./pages/client/Conversations";
 import Transcripts from "./pages/client/Transcripts";
@@ -155,10 +156,11 @@ const App = () => (
                 } />
                 
                 {/* Client Auth Route */}
-                <Route path="/client/login" element={<Auth />} />
+                <Route path="/client/login" element={<ClientLoginRedirect />} />
                 
                 {/* Slug-based client login route */}
                 <Route path="/login/:agencySlug" element={<SlugBasedAuth />} />
+                <Route path="/:agencySlug" element={<SlugBasedAuth />} />
 
               {/* Client Routes - Isolated */}
               <Route path="/*" element={
