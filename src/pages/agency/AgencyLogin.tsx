@@ -81,7 +81,7 @@ export default function AgencyLogin() {
       // Not an agency user — check if they're a client user and redirect
       const { data: clientUser } = await supabase
         .from('client_users')
-        .select('client_id, clients!inner(agency_id, agencies!inner(slug))')
+        .select('client_id, clients!inner(agency_id, agencies!inner(slug, whitelabel_domain, whitelabel_subdomain, whitelabel_verified))')
         .eq('user_id', data.user.id)
         .maybeSingle();
 
@@ -90,7 +90,9 @@ export default function AgencyLogin() {
 
       if (clientUser && (clientUser as any).clients?.agencies) {
         const agency = (clientUser as any).clients.agencies;
-        const redirectUrl = `/${agency.slug}`;
+        const redirectUrl = (agency.whitelabel_verified && agency.whitelabel_domain)
+          ? `https://${agency.whitelabel_subdomain || 'dashboard'}.${agency.whitelabel_domain}`
+          : `/${agency.slug}`;
         setDiverting(true);
         setDiversionUrl(redirectUrl);
         return;

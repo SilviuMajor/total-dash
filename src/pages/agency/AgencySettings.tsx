@@ -15,6 +15,14 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { BrandingUpload } from "@/components/BrandingUpload";
 
+const RESERVED_SLUGS = [
+  'admin', 'agency', 'client', 'login', 'portal', 'api', 'app',
+  'reset-password', 'change-password', 'transcripts', 'analytics',
+  'knowledge-base', 'agent-settings', 'specs', 'guides', 'settings',
+  'dashboard', 'auth', 'signup', 'register', 'help', 'support',
+  'billing', 'pricing', 'terms', 'privacy', 'status',
+];
+
 export default function AgencySettings() {
   const { profile, isPreviewMode, previewAgency, userType, previewDepth } = useMultiTenantAuth();
   const { activeSession } = useImpersonation();
@@ -51,6 +59,8 @@ export default function AgencySettings() {
   const [verifying, setVerifying] = useState(false);
   const [showSlugWarning, setShowSlugWarning] = useState(false);
   const [pendingSlug, setPendingSlug] = useState("");
+  const [slugValidationError, setSlugValidationError] = useState('');
+  const [checkingSlug, setCheckingSlug] = useState(false);
   const [hasWhitelabel, setHasWhitelabel] = useState<boolean>(false);
   const [clientLoginUrl, setClientLoginUrl] = useState('/client/login');
   const [clientLoginLoading, setClientLoginLoading] = useState(true);
@@ -103,7 +113,7 @@ export default function AgencySettings() {
         setClientLoginUrl(`https://${subdomain}.${agencyData.whitelabel_domain}/client/login?preview=true`);
       } else if (agencyData?.slug) {
         const baseUrl = window.location.origin;
-        setClientLoginUrl(`${baseUrl}/login/${agencyData.slug}?preview=true`);
+        setClientLoginUrl(`${baseUrl}/${agencyData.slug}?preview=true`);
       } else {
         setClientLoginUrl('/client/login?preview=true');
       }
@@ -140,11 +150,49 @@ export default function AgencySettings() {
     }
   };
 
-  const handleSlugChange = (newSlug: string) => {
+  const handleSlugChange = async (newSlug: string) => {
     const normalized = newSlug.toLowerCase()
       .replace(/[^a-z0-9-]/g, '')
       .replace(/^-+|-+$/g, '');
     setPendingSlug(normalized);
+    setSlugValidationError('');
+
+    if (!normalized) return;
+
+    if (normalized.length < 3) {
+      setSlugValidationError('Slug must be at least 3 characters');
+      return;
+    }
+
+    if (RESERVED_SLUGS.includes(normalized)) {
+      setSlugValidationError(`"${normalized}" is reserved and cannot be used`);
+      return;
+    }
+
+    // Check uniqueness (skip if unchanged)
+    if (normalized === agency?.original_slug) {
+      setShowSlugWarning(false);
+      return;
+    }
+
+    setCheckingSlug(true);
+    try {
+      const { data: existing } = await supabase
+        .from('agencies')
+        .select('id')
+        .eq('slug', normalized)
+        .neq('id', effectiveAgencyId || '')
+        .maybeSingle();
+
+      if (existing) {
+        setSlugValidationError('This slug is already taken');
+        setCheckingSlug(false);
+        return;
+      }
+    } catch {
+      // If check fails, allow it — DB constraint will catch duplicates on save
+    }
+    setCheckingSlug(false);
     setShowSlugWarning(true);
   };
 
@@ -284,6 +332,12 @@ export default function AgencySettings() {
                     onChange={(e) => handleSlugChange(e.target.value)}
                     placeholder="your-agency"
                   />
+                  {slugValidationError && (
+                    <p className="text-sm text-destructive mt-1">{slugValidationError}</p>
+                  )}
+                  {checkingSlug && (
+                    <p className="text-sm text-muted-foreground mt-1">Checking availability...</p>
+                  )}
                   <p className="text-xs text-muted-foreground">
                     Your agency dashboard: <span className="font-mono">total-dash.com/{agency?.slug || 'your-agency'}</span>
                   </p>
@@ -586,7 +640,7 @@ export default function AgencySettings() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setPendingSlug("")}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmSlugChange}>
+            <AlertDialogAction onClick={confirmSlugChange} disabled={!!slugValidationError || checkingSlug}>
               Confirm Change
             </AlertDialogAction>
           </AlertDialogFooter>
