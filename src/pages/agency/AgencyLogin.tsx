@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
@@ -50,7 +50,6 @@ export default function AgencyLogin() {
         throw new Error("Invalid email or password");
       }
 
-      // Check if they're an agency user
       const { data: agencyUsers, error: agencyUserError } = await supabase
         .from('agency_users')
         .select('agency_id, role')
@@ -62,7 +61,6 @@ export default function AgencyLogin() {
       }
 
       if (agencyUsers && agencyUsers.length > 0) {
-        // They ARE an agency user — proceed normally
         const { data: passwordData } = await supabase.functions.invoke('check-must-change-password', {
           body: {}
         });
@@ -78,14 +76,13 @@ export default function AgencyLogin() {
         return;
       }
 
-      // Not an agency user — check if they're a client user and redirect
+      // Not an agency user — check if they're a client user
       const { data: clientUser } = await supabase
         .from('client_users')
         .select('client_id, clients!inner(agency_id, agencies!inner(slug, whitelabel_domain, whitelabel_subdomain, whitelabel_verified))')
         .eq('user_id', data.user.id)
         .maybeSingle();
 
-      // Sign them out — they're in the wrong portal
       await supabase.auth.signOut();
 
       if (clientUser && (clientUser as any).clients?.agencies) {
@@ -98,7 +95,6 @@ export default function AgencyLogin() {
         return;
       }
 
-      // Not in agency_users OR client_users
       throw new Error("No agency found for this account. Please contact your administrator.");
 
     } catch (error: any) {
@@ -109,34 +105,45 @@ export default function AgencyLogin() {
     }
   };
 
+  // Use the light logo variant for the dark header
+  const headerLogoUrl = branding.fullLogoLightUrl || branding.fullLogoUrl;
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          {branding.fullLogoUrl && (
-            <div className="flex justify-center mb-4">
-              <img
-                src={branding.fullLogoUrl}
-                alt={branding.companyName}
-                className="h-10 object-contain"
-              />
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/30 p-4">
+      <Card className="w-full max-w-md overflow-hidden border-border/50">
+        {/* Dark branded header */}
+        <div className="bg-foreground px-8 py-8 text-center">
+          {headerLogoUrl ? (
+            <div className="flex justify-center mb-3">
+              <img src={headerLogoUrl} alt={branding.companyName} className="h-10 w-auto object-contain brightness-0 invert" />
+            </div>
+          ) : (
+            <div className="flex justify-center mb-3">
+              <div className="w-12 h-12 rounded-xl bg-background/10 flex items-center justify-center text-background text-xl font-bold">
+                {(branding.companyName || 'A').charAt(0).toUpperCase()}
+              </div>
             </div>
           )}
-          <div>
-            <CardTitle className="text-2xl">
-              {branding.companyName} Agency Portal
-            </CardTitle>
-            <CardDescription>
-              Sign in to access your agency portal
-            </CardDescription>
-          </div>
-        </CardHeader>
-        <CardContent>
+          <h1 className="text-lg font-semibold text-background">Agency portal</h1>
+          <p className="text-sm text-background/60 mt-0.5">Manage your clients and agents</p>
+        </div>
+        
+        <CardContent className="pt-6 pb-8 px-8">
           {diverting && diversionUrl ? (
-            <div className="text-center space-y-4">
-              <p className="text-sm text-muted-foreground">
-                This account is registered as a client user, not an agency user.
-              </p>
+            <div className="text-center space-y-4 py-4">
+              <div className="flex justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-amber-500">
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                  <line x1="12" y1="2" x2="12" y2="4" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">Wrong portal</h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Your account is registered as a client user. We'll take you to the right place.
+                </p>
+              </div>
               <Button
                 className="w-full"
                 onClick={() => {
@@ -149,55 +156,61 @@ export default function AgencyLogin() {
               >
                 Go to your login page
               </Button>
-              <button
-                onClick={() => { setDiverting(false); setDiversionUrl(null); }}
+              <button onClick={() => { setDiverting(false); setDiversionUrl(null); }}
                 className="text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
                 Try a different account
               </button>
             </div>
           ) : (
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="you@agency.com"
-                  value={email}
-                  onChange={(e) => handleEmailChange(e.target.value)}
-                  required
-                  disabled={loading}
-                />
-                {emailError && (
-                  <p className="text-sm text-destructive">{emailError}</p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password">Password</Label>
-                  <ForgotPasswordDialog />
+            <>
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="agency-email">Email</Label>
+                  <Input
+                    id="agency-email"
+                    type="email"
+                    placeholder="you@agency.com"
+                    value={email}
+                    onChange={(e) => handleEmailChange(e.target.value)}
+                    required
+                    disabled={loading}
+                  />
+                  {emailError && (
+                    <p className="text-sm text-destructive">{emailError}</p>
+                  )}
                 </div>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  disabled={loading}
-                />
-              </div>
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Signing in...
-                  </>
-                ) : (
-                  "Sign In"
-                )}
-              </Button>
-            </form>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="agency-password">Password</Label>
+                    <ForgotPasswordDialog />
+                  </div>
+                  <Input
+                    id="agency-password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    disabled={loading}
+                  />
+                </div>
+                <Button type="submit" disabled={loading} className="w-full bg-foreground text-background hover:bg-foreground/90">
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Signing in...
+                    </>
+                  ) : (
+                    "Sign in"
+                  )}
+                </Button>
+              </form>
+              <p className="text-center text-sm text-muted-foreground mt-4">
+                Looking for your client dashboard?{' '}
+                <a href="/client/login" className="text-foreground hover:underline font-medium">Find your portal</a>
+              </p>
+            </>
           )}
         </CardContent>
       </Card>
