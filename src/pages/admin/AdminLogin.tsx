@@ -72,17 +72,20 @@ export default function SuperAdminLogin() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/30 p-4">
       <div className="w-full max-w-md">
-        {/* Header with inline logo */}
-        <div className="flex items-center gap-3 mb-6">
+        {/* Header — stacked logo, title, subtitle */}
+        <div className="mb-8">
           {branding.fullLogoUrl ? (
-            <img src={branding.fullLogoUrl} alt={branding.companyName} className="h-8 w-auto object-contain" />
+            <img 
+              src={branding.fullLogoUrl} 
+              alt={branding.companyName} 
+              className="h-8 w-auto object-contain mb-4" 
+            />
           ) : (
-            <div className="w-9 h-9 rounded-lg bg-foreground flex items-center justify-center text-background text-sm font-bold">
-              T
+            <div className="w-8 h-8 rounded-md bg-foreground flex items-center justify-center mb-4">
+              <span className="text-background font-medium text-sm">T</span>
             </div>
           )}
-          <div>
-            <h1 className="text-lg font-semibold text-foreground leading-tight">Admin</h1>
+          <h1 className="text-xl font-semibold text-foreground">Admin</h1>
             <p className="text-xs text-muted-foreground">Platform administration</p>
           </div>
         </div>
