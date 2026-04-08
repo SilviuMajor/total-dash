@@ -282,7 +282,41 @@ export default function AgencySettings() {
                   <Label>Agency Slug (URL Path)</Label>
                   <Input
                     value={agency?.slug || ''}
-                    onChange={(e) => handleSlugChange(e.target.value)}
+                    onChange={(e) => {
+                      const normalized = e.target.value.toLowerCase()
+                        .replace(/[^a-z0-9-]/g, '')
+                        .replace(/^-+|-+$/g, '');
+                      setAgency({ ...agency!, slug: normalized });
+                      setSlugValidationError('');
+                    }}
+                    onBlur={async () => {
+                      if (!agency?.slug || agency.slug === agency.original_slug) return;
+                      if (agency.slug.length < 3) {
+                        setSlugValidationError('Slug must be at least 3 characters');
+                        return;
+                      }
+                      if (RESERVED_SLUGS.includes(agency.slug)) {
+                        setSlugValidationError(`"${agency.slug}" is reserved and cannot be used`);
+                        return;
+                      }
+                      setSlugValidationError('');
+                      setCheckingSlug(true);
+                      try {
+                        const { data: existing } = await supabase
+                          .from('agencies')
+                          .select('id')
+                          .eq('slug', agency.slug)
+                          .neq('id', effectiveAgencyId || '')
+                          .maybeSingle();
+                        if (existing) {
+                          setSlugValidationError('This slug is already taken');
+                          setCheckingSlug(false);
+                          return;
+                        }
+                      } catch {}
+                      setCheckingSlug(false);
+                      setShowSlugWarning(true);
+                    }}
                     placeholder="your-agency"
                   />
                   {slugValidationError && (
