@@ -113,7 +113,7 @@ export default function AgencySettings() {
         setClientLoginUrl(`https://${subdomain}.${agencyData.whitelabel_domain}/client/login?preview=true`);
       } else if (agencyData?.slug) {
         const baseUrl = window.location.origin;
-        setClientLoginUrl(`${baseUrl}/login/${agencyData.slug}?preview=true`);
+        setClientLoginUrl(`${baseUrl}/${agencyData.slug}?preview=true`);
       } else {
         setClientLoginUrl('/client/login?preview=true');
       }
