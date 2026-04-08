@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -11,10 +11,12 @@ import { useBranding } from "@/hooks/useBranding";
 import { useFavicon } from "@/hooks/useFavicon";
 import { ForgotPasswordDialog } from "@/components/ForgotPasswordDialog";
 import { supabase } from "@/integrations/supabase/client";
+import { Loader2 } from "lucide-react";
 
 export default function Auth() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [emailError, setEmailError] = useState("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const { user, profile } = useAuth();
@@ -24,6 +26,7 @@ export default function Auth() {
   const isPreviewMode = searchParams.get('preview') === 'true';
   
   const [loginAgencyId, setLoginAgencyId] = useState<string | null>(null);
+  const [agencyName, setAgencyName] = useState<string | null>(null);
   
   useEffect(() => {
     const storedContext = sessionStorage.getItem('loginAgencyContext');
@@ -31,6 +34,7 @@ export default function Auth() {
       try {
         const agency = JSON.parse(storedContext);
         setLoginAgencyId(agency.id);
+        setAgencyName(agency.name);
       } catch (e) {
         console.error('Error parsing agency context:', e);
       }
@@ -73,6 +77,20 @@ export default function Auth() {
     checkAndRedirect();
   }, [user, profile, navigate, isPreviewMode]);
 
+  const validateEmail = (value: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(value);
+  };
+
+  const handleEmailChange = (value: string) => {
+    setEmail(value);
+    if (value && !validateEmail(value)) {
+      setEmailError("Please enter a valid email address");
+    } else {
+      setEmailError("");
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -88,7 +106,7 @@ export default function Auth() {
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "Invalid email or password",
         variant: "destructive",
       });
     } finally {
@@ -105,22 +123,25 @@ export default function Auth() {
       )}
       
       <Card className={`w-full max-w-md bg-gradient-card border-border/50 ${isPreviewMode ? 'mt-8' : ''}`}>
-        <CardHeader className="space-y-4 text-center">
-          {branding.fullLogoUrl && (
-            <div className="flex justify-center">
-              <img src={branding.fullLogoUrl} alt={branding.companyName} className="h-16 w-auto object-contain" />
-            </div>
-          )}
-          <div>
-            <CardTitle className="text-2xl font-bold text-foreground">
-              Welcome Back
-            </CardTitle>
-            <CardDescription className="text-muted-foreground">
-              Enter your credentials to access your dashboard
-            </CardDescription>
+        <CardContent className="pt-8 pb-8 px-8">
+          <div className="text-center mb-6">
+            {branding.fullLogoUrl ? (
+              <div className="flex justify-center mb-4">
+                <img src={branding.fullLogoUrl} alt={branding.companyName} className="h-16 w-auto object-contain" />
+              </div>
+            ) : (
+              <div className="flex justify-center mb-4">
+                <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center text-primary text-2xl font-bold">
+                  {(agencyName || branding.companyName || 'D').charAt(0).toUpperCase()}
+                </div>
+              </div>
+            )}
+            <h1 className="text-2xl font-bold text-foreground">Welcome back</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Sign in to your {agencyName || branding.companyName} dashboard
+            </p>
           </div>
-        </CardHeader>
-        <CardContent>
+          
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
@@ -128,11 +149,14 @@ export default function Auth() {
                 id="email"
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => handleEmailChange(e.target.value)}
                 placeholder="you@example.com"
                 required
-                className="bg-muted/50 border-border"
+                disabled={loading}
               />
+              {emailError && (
+                <p className="text-sm text-destructive">{emailError}</p>
+              )}
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -146,15 +170,19 @@ export default function Auth() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 required
-                className="bg-muted/50 border-border"
+                disabled={loading}
               />
             </div>
-            <Button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-foreground text-background hover:bg-foreground/90"
-            >
-              {loading ? "Please wait..." : "Sign In"}
+
+            <Button type="submit" disabled={loading} className="w-full bg-foreground text-background hover:bg-foreground/90">
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Signing in...
+                </>
+              ) : (
+                "Sign in"
+              )}
             </Button>
           </form>
         </CardContent>
