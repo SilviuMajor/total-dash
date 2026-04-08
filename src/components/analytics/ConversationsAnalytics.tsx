@@ -25,6 +25,7 @@ interface ConvData {
   durationDist: { range: string; count: number }[];
   endReasonData: { name: string; value: number }[];
   reasonDist: { name: string; value: number }[];
+  tagDist: { name: string; count: number }[];
 }
 
 const END_COLORS = ["#22c55e", "#3b82f6", "#8b5cf6", "#f59e0b", "#ef4444", "#6b7280"];
@@ -116,9 +117,24 @@ export function ConversationsAnalytics({ agentId, dateRange }: ConversationsAnal
         .sort((a, b) => b[1] - a[1])
         .map(([reason, count]) => ({ name: reason, value: count }));
 
+      // Tag frequency
+      const tagCounts: Record<string, number> = {};
+      for (const c of conversations) {
+        const tags = c.metadata?.tags;
+        if (Array.isArray(tags)) {
+          tags.forEach((t: string) => {
+            tagCounts[t] = (tagCounts[t] || 0) + 1;
+          });
+        }
+      }
+      const tagDist = Object.entries(tagCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 15)
+        .map(([name, count]) => ({ name, count }));
+
       setData({
         total, completed, completionRate, avgDuration, avgMessages,
-        volumeData, granularity, showDow, byDayOfWeek, durationDist, endReasonData, reasonDist,
+        volumeData, granularity, showDow, byDayOfWeek, durationDist, endReasonData, reasonDist, tagDist,
       });
     } catch (e) {
       console.error("Error loading conversation analytics:", e);
@@ -231,6 +247,22 @@ export function ConversationsAnalytics({ agentId, dateRange }: ConversationsAnal
           </Card>
         )}
       </div>
+
+      {/* Tag frequency */}
+      {data.tagDist && data.tagDist.length > 0 && (
+        <Card className="p-4">
+          <p className="text-sm font-medium mb-3">Tag frequency</p>
+          <ResponsiveContainer width="100%" height={Math.max(200, data.tagDist.length * 32)}>
+            <BarChart data={data.tagDist} layout="vertical" margin={{ left: 0, right: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" className="stroke-border" horizontal={false} />
+              <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
+              <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={120} />
+              <Tooltip />
+              <Bar dataKey="count" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </Card>
+      )}
     </div>
   );
 }
