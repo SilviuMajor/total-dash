@@ -2471,6 +2471,7 @@ export type Database = {
           trial_ends_at: string
         }[]
       }
+      get_agency_by_slug: { Args: { p_slug: string }; Returns: Json }
       get_billing_data_detailed: {
         Args: never
         Returns: {

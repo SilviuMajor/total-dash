@@ -150,54 +150,7 @@ export default function AgencySettings() {
     }
   };
 
-  const handleSlugChange = async (newSlug: string) => {
-    const normalized = newSlug.toLowerCase()
-      .replace(/[^a-z0-9-]/g, '')
-      .replace(/^-+|-+$/g, '');
-    setPendingSlug(normalized);
-    setSlugValidationError('');
-
-    if (!normalized) return;
-
-    if (normalized.length < 3) {
-      setSlugValidationError('Slug must be at least 3 characters');
-      return;
-    }
-
-    if (RESERVED_SLUGS.includes(normalized)) {
-      setSlugValidationError(`"${normalized}" is reserved and cannot be used`);
-      return;
-    }
-
-    // Check uniqueness (skip if unchanged)
-    if (normalized === agency?.original_slug) {
-      setShowSlugWarning(false);
-      return;
-    }
-
-    setCheckingSlug(true);
-    try {
-      const { data: existing } = await supabase
-        .from('agencies')
-        .select('id')
-        .eq('slug', normalized)
-        .neq('id', effectiveAgencyId || '')
-        .maybeSingle();
-
-      if (existing) {
-        setSlugValidationError('This slug is already taken');
-        setCheckingSlug(false);
-        return;
-      }
-    } catch {
-      // If check fails, allow it — DB constraint will catch duplicates on save
-    }
-    setCheckingSlug(false);
-    setShowSlugWarning(true);
-  };
-
   const confirmSlugChange = () => {
-    setAgency({ ...agency, slug: pendingSlug });
     setShowSlugWarning(false);
   };
 
@@ -329,7 +282,41 @@ export default function AgencySettings() {
                   <Label>Agency Slug (URL Path)</Label>
                   <Input
                     value={agency?.slug || ''}
-                    onChange={(e) => handleSlugChange(e.target.value)}
+                    onChange={(e) => {
+                      const normalized = e.target.value.toLowerCase()
+                        .replace(/[^a-z0-9-]/g, '')
+                        .replace(/^-+|-+$/g, '');
+                      setAgency({ ...agency!, slug: normalized });
+                      setSlugValidationError('');
+                    }}
+                    onBlur={async () => {
+                      if (!agency?.slug || agency.slug === agency.original_slug) return;
+                      if (agency.slug.length < 3) {
+                        setSlugValidationError('Slug must be at least 3 characters');
+                        return;
+                      }
+                      if (RESERVED_SLUGS.includes(agency.slug)) {
+                        setSlugValidationError(`"${agency.slug}" is reserved and cannot be used`);
+                        return;
+                      }
+                      setSlugValidationError('');
+                      setCheckingSlug(true);
+                      try {
+                        const { data: existing } = await supabase
+                          .from('agencies')
+                          .select('id')
+                          .eq('slug', agency.slug)
+                          .neq('id', effectiveAgencyId || '')
+                          .maybeSingle();
+                        if (existing) {
+                          setSlugValidationError('This slug is already taken');
+                          setCheckingSlug(false);
+                          return;
+                        }
+                      } catch {}
+                      setCheckingSlug(false);
+                      setShowSlugWarning(true);
+                    }}
                     placeholder="your-agency"
                   />
                   {slugValidationError && (
@@ -631,7 +618,7 @@ export default function AgencySettings() {
               </p>
               <div className="p-3 bg-muted rounded font-mono text-sm">
                 <div className="line-through text-muted-foreground">total-dash.com/{agency?.original_slug}</div>
-                <div className="text-foreground font-semibold mt-1">total-dash.com/{pendingSlug}</div>
+                <div className="text-foreground font-semibold mt-1">total-dash.com/{agency?.slug}</div>
               </div>
               <p className="text-destructive font-semibold">
                 ⚠️ This will affect all links and bookmarks to your agency dashboard. Make sure to update any saved links.
@@ -639,7 +626,9 @@ export default function AgencySettings() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setPendingSlug("")}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => {
+              setAgency({ ...agency!, slug: agency?.original_slug || '' });
+            }}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={confirmSlugChange} disabled={!!slugValidationError || checkingSlug}>
               Confirm Change
             </AlertDialogAction>
