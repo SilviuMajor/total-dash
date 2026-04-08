@@ -736,6 +736,36 @@ export default function Conversations() {
     }
   };
 
+  const addAdhocTag = async (label: string) => {
+    if (!selectedConversation || updatingTags) return;
+    const trimmed = label.trim();
+    if (!trimmed) return;
+    const newTags = assignedTags.includes(trimmed) ? assignedTags : [...assignedTags, trimmed];
+    setUpdatingTags(true);
+    try {
+      await toggleTagMutation.mutateAsync({
+        id: selectedConversation.id,
+        metadata: selectedConversation.metadata,
+        newTags,
+      });
+      setAssignedTags(newTags);
+      setSelectedConversation(prev => prev ? { ...prev, metadata: { ...prev.metadata, tags: newTags } } : null);
+      if (!availableTags.some(t => t.label.toLowerCase() === trimmed.toLowerCase())) {
+        const updatedTags = [...availableTags, { id: crypto.randomUUID(), label: trimmed }];
+        await supabase.rpc('update_agent_config', {
+          p_agent_id: selectedAgentId,
+          p_config_updates: { conversation_tags: updatedTags },
+        });
+      }
+      setTagSearchInput('');
+      setTagDropdownOpen(false);
+    } catch {
+      toast({ title: "Error", description: "Failed to update tags", variant: "destructive" });
+    } finally {
+      setUpdatingTags(false);
+    }
+  };
+
   const handleTranscriptScroll = (event: React.UIEvent<HTMLDivElement>) => {
     const target = event.currentTarget;
     const isNearBottom = target.scrollHeight - target.scrollTop - target.clientHeight < 100;
