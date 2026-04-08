@@ -1212,7 +1212,7 @@ export default function Conversations() {
               <button
                 key={tf}
                 onClick={() => toggleTagFilter(tf)}
-                className="text-xs px-2 py-0.5 rounded-full bg-muted border border-border/50 text-muted-foreground flex items-center gap-1 font-medium"
+                className="text-xs px-2 py-0.5 rounded bg-muted border border-border/50 text-muted-foreground flex items-center gap-1 font-medium"
               >
                 {tf}
                 <X className="w-2.5 h-2.5 opacity-50" />
@@ -1222,7 +1222,7 @@ export default function Conversations() {
               <button
                 key={tag.id}
                 onClick={() => toggleTagFilter(tag.label)}
-                className="text-xs px-2 py-0.5 rounded-full border border-dashed border-border/50 text-muted-foreground/60 hover:text-muted-foreground hover:border-border transition-colors"
+                className="text-xs px-2 py-0.5 rounded border border-dashed border-border/50 text-muted-foreground/60 hover:text-muted-foreground hover:border-border transition-colors"
               >
                 {tag.label}
               </button>
@@ -1432,7 +1432,7 @@ export default function Conversations() {
                             {conv.metadata?.tags?.map((tag: string) => (
                               <span
                                 key={tag}
-                                className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium bg-muted border border-border/50 text-muted-foreground"
+                                className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium bg-muted border border-border/50 text-muted-foreground"
                               >
                                 {tag}
                               </span>
@@ -2253,7 +2253,7 @@ export default function Conversations() {
                           {assignedTags.map((tag: string) => (
                             <span
                               key={tag}
-                              className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-muted border border-border/50 text-muted-foreground"
+                              className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-muted border border-border/50 text-muted-foreground"
                             >
                               {tag}
                               <button
