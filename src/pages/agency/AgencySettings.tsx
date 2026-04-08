@@ -342,11 +342,6 @@ export default function AgencySettings() {
                     Your agency dashboard: <span className="font-mono">total-dash.com/{agency?.slug || 'your-agency'}</span>
                   </p>
                 </div>
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Your agency dashboard: <span className="font-mono">total-dash.com/{agency?.slug || 'your-agency'}</span>
-                  </p>
-                </div>
 
                 <div className="space-y-2">
                   <Label>Support Email</Label>
