@@ -2071,7 +2071,7 @@ function generateWidgetScript(config: any): string {
           message: text,
           action: 'text',
           conversationId,
-          isTestMode: false
+          isTestMode: CONFIG.isTestMode || false
         })
       });
       
@@ -2203,7 +2203,7 @@ function generateWidgetScript(config: any): string {
           baseUserId: userId,
           action: 'launch',
           conversationId: null,
-          isTestMode: false
+          isTestMode: CONFIG.isTestMode || false
         })
       });
       
@@ -2283,7 +2283,7 @@ function generateWidgetScript(config: any): string {
           message: JSON.stringify(button.payload),
           action: 'button',
           conversationId,
-          isTestMode: false
+          isTestMode: CONFIG.isTestMode || false
         })
       });
       
