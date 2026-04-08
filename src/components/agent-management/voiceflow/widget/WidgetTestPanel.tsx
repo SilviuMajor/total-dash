@@ -1,6 +1,5 @@
-import { useState, useEffect, ReactNode } from "react";
+import { useState, useEffect, useRef, ReactNode } from "react";
 import { Button } from "@/components/ui/button";
-import { ChatWidget } from "./ChatWidget";
 import { MessageSquare } from "lucide-react";
 
 interface WidgetTestPanelProps {
@@ -14,6 +13,8 @@ interface WidgetTestPanelProps {
 
 export function WidgetTestPanel({ agent, children }: WidgetTestPanelProps) {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   // Persist panel state in sessionStorage for same agent
   useEffect(() => {
@@ -26,6 +27,18 @@ export function WidgetTestPanel({ agent, children }: WidgetTestPanelProps) {
   }, [isPanelOpen, agent.id]);
 
   const primaryColor = agent.config?.widget_settings?.appearance?.primary_color || '#5B4FFF';
+
+  const supabaseUrl = (import.meta as any).env?.VITE_SUPABASE_URL || '';
+  const iframeSrc = `${supabaseUrl}/functions/v1/widget-loader?agentId=${agent.id}&format=html&embedded=true&testMode=true&t=${refreshKey}`;
+
+  // Expose a refresh method that can be called after settings save
+  useEffect(() => {
+    const handleSettingsUpdate = () => {
+      setRefreshKey(prev => prev + 1);
+    };
+    window.addEventListener('widget-settings-updated', handleSettingsUpdate);
+    return () => window.removeEventListener('widget-settings-updated', handleSettingsUpdate);
+  }, []);
 
   return (
     <div className="relative min-h-screen">
@@ -70,11 +83,15 @@ export function WidgetTestPanel({ agent, children }: WidgetTestPanelProps) {
           ${isPanelOpen ? 'translate-x-0' : 'translate-x-full'}
         `}
       >
-        <ChatWidget 
-          agent={agent}
-          isTestMode={true}
-          onClose={() => setIsPanelOpen(false)}
-        />
+        {isPanelOpen && (
+          <iframe
+            ref={iframeRef}
+            src={iframeSrc}
+            className="w-full h-full border-0"
+            title="Widget Preview"
+            sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+          />
+        )}
       </div>
     </div>
   );
