@@ -113,7 +113,7 @@ serve(async (req) => {
       const html = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <style>*{margin:0;padding:0;box-sizing:border-box}html,body{height:100%;overflow:hidden;font-family:${config.appearance.fontFamily || 'Inter'},system-ui,sans-serif}</style>
-</head><body><script>${widgetScript}<\/script></body></html>`;
+</head><body><scr` + `ipt>${widgetScript}</scr` + `ipt></body></html>`;
       return new Response(html, {
         headers: {
           ...corsHeaders,
