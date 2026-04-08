@@ -120,7 +120,7 @@ export function ConversationsAnalytics({ agentId, dateRange }: ConversationsAnal
       // Tag frequency
       const tagCounts: Record<string, number> = {};
       for (const c of conversations) {
-        const tags = c.metadata?.tags;
+        const tags = (c.metadata as any)?.tags;
         if (Array.isArray(tags)) {
           tags.forEach((t: string) => {
             tagCounts[t] = (tagCounts[t] || 0) + 1;
