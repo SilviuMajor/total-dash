@@ -3,21 +3,35 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
-import { useTheme } from "@/hooks/useTheme";
 import { useBranding } from "@/hooks/useBranding";
+import { useTheme } from "@/hooks/useTheme";
 import { ForgotPasswordDialog } from "@/components/ForgotPasswordDialog";
 
 export default function SuperAdminLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [emailError, setEmailError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { effectiveTheme } = useTheme();
   const branding = useBranding({ isClientView: false, agencyId: undefined, appTheme: effectiveTheme });
+
+  const validateEmail = (value: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(value);
+  };
+
+  const handleEmailChange = (value: string) => {
+    setEmail(value);
+    if (value && !validateEmail(value)) {
+      setEmailError("Please enter a valid email address");
+    } else {
+      setEmailError("");
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,7 +46,6 @@ export default function SuperAdminLogin() {
       if (error) throw error;
 
       if (data.user) {
-        // Verify super admin status
         const { data: superAdminData, error: superAdminError } = await supabase
           .from('super_admin_users')
           .select('*')
@@ -50,72 +63,74 @@ export default function SuperAdminLogin() {
         navigate("/admin/agencies");
       }
     } catch (error: any) {
-      toast.error(error.message || "Failed to sign in");
+      toast.error(error.message || "Invalid email or password");
     } finally {
       setLoading(false);
     }
   };
 
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          {branding.fullLogoUrl && (
-            <div className="flex justify-center mb-4">
-              <img 
-                src={branding.fullLogoUrl} 
-                alt={branding.companyName} 
-                className="h-16 w-auto object-contain" 
-              />
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/30 p-4">
+      <div className="w-full max-w-md">
+        {/* Header with inline logo */}
+        <div className="flex items-center gap-3 mb-6">
+          {branding.fullLogoUrl ? (
+            <img src={branding.fullLogoUrl} alt={branding.companyName} className="h-8 w-auto object-contain" />
+          ) : (
+            <div className="w-9 h-9 rounded-lg bg-foreground flex items-center justify-center text-background text-sm font-bold">
+              T
             </div>
           )}
-          <CardTitle className="text-3xl font-bold text-center">Admin</CardTitle>
-          <CardDescription className="text-center">
-            Sign in to manage your platform
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="admin@yourcompany.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                disabled={loading}
-              />
+          <div>
+            <h1 className="text-lg font-semibold text-foreground leading-tight">Admin</h1>
+            <p className="text-xs text-muted-foreground">Platform administration</p>
+          </div>
+        </div>
+
+        <form onSubmit={handleLogin} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="admin-email">Email</Label>
+            <Input
+              id="admin-email"
+              type="email"
+              placeholder="you@totaldash.com"
+              value={email}
+              onChange={(e) => handleEmailChange(e.target.value)}
+              required
+              disabled={loading}
+            />
+            {emailError && (
+              <p className="text-sm text-destructive">{emailError}</p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="admin-password">Password</Label>
+              <ForgotPasswordDialog />
             </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="password">Password</Label>
-                    <ForgotPasswordDialog />
-                  </div>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    disabled={loading}
-                  />
-                </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Signing in...
-                </>
-              ) : (
-                "Sign In"
-              )}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+            <Input
+              id="admin-password"
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              disabled={loading}
+            />
+          </div>
+
+          <Button type="submit" disabled={loading} className="w-full bg-foreground text-background hover:bg-foreground/90">
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Signing in...
+              </>
+            ) : (
+              "Sign in"
+            )}
+          </Button>
+        </form>
+      </div>
     </div>
   );
 }
