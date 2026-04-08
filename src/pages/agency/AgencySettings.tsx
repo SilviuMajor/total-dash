@@ -150,54 +150,7 @@ export default function AgencySettings() {
     }
   };
 
-  const handleSlugChange = async (newSlug: string) => {
-    const normalized = newSlug.toLowerCase()
-      .replace(/[^a-z0-9-]/g, '')
-      .replace(/^-+|-+$/g, '');
-    setPendingSlug(normalized);
-    setSlugValidationError('');
-
-    if (!normalized) return;
-
-    if (normalized.length < 3) {
-      setSlugValidationError('Slug must be at least 3 characters');
-      return;
-    }
-
-    if (RESERVED_SLUGS.includes(normalized)) {
-      setSlugValidationError(`"${normalized}" is reserved and cannot be used`);
-      return;
-    }
-
-    // Check uniqueness (skip if unchanged)
-    if (normalized === agency?.original_slug) {
-      setShowSlugWarning(false);
-      return;
-    }
-
-    setCheckingSlug(true);
-    try {
-      const { data: existing } = await supabase
-        .from('agencies')
-        .select('id')
-        .eq('slug', normalized)
-        .neq('id', effectiveAgencyId || '')
-        .maybeSingle();
-
-      if (existing) {
-        setSlugValidationError('This slug is already taken');
-        setCheckingSlug(false);
-        return;
-      }
-    } catch {
-      // If check fails, allow it — DB constraint will catch duplicates on save
-    }
-    setCheckingSlug(false);
-    setShowSlugWarning(true);
-  };
-
   const confirmSlugChange = () => {
-    setAgency({ ...agency, slug: pendingSlug });
     setShowSlugWarning(false);
   };
 

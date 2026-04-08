@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
-import { useParams, Navigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Auth from "./Auth";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 export default function SlugBasedAuth() {
   const { agencySlug } = useParams();
@@ -17,22 +19,24 @@ export default function SlugBasedAuth() {
         return;
       }
 
-      const { data: agency, error } = await supabase
-        .from('agencies')
-        .select('id, name, logo_light_url, logo_dark_url, full_logo_light_url, full_logo_dark_url, favicon_light_url, favicon_dark_url, primary_color, secondary_color, slug')
-        .eq('slug', agencySlug)
-        .single();
-      
-      if (error || !agency) {
-        console.error('Agency not found:', error);
-        setNotFound(true);
-        setLoading(false);
-        return;
-      }
+      try {
+        const { data: agency, error } = await supabase.rpc('get_agency_by_slug', {
+          p_slug: agencySlug,
+        });
+        
+        if (error || !agency) {
+          console.error('Agency not found:', error);
+          setNotFound(true);
+          setLoading(false);
+          return;
+        }
 
-      setAgencyContext(agency);
-      // Store in sessionStorage for the auth flow and branding
-      sessionStorage.setItem('loginAgencyContext', JSON.stringify(agency));
+        setAgencyContext(agency);
+        sessionStorage.setItem('loginAgencyContext', JSON.stringify(agency));
+      } catch (e) {
+        console.error('Error loading agency:', e);
+        setNotFound(true);
+      }
       setLoading(false);
     };
     
@@ -48,9 +52,24 @@ export default function SlugBasedAuth() {
   }
 
   if (notFound) {
-    return <Navigate to="/client/login" replace />;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Page not found</CardTitle>
+            <CardDescription>
+              We couldn't find a login portal for "{agencySlug}". Check the URL with your administrator.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button variant="outline" className="w-full" onClick={() => window.location.href = '/client/login'}>
+              Find your login page
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
-  // Render Auth page with agency branding context available via sessionStorage
   return <Auth />;
 }
