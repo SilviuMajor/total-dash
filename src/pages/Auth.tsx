@@ -96,12 +96,70 @@ export default function Auth() {
     setLoading(true);
 
     try {
-      const { error } = await signIn(email, password);
+      const { error, data } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
       if (error) throw error;
-      
+
+      if (!data?.user) throw new Error("Login failed");
+
+      // Check if user is a client user
+      const { data: clientUser } = await supabase
+        .from('client_users')
+        .select('id')
+        .eq('user_id', data.user.id)
+        .maybeSingle();
+
+      if (clientUser) {
+        // They ARE a client user — let the existing useEffect redirect handle it
+        toast({
+          title: "Success",
+          description: "Signed in successfully",
+        });
+        return;
+      }
+
+      // Not a client user — check what they actually are and redirect
+      await supabase.auth.signOut();
+
+      // Check super admin
+      const { data: superAdmin } = await supabase
+        .from('super_admin_users')
+        .select('id')
+        .eq('user_id', data.user.id)
+        .maybeSingle();
+
+      if (superAdmin) {
+        toast({
+          title: "Wrong portal",
+          description: "This is a client login page. Redirecting you to admin login.",
+        });
+        setTimeout(() => { window.location.href = '/admin/login'; }, 1500);
+        return;
+      }
+
+      // Check agency user
+      const { data: agencyUser } = await supabase
+        .from('agency_users')
+        .select('id')
+        .eq('user_id', data.user.id)
+        .maybeSingle();
+
+      if (agencyUser) {
+        toast({
+          title: "Wrong portal",
+          description: "This is a client login page. Redirecting you to agency login.",
+        });
+        setTimeout(() => { window.location.href = '/agency/login'; }, 1500);
+        return;
+      }
+
+      // Not a client, admin, or agency user at all
       toast({
-        title: "Success",
-        description: "Signed in successfully",
+        title: "Error",
+        description: "No client account found for this email. Please contact your administrator.",
+        variant: "destructive",
       });
     } catch (error: any) {
       toast({
