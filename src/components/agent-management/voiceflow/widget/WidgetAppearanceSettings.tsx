@@ -56,6 +56,7 @@ export function WidgetAppearanceSettings({ agent, onUpdate }: WidgetAppearanceSe
       text_color: widgetSettings.appearance?.text_color || "#000000",
       font_family: widgetSettings.appearance?.font_family || "Inter",
       font_size: widgetSettings.appearance?.font_size || 14,
+      widget_mode: widgetSettings.appearance?.widget_mode || 'light',
       message_bubble_style: widgetSettings.appearance?.message_bubble_style || "rounded",
       interactive_button_style: widgetSettings.appearance?.interactive_button_style || "solid"
     },
@@ -75,7 +76,11 @@ export function WidgetAppearanceSettings({ agent, onUpdate }: WidgetAppearanceSe
         enabled: widgetSettings.tabs?.faq?.enabled || false,
         items: widgetSettings.tabs?.faq?.items || []
       }
-    }
+    },
+    powered_by: {
+      enabled: widgetSettings.powered_by?.enabled !== false,
+      text: widgetSettings.powered_by?.text || 'TotalDash',
+    },
   });
 
   // Initialize lastSaved on mount
@@ -535,6 +540,26 @@ export function WidgetAppearanceSettings({ agent, onUpdate }: WidgetAppearanceSe
               ))}
             </div>
 
+            <Separator className="my-4" />
+
+            <div className="space-y-3">
+              <div>
+                <Label className="text-sm font-medium">Widget Mode</Label>
+                <p className="text-xs text-muted-foreground">Choose the visual theme for your chat widget</p>
+              </div>
+              <Select
+                value={formData.appearance.widget_mode}
+                onValueChange={(v) => setFormData(prev => ({ ...prev, appearance: { ...prev.appearance, widget_mode: v } }))}
+              >
+                <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="light">Light</SelectItem>
+                  <SelectItem value="dark">Dark</SelectItem>
+                  <SelectItem value="auto">Auto (match website)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             {/* Font Family */}
             <div>
               <Label htmlFor="font_family">Font Family</Label>
@@ -860,6 +885,34 @@ export function WidgetAppearanceSettings({ agent, onUpdate }: WidgetAppearanceSe
               </AccordionContent>
             </AccordionItem>
           </Accordion>
+        </div>
+
+        <Separator className="my-4" />
+
+        <div className="space-y-4">
+          <div>
+            <Label className="text-sm font-medium">Powered By Badge</Label>
+            <p className="text-xs text-muted-foreground">Shows a small credit on the home screen only</p>
+          </div>
+          <div className="flex items-center justify-between">
+            <Label className="text-sm">Show badge</Label>
+            <Switch
+              checked={formData.powered_by.enabled}
+              onCheckedChange={(v) => setFormData(prev => ({ ...prev, powered_by: { ...prev.powered_by, enabled: v } }))}
+            />
+          </div>
+          {formData.powered_by.enabled && (
+            <div className="space-y-1.5">
+              <Label className="text-sm">Badge text</Label>
+              <Input
+                value={formData.powered_by.text}
+                onChange={(e) => setFormData(prev => ({ ...prev, powered_by: { ...prev.powered_by, text: e.target.value } }))}
+                placeholder="TotalDash"
+                className="w-64"
+              />
+              <p className="text-xs text-muted-foreground">Displays as "POWERED BY {(formData.powered_by.text || 'TOTALDASH').toUpperCase()}"</p>
+            </div>
+          )}
         </div>
       </div>
 
