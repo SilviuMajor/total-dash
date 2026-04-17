@@ -520,6 +520,7 @@ function generateWidgetScript(config: any): string {
       text-align: left;
     }
     .vf-new-chat-btn:hover { background: \${theme.bgSurfaceHover}; }
+    .vf-new-chat-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
     .vf-chat-list-scroll { flex: 1; overflow-y: auto; padding: 0 16px 16px; }
     .vf-chat-section-label {
       font-size: 10px; font-weight: 600; color: \${theme.textMuted};
@@ -558,8 +559,9 @@ function generateWidgetScript(config: any): string {
     /* Bot message - flowing text, no bubble */
     .vf-msg-bot {
       font-size: 15px; color: \${theme.text}; line-height: 1.55;
-      margin: 0; max-width: 100%;
+      margin: 0; max-width: 100%; word-wrap: break-word;
     }
+    .vf-msg-bot img { max-width: 100%; height: auto; border-radius: 8px; margin-top: 6px; }
     .vf-msg-bot a { color: \${accent}; text-decoration: underline; }
     .vf-msg-time {
       font-size: 10px; color: \${theme.textMuted}; margin-top: 5px;
