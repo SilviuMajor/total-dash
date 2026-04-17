@@ -445,6 +445,7 @@ function generateWidgetScript(config: any): string {
       flex-shrink: 0; overflow: hidden;
     }
     .vf-logo-badge-sm img { width: 100%; height: 100%; object-fit: cover; }
+    .vf-logo-badge-sm { overflow: hidden; }
     
     /* Home Screen */
     .vf-home { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
@@ -540,7 +541,7 @@ function generateWidgetScript(config: any): string {
       font-size: 11px; color: \${theme.textMuted};
       display: flex; align-items: center; gap: 6px;
     }
-    .vf-conv-card-meta svg { width: 11px; height: 11px; }
+    .vf-conv-card-meta svg { width: 11px; height: 11px; flex-shrink: 0; }
     .vf-conv-card-count {
       font-size: 10px; background: \${theme.bgSurfaceHover};
       padding: 1px 6px; border-radius: 8px; color: \${theme.textSecondary};
@@ -678,7 +679,7 @@ function generateWidgetScript(config: any): string {
     }
     
     /* File preview in message */
-    .vf-file-preview { max-width: 200px; border-radius: 8px; margin-top: 4px; }
+    .vf-file-preview { max-width: 200px; height: auto; border-radius: 8px; margin-top: 4px; display: block; }
     .vf-file-link {
       color: \${accent}; font-size: 13px; text-decoration: underline;
       display: inline-block; margin-top: 4px;
@@ -712,6 +713,14 @@ function generateWidgetScript(config: any): string {
     .vf-empty svg { width: 40px; height: 40px; margin-bottom: 12px; opacity: 0.3; color: \${theme.textMuted}; }
     .vf-empty p { margin: 4px 0; font-size: 14px; }
     .vf-empty p:last-child { font-size: 13px; }
+    
+    /* Global SVG constraints */
+    .vf-home-button-icon svg,
+    .vf-header-btn svg,
+    .vf-home-button-chevron svg { width: 16px; height: 16px; }
+    .vf-home-button-icon svg { width: 15px; height: 15px; }
+    .vf-empty svg { width: 40px; height: 40px; }
+    button svg { flex-shrink: 0; }
     
     /* Scrollbar */
     .vf-messages-wrap::-webkit-scrollbar,
@@ -1029,7 +1038,7 @@ function generateWidgetScript(config: any): string {
           </div>
           <div style="padding: 0 16px 8px;">
             <button class="vf-new-chat-btn" onclick="window.vfStartNewChat()" style="margin:0;width:100%;">
-              \${icons.plus}
+              \<span style="width:18px;height:18px;flex-shrink:0;display:inline-flex;">${icons.plus}</span>
               <span style="font-size:14px;font-weight:500;">New Chat</span>
               <span style="margin-left:auto;color:inherit;opacity:0.3;">\${icons.chevronRight}</span>
             </button>
