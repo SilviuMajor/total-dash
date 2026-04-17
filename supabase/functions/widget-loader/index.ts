@@ -811,9 +811,8 @@ function generateWidgetScript(config: any): string {
   const hasCustomIcon = !!CONFIG.appearance.chatIconUrl;
   
   if (CONFIG.isEmbedded) {
-    // Embedded mode: no floating button, panel fills container
     container.innerHTML = \`
-      <div class="vf-widget-panel" style="position:relative;width:100%;height:100vh;border-radius:0;box-shadow:none;">
+      <div class="vf-widget-panel">
         <div id="vf-panel-content"></div>
       </div>
     \`;
@@ -821,10 +820,12 @@ function generateWidgetScript(config: any): string {
   } else {
     container.innerHTML = \`
       <button class="vf-widget-button \${hasCustomIcon ? 'has-custom-icon' : 'default-icon'}">
-        \${hasCustomIcon 
-          ? \`<img src="\${CONFIG.appearance.chatIconUrl}" alt="Chat" />\`
-          : icons.messageSquare
-        }
+        <div class="vf-btn-inner">
+          \${hasCustomIcon 
+            ? \`<img src="\${CONFIG.appearance.chatIconUrl}" alt="Chat" />\`
+            : icons.messageSquare
+          }
+        </div>
       </button>
       <div class="vf-widget-panel hidden">
         <div id="vf-panel-content"></div>
@@ -855,12 +856,10 @@ function generateWidgetScript(config: any): string {
   
   // Render Functions
   function renderPanel() {
-    // Save current input value before re-render
     const existingInput = document.getElementById('vf-input');
     const savedInputValue = existingInput ? existingInput.value : '';
     
-    const showHeader = currentTab !== 'Home' || isInActiveChat;
-    const showFloatingClose = currentTab === 'Home' && !isInActiveChat;
+    const isHome = currentTab === 'Home' && !isInActiveChat;
     const showBackButton = isInActiveChat && currentTab === 'Chats';
     const showTabs = !(currentTab === 'Chats' && isInActiveChat);
     const tabs = [];
@@ -868,55 +867,49 @@ function generateWidgetScript(config: any): string {
     if (CONFIG.tabs.chats.enabled) tabs.push('Chats');
     if (CONFIG.tabs.faq.enabled) tabs.push('FAQ');
     
+    const headerTitle = isInActiveChat ? 'New conversation' : CONFIG.title;
+    
     panelContent.innerHTML = \`
-      \${showFloatingClose ? \`
-        <button class="vf-floating-close" onclick="window.vfCloseWidget()">
-          \${icons.x}
-        </button>
-      \` : ''}
+      <div class="vf-accent-stripe"></div>
       
-      \${showHeader ? \`
-        <div class="vf-widget-header">
-          \${showBackButton ? \`
-            <button class="vf-back-button" onclick="window.vfGoBack()">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="19" y1="12" x2="5" y2="12"></line>
-                <polyline points="12 19 5 12 12 5"></polyline>
-              </svg>
-            </button>
-          \` : ''}
-          \${CONFIG.appearance.logoUrl ? \`<img src="\${CONFIG.appearance.logoUrl}" alt="Logo" />\` : ''}
-          <div class="vf-widget-header-text">
-            <div class="vf-widget-header-title">\${CONFIG.title}</div>
-            <div class="vf-widget-header-desc">\${CONFIG.description}</div>
+      \${isHome ? \`
+        <div id="vf-content" style="flex:1;display:flex;flex-direction:column;overflow:hidden;"></div>
+      \` : \`
+        <div class="vf-header">
+          <div class="vf-header-left">
+            \${showBackButton ? \`
+              <button class="vf-header-btn" onclick="window.vfGoBack()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>
+              </button>
+            \` : ''}
+            \${CONFIG.appearance.logoUrl ? \`
+              <div class="vf-logo-badge-sm"><img src="\${CONFIG.appearance.logoUrl}" alt="Logo" /></div>
+            \` : ''}
+            <p class="vf-header-title">\${headerTitle}</p>
           </div>
-          <button class="vf-widget-close" onclick="window.vfCloseWidget()">
-            \${icons.x}
+          <button class="vf-header-btn" onclick="window.vfCloseWidget()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
-        <svg viewBox="0 0 400 50" class="vf-wave-decoration" preserveAspectRatio="none">
-          <path d="M0,25 Q100,10 200,25 T400,25 L400,50 L0,50 Z" fill="\${CONFIG.appearance.secondaryColor}" opacity="0.15"/>
-        </svg>
-      \` : ''}
-      
-      <div class="vf-widget-content" id="vf-content"></div>
+        <div id="vf-content" style="flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0;"></div>
+      \`}
       
       \${isInActiveChat ? \`
-        <div class="vf-input-area">
+        <div class="vf-input-bar">
           \${isConversationEnded ? \`
-            <button class="vf-new-conversation-btn" onclick="window.vfStartNewChat()">
+            <button class="vf-btn-option" style="width:100%;justify-content:center;" onclick="window.vfStartNewChat()">
               + New Conversation
             </button>
           \` : \`
             <div class="vf-input-row">
               \${CONFIG.functions.fileUploadEnabled ? \`
-                <input type="file" id="vf-file-input" accept="image/*,application/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx" style="display: none;" />
-                <button class="vf-input-attach" onclick="window.vfAttachFile()">
+                <input type="file" id="vf-file-input" accept="image/*,application/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx" style="display:none;" />
+                <button class="vf-attach-btn" onclick="window.vfAttachFile()">
                   \${icons.paperclip}
                 </button>
               \` : ''}
-              <input type="text" class="vf-input" id="vf-input" placeholder="Type your message..." />
-              <button class="vf-send-button" onclick="window.vfSendMessage()">
+              <input type="text" class="vf-input-field" id="vf-input" placeholder="Type a message..." />
+              <button class="vf-send-btn" onclick="window.vfSendMessage()">
                 \${icons.send}
               </button>
             </div>
@@ -925,11 +918,11 @@ function generateWidgetScript(config: any): string {
       \` : ''}
       
       \${showTabs && tabs.length > 1 ? \`
-        <div class="vf-bottom-tabs">
+        <div class="vf-tabs">
           \${tabs.map(tab => \`
             <button class="vf-tab \${tab === currentTab ? 'active' : ''}" onclick="window.vfSwitchTab('\${tab}')">
-              \${tab === 'Home' ? icons.home : icons.messageSquare}
-              <span class="vf-tab-label">\${tab}</span>
+              \${tab === 'Home' ? icons.home : tab === 'FAQ' ? \`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>\` : icons.messageSquare}
+              <span>\${tab}</span>
             </button>
           \`).join('')}
         </div>
@@ -938,7 +931,6 @@ function generateWidgetScript(config: any): string {
     
     renderContent();
     
-    // Restore input value and re-attach Enter key listener
     const newInput = document.getElementById('vf-input');
     if (newInput) {
       newInput.value = savedInputValue;
@@ -947,7 +939,6 @@ function generateWidgetScript(config: any): string {
       });
     }
     
-    // Re-attach file input listener if present
     const fileInput = document.getElementById('vf-file-input');
     if (fileInput) {
       fileInput.addEventListener('change', handleFileUpload);
@@ -972,32 +963,46 @@ function generateWidgetScript(config: any): string {
   }
   
   function renderHome(container) {
+    const logoHtml = CONFIG.appearance.logoUrl 
+      ? \`<div class="vf-logo-badge"><img src="\${CONFIG.appearance.logoUrl}" alt="Logo" /></div>\`
+      : \`<div class="vf-logo-badge">\${CONFIG.agentName.charAt(0).toUpperCase()}</div>\`;
+    
     container.innerHTML = \`
-      <div class="vf-home-gradient-header">
-        <div class="vf-home-logo-text">
-          \${CONFIG.appearance.logoUrl ? \`
-            <img src="\${CONFIG.appearance.logoUrl}" alt="Logo" class="vf-home-logo" />
-          \` : ''}
-          <div class="vf-home-text">
-            <h2 class="vf-home-title">\${CONFIG.tabs.home.title}</h2>
-            <p class="vf-home-subtitle">\${CONFIG.tabs.home.subtitle}</p>
+      <div class="vf-home">
+        <div class="vf-home-hero">
+          <div class="vf-home-hero-top">
+            \${logoHtml}
+            <button class="vf-header-btn" onclick="window.vfCloseWidget()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+          <h2 class="vf-home-title">\${CONFIG.tabs.home.title}</h2>
+          <div class="vf-home-status">
+            <div class="vf-home-status-dot"></div>
+            <span class="vf-home-status-text">\${CONFIG.tabs.home.subtitle || 'We typically reply in minutes'}</span>
           </div>
         </div>
-      </div>
-      <div class="vf-home-content">
-        <div class="vf-home-buttons">
-          \${CONFIG.tabs.home.buttons.filter(btn => btn.enabled).map(btn => \`
+        
+        <div class="vf-home-actions">
+          \${CONFIG.tabs.home.buttons.filter(btn => btn.enabled).map((btn, idx) => \`
             <button class="vf-home-button" onclick="window.vfHandleHomeAction('\${btn.action}', '\${btn.phoneNumber || ''}')">
-              <div class="vf-home-button-content">
-                <div class="vf-home-button-icon">
-                  \${btn.action === 'call' ? icons.phone : icons.messageSquare}
-                </div>
-                <span>\${btn.text}</span>
+              <div class="vf-home-button-icon \${idx === 0 ? 'primary' : 'secondary'}">
+                \${btn.action === 'call' ? icons.phone : icons.messageSquare}
               </div>
-              <span class="vf-home-button-arrow">\${icons.chevronRight}</span>
+              <div class="vf-home-button-text">
+                <strong>\${btn.text}</strong>
+                <span>\${btn.action === 'call' ? 'Speak to a team member' : btn.action === 'new_chat' ? 'Chat with our AI assistant' : ''}</span>
+              </div>
+              <div class="vf-home-button-chevron">\${icons.chevronRight}</div>
             </button>
           \`).join('')}
         </div>
+        
+        \${CONFIG.poweredBy.enabled ? \`
+          <div class="vf-powered-by">
+            <span>Powered by \${CONFIG.poweredBy.text}</span>
+          </div>
+        \` : ''}
       </div>
     \`;
   }
@@ -1007,10 +1012,10 @@ function generateWidgetScript(config: any): string {
     
     if (history.length === 0) {
       container.innerHTML = \`
-        <div class="vf-empty-state">
+        <div class="vf-empty">
           \${icons.messageCircle}
-          <p style="margin-bottom: 4px;">No conversations yet</p>
-          <p style="font-size: 13px; opacity: 0.7;">Start a new chat to get going</p>
+          <p>No conversations yet</p>
+          <p>Start a new chat to get going</p>
         </div>
       \`;
     } else {
@@ -1018,61 +1023,44 @@ function generateWidgetScript(config: any): string {
       const older = history.slice(1);
       
       container.innerHTML = \`
-        <div class="vf-chats-header">
-          <div class="vf-chats-title-row">
-            \${icons.messageSquare}
-            <h3 class="vf-chats-title">Chats</h3>
+        <div class="vf-chat-list">
+          <div class="vf-chat-list-header">
+            <span class="vf-chat-list-title">Chats</span>
           </div>
-          <button class="vf-new-chat-button" onclick="window.vfStartNewChat()">
-            <div class="vf-new-chat-content">
+          <div style="padding: 0 16px 8px;">
+            <button class="vf-new-chat-btn" onclick="window.vfStartNewChat()" style="margin:0;width:100%;">
               \${icons.plus}
-              <span>New Chat</span>
-            </div>
-            <span class="vf-new-chat-arrow">\${icons.chevronRight}</span>
-          </button>
-        </div>
-        
-        \${recent ? \`
-          <div class="vf-chats-section">
-            <div class="vf-chats-section-title">Continue recent conversation</div>
-            <div class="vf-conversation-card" onclick="window.vfLoadConversation('\${recent.id}')">
-              <div class="vf-conversation-icon">
-                \${icons.messageCircle}
-              </div>
-              <div class="vf-conversation-details">
-                <div class="vf-conversation-preview">\${recent.preview}</div>
-                <div class="vf-conversation-meta">
+              <span style="font-size:14px;font-weight:500;">New Chat</span>
+              <span style="margin-left:auto;color:inherit;opacity:0.3;">\${icons.chevronRight}</span>
+            </button>
+          </div>
+          <div class="vf-chat-list-scroll">
+            \${recent ? \`
+              <div class="vf-chat-section-label">Continue recent conversation</div>
+              <div class="vf-conv-card" onclick="window.vfLoadConversation('\${recent.id}')">
+                <p class="vf-conv-card-preview">\${recent.preview}</p>
+                <div class="vf-conv-card-meta">
                   \${icons.clock}
                   <span>\${formatTimeAgo(recent.timestamp)}</span>
-                  <span class="vf-conversation-badge">\${recent.messageCount}</span>
+                  <span class="vf-conv-card-count">\${recent.messageCount}</span>
                 </div>
               </div>
-              <span class="vf-conversation-chevron">\${icons.chevronRight}</span>
-            </div>
-          </div>
-        \` : ''}
-        
-        \${older.length > 0 ? \`
-          <div class="vf-chats-section">
-            <div class="vf-chats-section-title">Previous conversations</div>
-            \${older.map(conv => \`
-              <div class="vf-conversation-card" onclick="window.vfLoadConversation('\${conv.id}')">
-                <div class="vf-conversation-icon">
-                  \${icons.messageCircle}
-                </div>
-                <div class="vf-conversation-details">
-                  <div class="vf-conversation-preview">\${conv.preview}</div>
-                  <div class="vf-conversation-meta">
+            \` : ''}
+            \${older.length > 0 ? \`
+              <div class="vf-chat-section-label">Previous conversations</div>
+              \${older.map(conv => \`
+                <div class="vf-conv-card" onclick="window.vfLoadConversation('\${conv.id}')">
+                  <p class="vf-conv-card-preview">\${conv.preview}</p>
+                  <div class="vf-conv-card-meta">
                     \${icons.clock}
                     <span>\${formatTimeAgo(conv.timestamp)}</span>
-                    <span class="vf-conversation-badge">\${conv.messageCount}</span>
+                    <span class="vf-conv-card-count">\${conv.messageCount}</span>
                   </div>
                 </div>
-                <span class="vf-conversation-chevron">\${icons.chevronRight}</span>
-              </div>
-            \`).join('')}
+              \`).join('')}
+            \` : ''}
           </div>
-        \` : ''}
+        </div>
       \`;
     }
   }
