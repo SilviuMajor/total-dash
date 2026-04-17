@@ -1241,87 +1241,99 @@ function generateWidgetScript(config: any): string {
   }
   
   function renderMessages(container) {
-    container.innerHTML = '<div class="vf-messages-container" id="vf-messages"></div>';
+    container.innerHTML = '<div class="vf-messages-wrap" id="vf-messages"></div>';
     const messagesEl = document.getElementById('vf-messages');
     
     messages.forEach(msg => {
-      const messageDiv = document.createElement('div');
-      messageDiv.className = \`vf-message \${msg.speaker}\`;
-      
-      const isAssistant = msg.speaker === 'assistant' || msg.speaker === 'system';
+      const isUser = msg.speaker === 'user';
       const isSystem = msg.speaker === 'system';
-      const buttonStyle = CONFIG.appearance.interactiveButtonStyle || 'solid';
+      const isAgent = msg.speaker === 'client_user';
       
-      // Parse message for file URLs
+      // Parse file URLs
       let messageContent = msg.text || '';
       let fileUrl = null;
       let fileName = null;
       let isImage = false;
       
-      // Detect file patterns: [Image: filename]\\nurl or [File: filename]\\nurl
-      const fileMatch = messageContent.match(/\\[(Image|File): ([^\\]]+)\\]\\n(https?:\\/\\/[^\\s]+)/);
+      const fileMatch = messageContent.match(/\[(Image|File): ([^\]]+)\]\n(https?:\/\/[^\s]+)/);
       if (fileMatch) {
         fileName = fileMatch[2];
         fileUrl = fileMatch[3];
-        isImage = fileMatch[1] === 'Image' || /\\.(jpg|jpeg|png|gif|webp)$/i.test(fileUrl);
-        messageContent = messageContent.replace(/\\[(Image|File): [^\\]]+\\]\\n[^\\s]+/, '').trim();
+        isImage = fileMatch[1] === 'Image' || /\.(jpg|jpeg|png|gif|webp)$/i.test(fileUrl);
+        messageContent = messageContent.replace(/\[(Image|File): [^\]]+\]\n[^\s]+/, '').trim();
       }
       
-      messageDiv.innerHTML = \`
-        \${isAssistant && !isSystem ? \`
-          <div class="vf-message-avatar">
-            \${CONFIG.appearance.chatIconUrl 
-              ? \`<img src="\${CONFIG.appearance.chatIconUrl}" alt="Bot" />\`
-              : icons.bot
-            }
+      const wrapper = document.createElement('div');
+      
+      if (isSystem) {
+        wrapper.className = 'vf-msg-system';
+        wrapper.textContent = messageContent;
+        messagesEl.appendChild(wrapper);
+        return;
+      }
+      
+      if (isUser) {
+        wrapper.className = 'vf-msg-user-wrap';
+        wrapper.innerHTML = \`
+          <div class="vf-msg-user">
+            \${messageContent ? messageContent : ''}
+            \${fileUrl ? (isImage 
+              ? \`<img src="\${fileUrl}" alt="\${fileName}" class="vf-file-preview" style="display:block;margin-top:6px;" />\`
+              : \`<a href="\${fileUrl}" target="_blank" class="vf-file-link" style="color:rgba(255,255,255,0.8);">\${fileName}</a>\`
+            ) : ''}
+          </div>
+        \`;
+        messagesEl.appendChild(wrapper);
+        return;
+      }
+      
+      // Bot or agent message
+      wrapper.style.cssText = 'display:flex;flex-direction:column;gap:0;';
+      
+      const isClicked = clickedButtonIds.has(msg.id);
+      
+      wrapper.innerHTML = \`
+        \${isAgent ? \`
+          <div class="vf-msg-agent">
+            \${messageContent}
+            \${fileUrl ? (isImage
+              ? \`<img src="\${fileUrl}" alt="\${fileName}" class="vf-file-preview" />\`
+              : \`<a href="\${fileUrl}" target="_blank" class="vf-file-link">\${fileName}</a>\`
+            ) : ''}
+          </div>
+        \` : \`
+          <p class="vf-msg-bot">
+            \${messageContent}
+            \${fileUrl ? (isImage
+              ? \`<img src="\${fileUrl}" alt="\${fileName}" class="vf-file-preview" style="display:block;margin-top:6px;" />\`
+              : \`<a href="\${fileUrl}" target="_blank" class="vf-file-link">\${fileName}</a>\`
+            ) : ''}
+          </p>
+        \`}
+        \${msg.buttons && msg.buttons.length > 0 ? \`
+          <div class="vf-buttons">
+            \${msg.buttons.map((btn, idx) => {
+              const isSelected = clickedButtonSelections[msg.id] === idx;
+              return \`
+                <button 
+                  class="vf-btn-option \${isSelected ? 'selected' : ''}" 
+                  \${isClicked ? 'disabled' : ''}
+                  onclick="window.vfHandleButtonClick('\${msg.id}', \${idx})"
+                >\${btn.text}</button>
+              \`;
+            }).join('')}
           </div>
         \` : ''}
-        <div class="vf-message-content">
-          <div class="vf-message-bubble">
-            \${messageContent ? \`<div>\${messageContent}</div>\` : ''}
-            \${fileUrl ? (isImage 
-              ? \`<img src="\${fileUrl}" alt="\${fileName}" class="vf-message-image" />\`
-              : \`<a href="\${fileUrl}" target="_blank" class="vf-message-file" download="\${fileName}">
-                  \${icons.paperclip}
-                  <span>\${fileName}</span>
-                </a>\`
-            ) : ''}
-            \${msg.buttons ? \`
-              <div class="vf-message-buttons">
-                \${msg.buttons.map((btn, idx) => {
-                  const isClicked = clickedButtonIds.has(msg.id);
-                  const isSelected = clickedButtonSelections[msg.id] === idx;
-                  return \`
-                    <button 
-                      class="vf-message-button \${buttonStyle} \${isClicked ? 'clicked' : ''} \${isSelected ? 'selected' : ''}" 
-                      \${isClicked ? 'disabled' : ''}
-                      onclick="window.vfHandleButtonClick('\${msg.id}', \${idx})"
-                    >
-                      \${btn.text}
-                    </button>
-                  \`;
-                }).join('')}
-              </div>
-            \` : ''}
-          </div>
-          <span class="vf-message-timestamp">\${formatTime(msg.timestamp)}</span>
-        </div>
+        <div class="vf-msg-time">\${formatTime(msg.timestamp)}</div>
       \`;
       
-      messagesEl.appendChild(messageDiv);
+      messagesEl.appendChild(wrapper);
     });
     
     if (isTyping) {
       const typingDiv = document.createElement('div');
-      typingDiv.className = 'vf-typing-container';
       typingDiv.innerHTML = \`
-        <div class="vf-message-avatar">
-          \${CONFIG.appearance.chatIconUrl 
-            ? \`<img src="\${CONFIG.appearance.chatIconUrl}" alt="Bot" />\`
-            : icons.bot
-          }
-        </div>
-        <div class="vf-typing-indicator">
+        <div class="vf-typing">
           <div class="vf-typing-dot"></div>
           <div class="vf-typing-dot"></div>
           <div class="vf-typing-dot"></div>
@@ -1334,24 +1346,30 @@ function generateWidgetScript(config: any): string {
   }
   
   function renderFAQ(container) {
-    if (CONFIG.tabs.faq.items.length === 0) {
+    const items = CONFIG.tabs.faq.items || [];
+    
+    if (items.length === 0) {
       container.innerHTML = \`
-        <div class="vf-empty-state">
-          <p>No FAQs available</p>
+        <div class="vf-empty">
+          <p>No FAQ items yet</p>
         </div>
       \`;
-    } else {
-      container.innerHTML = \`
-        <div style="padding: 20px;">
-          \${CONFIG.tabs.faq.items.map((item, i) => \`
-            <details style="margin-bottom: 12px; padding: 16px; border-radius: 12px; background: rgba(0,0,0,0.03);">
-              <summary style="cursor: pointer; font-weight: 600; font-size: 15px; outline: none;">\${item.question}</summary>
-              <p style="margin-top: 12px; color: rgba(0,0,0,0.7); line-height: 1.5;">\${item.answer}</p>
-            </details>
-          \`).join('')}
-        </div>
-      \`;
+      return;
     }
+    
+    container.innerHTML = \`
+      <div class="vf-faq-wrap">
+        \${items.map((item, idx) => \`
+          <div class="vf-faq-item">
+            <button class="vf-faq-q" onclick="this.classList.toggle('open');this.nextElementSibling.classList.toggle('open');">
+              <span>\${item.question}</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="vf-faq-a">\${item.answer}</div>
+          </div>
+        \`).join('')}
+      </div>
+    \`;
   }
   
   // File Upload Functions
