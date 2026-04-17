@@ -248,6 +248,46 @@ function generateWidgetScript(config: any): string {
   document.head.appendChild(fontLink);
   
   // Inject CSS
+  // Theme setup
+  const isDarkMode = (() => {
+    if (CONFIG.appearance.widgetMode === 'dark') return true;
+    if (CONFIG.appearance.widgetMode === 'light') return false;
+    // Auto: detect from website
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  })();
+  
+  const theme = isDarkMode ? {
+    bg: '#161618',
+    bgSurface: 'rgba(255,255,255,0.05)',
+    bgSurfaceHover: 'rgba(255,255,255,0.08)',
+    text: 'rgba(255,255,255,0.85)',
+    textSecondary: 'rgba(255,255,255,0.5)',
+    textMuted: 'rgba(255,255,255,0.25)',
+    textFaint: 'rgba(255,255,255,0.12)',
+    border: 'rgba(255,255,255,0.06)',
+    borderHover: 'rgba(255,255,255,0.12)',
+    inputBg: 'rgba(255,255,255,0.05)',
+    inputBorder: 'rgba(255,255,255,0.06)',
+    shadow: 'rgba(0,0,0,0.4)',
+    panelBorder: 'rgba(255,255,255,0.08)',
+  } : {
+    bg: '#ffffff',
+    bgSurface: '#f5f5f7',
+    bgSurfaceHover: '#eeeeef',
+    text: '#111111',
+    textSecondary: '#666666',
+    textMuted: '#bbbbbb',
+    textFaint: '#e0e0e0',
+    border: '#f0f0f0',
+    borderHover: '#e0e0e0',
+    inputBg: '#f5f5f7',
+    inputBorder: '#e5e7eb',
+    shadow: 'rgba(0,0,0,0.12)',
+    panelBorder: '#e5e7eb',
+  };
+  
+  const accent = CONFIG.appearance.primaryColor;
+  
   const style = document.createElement('style');
   style.textContent = \`
     * { box-sizing: border-box; }
@@ -259,11 +299,11 @@ function generateWidgetScript(config: any): string {
       right: 24px;
       max-width: 280px;
       padding: 12px 36px 12px 16px;
-      background: \${CONFIG.appearance.primaryColor};
+      background: \${accent};
       color: white;
       border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      font-family: \${CONFIG.appearance.fontFamily}, sans-serif;
+      box-shadow: 0 4px 12px \${theme.shadow};
+      font-family: \${CONFIG.appearance.fontFamily}, system-ui, sans-serif;
       font-size: 14px;
       font-weight: 500;
       cursor: pointer;
@@ -273,1096 +313,443 @@ function generateWidgetScript(config: any): string {
       transition: opacity 0.3s ease, transform 0.3s ease;
       pointer-events: none;
     }
-    
-    .vf-welcome-bubble.vf-visible {
-      opacity: 1;
-      transform: translateY(0);
-      pointer-events: auto;
-    }
-    
-    .vf-welcome-bubble.vf-hidden {
-      display: none !important;
-    }
-    
-    /* Speech bubble tail */
+    .vf-welcome-bubble.vf-visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+    .vf-welcome-bubble.vf-hidden { display: none !important; }
     .vf-welcome-bubble::after {
       content: '';
       position: absolute;
-      bottom: -8px;
-      right: 28px;
-      width: 0;
-      height: 0;
+      bottom: -8px; right: 28px;
       border-left: 8px solid transparent;
       border-right: 8px solid transparent;
-      border-top: 8px solid \${CONFIG.appearance.primaryColor};
+      border-top: 8px solid \${accent};
     }
-    
-    /* Close button */
     .vf-welcome-close {
-      position: absolute;
-      top: 8px;
-      right: 8px;
-      background: rgba(255,255,255,0.2);
-      border: none;
-      color: white;
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      cursor: pointer;
-      font-size: 14px;
-      line-height: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: background 0.2s;
+      position: absolute; top: 8px; right: 8px;
+      background: rgba(255,255,255,0.2); border: none; color: white;
+      width: 20px; height: 20px; border-radius: 50%; cursor: pointer;
+      font-size: 14px; display: flex; align-items: center; justify-content: center;
     }
+    .vf-welcome-close:hover { background: rgba(255,255,255,0.3); }
     
-    .vf-welcome-close:hover {
-      background: rgba(255,255,255,0.3);
-    }
-    
-    .vf-welcome-text {
-      display: block;
-    }
-    
-    /* Mobile adjustments for welcome bubble */
-    @media (max-width: 640px) {
-      .vf-welcome-bubble {
-        right: 16px;
-        bottom: 100px;
-        max-width: 260px;
-      }
-    }
-    
-    /* Chat Icon Button */
+    /* Glow Ring Button */
     .vf-widget-button {
-      position: fixed;
-      bottom: 24px;
-      right: 24px;
-      width: 60px;
-      height: 60px;
-      border: none;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.2s;
-      z-index: 999998;
+      position: fixed; bottom: 24px; right: 24px;
+      width: 60px; height: 60px; border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: transform 0.2s; z-index: 999998;
+      background: transparent; border-radius: 50%;
     }
-    
-    /* Custom icon - no background */
-    .vf-widget-button.has-custom-icon {
-      background: transparent;
-      box-shadow: none;
-      border-radius: 50%;
+    .vf-widget-button::before {
+      content: '';
+      position: absolute; inset: -5px; border-radius: 50%;
+      background: \${accent}; opacity: 0.15;
+      animation: vf-glow 2s ease-in-out infinite;
     }
-    
-    .vf-widget-button.has-custom-icon img {
-      width: 60px;
-      height: 60px;
-      border-radius: 50%;
-      object-fit: cover;
+    .vf-widget-button::after {
+      content: '';
+      position: absolute; inset: -10px; border-radius: 50%;
+      background: \${accent}; opacity: 0.06;
+      animation: vf-glow 2s ease-in-out infinite 0.3s;
     }
-    
-    .vf-widget-button.has-custom-icon:hover {
+    @keyframes vf-glow {
+      0%, 100% { transform: scale(1); opacity: 0.15; }
+      50% { transform: scale(1.08); opacity: 0.08; }
+    }
+    .vf-widget-button .vf-btn-inner {
+      width: 60px; height: 60px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      position: relative; z-index: 1;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .vf-widget-button.has-custom-icon .vf-btn-inner {
+      background: transparent; box-shadow: none;
+    }
+    .vf-widget-button.has-custom-icon .vf-btn-inner img {
+      width: 60px; height: 60px; border-radius: 50%; object-fit: cover;
+    }
+    .vf-widget-button.default-icon .vf-btn-inner {
+      background: \${accent};
+      box-shadow: 0 4px 12px \${theme.shadow};
+    }
+    .vf-widget-button.default-icon .vf-btn-inner svg {
+      fill: white; width: 28px; height: 28px;
+    }
+    .vf-widget-button:hover .vf-btn-inner {
       transform: scale(1.05);
     }
     
-    /* Default icon - colored background */
-    .vf-widget-button.default-icon {
-      background: \${CONFIG.appearance.primaryColor};
-      border-radius: 50%;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    }
-    
-    .vf-widget-button.default-icon:hover {
-      transform: scale(1.05);
-      box-shadow: 0 6px 16px rgba(0,0,0,0.2);
-    }
-    
-    .vf-widget-button.default-icon svg {
-      fill: white;
-      width: 28px;
-      height: 28px;
+    /* Stop glow when panel is open */
+    .vf-widget-panel:not(.hidden) ~ .vf-widget-button::before,
+    .vf-widget-panel:not(.hidden) ~ .vf-widget-button::after {
+      animation: none; opacity: 0;
     }
     
     /* Widget Panel */
     .vf-widget-panel {
-      position: fixed;
-      bottom: 100px;
-      right: 24px;
-      width: 380px;
-      max-width: calc(100vw - 48px);
-      height: 600px;
-      max-height: calc(100vh - 140px);
-      background: #ffffff;
+      position: fixed; bottom: 100px; right: 24px;
+      width: 380px; max-width: calc(100vw - 48px);
+      height: 600px; max-height: calc(100vh - 140px);
+      background: \${theme.bg};
       border-radius: 16px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+      border: 1px solid \${theme.panelBorder};
+      box-shadow: 0 8px 32px \${theme.shadow};
       z-index: 999999;
-      display: flex;
-      flex-direction: column;
-      font-family: \${CONFIG.appearance.fontFamily}, sans-serif;
+      display: flex; flex-direction: column;
+      font-family: \${CONFIG.appearance.fontFamily}, system-ui, sans-serif;
       overflow: hidden;
       transition: opacity 0.2s, transform 0.2s;
     }
-    
     .vf-widget-panel.hidden {
-      opacity: 0;
-      transform: scale(0.95);
-      pointer-events: none;
+      opacity: 0; transform: scale(0.95);
+      pointer-events: none; visibility: hidden;
     }
     
-    /* Header with gradient and wave */
-    .vf-widget-header {
-      position: relative;
-      background: linear-gradient(135deg, \${CONFIG.appearance.primaryColor} 0%, \${CONFIG.appearance.primaryColor}dd 100%);
-      color: \${CONFIG.appearance.secondaryColor};
-      padding: 20px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
+    /* Accent Stripe */
+    .vf-accent-stripe {
+      height: 3px; background: \${accent}; flex-shrink: 0;
+    }
+    
+    /* Header */
+    .vf-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid \${theme.border};
+      display: flex; justify-content: space-between; align-items: center;
       flex-shrink: 0;
     }
-    
-    .vf-widget-header img {
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      border: 2px solid \${CONFIG.appearance.secondaryColor}40;
-      background: white;
-      object-fit: cover;
-    }
-    
-    .vf-widget-header-text {
-      flex: 1;
-    }
-    
-    .vf-widget-header-title {
-      font-weight: 600;
-      font-size: 16px;
-      margin-bottom: 2px;
-    }
-    
-    .vf-widget-header-desc {
-      font-size: 12px;
-      opacity: 0.9;
-    }
-    
-    .vf-widget-close {
-      background: transparent;
-      border: none;
-      color: \${CONFIG.appearance.secondaryColor};
-      cursor: pointer;
-      width: 32px;
-      height: 32px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 50%;
+    .vf-header-left { display: flex; align-items: center; gap: 8px; }
+    .vf-header-title { font-size: 14px; font-weight: 500; color: \${theme.text}; margin: 0; }
+    .vf-header-btn {
+      width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; border: none;
+      background: \${theme.bgSurface}; color: \${theme.textSecondary};
       transition: background 0.2s;
-      flex-shrink: 0;
     }
+    .vf-header-btn:hover { background: \${theme.bgSurfaceHover}; }
+    .vf-header-btn svg { width: 14px; height: 14px; }
     
-    .vf-widget-close:hover {
-      background: rgba(255,255,255,0.2);
+    /* Logo Badge */
+    .vf-logo-badge {
+      width: 34px; height: 34px; border-radius: 9px;
+      background: \${accent};
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-weight: 500; font-size: 13px;
+      flex-shrink: 0; overflow: hidden;
     }
-    
-    .vf-back-button {
-      background: transparent;
-      border: none;
-      color: \${CONFIG.appearance.secondaryColor};
-      cursor: pointer;
-      width: 32px;
-      height: 32px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 50%;
-      transition: background 0.2s;
-      flex-shrink: 0;
-      margin-left: -8px;
+    .vf-logo-badge img { width: 100%; height: 100%; object-fit: cover; }
+    .vf-logo-badge-sm {
+      width: 24px; height: 24px; border-radius: 50%;
+      background: \${accent};
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-weight: 500; font-size: 10px;
+      flex-shrink: 0; overflow: hidden;
     }
+    .vf-logo-badge-sm img { width: 100%; height: 100%; object-fit: cover; }
     
-    .vf-back-button:hover {
-      background: rgba(255,255,255,0.2);
+    /* Home Screen */
+    .vf-home { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .vf-home-hero {
+      padding: 24px 20px 20px; flex-shrink: 0;
     }
-    
-    .vf-back-button svg {
-      width: 20px;
-      height: 20px;
+    .vf-home-hero-top {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      margin-bottom: 24px;
     }
-    
-    .vf-wave-decoration {
-      width: 100%;
-      height: 32px;
-    }
-    
-    /* Home Tab Gradient Header */
-    .vf-home-gradient-header {
-      position: relative;
-      padding: 48px 24px 96px 24px;
-      background: linear-gradient(160deg, \${CONFIG.appearance.primaryColor} 0%, \${CONFIG.appearance.primaryColor}dd 50%, transparent 100%);
-    }
-    
-    .vf-home-logo-text {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-    }
-    
-    .vf-home-logo {
-      width: 64px;
-      height: 64px;
-      border-radius: 50%;
-      border: 3px solid \${CONFIG.appearance.secondaryColor};
-      background: white;
-      object-fit: cover;
-      flex-shrink: 0;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
-    
-    .vf-home-text {
-      flex: 1;
-    }
-    
     .vf-home-title {
-      font-size: 28px;
-      font-weight: 700;
-      color: \${CONFIG.appearance.secondaryColor};
-      margin-bottom: 8px;
+      font-size: 24px; font-weight: 500; color: \${theme.text};
+      margin: 0 0 4px; line-height: 1.15; letter-spacing: -0.3px;
     }
-    
-    .vf-home-subtitle {
-      font-size: 18px;
-      font-weight: 500;
-      color: \${CONFIG.appearance.secondaryColor};
-      opacity: 0.95;
+    .vf-home-status {
+      display: flex; align-items: center; gap: 5px; margin-top: 8px;
     }
+    .vf-home-status-dot {
+      width: 6px; height: 6px; border-radius: 50%; background: #4ade80;
+    }
+    .vf-home-status-text { font-size: 11px; color: \${theme.textMuted}; }
     
-    .vf-home-content {
-      flex: 1 1 auto;
-      background: #ffffff;
-      padding: 0 24px 24px 24px;
-      margin-top: -64px;
-      position: relative;
-      z-index: 10;
+    .vf-home-actions {
+      flex: 1; padding: 0 14px; display: flex; flex-direction: column; gap: 8px;
       overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      min-height: 0;
-      justify-content: flex-start;
     }
-    
-    .vf-home-buttons {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      padding-top: 24px;
-    }
-    
     .vf-home-button {
-      width: 100%;
-      padding: 16px;
-      border: none;
-      border-radius: 16px;
-      background: rgba(0,0,0,0.03);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      transition: all 0.2s;
-      font-family: inherit;
-      font-size: 14px;
-      font-weight: 600;
-      color: inherit;
+      padding: 14px; border-radius: 12px;
+      background: \${theme.bgSurface}; border: 1px solid \${theme.border};
+      display: flex; align-items: center; gap: 12px;
+      cursor: pointer; transition: background 0.2s; width: 100%;
+      text-align: left; color: \${theme.text}; font-family: inherit;
     }
-    
-    .vf-home-button:hover {
-      background: rgba(0,0,0,0.06);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
-    
-    .vf-home-button-content {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    
+    .vf-home-button:hover { background: \${theme.bgSurfaceHover}; }
     .vf-home-button-icon {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      background: #ffffff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    
-    .vf-home-button-icon svg {
-      width: 20px;
-      height: 20px;
-      stroke: \${CONFIG.appearance.primaryColor};
-      fill: none;
-    }
-    
-    .vf-home-button-arrow {
-      color: rgba(0,0,0,0.4);
-      transition: transform 0.2s;
-    }
-    
-    .vf-home-button:hover .vf-home-button-arrow {
-      transform: translateX(4px);
-    }
-    
-    .vf-message-button.clicked {
-      opacity: 0.6;
-      cursor: not-allowed;
-      pointer-events: none;
-    }
-    
-    .vf-message-button.selected {
-      background: \${CONFIG.appearance.primaryColor} !important;
-      color: white !important;
-      border-color: \${CONFIG.appearance.primaryColor} !important;
-    }
-    
-    /* Floating close button for Home tab */
-    .vf-floating-close {
-      position: absolute;
-      top: 16px;
-      right: 16px;
-      z-index: 50;
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      background: rgba(255,255,255,0.2);
-      backdrop-filter: blur(8px);
-      border: none;
-      color: \${CONFIG.appearance.secondaryColor};
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      transition: all 0.2s;
-    }
-    
-    .vf-floating-close:hover {
-      background: rgba(255,255,255,0.3);
-    }
-    
-    /* Content Area */
-    .vf-widget-content {
-      flex: 1 1 auto;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      justify-content: flex-start;
-      min-height: 0;
-      height: 100%;
-    }
-    
-    /* Panel Content Container */
-    #vf-panel-content {
-      display: flex;
-      flex-direction: column;
-      height: 100%;
-      min-height: 0;
-      background: #ffffff;
-      overscroll-behavior: contain;
-    }
-    
-    .vf-widget-content::-webkit-scrollbar {
-      width: 8px;
-    }
-    
-    .vf-widget-content::-webkit-scrollbar-track {
-      background: transparent;
-    }
-    
-    .vf-widget-content::-webkit-scrollbar-thumb {
-      background: rgba(0,0,0,0.2);
-      border-radius: 4px;
-    }
-    
-    .vf-widget-content::-webkit-scrollbar-thumb:hover {
-      background: rgba(0,0,0,0.3);
-    }
-    
-    /* Chat List View */
-    .vf-chats-header {
-      padding: 20px 24px;
+      width: 34px; height: 34px; border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
       flex-shrink: 0;
     }
+    .vf-home-button-icon.primary { background: \${accent}; }
+    .vf-home-button-icon.primary svg { stroke: white; }
+    .vf-home-button-icon.secondary { background: \${theme.bgSurface}; border: 1px solid \${theme.border}; }
+    .vf-home-button-icon.secondary svg { stroke: \${theme.textSecondary}; }
+    .vf-home-button-text { flex: 1; }
+    .vf-home-button-text strong { font-size: 14px; font-weight: 500; display: block; color: \${theme.text}; }
+    .vf-home-button-text span { font-size: 11px; color: \${theme.textMuted}; margin-top: 2px; display: block; }
+    .vf-home-button-chevron { color: \${theme.textFaint}; flex-shrink: 0; }
+    .vf-home-button-chevron svg { width: 12px; height: 12px; }
     
-    .vf-chats-title-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 16px;
+    /* Powered By */
+    .vf-powered-by {
+      padding: 8px 14px; text-align: center; flex-shrink: 0;
+    }
+    .vf-powered-by span {
+      font-size: 9px; color: \${theme.textFaint};
+      letter-spacing: 0.5px; text-transform: uppercase;
     }
     
-    .vf-chats-title-row svg {
-      width: 20px;
-      height: 20px;
-      stroke: \${CONFIG.appearance.primaryColor};
+    /* Chat History */
+    .vf-chat-list { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .vf-chat-list-header {
+      padding: 16px 16px 12px;
+      display: flex; align-items: center; gap: 8px; flex-shrink: 0;
     }
-    
-    .vf-chats-title {
-      font-size: 18px;
-      font-weight: 600;
+    .vf-chat-list-title { font-size: 16px; font-weight: 500; color: \${theme.text}; }
+    .vf-new-chat-btn {
+      padding: 14px; border-radius: 12px;
+      background: \${theme.bgSurface}; border: 1px solid \${theme.border};
+      display: flex; align-items: center; gap: 12px;
+      cursor: pointer; transition: background 0.2s; width: 100%;
+      margin: 0 16px 8px; color: \${theme.text}; font-family: inherit;
+      text-align: left;
     }
-    
-    .vf-new-chat-button {
-      width: 100%;
-      padding: 16px 8px 16px 16px;
-      border: none;
-      border-radius: 12px;
-      background: \${CONFIG.appearance.primaryColor}25;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      transition: all 0.2s;
-      font-family: inherit;
-      font-weight: 500;
+    .vf-new-chat-btn:hover { background: \${theme.bgSurfaceHover}; }
+    .vf-chat-list-scroll { flex: 1; overflow-y: auto; padding: 0 16px 16px; }
+    .vf-chat-section-label {
+      font-size: 10px; font-weight: 600; color: \${theme.textMuted};
+      text-transform: uppercase; letter-spacing: 0.5px;
+      margin: 12px 0 8px;
     }
-    
-    .vf-new-chat-button:hover {
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    .vf-conv-card {
+      padding: 12px 14px; border-radius: 12px;
+      background: \${theme.bgSurface}; border: 1px solid \${theme.border};
+      margin-bottom: 6px; cursor: pointer;
+      transition: background 0.2s;
     }
-    
-    .vf-new-chat-arrow {
-      width: 20px;
-      height: 20px;
-      stroke: rgba(0,0,0,0.4);
-      flex-shrink: 0;
-      transition: transform 0.2s;
+    .vf-conv-card:hover { background: \${theme.bgSurfaceHover}; }
+    .vf-conv-card-preview {
+      font-size: 13px; color: \${theme.text}; margin: 0 0 4px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
-    
-    .vf-new-chat-button:hover .vf-new-chat-arrow {
-      transform: translateX(4px);
+    .vf-conv-card-meta {
+      font-size: 11px; color: \${theme.textMuted};
+      display: flex; align-items: center; gap: 6px;
     }
-    
-    .vf-new-chat-content {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    
-    .vf-new-chat-content svg {
-      width: 20px;
-      height: 20px;
-      stroke: \${CONFIG.appearance.primaryColor};
-    }
-    
-    .vf-chats-section {
-      padding: 0 16px 20px 24px;
-    }
-    
-    .vf-chats-section-title {
-      font-size: 11px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: rgba(0,0,0,0.5);
-      margin-bottom: 12px;
-    }
-    
-    .vf-conversation-card {
-      width: 100%;
-      padding: 16px 8px 16px 16px;
-      border-radius: 12px;
-      background: \${CONFIG.appearance.primaryColor}15;
-      cursor: pointer;
-      transition: all 0.2s;
-      display: flex;
-      align-items: start;
-      gap: 12px;
-      margin-bottom: 8px;
-    }
-    
-    .vf-conversation-card:hover {
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
-    
-    .vf-conversation-icon {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      background: \${CONFIG.appearance.primaryColor}30;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-    
-    .vf-conversation-icon svg {
-      width: 20px;
-      height: 20px;
-      stroke: \${CONFIG.appearance.primaryColor};
-    }
-    
-    .vf-conversation-details {
-      flex: 1;
-      min-width: 0;
-    }
-    
-    .vf-conversation-preview {
-      font-weight: 500;
-      font-size: 14px;
-      margin-bottom: 4px;
-      overflow: hidden;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      word-break: break-all;
-    }
-    
-    .vf-conversation-meta {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 12px;
-      color: rgba(0,0,0,0.5);
-    }
-    
-    .vf-conversation-meta svg {
-      width: 12px;
-      height: 12px;
-      stroke: currentColor;
-    }
-    
-    .vf-conversation-badge {
-      background: rgba(0,0,0,0.1);
-      padding: 2px 8px;
-      border-radius: 12px;
-      font-size: 11px;
+    .vf-conv-card-meta svg { width: 11px; height: 11px; }
+    .vf-conv-card-count {
+      font-size: 10px; background: \${theme.bgSurfaceHover};
+      padding: 1px 6px; border-radius: 8px; color: \${theme.textSecondary};
       margin-left: auto;
     }
     
-    .vf-conversation-chevron {
-      width: 20px;
-      height: 20px;
-      stroke: rgba(0,0,0,0.4);
-      flex-shrink: 0;
-      transition: transform 0.2s;
+    /* Messages Area */
+    .vf-messages-wrap {
+      flex: 1; overflow-y: auto; padding: 20px 20px 16px;
+      display: flex; flex-direction: column; gap: 16px;
+      scroll-behavior: smooth;
     }
     
-    .vf-conversation-card:hover .vf-conversation-chevron {
-      transform: translateX(2px);
+    /* Bot message - flowing text, no bubble */
+    .vf-msg-bot {
+      font-size: 15px; color: \${theme.text}; line-height: 1.55;
+      margin: 0; max-width: 100%;
+    }
+    .vf-msg-bot a { color: \${accent}; text-decoration: underline; }
+    .vf-msg-time {
+      font-size: 10px; color: \${theme.textMuted}; margin-top: 5px;
     }
     
-    .vf-empty-state {
-      text-align: center;
-      padding: 60px 32px;
-      color: rgba(0,0,0,0.4);
-    }
-    
-    .vf-empty-state svg {
-      width: 48px;
-      height: 48px;
-      opacity: 0.3;
-      margin: 0 auto 12px;
-    }
-    
-    /* Messages View */
-    .vf-messages-container {
-      flex: 1;
-      padding: 16px;
-      overflow-y: auto;
-      min-height: 0;
-      overscroll-behavior: contain;
-    }
-    
-    .vf-messages-container::-webkit-scrollbar {
-      width: 8px;
-    }
-    
-    .vf-messages-container::-webkit-scrollbar-track {
-      background: transparent;
-    }
-    
-    .vf-messages-container::-webkit-scrollbar-thumb {
-      background: rgba(0,0,0,0.2);
-      border-radius: 4px;
-    }
-    
-    .vf-messages-container::-webkit-scrollbar-thumb:hover {
-      background: rgba(0,0,0,0.3);
-    }
-    
-    .vf-message {
-      display: flex;
-      gap: 12px;
-      margin-bottom: 16px;
-      animation: fadeIn 0.3s;
-    }
-    
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    
-    .vf-message.user {
-      flex-direction: row-reverse;
-    }
-    
-    .vf-message-avatar {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: \${CONFIG.appearance.primaryColor}20;
-    }
-    
-    .vf-message-avatar img {
-      width: 100%;
-      height: 100%;
-      border-radius: 50%;
-      object-fit: cover;
-    }
-    
-    .vf-message-avatar svg {
-      width: 16px;
-      height: 16px;
-      fill: \${CONFIG.appearance.primaryColor};
-    }
-    
-    .vf-message-content {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      max-width: 75%;
-    }
-    
-    .vf-message.user .vf-message-content {
-      align-items: end;
-    }
-    
-    .vf-message-bubble {
-      padding: 12px 16px;
+    /* User message - compact coloured pill */
+    .vf-msg-user-wrap { display: flex; justify-content: flex-end; }
+    .vf-msg-user {
+      background: \${accent}; border-radius: 18px;
+      padding: 9px 16px; max-width: 75%;
+      font-size: 14px; color: white; line-height: 1.4; margin: 0;
       word-wrap: break-word;
-      border-radius: \${CONFIG.appearance.messageBubbleStyle === 'pill' ? '20px' : CONFIG.appearance.messageBubbleStyle === 'square' ? '4px' : '16px'};
     }
     
-    .vf-message.assistant .vf-message-bubble {
-      background: \${CONFIG.functions.messageBgColor};
-      color: \${CONFIG.functions.messageTextColor};
+    /* Interactive buttons - standalone below bot text */
+    .vf-buttons {
+      display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;
     }
-    
-    .vf-message.user .vf-message-bubble {
-      background: \${CONFIG.appearance.primaryColor};
-      color: \${CONFIG.appearance.secondaryColor};
+    .vf-btn-option {
+      padding: 8px 16px; border-radius: 18px;
+      border: 1px solid \${theme.borderHover};
+      background: transparent; color: \${theme.text};
+      font-size: 13px; font-weight: 500; cursor: pointer;
+      font-family: inherit; transition: background 0.15s, border-color 0.15s;
     }
-    
-    .vf-message.system {
-      display: flex;
-      justify-content: center;
-      margin: 8px 0;
+    .vf-btn-option:hover {
+      background: \${theme.bgSurface}; border-color: \${theme.textMuted};
     }
-    .vf-message.system .vf-message-content {
-      background: none;
+    .vf-btn-option.selected {
+      background: \${accent}; color: white;
+      border-color: \${accent};
     }
-    .vf-message.system .vf-message-bubble {
-      background: #f3f4f6;
-      color: #6b7280;
-      font-size: 12px;
-      padding: 4px 14px;
-      border-radius: 20px;
-      border: 1px solid #e5e7eb;
-      max-width: none;
-      text-align: center;
-    }
-    .vf-message.system .vf-message-timestamp {
-      display: none;
-    }
-    .vf-message.system .vf-message-avatar {
-      display: none;
-    }
-    
-    .vf-message-timestamp {
-      font-size: 11px;
-      color: rgba(0,0,0,0.4);
-      padding: 0 4px;
-    }
-    
-    .vf-message-buttons {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      margin-top: 8px;
-    }
-    
-    .vf-message-button {
-      padding: 10px 16px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-family: inherit;
-      font-size: 14px;
-      font-weight: 500;
-      transition: all 0.2s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-    }
-    
-    .vf-message-button.solid {
-      background: \${CONFIG.appearance.primaryColor};
-      color: \${CONFIG.appearance.secondaryColor};
-      border: none;
-    }
-    
-    .vf-message-button.outlined {
-      background: transparent;
-      color: \${CONFIG.appearance.primaryColor};
-      border: 2px solid \${CONFIG.appearance.primaryColor};
-    }
-    
-    .vf-message-button.soft {
-      background: \${CONFIG.appearance.primaryColor}20;
-      color: \${CONFIG.appearance.primaryColor};
-      border: 1px solid \${CONFIG.appearance.primaryColor}50;
-    }
-    
-    .vf-message-button:hover:not(:disabled) {
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      transform: translateY(-1px);
-    }
-    
-    .vf-message-button:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-    
-    .vf-message-button.selected {
-      background: \${CONFIG.appearance.primaryColor};
-      color: \${CONFIG.appearance.secondaryColor};
-      border: 2px solid \${CONFIG.appearance.primaryColor};
-    }
-    
-    .vf-message-image {
-      max-width: 100%;
-      border-radius: 8px;
-      margin-top: 8px;
-      display: block;
-      cursor: pointer;
-    }
-    
-    .vf-message-file {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 12px;
-      margin-top: 8px;
-      background: rgba(0,0,0,0.05);
-      border-radius: 8px;
-      text-decoration: none;
-      color: inherit;
-      transition: background 0.2s;
-    }
-    
-    .vf-message-file:hover {
-      background: rgba(0,0,0,0.1);
-    }
-    
-    .vf-message-file svg {
-      width: 20px;
-      height: 20px;
-      flex-shrink: 0;
-    }
-    
-    .vf-message-file span {
-      font-size: 14px;
-      font-weight: 500;
+    .vf-btn-option:disabled {
+      opacity: 0.4; cursor: default;
     }
     
     /* Typing Indicator */
-    .vf-typing-container {
-      display: flex;
-      gap: 12px;
-      margin-bottom: 16px;
-    }
-    
-    .vf-typing-indicator {
-      display: flex;
-      gap: 4px;
-      padding: 12px 16px;
-      background: rgba(0,0,0,0.05);
-      border-radius: 16px;
-      width: fit-content;
-    }
-    
+    .vf-typing { display: flex; gap: 4px; padding: 4px 0; }
     .vf-typing-dot {
-      width: 8px;
-      height: 8px;
-      background: \${CONFIG.appearance.primaryColor}99;
-      border-radius: 50%;
-      animation: bounce 1.4s infinite ease-in-out both;
+      width: 7px; height: 7px; border-radius: 50%;
+      background: \${theme.textMuted};
+      animation: vf-bounce 1.2s ease-in-out infinite;
+    }
+    .vf-typing-dot:nth-child(2) { animation-delay: 0.15s; }
+    .vf-typing-dot:nth-child(3) { animation-delay: 0.3s; }
+    @keyframes vf-bounce {
+      0%, 60%, 100% { transform: translateY(0); }
+      30% { transform: translateY(-6px); }
     }
     
-    .vf-typing-dot:nth-child(1) { animation-delay: -0.32s; }
-    .vf-typing-dot:nth-child(2) { animation-delay: -0.16s; }
-    
-    @keyframes bounce {
-      0%, 80%, 100% { transform: scale(0); }
-      40% { transform: scale(1); }
-    }
-    
-    /* Input Area */
-    .vf-input-area {
-      padding: 16px;
-      background: \${CONFIG.appearance.primaryColor}08;
-      border-top: 1px solid rgba(0,0,0,0.06);
+    /* Input Bar */
+    .vf-input-bar {
+      padding: 12px 16px; border-top: 1px solid \${theme.border};
       flex-shrink: 0;
     }
-    
-    .vf-new-conversation-btn {
-      width: 100%;
-      padding: 12px 16px;
-      border-radius: 24px;
-      border: none;
-      background: \${CONFIG.appearance.primaryColor};
-      color: white;
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
+    .vf-input-row { display: flex; align-items: center; gap: 8px; }
+    .vf-input-field {
+      flex: 1; background: \${theme.inputBg};
+      border: 1px solid \${theme.inputBorder};
+      border-radius: 22px; padding: 10px 16px;
+      font-size: 14px; color: \${theme.text};
+      font-family: inherit; outline: none;
+      transition: border-color 0.2s;
+    }
+    .vf-input-field::placeholder { color: \${theme.textMuted}; }
+    .vf-input-field:focus { border-color: \${accent}; }
+    .vf-attach-btn {
+      width: 36px; height: 36px; border-radius: 50%;
+      border: none; background: transparent;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; color: \${theme.textMuted};
+      flex-shrink: 0; transition: color 0.2s;
+    }
+    .vf-attach-btn:hover { color: \${theme.textSecondary}; }
+    .vf-attach-btn svg { width: 18px; height: 18px; }
+    .vf-send-btn {
+      width: 36px; height: 36px; border-radius: 50%;
+      border: none; background: \${accent};
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; flex-shrink: 0;
       transition: opacity 0.2s;
     }
-
-    .vf-new-conversation-btn:hover {
-      opacity: 0.9;
-    }
-
-    .vf-input-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
+    .vf-send-btn:hover { opacity: 0.9; }
+    .vf-send-btn svg { width: 14px; height: 14px; fill: white; }
     
-    .vf-input-attach {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      background: transparent;
-      border: none;
-      color: rgba(0,0,0,0.5);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.2s;
+    /* Tab Navigation */
+    .vf-tabs {
+      border-top: 1px solid \${theme.border};
+      display: flex; justify-content: center; gap: 32px;
+      padding: 8px 0; flex-shrink: 0;
     }
-    
-    .vf-input-attach:hover {
-      background: rgba(0,0,0,0.05);
-      color: rgba(0,0,0,0.7);
-    }
-    
-    .vf-input-attach svg {
-      width: 20px;
-      height: 20px;
-      stroke: currentColor;
-    }
-    
-    .vf-input {
-      flex: 1;
-      padding: 12px 20px;
-      border: none;
-      border-radius: 24px;
-      background: #ffffff;
-      font-family: inherit;
-      font-size: 14px;
-      outline: none;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-    
-    .vf-input:focus {
-      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-    }
-    
-    .vf-send-button {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      background: \${CONFIG.appearance.primaryColor};
-      color: \${CONFIG.appearance.secondaryColor};
-      border: none;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.2s;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-    
-    .vf-send-button:hover:not(:disabled) {
-      transform: scale(1.05);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    }
-    
-    .vf-send-button:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-    
-    .vf-send-button svg {
-      width: 18px;
-      height: 18px;
-      fill: currentColor;
-    }
-    
-    /* Bottom Tabs */
-    .vf-bottom-tabs {
-      display: flex;
-      align-items: center;
-      justify-content: space-around;
-      padding: 8px;
-      border-top: 1px solid rgba(0,0,0,0.1);
-      background: #ffffff;
-      flex-shrink: 0;
-      margin-top: auto;
-    }
-    
     .vf-tab {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-      padding: 12px;
-      border: none;
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+      padding: 6px 12px; border-radius: 8px;
+      cursor: pointer; border: none; background: transparent;
+      font-family: inherit; transition: background 0.2s;
+    }
+    .vf-tab svg { width: 18px; height: 18px; }
+    .vf-tab span { font-size: 11px; font-weight: 500; }
+    .vf-tab.active { color: \${accent}; }
+    .vf-tab.active svg { fill: \${accent}; stroke: \${accent}; }
+    .vf-tab:not(.active) { color: \${theme.textMuted}; }
+    .vf-tab:not(.active) svg { stroke: \${theme.textMuted}; fill: none; }
+    
+    /* Handover - agent message */
+    .vf-msg-agent {
+      background: \${theme.bgSurface}; border: 1px solid \${theme.border};
+      border-radius: 14px; padding: 10px 14px;
+      font-size: 15px; color: \${theme.text}; line-height: 1.5;
+      max-width: 85%;
+    }
+    
+    /* System messages */
+    .vf-msg-system {
+      text-align: center; font-size: 12px; color: \${theme.textMuted};
+      padding: 8px 0;
+    }
+    
+    /* File preview in message */
+    .vf-file-preview { max-width: 200px; border-radius: 8px; margin-top: 4px; }
+    .vf-file-link {
+      color: \${accent}; font-size: 13px; text-decoration: underline;
+      display: inline-block; margin-top: 4px;
+    }
+    
+    /* FAQ */
+    .vf-faq-wrap { flex: 1; overflow-y: auto; padding: 16px; }
+    .vf-faq-item {
+      border: 1px solid \${theme.border}; border-radius: 10px;
+      margin-bottom: 8px; overflow: hidden;
+    }
+    .vf-faq-q {
+      padding: 12px 16px; cursor: pointer; font-size: 14px; font-weight: 500;
+      color: \${theme.text}; background: transparent; border: none;
+      width: 100%; text-align: left; font-family: inherit;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .vf-faq-q:hover { background: \${theme.bgSurface}; }
+    .vf-faq-q svg { width: 14px; height: 14px; color: \${theme.textMuted}; transition: transform 0.2s; flex-shrink: 0; }
+    .vf-faq-q.open svg { transform: rotate(180deg); }
+    .vf-faq-a {
+      padding: 0 16px 12px; font-size: 14px; color: \${theme.textSecondary};
+      line-height: 1.6; display: none;
+    }
+    .vf-faq-a.open { display: block; }
+    
+    /* Empty state */
+    .vf-empty {
+      text-align: center; padding: 40px 20px; color: \${theme.textMuted};
+    }
+    .vf-empty svg { width: 40px; height: 40px; margin-bottom: 12px; opacity: 0.3; color: \${theme.textMuted}; }
+    .vf-empty p { margin: 4px 0; font-size: 14px; }
+    .vf-empty p:last-child { font-size: 13px; }
+    
+    /* Scrollbar */
+    .vf-messages-wrap::-webkit-scrollbar,
+    .vf-chat-list-scroll::-webkit-scrollbar,
+    .vf-faq-wrap::-webkit-scrollbar {
+      width: 4px;
+    }
+    .vf-messages-wrap::-webkit-scrollbar-thumb,
+    .vf-chat-list-scroll::-webkit-scrollbar-thumb,
+    .vf-faq-wrap::-webkit-scrollbar-thumb {
+      background: \${theme.borderHover}; border-radius: 4px;
+    }
+    .vf-messages-wrap::-webkit-scrollbar-track,
+    .vf-chat-list-scroll::-webkit-scrollbar-track,
+    .vf-faq-wrap::-webkit-scrollbar-track {
       background: transparent;
-      cursor: pointer;
-      border-radius: 8px;
-      transition: all 0.2s;
-      font-family: inherit;
     }
     
-    .vf-tab.active {
-      background: \${CONFIG.appearance.primaryColor}15;
-      color: \${CONFIG.appearance.primaryColor};
-    }
-    
-    .vf-tab svg {
-      width: 20px;
-      height: 20px;
-      stroke: currentColor;
-    }
-    
-    .vf-tab-label {
-      font-size: 12px;
-      font-weight: 500;
-    }
-    
-    /* Hide elements */
-    .hidden {
-      display: none !important;
-    }
-    
-    /* Mobile Breakpoint - 640px */
+    /* Mobile */
     @media (max-width: 640px) {
-      /* Hide chat button when widget is open on mobile */
-      .vf-widget-panel:not(.hidden) ~ .vf-widget-button {
-        display: none !important;
-      }
-      
-      /* Chat Button - Larger on mobile with more spacing */
-      .vf-widget-button {
-        width: 70px;
-        height: 70px;
-        right: 24px;
-        bottom: 24px;
-      }
-      
-      .vf-widget-button.has-custom-icon img {
-        width: 70px;
-        height: 70px;
-      }
-      
-      .vf-widget-button.default-icon svg {
-        width: 28px;
-        height: 28px;
-      }
-      
-      /* Widget Panel - Full screen on mobile */
-      .vf-widget-panel:not(.hidden) {
-        position: fixed !important;
-        top: 0 !important;
-        left: 0 !important;
-        right: 0 !important;
-        bottom: 0 !important;
-        width: 100vw !important;
-        height: 100vh !important;
-        height: 100dvh !important;
-        max-width: 100vw !important;
-        max-height: 100vh !important;
-        max-height: 100dvh !important;
-        border-radius: 0 !important;
-        box-shadow: none !important;
-        margin: 0 !important;
-      }
-      
-      /* Header - Account for notches */
-      .vf-widget-header {
+      .vf-widget-panel {
+        bottom: 0; right: 0; left: 0;
+        width: 100%; max-width: 100%;
+        height: 100vh; max-height: 100vh;
         border-radius: 0;
-        padding-top: max(20px, env(safe-area-inset-top));
-        padding-left: max(20px, env(safe-area-inset-left));
-        padding-right: max(20px, env(safe-area-inset-right));
       }
-      
-      /* Home gradient header */
-      .vf-home-gradient-header {
-        padding-top: max(48px, calc(48px + env(safe-area-inset-top)));
-        padding-left: max(24px, env(safe-area-inset-left));
-        padding-right: max(24px, env(safe-area-inset-right));
-      }
-      
-      /* Bottom tabs - Account for home indicator */
-      .vf-bottom-tabs {
-        padding-bottom: max(8px, env(safe-area-inset-bottom));
-      }
-      
-      .vf-widget-tabs {
-        padding-bottom: max(8px, env(safe-area-inset-bottom));
-      }
-      
-      /* Input area - Account for keyboard/home indicator */
-      .vf-input-area {
-        padding-bottom: max(12px, env(safe-area-inset-bottom));
-        padding-left: max(12px, env(safe-area-inset-left));
-        padding-right: max(12px, env(safe-area-inset-right));
-      }
-      
-      /* Touch targets - Larger for mobile */
-      .vf-message-button {
-        min-height: 44px;
-        padding: 12px 16px;
-      }
-      
-      .vf-tab {
-        min-height: 44px;
-      }
-      
-      /* Input field - 16px prevents iOS zoom */
-      .vf-input {
-        font-size: 16px !important;
-      }
-      
-      /* Home buttons - Better touch targets */
-      .vf-home-button {
-        min-height: 56px;
-        padding: 16px 20px;
-      }
+      .vf-welcome-bubble { right: 16px; bottom: 100px; max-width: 260px; }
     }
+    
+    /* Embedded mode overrides */
+    \${CONFIG.isEmbedded ? \`
+      .vf-widget-panel {
+        position: relative; bottom: auto; right: auto;
+        width: 100%; height: 100vh;
+        border-radius: 0; box-shadow: none; border: none;
+        max-width: none; max-height: none;
+      }
+    \` : ''}
   \`;
   document.head.appendChild(style);
   
