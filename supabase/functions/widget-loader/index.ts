@@ -963,32 +963,46 @@ function generateWidgetScript(config: any): string {
   }
   
   function renderHome(container) {
+    const logoHtml = CONFIG.appearance.logoUrl 
+      ? \`<div class="vf-logo-badge"><img src="\${CONFIG.appearance.logoUrl}" alt="Logo" /></div>\`
+      : \`<div class="vf-logo-badge">\${CONFIG.agentName.charAt(0).toUpperCase()}</div>\`;
+    
     container.innerHTML = \`
-      <div class="vf-home-gradient-header">
-        <div class="vf-home-logo-text">
-          \${CONFIG.appearance.logoUrl ? \`
-            <img src="\${CONFIG.appearance.logoUrl}" alt="Logo" class="vf-home-logo" />
-          \` : ''}
-          <div class="vf-home-text">
-            <h2 class="vf-home-title">\${CONFIG.tabs.home.title}</h2>
-            <p class="vf-home-subtitle">\${CONFIG.tabs.home.subtitle}</p>
+      <div class="vf-home">
+        <div class="vf-home-hero">
+          <div class="vf-home-hero-top">
+            \${logoHtml}
+            <button class="vf-header-btn" onclick="window.vfCloseWidget()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+          <h2 class="vf-home-title">\${CONFIG.tabs.home.title}</h2>
+          <div class="vf-home-status">
+            <div class="vf-home-status-dot"></div>
+            <span class="vf-home-status-text">\${CONFIG.tabs.home.subtitle || 'We typically reply in minutes'}</span>
           </div>
         </div>
-      </div>
-      <div class="vf-home-content">
-        <div class="vf-home-buttons">
-          \${CONFIG.tabs.home.buttons.filter(btn => btn.enabled).map(btn => \`
+        
+        <div class="vf-home-actions">
+          \${CONFIG.tabs.home.buttons.filter(btn => btn.enabled).map((btn, idx) => \`
             <button class="vf-home-button" onclick="window.vfHandleHomeAction('\${btn.action}', '\${btn.phoneNumber || ''}')">
-              <div class="vf-home-button-content">
-                <div class="vf-home-button-icon">
-                  \${btn.action === 'call' ? icons.phone : icons.messageSquare}
-                </div>
-                <span>\${btn.text}</span>
+              <div class="vf-home-button-icon \${idx === 0 ? 'primary' : 'secondary'}">
+                \${btn.action === 'call' ? icons.phone : icons.messageSquare}
               </div>
-              <span class="vf-home-button-arrow">\${icons.chevronRight}</span>
+              <div class="vf-home-button-text">
+                <strong>\${btn.text}</strong>
+                <span>\${btn.action === 'call' ? 'Speak to a team member' : btn.action === 'new_chat' ? 'Chat with our AI assistant' : ''}</span>
+              </div>
+              <div class="vf-home-button-chevron">\${icons.chevronRight}</div>
             </button>
           \`).join('')}
         </div>
+        
+        \${CONFIG.poweredBy.enabled ? \`
+          <div class="vf-powered-by">
+            <span>Powered by \${CONFIG.poweredBy.text}</span>
+          </div>
+        \` : ''}
       </div>
     \`;
   }
