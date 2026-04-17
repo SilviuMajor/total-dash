@@ -811,9 +811,8 @@ function generateWidgetScript(config: any): string {
   const hasCustomIcon = !!CONFIG.appearance.chatIconUrl;
   
   if (CONFIG.isEmbedded) {
-    // Embedded mode: no floating button, panel fills container
     container.innerHTML = \`
-      <div class="vf-widget-panel" style="position:relative;width:100%;height:100vh;border-radius:0;box-shadow:none;">
+      <div class="vf-widget-panel">
         <div id="vf-panel-content"></div>
       </div>
     \`;
@@ -821,10 +820,12 @@ function generateWidgetScript(config: any): string {
   } else {
     container.innerHTML = \`
       <button class="vf-widget-button \${hasCustomIcon ? 'has-custom-icon' : 'default-icon'}">
-        \${hasCustomIcon 
-          ? \`<img src="\${CONFIG.appearance.chatIconUrl}" alt="Chat" />\`
-          : icons.messageSquare
-        }
+        <div class="vf-btn-inner">
+          \${hasCustomIcon 
+            ? \`<img src="\${CONFIG.appearance.chatIconUrl}" alt="Chat" />\`
+            : icons.messageSquare
+          }
+        </div>
       </button>
       <div class="vf-widget-panel hidden">
         <div id="vf-panel-content"></div>
