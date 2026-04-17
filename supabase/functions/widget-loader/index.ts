@@ -856,12 +856,10 @@ function generateWidgetScript(config: any): string {
   
   // Render Functions
   function renderPanel() {
-    // Save current input value before re-render
     const existingInput = document.getElementById('vf-input');
     const savedInputValue = existingInput ? existingInput.value : '';
     
-    const showHeader = currentTab !== 'Home' || isInActiveChat;
-    const showFloatingClose = currentTab === 'Home' && !isInActiveChat;
+    const isHome = currentTab === 'Home' && !isInActiveChat;
     const showBackButton = isInActiveChat && currentTab === 'Chats';
     const showTabs = !(currentTab === 'Chats' && isInActiveChat);
     const tabs = [];
@@ -869,55 +867,49 @@ function generateWidgetScript(config: any): string {
     if (CONFIG.tabs.chats.enabled) tabs.push('Chats');
     if (CONFIG.tabs.faq.enabled) tabs.push('FAQ');
     
+    const headerTitle = isInActiveChat ? 'New conversation' : CONFIG.title;
+    
     panelContent.innerHTML = \`
-      \${showFloatingClose ? \`
-        <button class="vf-floating-close" onclick="window.vfCloseWidget()">
-          \${icons.x}
-        </button>
-      \` : ''}
+      <div class="vf-accent-stripe"></div>
       
-      \${showHeader ? \`
-        <div class="vf-widget-header">
-          \${showBackButton ? \`
-            <button class="vf-back-button" onclick="window.vfGoBack()">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="19" y1="12" x2="5" y2="12"></line>
-                <polyline points="12 19 5 12 12 5"></polyline>
-              </svg>
-            </button>
-          \` : ''}
-          \${CONFIG.appearance.logoUrl ? \`<img src="\${CONFIG.appearance.logoUrl}" alt="Logo" />\` : ''}
-          <div class="vf-widget-header-text">
-            <div class="vf-widget-header-title">\${CONFIG.title}</div>
-            <div class="vf-widget-header-desc">\${CONFIG.description}</div>
+      \${isHome ? \`
+        <div id="vf-content" style="flex:1;display:flex;flex-direction:column;overflow:hidden;"></div>
+      \` : \`
+        <div class="vf-header">
+          <div class="vf-header-left">
+            \${showBackButton ? \`
+              <button class="vf-header-btn" onclick="window.vfGoBack()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>
+              </button>
+            \` : ''}
+            \${CONFIG.appearance.logoUrl ? \`
+              <div class="vf-logo-badge-sm"><img src="\${CONFIG.appearance.logoUrl}" alt="Logo" /></div>
+            \` : ''}
+            <p class="vf-header-title">\${headerTitle}</p>
           </div>
-          <button class="vf-widget-close" onclick="window.vfCloseWidget()">
-            \${icons.x}
+          <button class="vf-header-btn" onclick="window.vfCloseWidget()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
-        <svg viewBox="0 0 400 50" class="vf-wave-decoration" preserveAspectRatio="none">
-          <path d="M0,25 Q100,10 200,25 T400,25 L400,50 L0,50 Z" fill="\${CONFIG.appearance.secondaryColor}" opacity="0.15"/>
-        </svg>
-      \` : ''}
-      
-      <div class="vf-widget-content" id="vf-content"></div>
+        <div id="vf-content" style="flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0;"></div>
+      \`}
       
       \${isInActiveChat ? \`
-        <div class="vf-input-area">
+        <div class="vf-input-bar">
           \${isConversationEnded ? \`
-            <button class="vf-new-conversation-btn" onclick="window.vfStartNewChat()">
+            <button class="vf-btn-option" style="width:100%;justify-content:center;" onclick="window.vfStartNewChat()">
               + New Conversation
             </button>
           \` : \`
             <div class="vf-input-row">
               \${CONFIG.functions.fileUploadEnabled ? \`
-                <input type="file" id="vf-file-input" accept="image/*,application/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx" style="display: none;" />
-                <button class="vf-input-attach" onclick="window.vfAttachFile()">
+                <input type="file" id="vf-file-input" accept="image/*,application/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx" style="display:none;" />
+                <button class="vf-attach-btn" onclick="window.vfAttachFile()">
                   \${icons.paperclip}
                 </button>
               \` : ''}
-              <input type="text" class="vf-input" id="vf-input" placeholder="Type your message..." />
-              <button class="vf-send-button" onclick="window.vfSendMessage()">
+              <input type="text" class="vf-input-field" id="vf-input" placeholder="Type a message..." />
+              <button class="vf-send-btn" onclick="window.vfSendMessage()">
                 \${icons.send}
               </button>
             </div>
@@ -926,11 +918,11 @@ function generateWidgetScript(config: any): string {
       \` : ''}
       
       \${showTabs && tabs.length > 1 ? \`
-        <div class="vf-bottom-tabs">
+        <div class="vf-tabs">
           \${tabs.map(tab => \`
             <button class="vf-tab \${tab === currentTab ? 'active' : ''}" onclick="window.vfSwitchTab('\${tab}')">
-              \${tab === 'Home' ? icons.home : icons.messageSquare}
-              <span class="vf-tab-label">\${tab}</span>
+              \${tab === 'Home' ? icons.home : tab === 'FAQ' ? \`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>\` : icons.messageSquare}
+              <span>\${tab}</span>
             </button>
           \`).join('')}
         </div>
@@ -939,7 +931,6 @@ function generateWidgetScript(config: any): string {
     
     renderContent();
     
-    // Restore input value and re-attach Enter key listener
     const newInput = document.getElementById('vf-input');
     if (newInput) {
       newInput.value = savedInputValue;
@@ -948,7 +939,6 @@ function generateWidgetScript(config: any): string {
       });
     }
     
-    // Re-attach file input listener if present
     const fileInput = document.getElementById('vf-file-input');
     if (fileInput) {
       fileInput.addEventListener('change', handleFileUpload);
