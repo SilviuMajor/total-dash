@@ -1012,10 +1012,10 @@ function generateWidgetScript(config: any): string {
     
     if (history.length === 0) {
       container.innerHTML = \`
-        <div class="vf-empty-state">
+        <div class="vf-empty">
           \${icons.messageCircle}
-          <p style="margin-bottom: 4px;">No conversations yet</p>
-          <p style="font-size: 13px; opacity: 0.7;">Start a new chat to get going</p>
+          <p>No conversations yet</p>
+          <p>Start a new chat to get going</p>
         </div>
       \`;
     } else {
@@ -1023,61 +1023,44 @@ function generateWidgetScript(config: any): string {
       const older = history.slice(1);
       
       container.innerHTML = \`
-        <div class="vf-chats-header">
-          <div class="vf-chats-title-row">
-            \${icons.messageSquare}
-            <h3 class="vf-chats-title">Chats</h3>
+        <div class="vf-chat-list">
+          <div class="vf-chat-list-header">
+            <span class="vf-chat-list-title">Chats</span>
           </div>
-          <button class="vf-new-chat-button" onclick="window.vfStartNewChat()">
-            <div class="vf-new-chat-content">
+          <div style="padding: 0 16px 8px;">
+            <button class="vf-new-chat-btn" onclick="window.vfStartNewChat()" style="margin:0;width:100%;">
               \${icons.plus}
-              <span>New Chat</span>
-            </div>
-            <span class="vf-new-chat-arrow">\${icons.chevronRight}</span>
-          </button>
-        </div>
-        
-        \${recent ? \`
-          <div class="vf-chats-section">
-            <div class="vf-chats-section-title">Continue recent conversation</div>
-            <div class="vf-conversation-card" onclick="window.vfLoadConversation('\${recent.id}')">
-              <div class="vf-conversation-icon">
-                \${icons.messageCircle}
-              </div>
-              <div class="vf-conversation-details">
-                <div class="vf-conversation-preview">\${recent.preview}</div>
-                <div class="vf-conversation-meta">
+              <span style="font-size:14px;font-weight:500;">New Chat</span>
+              <span style="margin-left:auto;color:inherit;opacity:0.3;">\${icons.chevronRight}</span>
+            </button>
+          </div>
+          <div class="vf-chat-list-scroll">
+            \${recent ? \`
+              <div class="vf-chat-section-label">Continue recent conversation</div>
+              <div class="vf-conv-card" onclick="window.vfLoadConversation('\${recent.id}')">
+                <p class="vf-conv-card-preview">\${recent.preview}</p>
+                <div class="vf-conv-card-meta">
                   \${icons.clock}
                   <span>\${formatTimeAgo(recent.timestamp)}</span>
-                  <span class="vf-conversation-badge">\${recent.messageCount}</span>
+                  <span class="vf-conv-card-count">\${recent.messageCount}</span>
                 </div>
               </div>
-              <span class="vf-conversation-chevron">\${icons.chevronRight}</span>
-            </div>
-          </div>
-        \` : ''}
-        
-        \${older.length > 0 ? \`
-          <div class="vf-chats-section">
-            <div class="vf-chats-section-title">Previous conversations</div>
-            \${older.map(conv => \`
-              <div class="vf-conversation-card" onclick="window.vfLoadConversation('\${conv.id}')">
-                <div class="vf-conversation-icon">
-                  \${icons.messageCircle}
-                </div>
-                <div class="vf-conversation-details">
-                  <div class="vf-conversation-preview">\${conv.preview}</div>
-                  <div class="vf-conversation-meta">
+            \` : ''}
+            \${older.length > 0 ? \`
+              <div class="vf-chat-section-label">Previous conversations</div>
+              \${older.map(conv => \`
+                <div class="vf-conv-card" onclick="window.vfLoadConversation('\${conv.id}')">
+                  <p class="vf-conv-card-preview">\${conv.preview}</p>
+                  <div class="vf-conv-card-meta">
                     \${icons.clock}
                     <span>\${formatTimeAgo(conv.timestamp)}</span>
-                    <span class="vf-conversation-badge">\${conv.messageCount}</span>
+                    <span class="vf-conv-card-count">\${conv.messageCount}</span>
                   </div>
                 </div>
-                <span class="vf-conversation-chevron">\${icons.chevronRight}</span>
-              </div>
-            \`).join('')}
+              \`).join('')}
+            \` : ''}
           </div>
-        \` : ''}
+        </div>
       \`;
     }
   }
