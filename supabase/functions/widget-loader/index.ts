@@ -75,6 +75,7 @@ serve(async (req) => {
         fontSize: appearance.font_size || 14,
         messageBubbleStyle: appearance.message_bubble_style || 'rounded',
         interactiveButtonStyle: appearance.interactive_button_style || 'solid',
+        widgetMode: appearance.widget_mode || 'light',
       },
       tabs: {
         home: {
@@ -100,6 +101,10 @@ serve(async (req) => {
         typingDelayMs: functions.typing_delay_ms || 500,
         notificationSoundEnabled: functions.notification_sound_enabled || false,
         fileUploadEnabled: functions.file_upload_enabled || false
+      },
+      poweredBy: {
+        enabled: widgetSettings.powered_by?.enabled !== false,
+        text: widgetSettings.powered_by?.text || 'TotalDash',
       },
       isEmbedded: embedded,
       isTestMode: testMode
