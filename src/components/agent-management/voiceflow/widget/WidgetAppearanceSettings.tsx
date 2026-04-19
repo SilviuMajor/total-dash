@@ -46,9 +46,7 @@ export function WidgetAppearanceSettings({ agent, onUpdate }: WidgetAppearanceSe
       chat_icon_url: appearanceData.chat_icon_url || "",
       chat_button_color: appearanceData.chat_button_color || "#000000",
       primary_color: appearanceData.primary_color || "#5B4FFF",
-      secondary_color: appearanceData.secondary_color || "#FFFFFF",
       font_family: appearanceData.font_family || "Inter",
-      font_size: appearanceData.font_size || 14,
       widget_mode: appearanceData.widget_mode || "light",
     },
     powered_by: {
@@ -393,60 +391,32 @@ export function WidgetAppearanceSettings({ agent, onUpdate }: WidgetAppearanceSe
               </Select>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Primary colour</Label>
-                <div className="flex gap-2 mt-2">
-                  <Input
-                    type="color"
-                    value={formData.appearance.primary_color}
-                    onChange={(e) =>
-                      setFormData(prev => ({
-                        ...prev,
-                        appearance: { ...prev.appearance, primary_color: e.target.value }
-                      }))
-                    }
-                    className="w-12 h-10 p-1 cursor-pointer"
-                  />
-                  <Input
-                    value={formData.appearance.primary_color}
-                    onChange={(e) =>
-                      setFormData(prev => ({
-                        ...prev,
-                        appearance: { ...prev.appearance, primary_color: e.target.value }
-                      }))
-                    }
-                    placeholder="#000000"
-                    className="flex-1 font-mono text-sm"
-                  />
-                </div>
-              </div>
-              <div>
-                <Label>Secondary colour</Label>
-                <div className="flex gap-2 mt-2">
-                  <Input
-                    type="color"
-                    value={formData.appearance.secondary_color}
-                    onChange={(e) =>
-                      setFormData(prev => ({
-                        ...prev,
-                        appearance: { ...prev.appearance, secondary_color: e.target.value }
-                      }))
-                    }
-                    className="w-12 h-10 p-1 cursor-pointer"
-                  />
-                  <Input
-                    value={formData.appearance.secondary_color}
-                    onChange={(e) =>
-                      setFormData(prev => ({
-                        ...prev,
-                        appearance: { ...prev.appearance, secondary_color: e.target.value }
-                      }))
-                    }
-                    placeholder="#FFFFFF"
-                    className="flex-1 font-mono text-sm"
-                  />
-                </div>
+            <div>
+              <Label>Primary colour</Label>
+              <p className="text-xs text-muted-foreground mb-2">Used for accent stripe, user messages, and interactive elements</p>
+              <div className="flex gap-2">
+                <Input
+                  type="color"
+                  value={formData.appearance.primary_color}
+                  onChange={(e) =>
+                    setFormData(prev => ({
+                      ...prev,
+                      appearance: { ...prev.appearance, primary_color: e.target.value }
+                    }))
+                  }
+                  className="w-12 h-10 p-1 cursor-pointer"
+                />
+                <Input
+                  value={formData.appearance.primary_color}
+                  onChange={(e) =>
+                    setFormData(prev => ({
+                      ...prev,
+                      appearance: { ...prev.appearance, primary_color: e.target.value }
+                    }))
+                  }
+                  placeholder="#000000"
+                  className="flex-1 font-mono text-sm"
+                />
               </div>
             </div>
           </div>
@@ -459,46 +429,25 @@ export function WidgetAppearanceSettings({ agent, onUpdate }: WidgetAppearanceSe
           <h3 className="text-base font-semibold mb-1">Typography</h3>
           <p className="text-sm text-muted-foreground mb-4">Font used throughout the widget</p>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label>Font family</Label>
-              <Select
-                value={formData.appearance.font_family}
-                onValueChange={(v) =>
-                  setFormData(prev => ({ ...prev, appearance: { ...prev.appearance, font_family: v } }))
-                }
-              >
-                <SelectTrigger className="mt-2">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {GOOGLE_FONTS.map(font => (
-                    <SelectItem key={font} value={font}>
-                      <span style={{ fontFamily: font }}>{font}</span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Font size</Label>
-              <div className="flex items-center gap-2 mt-2">
-                <Input
-                  type="number"
-                  min={12}
-                  max={20}
-                  value={formData.appearance.font_size}
-                  onChange={(e) =>
-                    setFormData(prev => ({
-                      ...prev,
-                      appearance: { ...prev.appearance, font_size: parseInt(e.target.value) || 14 }
-                    }))
-                  }
-                  className="w-20"
-                />
-                <span className="text-sm text-muted-foreground">px</span>
-              </div>
-            </div>
+          <div>
+            <Label>Font family</Label>
+            <Select
+              value={formData.appearance.font_family}
+              onValueChange={(v) =>
+                setFormData(prev => ({ ...prev, appearance: { ...prev.appearance, font_family: v } }))
+              }
+            >
+              <SelectTrigger className="w-64 mt-2">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {GOOGLE_FONTS.map(font => (
+                  <SelectItem key={font} value={font}>
+                    <span style={{ fontFamily: font }}>{font}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 

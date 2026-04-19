@@ -31,9 +31,6 @@ export function WidgetFunctionsSettings({ agent, onUpdate }: WidgetFunctionsSett
   const widgetSettings = agent.config?.widget_settings || {};
 
   const [formData, setFormData] = useState({
-    title: widgetSettings.title || "Chat with us",
-    description: widgetSettings.description || "We're here to help",
-    branding_url: widgetSettings.branding_url || "",
     welcome_message: {
       enabled: widgetSettings.welcome_message?.enabled || false,
       text: widgetSettings.welcome_message?.text || "👋 Hi there! How can I help you today?",
@@ -80,9 +77,6 @@ export function WidgetFunctionsSettings({ agent, onUpdate }: WidgetFunctionsSett
         p_config_updates: {
           widget_settings: {
             ...widgetSettings,
-            title: formData.title,
-            description: formData.description,
-            branding_url: formData.branding_url,
             welcome_message: formData.welcome_message,
             tabs: formData.tabs,
             functions: {
