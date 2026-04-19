@@ -404,6 +404,15 @@ function generateWidgetScript(config: any): string {
       pointer-events: none; visibility: hidden;
     }
     
+    /* Panel Content Container */
+    #vf-panel-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: 0;
+    }
+
     /* Accent Stripe */
     .vf-accent-stripe {
       height: 3px; background: \${accent}; flex-shrink: 0;
