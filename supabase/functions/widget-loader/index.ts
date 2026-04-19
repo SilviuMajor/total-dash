@@ -428,14 +428,19 @@ function generateWidgetScript(config: any): string {
       margin: 0;
     }
     .vf-logo-badge {
-      width: 24px; height: 24px; border-radius: 6px;
+      width: 26px; height: 26px; border-radius: 6px;
       background: #ffffff;
       color: \${accent};
       display: flex; align-items: center; justify-content: center;
-      font-size: 9px; font-weight: 500; letter-spacing: -0.02em;
+      font-size: 10px; font-weight: 500; letter-spacing: -0.02em;
       flex-shrink: 0; overflow: hidden;
     }
     .vf-logo-badge img { width: 100%; height: 100%; object-fit: cover; }
+    /* Home card gets a larger, more prominent logo — proper brand moment */
+    .vf-dark-card-home .vf-logo-badge {
+      width: 34px; height: 34px; border-radius: 8px;
+      font-size: 12px;
+    }
     .vf-dark-close {
       width: 24px; height: 24px; border-radius: 50%;
       background: \${theme.darkInnerBg};
@@ -554,17 +559,21 @@ function generateWidgetScript(config: any): string {
       align-self: flex-start; margin-top: 2px;
     }
     .vf-btn-option {
-      padding: 6px 12px;
+      padding: 7px 14px;
       border: 1px solid \${accent};
       border-radius: 999px;
-      background: transparent; color: \${accent};
-      font-size: 11px; font-weight: 500;
+      background: \${accentTint};
+      color: \${accent};
+      font-size: 12px; font-weight: 500;
       cursor: pointer; font-family: inherit; line-height: 1.3;
-      transition: background 0.15s ease;
+      transition: background 0.15s ease, opacity 0.15s ease;
     }
-    .vf-btn-option:hover { background: \${accentTint}; }
-    .vf-btn-option.selected { background: \${accent}; color: #ffffff; }
-    .vf-btn-option:disabled { opacity: 0.5; cursor: default; pointer-events: none; }
+    .vf-btn-option:hover { background: \${accentTintStrong}; }
+    /* Once a button has been clicked, all buttons in the group get disabled. */
+    /* Non-selected ones fade to 35% opacity; the selected one fills and stays at 100%. */
+    .vf-btn-option:disabled { opacity: 0.35; cursor: default; pointer-events: none; }
+    .vf-btn-option.selected { background: \${accent}; color: #ffffff; border-color: \${accent}; }
+    .vf-btn-option.selected:disabled { opacity: 1; }
     .vf-typing {
       align-self: flex-start;
       width: fit-content;
@@ -929,6 +938,31 @@ function generateWidgetScript(config: any): string {
   const chatPanel = container.querySelector('.vf-widget-panel');
   const panelContent = document.getElementById('vf-panel-content');
   
+  // FAB icon swap: show chat bubble when closed, × when open.
+  // When the panel is open, the button acts as a close/minimize affordance, so we
+  // override the custom chat-icon image (if any) with the × for the duration.
+  function updateFabIcon() {
+    if (!chatButton) return;
+    const inner = chatButton.querySelector('.vf-btn-inner');
+    if (!inner) return;
+    
+    if (isOpen) {
+      chatButton.classList.remove('has-custom-icon');
+      chatButton.classList.add('default-icon');
+      inner.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
+    } else {
+      if (hasCustomIcon) {
+        chatButton.classList.remove('default-icon');
+        chatButton.classList.add('has-custom-icon');
+        inner.innerHTML = \`<img src="\${CONFIG.appearance.chatIconUrl}" alt="Chat" />\`;
+      } else {
+        chatButton.classList.remove('has-custom-icon');
+        chatButton.classList.add('default-icon');
+        inner.innerHTML = icons.messageSquare;
+      }
+    }
+  }
+  
   // Initialize
   const session = SessionManager.initSession();
   userId = session.userId;
@@ -1141,58 +1175,77 @@ function generateWidgetScript(config: any): string {
   function renderChatHistory(container) {
     const history = SessionManager.getConversationHistory();
     
+    // Empty state — first-time user or no prior conversations
     if (history.length === 0) {
       container.innerHTML = \`
         <div class="vf-empty">
-          \${icons.messageCircle}
-          <p>No conversations yet</p>
-          <p>Start a new chat to get going</p>
+          <div class="vf-empty-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <div class="vf-empty-title">No conversations yet</div>
+          <div class="vf-empty-sub">Start a new chat and we'll remember it here for next time.</div>
+          <button class="vf-empty-cta" onclick="window.vfStartNewChat()">New chat</button>
         </div>
       \`;
-    } else {
-      const recent = history[0];
-      const older = history.slice(1);
+      return;
+    }
+    
+    // Populated list — tinted CTA + section label + conversation pill cards
+    const recent = history[0];
+    const older = history.slice(1);
+    
+    // Build a single card's HTML — avatar + preview + meta + time (+ unread badge if applicable).
+    // Avatar: if a human agent took over during this conversation and their name was stored,
+    // show their initials. Otherwise show the generic bot icon.
+    const convCardHtml = (conv) => {
+      let avatarHtml = \`
+        <div class="vf-conv-avatar bot">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 8.5-8.5 8.5 8.5 0 0 1 8.5 8.5z"/></svg>
+        </div>
+      \`;
       
-      container.innerHTML = \`
-        <div class="vf-chat-list">
-          <div class="vf-chat-list-header">
-            <span class="vf-chat-list-title">Chats</span>
+      const lastAgentMsg = (conv.messages || []).slice().reverse().find(m => m.speaker === 'client_user');
+      if (lastAgentMsg && lastAgentMsg.agentName) {
+        const initials = lastAgentMsg.agentName.trim().split(/\\s+/).map(w => w.charAt(0).toUpperCase()).slice(0, 2).join('');
+        avatarHtml = \`<div class="vf-conv-avatar">\${initials || '?'}</div>\`;
+      }
+      
+      const unread = conv.unreadCount || 0;
+      const unreadHtml = unread > 0
+        ? \`<div class="vf-conv-unread">\${unread}</div>\`
+        : '';
+      
+      const safePreview = (conv.preview || 'New conversation')
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      
+      return \`
+        <div class="vf-conv-card" onclick="window.vfLoadConversation('\${conv.id}')">
+          \${avatarHtml}
+          <div class="vf-conv-middle">
+            <div class="vf-conv-preview">\${safePreview}</div>
+            <div class="vf-conv-meta">\${conv.messageCount || 0} messages</div>
           </div>
-          <div style="padding: 0 16px 8px;">
-            <button class="vf-new-chat-btn" onclick="window.vfStartNewChat()" style="margin:0;width:100%;">
-              <span style="width:18px;height:18px;flex-shrink:0;display:inline-flex;">\${icons.plus}</span>
-              <span style="font-size:14px;font-weight:500;">New Chat</span>
-              <span style="margin-left:auto;color:inherit;opacity:0.3;">\${icons.chevronRight}</span>
-            </button>
-          </div>
-          <div class="vf-chat-list-scroll">
-            \${recent ? \`
-              <div class="vf-chat-section-label">Continue recent conversation</div>
-              <div class="vf-conv-card" onclick="window.vfLoadConversation('\${recent.id}')">
-                <p class="vf-conv-card-preview">\${recent.preview}</p>
-                <div class="vf-conv-card-meta">
-                  \${icons.clock}
-                  <span>\${formatTimeAgo(recent.timestamp)}</span>
-                  <span class="vf-conv-card-count">\${recent.messageCount}</span>
-                </div>
-              </div>
-            \` : ''}
-            \${older.length > 0 ? \`
-              <div class="vf-chat-section-label">Previous conversations</div>
-              \${older.map(conv => \`
-                <div class="vf-conv-card" onclick="window.vfLoadConversation('\${conv.id}')">
-                  <p class="vf-conv-card-preview">\${conv.preview}</p>
-                  <div class="vf-conv-card-meta">
-                    \${icons.clock}
-                    <span>\${formatTimeAgo(conv.timestamp)}</span>
-                    <span class="vf-conv-card-count">\${conv.messageCount}</span>
-                  </div>
-                </div>
-              \`).join('')}
-            \` : ''}
+          <div class="vf-conv-right">
+            <div class="vf-conv-time">\${formatTimeAgo(conv.timestamp)}</div>
+            \${unreadHtml}
           </div>
         </div>
       \`;
+    };
+    
+    container.innerHTML = \`
+      <div class="vf-chat-list">
+        <button class="vf-new-chat-tinted" onclick="window.vfStartNewChat()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+          <span>New chat</span>
+        </button>
+        <div class="vf-chat-section-label">Recent</div>
+        <div class="vf-chat-list-scroll">
+          \${recent ? convCardHtml(recent) : ''}
+          \${older.map(convCardHtml).join('')}
+        </div>
+      </div>
+    \`;
     }
   }
   
@@ -1895,6 +1948,7 @@ function generateWidgetScript(config: any): string {
   window.vfCloseWidget = function() {
     isOpen = false;
     chatPanel.classList.add('hidden');
+    updateFabIcon();
   };
   
   window.vfSendMessage = function() {
@@ -1970,6 +2024,7 @@ function generateWidgetScript(config: any): string {
       isOpen = true;
       currentTab = 'Home';
       chatPanel.classList.remove('hidden');
+      updateFabIcon();
       renderPanel();
     });
   }
@@ -2018,6 +2073,7 @@ function generateWidgetScript(config: any): string {
     chatButton.addEventListener('click', () => {
       isOpen = !isOpen;
       chatPanel.classList.toggle('hidden');
+      updateFabIcon();
       if (isOpen) {
         hideWelcomeBubble();
         renderPanel();
