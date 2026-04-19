@@ -2,14 +2,12 @@ import { useState, useEffect, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, X, Plus, Trash2, Save, Check, Loader2, Phone, MessageSquare, Link } from "lucide-react";
+import { Upload, X, Save, Check, Loader2, MessageSquare } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 interface WidgetAppearanceSettingsProps {
@@ -26,116 +24,137 @@ const GOOGLE_FONTS = [
   "Nunito", "Playfair Display", "Merriweather", "Source Sans Pro", "Ubuntu"
 ];
 
+const BUTTON_COLOR_PRESETS = [
+  { value: "black", color: "#000000", label: "Black" },
+  { value: "primary", color: null, label: "Primary" },
+  { value: "white", color: "#FFFFFF", label: "White" },
+];
+
 export function WidgetAppearanceSettings({ agent, onUpdate }: WidgetAppearanceSettingsProps) {
   const { toast } = useToast();
   const [uploading, setUploading] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  
-  // Ref to track last saved state
   const lastSavedRef = useRef<string>("");
 
   const widgetSettings = agent.config?.widget_settings || {};
-  
+  const appearanceData = widgetSettings.appearance || {};
+
   const [formData, setFormData] = useState({
-    title: widgetSettings.title || "Chat with us",
-    description: widgetSettings.description || "We're here to help",
-    branding_url: widgetSettings.branding_url || "",
-    welcome_message: {
-      enabled: widgetSettings.welcome_message?.enabled || false,
-      text: widgetSettings.welcome_message?.text || "👋 Hi there! How can I help you today?",
-      delay_ms: widgetSettings.welcome_message?.delay_ms || 1500,
-      auto_dismiss_seconds: widgetSettings.welcome_message?.auto_dismiss_seconds || 0
-    },
     appearance: {
-      logo_url: widgetSettings.appearance?.logo_url || "",
-      chat_icon_url: widgetSettings.appearance?.chat_icon_url || "",
-      background_image_url: widgetSettings.appearance?.background_image_url || "",
-      primary_color: widgetSettings.appearance?.primary_color || "#5B4FFF",
-      secondary_color: widgetSettings.appearance?.secondary_color || "#FFFFFF",
-      text_color: widgetSettings.appearance?.text_color || "#000000",
-      font_family: widgetSettings.appearance?.font_family || "Inter",
-      font_size: widgetSettings.appearance?.font_size || 14,
-      widget_mode: widgetSettings.appearance?.widget_mode || 'light',
-      message_bubble_style: widgetSettings.appearance?.message_bubble_style || "rounded",
-      interactive_button_style: widgetSettings.appearance?.interactive_button_style || "solid"
-    },
-    tabs: {
-      home: {
-        enabled: widgetSettings.tabs?.home?.enabled !== false,
-        title: widgetSettings.tabs?.home?.title || "Welcome",
-        subtitle: widgetSettings.tabs?.home?.subtitle || "How can we help you today?",
-        buttons: widgetSettings.tabs?.home?.buttons || [
-          { id: 1, text: "Start a new chat", enabled: true, action: "new_chat" }
-        ]
-      },
-      chats: {
-        enabled: widgetSettings.tabs?.chats?.enabled !== false
-      },
-      faq: {
-        enabled: widgetSettings.tabs?.faq?.enabled || false,
-        items: widgetSettings.tabs?.faq?.items || []
-      }
+      logo_url: appearanceData.logo_url || "",
+      chat_icon_url: appearanceData.chat_icon_url || "",
+      chat_button_color: appearanceData.chat_button_color || "#000000",
+      primary_color: appearanceData.primary_color || "#5B4FFF",
+      secondary_color: appearanceData.secondary_color || "#FFFFFF",
+      font_family: appearanceData.font_family || "Inter",
+      font_size: appearanceData.font_size || 14,
+      widget_mode: appearanceData.widget_mode || "light",
     },
     powered_by: {
       enabled: widgetSettings.powered_by?.enabled !== false,
-      text: widgetSettings.powered_by?.text || 'TotalDash',
+      text: widgetSettings.powered_by?.text || "TotalDash",
     },
   });
 
-  // Initialize lastSaved on mount
+  const getButtonColorPreset = () => {
+    const color = formData.appearance.chat_button_color;
+    if (formData.appearance.chat_icon_url) return "black";
+    if (color === "#000000") return "black";
+    if (color === formData.appearance.primary_color) return "primary";
+    if (color === "#FFFFFF" || color === "#ffffff") return "white";
+    return "custom";
+  };
+
+  const [buttonColorPreset, setButtonColorPreset] = useState(getButtonColorPreset());
+
   useEffect(() => {
     lastSavedRef.current = JSON.stringify(formData);
   }, [agent.id]);
 
-  // Track changes
   useEffect(() => {
-    const currentData = JSON.stringify(formData);
-    setHasUnsavedChanges(currentData !== lastSavedRef.current);
+    setHasUnsavedChanges(JSON.stringify(formData) !== lastSavedRef.current);
   }, [formData]);
 
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const { error } = await supabase.rpc('update_agent_config', {
+      const { error } = await supabase.rpc("update_agent_config", {
         p_agent_id: agent.id,
         p_config_updates: {
-          widget_settings: formData
+          widget_settings: {
+            ...widgetSettings,
+            appearance: formData.appearance,
+            powered_by: formData.powered_by,
+          },
         },
       });
 
       if (error) throw error;
-      
+
       lastSavedRef.current = JSON.stringify(formData);
       setHasUnsavedChanges(false);
-      
-      toast({
-        title: "Success",
-        description: "Widget appearance saved successfully"
-      });
-      
-      window.dispatchEvent(new Event('widget-settings-updated'));
-      
-      // Trigger parent update to reload agent data
+
+      toast({ title: "Success", description: "Appearance saved successfully" });
+      window.dispatchEvent(new Event("widget-settings-updated"));
       onUpdate();
     } catch (error) {
-      console.error('Save error:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save changes",
-        variant: "destructive"
-      });
+      console.error("Save error:", error);
+      toast({ title: "Error", description: "Failed to save changes", variant: "destructive" });
     } finally {
       setIsSaving(false);
     }
   };
 
+  const handleImageUpload = async (type: "logo" | "chat_icon", file: File) => {
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "Error", description: "File size must be under 5MB", variant: "destructive" });
+      return;
+    }
+    setUploading(type);
+    try {
+      const fileName = `${agent.id}/${type}-${Date.now()}-${file.name}`;
+      const { error: uploadError } = await supabase.storage.from("widget-assets").upload(fileName, file);
+      if (uploadError) throw uploadError;
+      const { data: { publicUrl } } = supabase.storage.from("widget-assets").getPublicUrl(fileName);
+      setFormData(prev => ({
+        ...prev,
+        appearance: { ...prev.appearance, [`${type}_url`]: publicUrl }
+      }));
+      toast({ title: "Success", description: "Image uploaded successfully" });
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast({ title: "Error", description: "Failed to upload image", variant: "destructive" });
+    } finally {
+      setUploading(null);
+    }
+  };
+
+  const removeImage = (type: "logo" | "chat_icon") => {
+    setFormData(prev => ({
+      ...prev,
+      appearance: { ...prev.appearance, [`${type}_url`]: "" }
+    }));
+  };
+
+  const setButtonColor = (preset: string) => {
+    setButtonColorPreset(preset);
+    let color = "#000000";
+    if (preset === "primary") color = formData.appearance.primary_color;
+    else if (preset === "white") color = "#FFFFFF";
+    else if (preset === "black") color = "#000000";
+    if (preset !== "custom") {
+      setFormData(prev => ({
+        ...prev,
+        appearance: { ...prev.appearance, chat_button_color: color }
+      }));
+    }
+  };
+
+  const isCustomImage = !!formData.appearance.chat_icon_url;
+
   const SaveButton = () => (
-    <Button 
-      onClick={handleSave}
-      disabled={!hasUnsavedChanges || isSaving}
-      className="min-w-[140px]"
-    >
+    <Button onClick={handleSave} disabled={!hasUnsavedChanges || isSaving} className="min-w-[140px]">
       {isSaving ? (
         <>
           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -155,403 +174,217 @@ export function WidgetAppearanceSettings({ agent, onUpdate }: WidgetAppearanceSe
     </Button>
   );
 
-  const handleImageUpload = async (type: 'logo' | 'chat_icon' | 'background', file: File) => {
-    if (file.size > 5 * 1024 * 1024) {
-      toast({
-        title: "Error",
-        description: "File size must be under 5MB",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setUploading(type);
-    try {
-      const fileName = `${agent.id}/${type}-${Date.now()}-${file.name}`;
-      const { error: uploadError } = await supabase.storage
-        .from('widget-assets')
-        .upload(fileName, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('widget-assets')
-        .getPublicUrl(fileName);
-
-      setFormData(prev => ({
-        ...prev,
-        appearance: {
-          ...prev.appearance,
-          [`${type}_url`]: publicUrl
-        }
-      }));
-
-      toast({
-        title: "Success",
-        description: "Image uploaded successfully"
-      });
-    } catch (error) {
-      console.error('Upload error:', error);
-      toast({
-        title: "Error",
-        description: "Failed to upload image",
-        variant: "destructive"
-      });
-    } finally {
-      setUploading(null);
-    }
-  };
-
-  const removeImage = (type: 'logo' | 'chat_icon' | 'background') => {
-    setFormData(prev => ({
-      ...prev,
-      appearance: {
-        ...prev.appearance,
-        [`${type}_url`]: ""
-      }
-    }));
-  };
-
-  const addHomeButton = () => {
-    setFormData(prev => ({
-      ...prev,
-      tabs: {
-        ...prev.tabs,
-        home: {
-          ...prev.tabs.home,
-          buttons: [
-            ...prev.tabs.home.buttons,
-            { id: Date.now(), text: `Button ${prev.tabs.home.buttons.length + 1}`, enabled: false, action: "custom" }
-          ]
-        }
-      }
-    }));
-  };
-
-  const removeHomeButton = (id: number) => {
-    setFormData(prev => ({
-      ...prev,
-      tabs: {
-        ...prev.tabs,
-        home: {
-          ...prev.tabs.home,
-          buttons: prev.tabs.home.buttons.filter(btn => btn.id !== id)
-        }
-      }
-    }));
-  };
-
-  const updateHomeButton = (id: number, field: string, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      tabs: {
-        ...prev.tabs,
-        home: {
-          ...prev.tabs.home,
-          buttons: prev.tabs.home.buttons.map(btn =>
-            btn.id === id ? { ...btn, [field]: value } : btn
-          )
-        }
-      }
-    }));
-  };
-
-  const addFAQItem = () => {
-    setFormData(prev => ({
-      ...prev,
-      tabs: {
-        ...prev.tabs,
-        faq: {
-          ...prev.tabs.faq,
-          items: [
-            ...prev.tabs.faq.items,
-            { question: "", answer: "" }
-          ]
-        }
-      }
-    }));
-  };
-
-  const removeFAQItem = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      tabs: {
-        ...prev.tabs,
-        faq: {
-          ...prev.tabs.faq,
-          items: prev.tabs.faq.items.filter((_, i) => i !== index)
-        }
-      }
-    }));
-  };
-
-  const updateFAQItem = (index: number, field: 'question' | 'answer', value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      tabs: {
-        ...prev.tabs,
-        faq: {
-          ...prev.tabs.faq,
-          items: prev.tabs.faq.items.map((item, i) =>
-            i === index ? { ...item, [field]: value } : item
-          )
-        }
-      }
-    }));
-  };
-
-  const messageBubbleStyles = [
-    { value: 'rounded', label: 'Rounded', preview: 'rounded-lg' },
-    { value: 'square', label: 'Square', preview: 'rounded-none' },
-    { value: 'pill', label: 'Pill', preview: 'rounded-full' }
-  ];
-
-  const interactiveButtonStyles = [
-    { value: 'solid', label: 'Solid', description: 'Filled background' },
-    { value: 'outlined', label: 'Outlined', description: 'Transparent with border' },
-    { value: 'soft', label: 'Soft', description: 'Light background' }
-  ];
-
   return (
     <Card className="overflow-hidden">
-      {/* Sticky Header */}
       <div className="sticky top-0 z-10 bg-background border-b px-6 py-4">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold">Widget Appearance</h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              Configure how your widget looks and feels
-            </p>
+            <h3 className="text-lg font-semibold">Appearance</h3>
+            <p className="text-sm text-muted-foreground mt-1">Visual styling for your chat widget</p>
           </div>
           <SaveButton />
         </div>
       </div>
 
       <div className="px-6 py-6 space-y-8">
-        {/* Basic Information */}
+        {/* Chat Button */}
         <div>
-          <h3 className="text-lg font-semibold mb-4">Basic Information</h3>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="title">Widget Title</Label>
-              <Input
-                id="title"
-                value={formData.title}
-                onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                placeholder="Chat with us"
-              />
-            </div>
-            <div>
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={formData.description}
-                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="We're here to help"
-                rows={3}
-              />
-            </div>
-            <div>
-              <Label htmlFor="branding_url">Branding URL (optional)</Label>
-              <Input
-                id="branding_url"
-                type="url"
-                value={formData.branding_url}
-                onChange={(e) => setFormData(prev => ({ ...prev, branding_url: e.target.value }))}
-                placeholder="https://example.com"
-              />
-            </div>
+          <h3 className="text-base font-semibold mb-1">Chat button</h3>
+          <p className="text-sm text-muted-foreground mb-4">The floating button visitors click to open the widget</p>
 
-            {/* Welcome Message */}
-            <Separator className="my-4" />
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="welcome_message_enabled" className="text-base font-medium">Welcome Message</Label>
-                  <p className="text-sm text-muted-foreground">Show a message bubble above the chat icon</p>
-                </div>
-                <Switch
-                  id="welcome_message_enabled"
-                  checked={formData.welcome_message.enabled}
-                  onCheckedChange={(checked) => setFormData(prev => ({
-                    ...prev,
-                    welcome_message: { ...prev.welcome_message, enabled: checked }
-                  }))}
-                />
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <button
+              type="button"
+              onClick={() => {
+                removeImage("chat_icon");
+                setButtonColorPreset("black");
+                setFormData(prev => ({
+                  ...prev,
+                  appearance: { ...prev.appearance, chat_icon_url: "", chat_button_color: "#000000" }
+                }));
+              }}
+              className={`p-4 rounded-lg border-2 text-center transition-all ${
+                !isCustomImage ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
+              }`}
+            >
+              <div
+                className="w-12 h-12 rounded-full mx-auto mb-2 flex items-center justify-center"
+                style={{ backgroundColor: isCustomImage ? "#000000" : formData.appearance.chat_button_color }}
+              >
+                <MessageSquare className="w-5 h-5 text-white" />
               </div>
+              <p className="text-sm font-medium">Default icon</p>
+              <p className="text-xs text-muted-foreground">Customisable colour</p>
+            </button>
 
-              {formData.welcome_message.enabled && (
-                <div className="space-y-4 pl-0">
-                  <div>
-                    <Label htmlFor="welcome_message_text">Message Text</Label>
-                    <Input
-                      id="welcome_message_text"
-                      value={formData.welcome_message.text}
-                      onChange={(e) => setFormData(prev => ({
-                        ...prev,
-                        welcome_message: { ...prev.welcome_message, text: e.target.value.slice(0, 120) }
-                      }))}
-                      placeholder="👋 Hi there! How can I help you today?"
-                      maxLength={120}
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {formData.welcome_message.text.length}/120 characters
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="welcome_message_delay">Show Delay (ms)</Label>
-                      <Input
-                        id="welcome_message_delay"
-                        type="number"
-                        min="0"
-                        max="10000"
-                        step="100"
-                        value={formData.welcome_message.delay_ms}
-                        onChange={(e) => setFormData(prev => ({
-                          ...prev,
-                          welcome_message: { ...prev.welcome_message, delay_ms: parseInt(e.target.value) || 1500 }
-                        }))}
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">Delay before showing</p>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="welcome_message_autodismiss">Auto-dismiss (seconds)</Label>
-                      <Input
-                        id="welcome_message_autodismiss"
-                        type="number"
-                        min="0"
-                        max="60"
-                        value={formData.welcome_message.auto_dismiss_seconds}
-                        onChange={(e) => setFormData(prev => ({
-                          ...prev,
-                          welcome_message: { ...prev.welcome_message, auto_dismiss_seconds: parseInt(e.target.value) || 0 }
-                        }))}
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">0 = manual dismiss only</p>
-                    </div>
-                  </div>
+            <div
+              className={`p-4 rounded-lg border-2 text-center transition-all ${
+                isCustomImage ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
+              }`}
+            >
+              {isCustomImage ? (
+                <div className="relative inline-block mb-2">
+                  <img
+                    src={formData.appearance.chat_icon_url}
+                    alt="Custom icon"
+                    className="w-12 h-12 rounded-full object-cover mx-auto"
+                  />
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    className="absolute -top-1 -right-1 h-5 w-5"
+                    onClick={() => removeImage("chat_icon")}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="w-12 h-12 rounded-full bg-muted mx-auto mb-2 flex items-center justify-center border border-dashed border-muted-foreground/30">
+                  <Upload className="w-4 h-4 text-muted-foreground" />
+                </div>
+              )}
+              <p className="text-sm font-medium">Custom image</p>
+              <p className="text-xs text-muted-foreground">Upload your own</p>
+              {!isCustomImage && (
+                <div className="mt-2">
+                  <input
+                    type="file"
+                    id="upload-chat-icon"
+                    className="hidden"
+                    accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp"
+                    onChange={(e) => e.target.files?.[0] && handleImageUpload("chat_icon", e.target.files[0])}
+                  />
+                  <label htmlFor="upload-chat-icon">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="cursor-pointer"
+                      disabled={uploading === "chat_icon"}
+                      asChild
+                    >
+                      <span>{uploading === "chat_icon" ? "Uploading..." : "Upload"}</span>
+                    </Button>
+                  </label>
                 </div>
               )}
             </div>
           </div>
+
+          {!isCustomImage && (
+            <div className="p-4 bg-muted/50 rounded-lg">
+              <Label className="text-sm font-medium mb-3 block">Button colour</Label>
+              <div className="flex gap-2 items-center">
+                {BUTTON_COLOR_PRESETS.map((preset) => {
+                  const displayColor = preset.value === "primary"
+                    ? formData.appearance.primary_color
+                    : (preset.color || "#000000");
+                  const isActive = buttonColorPreset === preset.value;
+                  return (
+                    <button
+                      key={preset.value}
+                      type="button"
+                      title={preset.label}
+                      onClick={() => setButtonColor(preset.value)}
+                      className="relative"
+                    >
+                      <div
+                        className={`w-8 h-8 rounded-full transition-all ${
+                          isActive ? "ring-2 ring-primary ring-offset-2" : ""
+                        } ${preset.value === "white" ? "border border-border" : ""}`}
+                        style={{ backgroundColor: displayColor }}
+                      />
+                    </button>
+                  );
+                })}
+                <div className="w-px h-6 bg-border mx-1" />
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={formData.appearance.chat_button_color}
+                    onChange={(e) => {
+                      setButtonColorPreset("custom");
+                      setFormData(prev => ({
+                        ...prev,
+                        appearance: { ...prev.appearance, chat_button_color: e.target.value }
+                      }));
+                    }}
+                    className={`w-8 h-8 rounded-full cursor-pointer border-0 p-0 ${
+                      buttonColorPreset === "custom" ? "ring-2 ring-primary ring-offset-2" : ""
+                    }`}
+                    style={{ WebkitAppearance: "none" }}
+                  />
+                  <span className="text-xs text-muted-foreground">Custom</span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         <Separator />
 
-        {/* Appearance */}
+        {/* Brand & Colours */}
         <div>
-          <h3 className="text-lg font-semibold mb-4">Appearance</h3>
-          <div className="space-y-6">
-            {/* Image Uploads */}
-            <div className="grid gap-4">
-              {[
-                { type: 'logo' as const, label: 'Logo', key: 'logo_url' },
-                { type: 'chat_icon' as const, label: 'Chat Icon', key: 'chat_icon_url' },
-                { type: 'background' as const, label: 'Background Image', key: 'background_image_url' }
-              ].map(({ type, label, key }) => (
-                <div key={type}>
-                  <Label>{label}</Label>
-                  <div className="mt-2">
-                    {formData.appearance[key] ? (
-                      <div className="relative inline-block">
-                        <img 
-                          src={formData.appearance[key]} 
-                          alt={label}
-                          className="h-20 w-20 object-cover rounded border"
-                        />
-                        <Button
-                          variant="destructive"
-                          size="icon"
-                          className="absolute -top-2 -right-2 h-6 w-6"
-                          onClick={() => removeImage(type)}
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <div>
-                        <input
-                          type="file"
-                          id={`upload-${type}`}
-                          className="hidden"
-                          accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp"
-                          onChange={(e) => e.target.files?.[0] && handleImageUpload(type, e.target.files[0])}
-                        />
-                        <label htmlFor={`upload-${type}`}>
-                          <Button
-                            variant="outline"
-                            className="cursor-pointer"
-                            disabled={uploading === type}
-                            asChild
-                          >
-                            <span>
-                              <Upload className="w-4 h-4 mr-2" />
-                              {uploading === type ? 'Uploading...' : `Upload ${label}`}
-                            </span>
-                          </Button>
-                        </label>
-                      </div>
-                    )}
-                  </div>
+          <h3 className="text-base font-semibold mb-1">Brand & colours</h3>
+          <p className="text-sm text-muted-foreground mb-4">Your logo and colour scheme</p>
+
+          <div className="space-y-4">
+            <div>
+              <Label>Logo</Label>
+              <p className="text-xs text-muted-foreground mb-2">Shown in the widget header and home screen</p>
+              {formData.appearance.logo_url ? (
+                <div className="relative inline-block">
+                  <img
+                    src={formData.appearance.logo_url}
+                    alt="Logo"
+                    className="h-16 w-16 object-cover rounded border"
+                  />
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    className="absolute -top-2 -right-2 h-6 w-6"
+                    onClick={() => removeImage("logo")}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
                 </div>
-              ))}
+              ) : (
+                <div>
+                  <input
+                    type="file"
+                    id="upload-logo"
+                    className="hidden"
+                    accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp"
+                    onChange={(e) => e.target.files?.[0] && handleImageUpload("logo", e.target.files[0])}
+                  />
+                  <label htmlFor="upload-logo">
+                    <Button
+                      variant="outline"
+                      className="cursor-pointer"
+                      disabled={uploading === "logo"}
+                      asChild
+                    >
+                      <span>
+                        <Upload className="w-4 h-4 mr-2" />
+                        {uploading === "logo" ? "Uploading..." : "Upload Logo"}
+                      </span>
+                    </Button>
+                  </label>
+                </div>
+              )}
             </div>
 
-            {/* Color Pickers */}
-            <div className="grid grid-cols-3 gap-4">
-              {[
-                { key: 'primary_color' as const, label: 'Primary Color' },
-                { key: 'secondary_color' as const, label: 'Secondary Color' },
-                { key: 'text_color' as const, label: 'Text Color' }
-              ].map(({ key, label }) => (
-                <div key={key}>
-                  <Label htmlFor={key}>{label}</Label>
-                  <div className="flex gap-2 mt-2">
-                    <Input
-                      id={key}
-                      type="color"
-                      value={formData.appearance[key]}
-                      onChange={(e) => setFormData(prev => ({
-                        ...prev,
-                        appearance: {
-                          ...prev.appearance,
-                          [key]: e.target.value
-                        }
-                      }))}
-                      className="w-16 h-10 p-1"
-                    />
-                    <Input
-                      value={formData.appearance[key]}
-                      onChange={(e) => setFormData(prev => ({
-                        ...prev,
-                        appearance: {
-                          ...prev.appearance,
-                          [key]: e.target.value
-                        }
-                      }))}
-                      placeholder="#000000"
-                      className="flex-1"
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <Separator className="my-4" />
-
-            <div className="space-y-3">
-              <div>
-                <Label className="text-sm font-medium">Widget Mode</Label>
-                <p className="text-xs text-muted-foreground">Choose the visual theme for your chat widget</p>
-              </div>
+            <div>
+              <Label>Widget mode</Label>
+              <p className="text-xs text-muted-foreground mb-2">Visual theme for the chat widget</p>
               <Select
                 value={formData.appearance.widget_mode}
-                onValueChange={(v) => setFormData(prev => ({ ...prev, appearance: { ...prev.appearance, widget_mode: v } }))}
+                onValueChange={(v) =>
+                  setFormData(prev => ({ ...prev, appearance: { ...prev.appearance, widget_mode: v } }))
+                }
               >
-                <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-48">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="light">Light</SelectItem>
                   <SelectItem value="dark">Dark</SelectItem>
@@ -560,20 +393,82 @@ export function WidgetAppearanceSettings({ agent, onUpdate }: WidgetAppearanceSe
               </Select>
             </div>
 
-            {/* Font Family */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Primary colour</Label>
+                <div className="flex gap-2 mt-2">
+                  <Input
+                    type="color"
+                    value={formData.appearance.primary_color}
+                    onChange={(e) =>
+                      setFormData(prev => ({
+                        ...prev,
+                        appearance: { ...prev.appearance, primary_color: e.target.value }
+                      }))
+                    }
+                    className="w-12 h-10 p-1 cursor-pointer"
+                  />
+                  <Input
+                    value={formData.appearance.primary_color}
+                    onChange={(e) =>
+                      setFormData(prev => ({
+                        ...prev,
+                        appearance: { ...prev.appearance, primary_color: e.target.value }
+                      }))
+                    }
+                    placeholder="#000000"
+                    className="flex-1 font-mono text-sm"
+                  />
+                </div>
+              </div>
+              <div>
+                <Label>Secondary colour</Label>
+                <div className="flex gap-2 mt-2">
+                  <Input
+                    type="color"
+                    value={formData.appearance.secondary_color}
+                    onChange={(e) =>
+                      setFormData(prev => ({
+                        ...prev,
+                        appearance: { ...prev.appearance, secondary_color: e.target.value }
+                      }))
+                    }
+                    className="w-12 h-10 p-1 cursor-pointer"
+                  />
+                  <Input
+                    value={formData.appearance.secondary_color}
+                    onChange={(e) =>
+                      setFormData(prev => ({
+                        ...prev,
+                        appearance: { ...prev.appearance, secondary_color: e.target.value }
+                      }))
+                    }
+                    placeholder="#FFFFFF"
+                    className="flex-1 font-mono text-sm"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <Separator />
+
+        {/* Typography */}
+        <div>
+          <h3 className="text-base font-semibold mb-1">Typography</h3>
+          <p className="text-sm text-muted-foreground mb-4">Font used throughout the widget</p>
+
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="font_family">Font Family</Label>
+              <Label>Font family</Label>
               <Select
                 value={formData.appearance.font_family}
-                onValueChange={(value) => setFormData(prev => ({
-                  ...prev,
-                  appearance: {
-                    ...prev.appearance,
-                    font_family: value
-                  }
-                }))}
+                onValueChange={(v) =>
+                  setFormData(prev => ({ ...prev, appearance: { ...prev.appearance, font_family: v } }))
+                }
               >
-                <SelectTrigger id="font_family">
+                <SelectTrigger className="mt-2">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -585,105 +480,23 @@ export function WidgetAppearanceSettings({ agent, onUpdate }: WidgetAppearanceSe
                 </SelectContent>
               </Select>
             </div>
-
-            {/* Font Size */}
             <div>
-              <Label htmlFor="font_size">Font Size</Label>
-              <div className="flex items-center gap-3 mt-2">
+              <Label>Font size</Label>
+              <div className="flex items-center gap-2 mt-2">
                 <Input
-                  id="font_size"
                   type="number"
-                  min="12"
-                  max="20"
+                  min={12}
+                  max={20}
                   value={formData.appearance.font_size}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    appearance: { ...prev.appearance, font_size: parseInt(e.target.value) || 14 }
-                  }))}
+                  onChange={(e) =>
+                    setFormData(prev => ({
+                      ...prev,
+                      appearance: { ...prev.appearance, font_size: parseInt(e.target.value) || 14 }
+                    }))
+                  }
                   className="w-20"
                 />
-                <span className="text-sm text-muted-foreground">px (12-20)</span>
-              </div>
-            </div>
-
-            {/* Message Bubble Style with Visual Preview */}
-            <div>
-              <Label>Message Bubble Style</Label>
-              <div className="grid grid-cols-3 gap-4 mt-2">
-                {messageBubbleStyles.map(style => (
-                  <div
-                    key={style.value}
-                    className={`
-                      relative cursor-pointer border-2 p-4 transition-all
-                      ${formData.appearance.message_bubble_style === style.value 
-                        ? 'border-primary bg-primary/5' 
-                        : 'border-muted hover:border-muted-foreground/50'}
-                      ${style.preview}
-                    `}
-                    onClick={() => setFormData(prev => ({
-                      ...prev,
-                      appearance: { ...prev.appearance, message_bubble_style: style.value }
-                    }))}
-                  >
-                    <div 
-                      className={`h-10 flex items-center justify-center text-sm font-medium ${style.preview}`}
-                      style={{ 
-                        backgroundColor: formData.appearance.primary_color,
-                        color: formData.appearance.secondary_color
-                      }}
-                    >
-                      {style.label}
-                    </div>
-                    <p className="text-xs text-center mt-2 text-muted-foreground">{style.label}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Interactive Button Style */}
-            <div>
-              <Label>Interactive Button Style</Label>
-              <p className="text-xs text-muted-foreground mb-2 mt-1">
-                Style for clickable buttons presented in conversations
-              </p>
-              <div className="space-y-2 mt-2">
-                {interactiveButtonStyles.map((style) => (
-                  <button
-                    key={style.value}
-                    type="button"
-                    onClick={() => setFormData(prev => ({
-                      ...prev,
-                      appearance: { ...prev.appearance, interactive_button_style: style.value }
-                    }))}
-                    className={`w-full p-3 border-2 transition-all text-left ${
-                      formData.appearance.interactive_button_style === style.value
-                        ? 'border-primary bg-primary/10'
-                        : 'border-border hover:border-primary/50'
-                    } rounded-lg`}
-                  >
-                    <div className="text-sm font-medium mb-1">{style.label}</div>
-                    <div className="text-xs text-muted-foreground mb-2">{style.description}</div>
-                    <div 
-                      className="h-8 rounded-lg flex items-center justify-center text-xs font-medium"
-                      style={
-                        style.value === 'solid' ? {
-                          backgroundColor: formData.appearance.primary_color,
-                          color: formData.appearance.secondary_color
-                        } : style.value === 'outlined' ? {
-                          backgroundColor: 'transparent',
-                          color: formData.appearance.primary_color,
-                          border: `2px solid ${formData.appearance.primary_color}`
-                        } : {
-                          backgroundColor: `${formData.appearance.primary_color}20`,
-                          color: formData.appearance.primary_color,
-                          border: `1px solid ${formData.appearance.primary_color}50`
-                        }
-                      }
-                    >
-                      Sample Button
-                    </div>
-                  </button>
-                ))}
+                <span className="text-sm text-muted-foreground">px</span>
               </div>
             </div>
           </div>
@@ -691,236 +504,43 @@ export function WidgetAppearanceSettings({ agent, onUpdate }: WidgetAppearanceSe
 
         <Separator />
 
-        {/* Tab Configuration */}
+        {/* Powered By */}
         <div>
-          <h3 className="text-lg font-semibold mb-4">Tab Configuration</h3>
-          <Accordion type="multiple" className="w-full">
-            {/* Home Tab */}
-            <AccordionItem value="home">
-              <AccordionTrigger>
-                <div className="flex items-center gap-2">
-                  <Switch
-                    checked={formData.tabs.home.enabled}
-                    onCheckedChange={(checked) => setFormData(prev => ({
-                      ...prev,
-                      tabs: { ...prev.tabs, home: { ...prev.tabs.home, enabled: checked } }
-                    }))}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                  <span>Home Tab</span>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent>
-                <div className="space-y-4 pt-4">
-                  <div>
-                    <Label>Title</Label>
-                    <Input
-                      value={formData.tabs.home.title}
-                      onChange={(e) => setFormData(prev => ({
-                        ...prev,
-                        tabs: { ...prev.tabs, home: { ...prev.tabs.home, title: e.target.value } }
-                      }))}
-                    />
-                  </div>
-                  <div>
-                    <Label>Subtitle</Label>
-                    <Input
-                      value={formData.tabs.home.subtitle}
-                      onChange={(e) => setFormData(prev => ({
-                        ...prev,
-                        tabs: { ...prev.tabs, home: { ...prev.tabs.home, subtitle: e.target.value } }
-                      }))}
-                    />
-                  </div>
-                  <div>
-                    <Label>Quick Action Buttons</Label>
-                    <div className="space-y-2 mt-2">
-                      {formData.tabs.home.buttons.map(btn => (
-                        <div key={btn.id} className="flex items-center gap-2 p-3 border rounded-lg">
-                          <Switch
-                            checked={btn.enabled}
-                            onCheckedChange={(checked) => updateHomeButton(btn.id, 'enabled', checked)}
-                          />
-                          <Input
-                            value={btn.text}
-                            onChange={(e) => updateHomeButton(btn.id, 'text', e.target.value)}
-                            placeholder="Button text"
-                            className="flex-1"
-                          />
-                          <Select
-                            value={btn.action}
-                            onValueChange={(value) => updateHomeButton(btn.id, 'action', value)}
-                          >
-                            <SelectTrigger className="w-[150px]">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="new_chat">
-                                <div className="flex items-center gap-2">
-                                  <MessageSquare className="w-4 h-4" />
-                                  <span>New Chat</span>
-                                </div>
-                              </SelectItem>
-                              <SelectItem value="call">
-                                <div className="flex items-center gap-2">
-                                  <Phone className="w-4 h-4" />
-                                  <span>Call</span>
-                                </div>
-                              </SelectItem>
-                              <SelectItem value="custom">
-                                <div className="flex items-center gap-2">
-                                  <Link className="w-4 h-4" />
-                                  <span>Custom</span>
-                                </div>
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                          {btn.action === "call" && (
-                            <Input
-                              type="tel"
-                              placeholder="+1 (555) 123-4567"
-                              value={btn.phoneNumber || ""}
-                              onChange={(e) => updateHomeButton(btn.id, 'phoneNumber', e.target.value)}
-                              className="mt-2"
-                            />
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => removeHomeButton(btn.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={addHomeButton}
-                        className="w-full"
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Button
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
+          <h3 className="text-base font-semibold mb-1">Powered by badge</h3>
+          <p className="text-sm text-muted-foreground mb-4">Shown on the home screen only</p>
 
-            {/* Chats Tab */}
-            <AccordionItem value="chats">
-              <AccordionTrigger>
-                <div className="flex items-center gap-2">
-                  <Switch
-                    checked={formData.tabs.chats.enabled}
-                    onCheckedChange={(checked) => setFormData(prev => ({
-                      ...prev,
-                      tabs: { ...prev.tabs, chats: { ...prev.tabs.chats, enabled: checked } }
-                    }))}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                  <span>Chats Tab</span>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent>
-                <p className="text-sm text-muted-foreground pt-4">
-                  The Chats tab shows conversation history and allows users to start new chats.
-                </p>
-              </AccordionContent>
-            </AccordionItem>
-
-            {/* FAQ Tab */}
-            <AccordionItem value="faq">
-              <AccordionTrigger>
-                <div className="flex items-center gap-2">
-                  <Switch
-                    checked={formData.tabs.faq.enabled}
-                    onCheckedChange={(checked) => setFormData(prev => ({
-                      ...prev,
-                      tabs: { ...prev.tabs, faq: { ...prev.tabs.faq, enabled: checked } }
-                    }))}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                  <span>FAQ Tab</span>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent>
-                <div className="space-y-4 pt-4">
-                  {formData.tabs.faq.items.map((item, index) => (
-                    <div key={index} className="p-4 border rounded-lg space-y-2">
-                      <div className="flex justify-between items-start">
-                        <Label>FAQ Item {index + 1}</Label>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeFAQItem(index)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <Input
-                        value={item.question}
-                        onChange={(e) => updateFAQItem(index, 'question', e.target.value)}
-                        placeholder="Question"
-                      />
-                      <Textarea
-                        value={item.answer}
-                        onChange={(e) => updateFAQItem(index, 'answer', e.target.value)}
-                        placeholder="Answer"
-                        rows={3}
-                      />
-                    </div>
-                  ))}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={addFAQItem}
-                    className="w-full"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add FAQ Item
-                  </Button>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-        </div>
-
-        <Separator className="my-4" />
-
-        <div className="space-y-4">
-          <div>
-            <Label className="text-sm font-medium">Powered By Badge</Label>
-            <p className="text-xs text-muted-foreground">Shows a small credit on the home screen only</p>
-          </div>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-3">
             <Label className="text-sm">Show badge</Label>
             <Switch
               checked={formData.powered_by.enabled}
-              onCheckedChange={(v) => setFormData(prev => ({ ...prev, powered_by: { ...prev.powered_by, enabled: v } }))}
+              onCheckedChange={(v) =>
+                setFormData(prev => ({ ...prev, powered_by: { ...prev.powered_by, enabled: v } }))
+              }
             />
           </div>
           {formData.powered_by.enabled && (
-            <div className="space-y-1.5">
+            <div>
               <Label className="text-sm">Badge text</Label>
               <Input
                 value={formData.powered_by.text}
-                onChange={(e) => setFormData(prev => ({ ...prev, powered_by: { ...prev.powered_by, text: e.target.value } }))}
+                onChange={(e) =>
+                  setFormData(prev => ({ ...prev, powered_by: { ...prev.powered_by, text: e.target.value } }))
+                }
                 placeholder="TotalDash"
-                className="w-64"
+                className="w-64 mt-1"
               />
-              <p className="text-xs text-muted-foreground">Displays as "POWERED BY {(formData.powered_by.text || 'TOTALDASH').toUpperCase()}"</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Displays as "POWERED BY {(formData.powered_by.text || "TOTALDASH").toUpperCase()}"
+              </p>
             </div>
           )}
         </div>
       </div>
 
-      {/* Sticky Footer */}
       <div className="sticky bottom-0 z-10 bg-background border-t px-6 py-4">
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            {hasUnsavedChanges ? 'You have unsaved changes' : 'All changes saved'}
+            {hasUnsavedChanges ? "You have unsaved changes" : "All changes saved"}
           </p>
           <SaveButton />
         </div>
