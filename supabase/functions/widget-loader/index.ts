@@ -358,7 +358,7 @@ function generateWidgetScript(config: any): string {
     /* === WIDGET PANEL (soft off-white canvas) === */
     .vf-widget-panel {
       position: fixed; bottom: 96px; right: 24px;
-      width: 380px; max-width: calc(100vw - 48px);
+      width: 360px; max-width: calc(100vw - 48px);
       height: 580px; max-height: calc(100vh - 120px);
       background: \${theme.canvas};
       border-radius: 16px;
