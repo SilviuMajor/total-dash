@@ -1418,10 +1418,14 @@ function generateWidgetScript(config: any): string {
         return;
       }
       
-      // Bot or agent message
-      wrapper.style.cssText = 'display:flex;flex-direction:column;gap:0;';
-      
+      // Bot message — grey bubble ONLY if there's text or a file.
+      // When Voiceflow sends { text: '', buttons: [...] } we must skip the
+      // empty <p class="vf-msg-bot"> or it renders as an empty grey bubble
+      // above the buttons. That was the "empty bubble before buttons" bug.
       const isClicked = clickedButtonIds.has(msg.id);
+      wrapper.style.cssText = 'display:flex;flex-direction:column;gap:5px;align-self:flex-start;max-width:100%;';
+      
+      const hasBotBody = (messageContent && messageContent.trim()) || fileUrl;
       
       wrapper.innerHTML = \`
         \${isAgent ? \`
@@ -1432,7 +1436,7 @@ function generateWidgetScript(config: any): string {
               : \`<a href="\${fileUrl}" target="_blank" class="vf-file-link">\${fileName}</a>\`
             ) : ''}
           </div>
-        \` : \`
+        \` : (hasBotBody ? \`
           <p class="vf-msg-bot">
             \${messageContent}
             \${fileUrl ? (isImage
@@ -1440,7 +1444,7 @@ function generateWidgetScript(config: any): string {
               : \`<a href="\${fileUrl}" target="_blank" class="vf-file-link">\${fileName}</a>\`
             ) : ''}
           </p>
-        \`}
+        \` : '')}
         \${msg.buttons && msg.buttons.length > 0 ? \`
           <div class="vf-buttons">
             \${msg.buttons.map((btn, idx) => {
@@ -1461,16 +1465,19 @@ function generateWidgetScript(config: any): string {
       messagesEl.appendChild(wrapper);
     });
     
+    // Typing indicator — append .vf-typing directly (no outer wrapper div).
+    // The old code wrapped it in a plain <div> which became a block-level
+    // flex child, stretched to full width, and ignored align-self:flex-start.
+    // That was the "typing stretches across full width" bug.
     if (isTyping) {
-      const typingDiv = document.createElement('div');
-      typingDiv.innerHTML = \`
-        <div class="vf-typing">
-          <div class="vf-typing-dot"></div>
-          <div class="vf-typing-dot"></div>
-          <div class="vf-typing-dot"></div>
-        </div>
+      const typingEl = document.createElement('div');
+      typingEl.className = 'vf-typing';
+      typingEl.innerHTML = \`
+        <div class="vf-typing-dot"></div>
+        <div class="vf-typing-dot"></div>
+        <div class="vf-typing-dot"></div>
       \`;
-      messagesEl.appendChild(typingDiv);
+      messagesEl.appendChild(typingEl);
     }
     
     scrollToLatestMessage();
