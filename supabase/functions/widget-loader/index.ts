@@ -1246,7 +1246,6 @@ function generateWidgetScript(config: any): string {
         </div>
       </div>
     \`;
-    }
   }
   
   function scrollToLatestMessage() {
