@@ -358,7 +358,7 @@ function generateWidgetScript(config: any): string {
     /* === WIDGET PANEL (soft off-white canvas) === */
     .vf-widget-panel {
       position: fixed; bottom: 96px; right: 24px;
-      width: 380px; max-width: calc(100vw - 48px);
+      width: 360px; max-width: calc(100vw - 48px);
       height: 580px; max-height: calc(100vh - 120px);
       background: \${theme.canvas};
       border-radius: 16px;
@@ -393,8 +393,8 @@ function generateWidgetScript(config: any): string {
     }
     .vf-dark-card-home { min-height: 155px; }
     .vf-dark-card-chat {
-      height: 38px; padding: 0 12px;
-      flex-direction: row; align-items: center; gap: 9px;
+      height: 44px; padding: 0 12px;
+      flex-direction: row; align-items: center; gap: 10px;
     }
     .vf-dark-top {
       display: flex; justify-content: space-between; align-items: center;
@@ -402,18 +402,18 @@ function generateWidgetScript(config: any): string {
     .vf-dark-greeting-wrap { margin-top: auto; }
     .vf-dark-greeting {
       color: \${theme.darkText};
-      font-size: 20px; font-weight: 500;
+      font-size: 22px; font-weight: 500;
       letter-spacing: -0.015em; line-height: 1.15;
       margin: 0;
     }
     .vf-dark-status {
-      display: flex; align-items: center; gap: 6px; margin-top: 8px;
+      display: flex; align-items: center; gap: 7px; margin-top: 10px;
     }
     .vf-dark-status-dot {
-      width: 6px; height: 6px; border-radius: 50%;
+      width: 7px; height: 7px; border-radius: 50%;
       background: \${theme.statusOnline};
     }
-    .vf-dark-status-text { font-size: 11px; color: \${theme.darkMuted}; }
+    .vf-dark-status-text { font-size: 12px; color: \${theme.darkMuted}; }
     .vf-dark-back {
       color: rgba(255,255,255,0.75);
       background: transparent; border: none;
@@ -421,30 +421,30 @@ function generateWidgetScript(config: any): string {
       display: flex; align-items: center; justify-content: center;
       flex-shrink: 0;
     }
-    .vf-dark-back svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2; }
+    .vf-dark-back svg { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 2; }
     .vf-dark-title {
       color: \${theme.darkText};
-      font-size: 12px; font-weight: 500;
+      font-size: 13px; font-weight: 500;
       margin: 0;
     }
     .vf-logo-badge {
-      width: 22px; height: 22px; border-radius: 5px;
+      width: 24px; height: 24px; border-radius: 6px;
       background: #ffffff;
       color: \${accent};
       display: flex; align-items: center; justify-content: center;
-      font-size: 8px; font-weight: 500; letter-spacing: -0.02em;
+      font-size: 9px; font-weight: 500; letter-spacing: -0.02em;
       flex-shrink: 0; overflow: hidden;
     }
     .vf-logo-badge img { width: 100%; height: 100%; object-fit: cover; }
     .vf-dark-close {
-      width: 22px; height: 22px; border-radius: 50%;
+      width: 24px; height: 24px; border-radius: 50%;
       background: \${theme.darkInnerBg};
       color: \${theme.darkInnerFg};
       border: none; cursor: pointer;
       display: flex; align-items: center; justify-content: center;
       flex-shrink: 0; padding: 0;
     }
-    .vf-dark-close svg { width: 10px; height: 10px; stroke: currentColor; fill: none; stroke-width: 2.5; }
+    .vf-dark-close svg { width: 11px; height: 11px; stroke: currentColor; fill: none; stroke-width: 2.5; }
     .vf-dark-close:hover { background: rgba(255,255,255,0.15); }
 
     /* === HOME ACTIONS (pill cards with tinted icon square) === */
@@ -454,8 +454,8 @@ function generateWidgetScript(config: any): string {
       flex-shrink: 0;
     }
     .vf-home-action {
-      display: flex; align-items: center; gap: 10px;
-      padding: 10px 13px;
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 14px;
       background: \${theme.surface};
       border: 0.5px solid \${theme.surfaceBorder};
       border-radius: 12px;
@@ -466,24 +466,24 @@ function generateWidgetScript(config: any): string {
     }
     .vf-home-action:hover { background: #FAFAFB; }
     .vf-home-action-icon {
-      width: 28px; height: 28px; border-radius: 7px;
+      width: 34px; height: 34px; border-radius: 8px;
       display: flex; align-items: center; justify-content: center;
       flex-shrink: 0;
     }
-    .vf-home-action-icon svg { width: 14px; height: 14px; }
+    .vf-home-action-icon svg { width: 16px; height: 16px; }
     .vf-home-action-icon.primary { background: \${accentTintStrong}; color: \${accent}; }
     .vf-home-action-icon.secondary { background: #F0F0F2; color: #444; }
     .vf-home-action-text { flex: 1; min-width: 0; }
     .vf-home-action-label {
-      font-size: 12px; font-weight: 500;
-      color: \${theme.textPrimary}; line-height: 1.2;
+      font-size: 14px; font-weight: 500;
+      color: \${theme.textPrimary}; line-height: 1.25;
     }
     .vf-home-action-sub {
-      font-size: 10.5px; color: \${theme.textMuted};
-      line-height: 1.2; margin-top: 2px;
+      font-size: 12px; color: \${theme.textMuted};
+      line-height: 1.25; margin-top: 2px;
     }
     .vf-home-action-chev { color: \${theme.textFaint}; display: flex; flex-shrink: 0; }
-    .vf-home-action-chev svg { width: 11px; height: 11px; stroke: currentColor; fill: none; stroke-width: 2.5; }
+    .vf-home-action-chev svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2.5; }
 
     /* === CONTENT CONTAINER === */
     #vf-content {
@@ -502,12 +502,12 @@ function generateWidgetScript(config: any): string {
     .vf-msg-bot {
       align-self: flex-start;
       max-width: 78%;
-      padding: 7px 11px;
+      padding: 9px 13px;
       background: \${theme.botBubble};
-      border-radius: 14px; border-top-left-radius: 5px;
-      font-size: 11px;
+      border-radius: 16px; border-top-left-radius: 6px;
+      font-size: 13px;
       color: \${theme.textPrimary};
-      line-height: 1.4; margin: 0;
+      line-height: 1.45; margin: 0;
       word-wrap: break-word;
     }
     .vf-msg-bot img { max-width: 100%; height: auto; border-radius: 8px; margin-top: 6px; }
@@ -515,11 +515,11 @@ function generateWidgetScript(config: any): string {
     .vf-msg-user-wrap { display: flex; justify-content: flex-end; }
     .vf-msg-user {
       max-width: 78%;
-      padding: 7px 11px;
+      padding: 9px 13px;
       background: \${accent};
       color: #ffffff;
-      border-radius: 14px; border-top-right-radius: 5px;
-      font-size: 11px; line-height: 1.4; margin: 0;
+      border-radius: 16px; border-top-right-radius: 6px;
+      font-size: 13px; line-height: 1.45; margin: 0;
       word-wrap: break-word;
     }
     .vf-msg-agent-wrap {
@@ -544,9 +544,9 @@ function generateWidgetScript(config: any): string {
     }
     .vf-msg-system {
       align-self: center;
-      font-size: 9.5px;
+      font-size: 11px;
       color: \${theme.textMuted};
-      padding: 4px 0; text-align: center;
+      padding: 6px 0; text-align: center;
     }
     .vf-msg-time { display: none; }
     .vf-buttons {
@@ -554,11 +554,11 @@ function generateWidgetScript(config: any): string {
       align-self: flex-start; margin-top: 2px;
     }
     .vf-btn-option {
-      padding: 4px 10px;
-      border: 0.8px solid \${accent};
+      padding: 6px 12px;
+      border: 1px solid \${accent};
       border-radius: 999px;
       background: transparent; color: \${accent};
-      font-size: 9px; font-weight: 500;
+      font-size: 11px; font-weight: 500;
       cursor: pointer; font-family: inherit; line-height: 1.3;
       transition: background 0.15s ease;
     }
@@ -567,13 +567,14 @@ function generateWidgetScript(config: any): string {
     .vf-btn-option:disabled { opacity: 0.5; cursor: default; pointer-events: none; }
     .vf-typing {
       align-self: flex-start;
-      padding: 8px 12px;
+      width: fit-content;
+      padding: 10px 14px;
       background: \${theme.botBubble};
-      border-radius: 14px; border-top-left-radius: 5px;
-      display: flex; gap: 3px; align-items: center;
+      border-radius: 16px; border-top-left-radius: 6px;
+      display: inline-flex; gap: 4px; align-items: center;
     }
     .vf-typing-dot {
-      width: 4px; height: 4px; border-radius: 50%;
+      width: 5px; height: 5px; border-radius: 50%;
       background: #888;
       animation: vf-tbounce 1.4s infinite both;
     }
@@ -593,28 +594,28 @@ function generateWidgetScript(config: any): string {
     }
     .vf-input-row { display: flex; align-items: center; gap: 6px; }
     .vf-input-field {
-      flex: 1; height: 28px;
+      flex: 1; height: 34px;
       background: \${theme.surface};
       border: 0.5px solid #E0E0E4;
       border-radius: 999px;
-      padding: 0 12px;
-      font-size: 11px; color: \${theme.textPrimary};
+      padding: 0 14px;
+      font-size: 13px; color: \${theme.textPrimary};
       font-family: inherit; outline: none;
       transition: border-color 0.2s;
     }
     .vf-input-field::placeholder { color: #aaa; }
     .vf-input-field:focus { border-color: \${accent}; }
     .vf-attach-btn {
-      width: 28px; height: 28px; border-radius: 50%;
+      width: 34px; height: 34px; border-radius: 50%;
       border: none; background: transparent;
       display: flex; align-items: center; justify-content: center;
       cursor: pointer; color: #888;
       flex-shrink: 0; padding: 0;
     }
     .vf-attach-btn:hover { color: \${theme.textSecondary}; }
-    .vf-attach-btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; }
+    .vf-attach-btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; }
     .vf-send-btn {
-      width: 28px; height: 28px; border-radius: 50%;
+      width: 34px; height: 34px; border-radius: 50%;
       border: none; background: \${accent};
       color: #ffffff;
       display: flex; align-items: center; justify-content: center;
@@ -622,26 +623,26 @@ function generateWidgetScript(config: any): string {
       transition: opacity 0.2s;
     }
     .vf-send-btn:hover { opacity: 0.9; }
-    .vf-send-btn svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2; }
+    .vf-send-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; }
 
     /* === BOTTOM TABS === */
     .vf-tabs {
       border-top: 0.5px solid \${theme.divider};
       display: flex; justify-content: space-around; align-items: center;
-      padding: 6px 0;
+      padding: 8px 0;
       background: \${theme.canvas};
       flex-shrink: 0;
-      height: 32px;
+      height: 44px;
     }
     .vf-tab {
-      display: flex; flex-direction: column; align-items: center; gap: 2px;
-      padding: 2px 12px;
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+      padding: 4px 18px;
       cursor: pointer;
       border: none; background: transparent;
       font-family: inherit;
     }
-    .vf-tab svg { width: 11px; height: 11px; }
-    .vf-tab span { font-size: 8px; font-weight: 500; }
+    .vf-tab svg { width: 16px; height: 16px; }
+    .vf-tab span { font-size: 10px; font-weight: 500; }
     .vf-tab.active { color: \${theme.dark}; }
     .vf-tab.active svg { fill: currentColor; stroke: currentColor; }
     .vf-tab:not(.active) { color: #a0a0a4; }
@@ -655,27 +656,27 @@ function generateWidgetScript(config: any): string {
     }
     .vf-new-chat-tinted {
       display: flex; align-items: center; gap: 10px;
-      padding: 10px 12px;
+      padding: 11px 14px;
       background: \${accentTint};
       color: \${accent};
       border-radius: 10px;
       border: none; cursor: pointer;
       font-family: inherit;
-      font-size: 11.5px; font-weight: 500;
-      margin-bottom: 8px;
+      font-size: 13px; font-weight: 500;
+      margin-bottom: 10px;
       width: 100%; text-align: left;
     }
-    .vf-new-chat-tinted svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; flex-shrink: 0; }
+    .vf-new-chat-tinted svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; flex-shrink: 0; }
     .vf-new-chat-tinted:hover { background: \${accentTintStrong}; }
     .vf-chat-section-label {
-      font-size: 10px; color: \${theme.textMuted};
+      font-size: 11px; color: \${theme.textMuted};
       font-weight: 500;
-      padding: 4px 2px 6px;
+      padding: 4px 2px 8px;
     }
     .vf-chat-list-scroll { flex: 1; overflow-y: auto; }
     .vf-conv-card {
-      display: flex; align-items: center; gap: 10px;
-      padding: 9px 10px;
+      display: flex; align-items: center; gap: 11px;
+      padding: 11px 12px;
       background: \${theme.surface};
       border: 0.5px solid \${theme.surfaceBorder};
       border-radius: 10px;
@@ -685,36 +686,36 @@ function generateWidgetScript(config: any): string {
     }
     .vf-conv-card:hover { background: #FAFAFB; }
     .vf-conv-avatar {
-      width: 30px; height: 30px; border-radius: 50%;
+      width: 34px; height: 34px; border-radius: 50%;
       background: \${theme.avatarBg};
       color: \${theme.avatarFg};
       display: flex; align-items: center; justify-content: center;
-      font-size: 10px; font-weight: 500;
+      font-size: 11px; font-weight: 500;
       flex-shrink: 0;
     }
     .vf-conv-avatar.bot { background: \${theme.botBubble}; color: #666; }
-    .vf-conv-avatar.bot svg { width: 12px; height: 12px; }
+    .vf-conv-avatar.bot svg { width: 14px; height: 14px; }
     .vf-conv-middle { flex: 1; min-width: 0; }
     .vf-conv-preview {
-      font-size: 11px;
+      font-size: 13px;
       color: \${theme.textPrimary};
       line-height: 1.3; margin: 0;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .vf-conv-meta {
-      font-size: 9.5px;
+      font-size: 11px;
       color: \${theme.textMuted};
-      line-height: 1.2; margin-top: 2px;
+      line-height: 1.2; margin-top: 3px;
     }
     .vf-conv-right {
       display: flex; flex-direction: column; align-items: flex-end;
-      gap: 3px; flex-shrink: 0;
+      gap: 4px; flex-shrink: 0;
     }
-    .vf-conv-time { font-size: 9.5px; color: \${theme.textMuted}; }
+    .vf-conv-time { font-size: 11px; color: \${theme.textMuted}; }
     .vf-conv-unread {
-      width: 16px; height: 16px; border-radius: 50%;
+      width: 18px; height: 18px; border-radius: 50%;
       background: \${accent}; color: #ffffff;
-      font-size: 9px; font-weight: 500;
+      font-size: 10px; font-weight: 500;
       display: flex; align-items: center; justify-content: center;
     }
 
@@ -732,18 +733,18 @@ function generateWidgetScript(config: any): string {
     }
     .vf-faq-q {
       display: flex; align-items: center; justify-content: space-between; gap: 10px;
-      padding: 10px 12px;
+      padding: 12px 14px;
       cursor: pointer;
       border: none; background: transparent;
       font-family: inherit;
-      font-size: 11px; font-weight: 500;
+      font-size: 13px; font-weight: 500;
       color: \${theme.textPrimary};
       width: 100%; text-align: left;
-      line-height: 1.3;
+      line-height: 1.35;
     }
     .vf-faq-q:hover { background: #FAFAFB; }
     .vf-faq-q svg {
-      width: 11px; height: 11px;
+      width: 13px; height: 13px;
       color: \${theme.textMuted};
       transition: transform 0.2s;
       flex-shrink: 0;
@@ -751,10 +752,10 @@ function generateWidgetScript(config: any): string {
     }
     .vf-faq-q.open svg { transform: rotate(180deg); }
     .vf-faq-a {
-      padding: 10px 12px;
+      padding: 12px 14px;
       border-top: 0.5px solid rgba(0,0,0,0.04);
-      font-size: 10.5px; color: #555;
-      line-height: 1.5; display: none;
+      font-size: 12px; color: #555;
+      line-height: 1.55; display: none;
     }
     .vf-faq-a.open { display: block; }
 
@@ -766,20 +767,20 @@ function generateWidgetScript(config: any): string {
       padding: 20px; gap: 8px; text-align: center;
     }
     .vf-empty-icon {
-      width: 40px; height: 40px; border-radius: 50%;
+      width: 44px; height: 44px; border-radius: 50%;
       background: \${theme.botBubble};
       color: #888;
       display: flex; align-items: center; justify-content: center;
     }
-    .vf-empty-icon svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; }
-    .vf-empty-title { font-size: 12px; font-weight: 500; color: \${theme.textPrimary}; }
-    .vf-empty-sub { font-size: 10.5px; color: \${theme.textMuted}; line-height: 1.4; max-width: 180px; }
+    .vf-empty-icon svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2; }
+    .vf-empty-title { font-size: 14px; font-weight: 500; color: \${theme.textPrimary}; }
+    .vf-empty-sub { font-size: 12px; color: \${theme.textMuted}; line-height: 1.45; max-width: 200px; }
     .vf-empty-cta {
-      margin-top: 4px;
-      padding: 8px 14px;
+      margin-top: 6px;
+      padding: 10px 18px;
       background: \${theme.dark}; color: #ffffff;
       border: none; border-radius: 999px;
-      font-size: 10.5px; font-weight: 500;
+      font-size: 12px; font-weight: 500;
       cursor: pointer; font-family: inherit;
     }
 
@@ -1140,81 +1141,59 @@ function generateWidgetScript(config: any): string {
   function renderChatHistory(container) {
     const history = SessionManager.getConversationHistory();
     
-    // Empty state — first-time user or no prior conversations
     if (history.length === 0) {
       container.innerHTML = \`
         <div class="vf-empty">
-          <div class="vf-empty-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-          </div>
-          <div class="vf-empty-title">No conversations yet</div>
-          <div class="vf-empty-sub">Start a new chat and we'll remember it here for next time.</div>
-          <button class="vf-empty-cta" onclick="window.vfStartNewChat()">New chat</button>
+          \${icons.messageCircle}
+          <p>No conversations yet</p>
+          <p>Start a new chat to get going</p>
         </div>
       \`;
-      return;
+    } else {
+      const recent = history[0];
+      const older = history.slice(1);
+      
+      container.innerHTML = \`
+        <div class="vf-chat-list">
+          <div class="vf-chat-list-header">
+            <span class="vf-chat-list-title">Chats</span>
+          </div>
+          <div style="padding: 0 16px 8px;">
+            <button class="vf-new-chat-btn" onclick="window.vfStartNewChat()" style="margin:0;width:100%;">
+              <span style="width:18px;height:18px;flex-shrink:0;display:inline-flex;">\${icons.plus}</span>
+              <span style="font-size:14px;font-weight:500;">New Chat</span>
+              <span style="margin-left:auto;color:inherit;opacity:0.3;">\${icons.chevronRight}</span>
+            </button>
+          </div>
+          <div class="vf-chat-list-scroll">
+            \${recent ? \`
+              <div class="vf-chat-section-label">Continue recent conversation</div>
+              <div class="vf-conv-card" onclick="window.vfLoadConversation('\${recent.id}')">
+                <p class="vf-conv-card-preview">\${recent.preview}</p>
+                <div class="vf-conv-card-meta">
+                  \${icons.clock}
+                  <span>\${formatTimeAgo(recent.timestamp)}</span>
+                  <span class="vf-conv-card-count">\${recent.messageCount}</span>
+                </div>
+              </div>
+            \` : ''}
+            \${older.length > 0 ? \`
+              <div class="vf-chat-section-label">Previous conversations</div>
+              \${older.map(conv => \`
+                <div class="vf-conv-card" onclick="window.vfLoadConversation('\${conv.id}')">
+                  <p class="vf-conv-card-preview">\${conv.preview}</p>
+                  <div class="vf-conv-card-meta">
+                    \${icons.clock}
+                    <span>\${formatTimeAgo(conv.timestamp)}</span>
+                    <span class="vf-conv-card-count">\${conv.messageCount}</span>
+                  </div>
+                </div>
+              \`).join('')}
+            \` : ''}
+          </div>
+        </div>
+      \`;
     }
-    
-    // Populated list — tinted CTA + section label + conversation pill cards
-    const recent = history[0];
-    const older = history.slice(1);
-    
-    // Build a single card's HTML — avatar + preview + time (+ unread badge if applicable)
-    const convCardHtml = (conv) => {
-      // Avatar: if the most recent message was from a human agent, use initials;
-      // otherwise show the generic bot icon. We derive this from the last message
-      // with a speaker of 'client_user' if any — otherwise bot.
-      let avatarHtml = \`
-        <div class="vf-conv-avatar bot">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 8.5-8.5 8.5 8.5 0 0 1 8.5 8.5z"/></svg>
-        </div>
-      \`;
-      
-      // Look for a 'client_user' speaker in the stored messages (handover agent)
-      const lastAgentMsg = (conv.messages || []).slice().reverse().find(m => m.speaker === 'client_user');
-      if (lastAgentMsg && lastAgentMsg.agentName) {
-        const initials = lastAgentMsg.agentName.trim().split(/\\s+/).map(w => w.charAt(0).toUpperCase()).slice(0, 2).join('');
-        avatarHtml = \`<div class="vf-conv-avatar">\${initials || '?'}</div>\`;
-      }
-      
-      // Unread count — stored on the conversation if present
-      const unread = conv.unreadCount || 0;
-      const unreadHtml = unread > 0
-        ? \`<div class="vf-conv-unread">\${unread}</div>\`
-        : '';
-      
-      // Safely escape the preview text
-      const safePreview = (conv.preview || 'New conversation')
-        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-      
-      return \`
-        <div class="vf-conv-card" onclick="window.vfLoadConversation('\${conv.id}')">
-          \${avatarHtml}
-          <div class="vf-conv-middle">
-            <div class="vf-conv-preview">\${safePreview}</div>
-            <div class="vf-conv-meta">\${conv.messageCount || 0} messages</div>
-          </div>
-          <div class="vf-conv-right">
-            <div class="vf-conv-time">\${formatTimeAgo(conv.timestamp)}</div>
-            \${unreadHtml}
-          </div>
-        </div>
-      \`;
-    };
-    
-    container.innerHTML = \`
-      <div class="vf-chat-list">
-        <button class="vf-new-chat-tinted" onclick="window.vfStartNewChat()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
-          <span>New chat</span>
-        </button>
-        <div class="vf-chat-section-label">Recent</div>
-        <div class="vf-chat-list-scroll">
-          \${recent ? convCardHtml(recent) : ''}
-          \${older.map(convCardHtml).join('')}
-        </div>
-      </div>
-    \`;
   }
   
   function scrollToLatestMessage() {
@@ -1396,22 +1375,12 @@ function generateWidgetScript(config: any): string {
     container.innerHTML = '<div class="vf-messages-wrap" id="vf-messages"></div>';
     const messagesEl = document.getElementById('vf-messages');
     
-    // Helper: derive two-letter initials from an agent name ("Sarah Adams" → "SA", "Mark" → "MA")
-    const agentInitials = (name) => {
-      if (!name) return '?';
-      const parts = name.trim().split(/\\s+/);
-      if (parts.length >= 2) {
-        return (parts[0].charAt(0) + parts[1].charAt(0)).toUpperCase();
-      }
-      return parts[0].substring(0, 2).toUpperCase();
-    };
-    
     messages.forEach(msg => {
       const isUser = msg.speaker === 'user';
       const isSystem = msg.speaker === 'system';
       const isAgent = msg.speaker === 'client_user';
       
-      // Parse file URL from message text (widget uses "[Image: foo.png]\\nhttps://..." convention)
+      // Parse file URLs
       let messageContent = msg.text || '';
       let fileUrl = null;
       let fileName = null;
@@ -1427,7 +1396,6 @@ function generateWidgetScript(config: any): string {
       
       const wrapper = document.createElement('div');
       
-      // System message — centred grey text ("Sarah joined the chat", "Conversation ended")
       if (isSystem) {
         wrapper.className = 'vf-msg-system';
         wrapper.textContent = messageContent;
@@ -1435,7 +1403,6 @@ function generateWidgetScript(config: any): string {
         return;
       }
       
-      // User message — brand-colour pill, right-aligned
       if (isUser) {
         wrapper.className = 'vf-msg-user-wrap';
         wrapper.innerHTML = \`
@@ -1443,7 +1410,7 @@ function generateWidgetScript(config: any): string {
             \${messageContent ? messageContent : ''}
             \${fileUrl ? (isImage 
               ? \`<img src="\${fileUrl}" alt="\${fileName}" class="vf-file-preview" style="display:block;margin-top:6px;" />\`
-              : \`<a href="\${fileUrl}" target="_blank" class="vf-file-link" style="color:rgba(255,255,255,0.85);">\${fileName}</a>\`
+              : \`<a href="\${fileUrl}" target="_blank" class="vf-file-link" style="color:rgba(255,255,255,0.8);">\${fileName}</a>\`
             ) : ''}
           </div>
         \`;
@@ -1451,41 +1418,33 @@ function generateWidgetScript(config: any): string {
         return;
       }
       
-      // Agent (human handover) — same bubble style as bot, with avatar + name above
-      if (isAgent) {
-        const name = msg.agentName || 'Support';
-        const initials = agentInitials(name);
-        
-        wrapper.className = 'vf-msg-agent-wrap';
-        wrapper.innerHTML = \`
-          <div class="vf-msg-agent-name">\${name}</div>
-          <div class="vf-msg-agent-row">
-            <div class="vf-msg-agent-avatar">\${initials}</div>
-            <p class="vf-msg-bot">
-              \${messageContent}
-              \${fileUrl ? (isImage
-                ? \`<img src="\${fileUrl}" alt="\${fileName}" class="vf-file-preview" style="display:block;margin-top:6px;" />\`
-                : \`<a href="\${fileUrl}" target="_blank" class="vf-file-link">\${fileName}</a>\`
-              ) : ''}
-            </p>
-          </div>
-        \`;
-        messagesEl.appendChild(wrapper);
-        return;
-      }
-      
-      // Bot message — grey bubble + optional interactive buttons below
+      // Bot message — grey bubble ONLY if there's text or a file.
+      // When Voiceflow sends { text: '', buttons: [...] } we must skip the
+      // empty <p class="vf-msg-bot"> or it renders as an empty grey bubble
+      // above the buttons. That was the "empty bubble before buttons" bug.
       const isClicked = clickedButtonIds.has(msg.id);
       wrapper.style.cssText = 'display:flex;flex-direction:column;gap:5px;align-self:flex-start;max-width:100%;';
       
+      const hasBotBody = (messageContent && messageContent.trim()) || fileUrl;
+      
       wrapper.innerHTML = \`
-        <p class="vf-msg-bot">
-          \${messageContent}
-          \${fileUrl ? (isImage
-            ? \`<img src="\${fileUrl}" alt="\${fileName}" class="vf-file-preview" style="display:block;margin-top:6px;" />\`
-            : \`<a href="\${fileUrl}" target="_blank" class="vf-file-link">\${fileName}</a>\`
-          ) : ''}
-        </p>
+        \${isAgent ? \`
+          <div class="vf-msg-agent">
+            \${messageContent}
+            \${fileUrl ? (isImage
+              ? \`<img src="\${fileUrl}" alt="\${fileName}" class="vf-file-preview" />\`
+              : \`<a href="\${fileUrl}" target="_blank" class="vf-file-link">\${fileName}</a>\`
+            ) : ''}
+          </div>
+        \` : (hasBotBody ? \`
+          <p class="vf-msg-bot">
+            \${messageContent}
+            \${fileUrl ? (isImage
+              ? \`<img src="\${fileUrl}" alt="\${fileName}" class="vf-file-preview" style="display:block;margin-top:6px;" />\`
+              : \`<a href="\${fileUrl}" target="_blank" class="vf-file-link">\${fileName}</a>\`
+            ) : ''}
+          </p>
+        \` : '')}
         \${msg.buttons && msg.buttons.length > 0 ? \`
           <div class="vf-buttons">
             \${msg.buttons.map((btn, idx) => {
@@ -1500,22 +1459,25 @@ function generateWidgetScript(config: any): string {
             }).join('')}
           </div>
         \` : ''}
+        <div class="vf-msg-time">\${formatTime(msg.timestamp)}</div>
       \`;
       
       messagesEl.appendChild(wrapper);
     });
     
-    // Typing indicator — three bouncing dots inside a bot-style bubble
+    // Typing indicator — append .vf-typing directly (no outer wrapper div).
+    // The old code wrapped it in a plain <div> which became a block-level
+    // flex child, stretched to full width, and ignored align-self:flex-start.
+    // That was the "typing stretches across full width" bug.
     if (isTyping) {
-      const typingDiv = document.createElement('div');
-      typingDiv.innerHTML = \`
-        <div class="vf-typing">
-          <div class="vf-typing-dot"></div>
-          <div class="vf-typing-dot"></div>
-          <div class="vf-typing-dot"></div>
-        </div>
+      const typingEl = document.createElement('div');
+      typingEl.className = 'vf-typing';
+      typingEl.innerHTML = \`
+        <div class="vf-typing-dot"></div>
+        <div class="vf-typing-dot"></div>
+        <div class="vf-typing-dot"></div>
       \`;
-      messagesEl.appendChild(typingDiv);
+      messagesEl.appendChild(typingEl);
     }
     
     scrollToLatestMessage();
@@ -1524,29 +1486,22 @@ function generateWidgetScript(config: any): string {
   function renderFAQ(container) {
     const items = CONFIG.tabs.faq.items || [];
     
-    // Empty state — consistent with Chats tab empty state
     if (items.length === 0) {
       container.innerHTML = \`
         <div class="vf-empty">
-          <div class="vf-empty-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
-          </div>
-          <div class="vf-empty-title">No FAQ yet</div>
-          <div class="vf-empty-sub">Common questions will appear here when they're added.</div>
+          <p>No FAQ items yet</p>
         </div>
       \`;
       return;
     }
     
-    // Pill-card accordion — one item open at a time, chevron rotates 180° when open.
-    // No search bar (by design — it's only useful once the list is long).
     container.innerHTML = \`
       <div class="vf-faq-wrap">
-        \${items.map((item) => \`
+        \${items.map((item, idx) => \`
           <div class="vf-faq-item">
             <button class="vf-faq-q" onclick="this.classList.toggle('open');this.nextElementSibling.classList.toggle('open');">
               <span>\${item.question}</span>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
             </button>
             <div class="vf-faq-a">\${item.answer}</div>
           </div>
