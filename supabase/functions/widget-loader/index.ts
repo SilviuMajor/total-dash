@@ -1074,46 +1074,65 @@ function generateWidgetScript(config: any): string {
   }
   
   function renderHome(container) {
-    const logoHtml = CONFIG.appearance.logoUrl 
-      ? \`<div class="vf-logo-badge"><img src="\${CONFIG.appearance.logoUrl}" alt="Logo" /></div>\`
-      : \`<div class="vf-logo-badge">\${CONFIG.agentName.charAt(0).toUpperCase()}</div>\`;
+    // Fill the dark card (rendered by renderPanel as an empty placeholder on home).
+    // Logo + close go in the top row. Greeting + status sit at the bottom.
+    const darkCard = document.getElementById('vf-dark-card');
+    if (darkCard) {
+      const logoInner = CONFIG.appearance.logoUrl
+        ? \`<img src="\${CONFIG.appearance.logoUrl}" alt="Logo" />\`
+        : (CONFIG.agentName || '?').charAt(0).toUpperCase();
+      
+      darkCard.innerHTML = \`
+        <div class="vf-dark-top">
+          <div class="vf-logo-badge">\${logoInner}</div>
+          <button class="vf-dark-close" onclick="window.vfCloseWidget()" aria-label="Close">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div class="vf-dark-greeting-wrap">
+          <h2 class="vf-dark-greeting">\${CONFIG.tabs.home.title}</h2>
+          <div class="vf-dark-status">
+            <div class="vf-dark-status-dot"></div>
+            <span class="vf-dark-status-text">\${CONFIG.tabs.home.subtitle || 'Team online now'}</span>
+          </div>
+        </div>
+      \`;
+    }
+    
+    // Action pill cards — first enabled button gets the primary (brand-tinted) icon square.
+    // Subsequent buttons get the neutral grey icon square.
+    const enabledButtons = CONFIG.tabs.home.buttons.filter(btn => btn.enabled);
+    
+    const actionIconSvg = (action) => {
+      if (action === 'call') {
+        return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7 12.8 12.8 0 0 0 .7 2.8 2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4 12.8 12.8 0 0 0 2.8.7A2 2 0 0 1 22 16.9z"></path></svg>';
+      }
+      // Default: speech bubble
+      return '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 8.5-8.5 8.5 8.5 0 0 1 8.5 8.5z"></path></svg>';
+    };
+    
+    const actionSubtitle = (action) => {
+      if (action === 'call') return 'Speak to a team member';
+      if (action === 'new_chat') return 'Chat with our AI assistant';
+      return '';
+    };
     
     container.innerHTML = \`
-      <div class="vf-home">
-        <div class="vf-home-hero">
-          <div class="vf-home-hero-top">
-            \${logoHtml}
-            <button class="vf-header-btn" onclick="window.vfCloseWidget()">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
-          </div>
-          <h2 class="vf-home-title">\${CONFIG.tabs.home.title}</h2>
-          <div class="vf-home-status">
-            <div class="vf-home-status-dot"></div>
-            <span class="vf-home-status-text">\${CONFIG.tabs.home.subtitle || 'We typically reply in minutes'}</span>
-          </div>
-        </div>
-        
-        <div class="vf-home-actions">
-          \${CONFIG.tabs.home.buttons.filter(btn => btn.enabled).map((btn, idx) => \`
-            <button class="vf-home-button" onclick="window.vfHandleHomeAction('\${btn.action}', '\${btn.phoneNumber || ''}')">
-              <div class="vf-home-button-icon \${idx === 0 ? 'primary' : 'secondary'}">
-                \${btn.action === 'call' ? icons.phone : icons.messageSquare}
-              </div>
-              <div class="vf-home-button-text">
-                <strong>\${btn.text}</strong>
-                <span>\${btn.action === 'call' ? 'Speak to a team member' : btn.action === 'new_chat' ? 'Chat with our AI assistant' : ''}</span>
-              </div>
-              <div class="vf-home-button-chevron">\${icons.chevronRight}</div>
-            </button>
-          \`).join('')}
-        </div>
-        
-        \${CONFIG.poweredBy.enabled ? \`
-          <div class="vf-powered-by">
-            <span>Powered by \${CONFIG.poweredBy.text}</span>
-          </div>
-        \` : ''}
+      <div class="vf-home-actions">
+        \${enabledButtons.map((btn, idx) => \`
+          <button class="vf-home-action" onclick="window.vfHandleHomeAction('\${btn.action}', '\${btn.phoneNumber || ''}')">
+            <div class="vf-home-action-icon \${idx === 0 ? 'primary' : 'secondary'}">
+              \${actionIconSvg(btn.action)}
+            </div>
+            <div class="vf-home-action-text">
+              <div class="vf-home-action-label">\${btn.text}</div>
+              \${actionSubtitle(btn.action) ? \`<div class="vf-home-action-sub">\${actionSubtitle(btn.action)}</div>\` : ''}
+            </div>
+            <div class="vf-home-action-chev">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+            </div>
+          </button>
+        \`).join('')}
       </div>
     \`;
   }
