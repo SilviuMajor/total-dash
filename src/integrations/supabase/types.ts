@@ -2287,6 +2287,7 @@ export type Database = {
       }
       transcripts: {
         Row: {
+          attachments: Json | null
           buttons: Json | null
           confidence: number | null
           conversation_id: string
@@ -2297,6 +2298,7 @@ export type Database = {
           timestamp: string | null
         }
         Insert: {
+          attachments?: Json | null
           buttons?: Json | null
           confidence?: number | null
           conversation_id: string
@@ -2307,6 +2309,7 @@ export type Database = {
           timestamp?: string | null
         }
         Update: {
+          attachments?: Json | null
           buttons?: Json | null
           confidence?: number | null
           conversation_id?: string
