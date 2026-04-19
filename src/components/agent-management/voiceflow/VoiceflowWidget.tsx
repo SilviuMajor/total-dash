@@ -27,9 +27,9 @@ export function VoiceflowWidget({ agent, onUpdate }: VoiceflowWidgetProps) {
 
       <Tabs value={activeWidgetTab} onValueChange={setActiveWidgetTab} className="w-full">
         <TabsList>
-          <TabsTrigger value="appearance">Appearance & Branding</TabsTrigger>
-          <TabsTrigger value="functions">Functions</TabsTrigger>
-          <TabsTrigger value="deployment">Website Deployment</TabsTrigger>
+          <TabsTrigger value="appearance">Appearance</TabsTrigger>
+          <TabsTrigger value="functions">Content & behavior</TabsTrigger>
+          <TabsTrigger value="deployment">Deployment</TabsTrigger>
         </TabsList>
 
         <TabsContent value="appearance" className="mt-6">
