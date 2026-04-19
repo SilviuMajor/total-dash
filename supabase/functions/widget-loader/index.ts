@@ -393,8 +393,8 @@ function generateWidgetScript(config: any): string {
     }
     .vf-dark-card-home { min-height: 155px; }
     .vf-dark-card-chat {
-      height: 38px; padding: 0 12px;
-      flex-direction: row; align-items: center; gap: 9px;
+      height: 44px; padding: 0 12px;
+      flex-direction: row; align-items: center; gap: 10px;
     }
     .vf-dark-top {
       display: flex; justify-content: space-between; align-items: center;
@@ -402,18 +402,18 @@ function generateWidgetScript(config: any): string {
     .vf-dark-greeting-wrap { margin-top: auto; }
     .vf-dark-greeting {
       color: \${theme.darkText};
-      font-size: 20px; font-weight: 500;
+      font-size: 22px; font-weight: 500;
       letter-spacing: -0.015em; line-height: 1.15;
       margin: 0;
     }
     .vf-dark-status {
-      display: flex; align-items: center; gap: 6px; margin-top: 8px;
+      display: flex; align-items: center; gap: 7px; margin-top: 10px;
     }
     .vf-dark-status-dot {
-      width: 6px; height: 6px; border-radius: 50%;
+      width: 7px; height: 7px; border-radius: 50%;
       background: \${theme.statusOnline};
     }
-    .vf-dark-status-text { font-size: 11px; color: \${theme.darkMuted}; }
+    .vf-dark-status-text { font-size: 12px; color: \${theme.darkMuted}; }
     .vf-dark-back {
       color: rgba(255,255,255,0.75);
       background: transparent; border: none;
@@ -421,30 +421,30 @@ function generateWidgetScript(config: any): string {
       display: flex; align-items: center; justify-content: center;
       flex-shrink: 0;
     }
-    .vf-dark-back svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2; }
+    .vf-dark-back svg { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 2; }
     .vf-dark-title {
       color: \${theme.darkText};
-      font-size: 12px; font-weight: 500;
+      font-size: 13px; font-weight: 500;
       margin: 0;
     }
     .vf-logo-badge {
-      width: 22px; height: 22px; border-radius: 5px;
+      width: 24px; height: 24px; border-radius: 6px;
       background: #ffffff;
       color: \${accent};
       display: flex; align-items: center; justify-content: center;
-      font-size: 8px; font-weight: 500; letter-spacing: -0.02em;
+      font-size: 9px; font-weight: 500; letter-spacing: -0.02em;
       flex-shrink: 0; overflow: hidden;
     }
     .vf-logo-badge img { width: 100%; height: 100%; object-fit: cover; }
     .vf-dark-close {
-      width: 22px; height: 22px; border-radius: 50%;
+      width: 24px; height: 24px; border-radius: 50%;
       background: \${theme.darkInnerBg};
       color: \${theme.darkInnerFg};
       border: none; cursor: pointer;
       display: flex; align-items: center; justify-content: center;
       flex-shrink: 0; padding: 0;
     }
-    .vf-dark-close svg { width: 10px; height: 10px; stroke: currentColor; fill: none; stroke-width: 2.5; }
+    .vf-dark-close svg { width: 11px; height: 11px; stroke: currentColor; fill: none; stroke-width: 2.5; }
     .vf-dark-close:hover { background: rgba(255,255,255,0.15); }
 
     /* === HOME ACTIONS (pill cards with tinted icon square) === */
