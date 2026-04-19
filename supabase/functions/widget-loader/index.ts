@@ -245,46 +245,40 @@ function generateWidgetScript(config: any): string {
   document.head.appendChild(fontLink);
   
   // Inject CSS
-  // Theme setup
-  const isDarkMode = (() => {
-    if (CONFIG.appearance.widgetMode === 'dark') return true;
-    if (CONFIG.appearance.widgetMode === 'light') return false;
-    // Auto: detect from website
-    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-  })();
-  
-  const theme = isDarkMode ? {
-    bg: '#161618',
-    bgSurface: 'rgba(255,255,255,0.05)',
-    bgSurfaceHover: 'rgba(255,255,255,0.08)',
-    text: 'rgba(255,255,255,0.85)',
-    textSecondary: 'rgba(255,255,255,0.5)',
-    textMuted: 'rgba(255,255,255,0.25)',
-    textFaint: 'rgba(255,255,255,0.12)',
-    border: 'rgba(255,255,255,0.06)',
-    borderHover: 'rgba(255,255,255,0.12)',
-    inputBg: 'rgba(255,255,255,0.05)',
-    inputBorder: 'rgba(255,255,255,0.06)',
-    shadow: 'rgba(0,0,0,0.4)',
-    panelBorder: 'rgba(255,255,255,0.08)',
-  } : {
-    bg: '#ffffff',
-    bgSurface: '#f5f5f7',
-    bgSurfaceHover: '#eeeeef',
-    text: '#111111',
+  // Single unified theme — dark and light coexist spatially (no mode toggle)
+  const theme = {
+    canvas: '#F5F5F7',
+    dark: '#0F0F12',
+    darkInnerBg: 'rgba(255,255,255,0.10)',
+    darkInnerFg: 'rgba(255,255,255,0.65)',
+    darkText: '#ffffff',
+    darkMuted: 'rgba(255,255,255,0.6)',
+    surface: '#ffffff',
+    surfaceBorder: 'rgba(0,0,0,0.06)',
+    divider: 'rgba(0,0,0,0.08)',
+    textPrimary: '#111111',
     textSecondary: '#666666',
-    textMuted: '#bbbbbb',
-    textFaint: '#e0e0e0',
-    border: '#f0f0f0',
-    borderHover: '#e0e0e0',
-    inputBg: '#f5f5f7',
-    inputBorder: '#e5e7eb',
-    shadow: 'rgba(0,0,0,0.12)',
-    panelBorder: '#e5e7eb',
+    textMuted: '#888888',
+    textFaint: '#bbbbbb',
+    botBubble: '#EDEDEF',
+    statusOnline: '#22c55e',
+    avatarBg: '#C7D2FE',
+    avatarFg: '#3730A3',
   };
   
   const accent = CONFIG.appearance.primaryColor;
-  const buttonColor = CONFIG.appearance.chatButtonColor || '#000000';
+  const buttonColor = CONFIG.appearance.chatButtonColor || '#0F0F12';
+  
+  // Helper: convert hex colour to rgba with alpha (for brand-tinted fills)
+  function hexToRgba(hex, alpha) {
+    const h = hex.replace('#', '');
+    const r = parseInt(h.substr(0, 2), 16);
+    const g = parseInt(h.substr(2, 2), 16);
+    const b = parseInt(h.substr(4, 2), 16);
+    return \`rgba(\${r}, \${g}, \${b}, \${alpha})\`;
+  }
+  const accentTint = hexToRgba(accent, 0.10);
+  const accentTintStrong = hexToRgba(accent, 0.12);
   
   const style = document.createElement('style');
   style.textContent = \`
