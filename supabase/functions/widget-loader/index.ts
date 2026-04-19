@@ -56,8 +56,6 @@ serve(async (req) => {
       agentId: agent.id,
       agentName: agent.name,
       title: widgetSettings.title || 'Chat with us',
-      description: widgetSettings.description || "We're here to help",
-      brandingUrl: widgetSettings.branding_url || '',
       welcomeMessage: {
         enabled: welcomeMessage.enabled || false,
         text: welcomeMessage.text || "👋 Hi there! How can I help you today?",
@@ -69,10 +67,8 @@ serve(async (req) => {
         chatIconUrl: appearance.chat_icon_url || '',
         backgroundImageUrl: appearance.background_image_url || '',
         primaryColor: appearance.primary_color || '#5B4FFF',
-        secondaryColor: appearance.secondary_color || '#FFFFFF',
         textColor: appearance.text_color || '#000000',
         fontFamily: appearance.font_family || 'Inter',
-        fontSize: appearance.font_size || 14,
         messageBubbleStyle: appearance.message_bubble_style || 'rounded',
         interactiveButtonStyle: appearance.interactive_button_style || 'solid',
         widgetMode: appearance.widget_mode || 'light',
@@ -889,7 +885,7 @@ function generateWidgetScript(config: any): string {
     if (CONFIG.tabs.chats.enabled) tabs.push('Chats');
     if (CONFIG.tabs.faq.enabled) tabs.push('FAQ');
     
-    const headerTitle = isInActiveChat ? 'New conversation' : CONFIG.title;
+    const headerTitle = isInActiveChat ? 'New conversation' : 'Chat';
     
     panelContent.innerHTML = \`
       <div class="vf-accent-stripe"></div>

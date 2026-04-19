@@ -46,9 +46,7 @@ export function WidgetAppearanceSettings({ agent, onUpdate }: WidgetAppearanceSe
       chat_icon_url: appearanceData.chat_icon_url || "",
       chat_button_color: appearanceData.chat_button_color || "#000000",
       primary_color: appearanceData.primary_color || "#5B4FFF",
-      secondary_color: appearanceData.secondary_color || "#FFFFFF",
       font_family: appearanceData.font_family || "Inter",
-      font_size: appearanceData.font_size || 14,
       widget_mode: appearanceData.widget_mode || "light",
     },
     powered_by: {
@@ -393,60 +391,32 @@ export function WidgetAppearanceSettings({ agent, onUpdate }: WidgetAppearanceSe
               </Select>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Primary colour</Label>
-                <div className="flex gap-2 mt-2">
-                  <Input
-                    type="color"
-                    value={formData.appearance.primary_color}
-                    onChange={(e) =>
-                      setFormData(prev => ({
-                        ...prev,
-                        appearance: { ...prev.appearance, primary_color: e.target.value }
-                      }))
-                    }
-                    className="w-12 h-10 p-1 cursor-pointer"
-                  />
-                  <Input
-                    value={formData.appearance.primary_color}
-                    onChange={(e) =>
-                      setFormData(prev => ({
-                        ...prev,
-                        appearance: { ...prev.appearance, primary_color: e.target.value }
-                      }))
-                    }
-                    placeholder="#000000"
-                    className="flex-1 font-mono text-sm"
-                  />
-                </div>
-              </div>
-              <div>
-                <Label>Secondary colour</Label>
-                <div className="flex gap-2 mt-2">
-                  <Input
-                    type="color"
-                    value={formData.appearance.secondary_color}
-                    onChange={(e) =>
-                      setFormData(prev => ({
-                        ...prev,
-                        appearance: { ...prev.appearance, secondary_color: e.target.value }
-                      }))
-                    }
-                    className="w-12 h-10 p-1 cursor-pointer"
-                  />
-                  <Input
-                    value={formData.appearance.secondary_color}
-                    onChange={(e) =>
-                      setFormData(prev => ({
-                        ...prev,
-                        appearance: { ...prev.appearance, secondary_color: e.target.value }
-                      }))
-                    }
-                    placeholder="#FFFFFF"
-                    className="flex-1 font-mono text-sm"
-                  />
-                </div>
+            <div>
+              <Label>Primary colour</Label>
+              <p className="text-xs text-muted-foreground mb-2">Used for accent stripe, user messages, and interactive elements</p>
+              <div className="flex gap-2">
+                <Input
+                  type="color"
+                  value={formData.appearance.primary_color}
+                  onChange={(e) =>
+                    setFormData(prev => ({
+                      ...prev,
+                      appearance: { ...prev.appearance, primary_color: e.target.value }
+                    }))
+                  }
+                  className="w-12 h-10 p-1 cursor-pointer"
+                />
+                <Input
+                  value={formData.appearance.primary_color}
+                  onChange={(e) =>
+                    setFormData(prev => ({
+                      ...prev,
+                      appearance: { ...prev.appearance, primary_color: e.target.value }
+                    }))
+                  }
+                  placeholder="#000000"
+                  className="flex-1 font-mono text-sm"
+                />
               </div>
             </div>
           </div>
