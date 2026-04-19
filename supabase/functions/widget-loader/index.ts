@@ -76,6 +76,7 @@ serve(async (req) => {
         messageBubbleStyle: appearance.message_bubble_style || 'rounded',
         interactiveButtonStyle: appearance.interactive_button_style || 'solid',
         widgetMode: appearance.widget_mode || 'light',
+        chatButtonColor: appearance.chat_button_color || '#000000',
       },
       tabs: {
         home: {
@@ -287,6 +288,7 @@ function generateWidgetScript(config: any): string {
   };
   
   const accent = CONFIG.appearance.primaryColor;
+  const buttonColor = CONFIG.appearance.chatButtonColor || '#000000';
   
   const style = document.createElement('style');
   style.textContent = \`
@@ -342,13 +344,13 @@ function generateWidgetScript(config: any): string {
     .vf-widget-button::before {
       content: '';
       position: absolute; inset: -5px; border-radius: 50%;
-      background: \${accent}; opacity: 0.15;
+      background: \${buttonColor}; opacity: 0.15;
       animation: vf-glow 2s ease-in-out infinite;
     }
     .vf-widget-button::after {
       content: '';
       position: absolute; inset: -10px; border-radius: 50%;
-      background: \${accent}; opacity: 0.06;
+      background: \${buttonColor}; opacity: 0.06;
       animation: vf-glow 2s ease-in-out infinite 0.3s;
     }
     @keyframes vf-glow {
@@ -368,7 +370,7 @@ function generateWidgetScript(config: any): string {
       width: 60px; height: 60px; border-radius: 50%; object-fit: cover;
     }
     .vf-widget-button.default-icon .vf-btn-inner {
-      background: \${accent};
+      background: \${buttonColor};
       box-shadow: 0 4px 12px \${theme.shadow};
     }
     .vf-widget-button.default-icon .vf-btn-inner svg {
