@@ -573,7 +573,7 @@ function generateWidgetScript(config: any): string {
     /* Non-selected ones fade to 35% opacity; the selected one fills and stays at 100%. */
     .vf-btn-option:disabled { opacity: 0.35; cursor: default; pointer-events: none; }
     .vf-btn-option.selected { background: \${accent}; color: #ffffff; border-color: \${accent}; }
-    .vf-btn-option.selected:disabled { opacity: 1; }
+    .vf-btn-option.selected:disabled { opacity: 0.7; }
     .vf-typing {
       align-self: flex-start;
       width: fit-content;
