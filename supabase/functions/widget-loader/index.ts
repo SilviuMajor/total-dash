@@ -944,6 +944,11 @@ function generateWidgetScript(config: any): string {
   }
   
   // Render Functions
+  //
+  // Panel shell: the dark card sits at the top of the canvas with 10px margin.
+  // On home, the card is tall and holds logo + close + greeting + status inside it.
+  // On chat/chats/FAQ, the card shrinks to a 38px header holding back + logo + title + close.
+  // No separate vf-header bar. No accent stripe.
   function renderPanel() {
     const existingInput = document.getElementById('vf-input');
     const savedInputValue = existingInput ? existingInput.value : '';
@@ -956,33 +961,44 @@ function generateWidgetScript(config: any): string {
     if (CONFIG.tabs.chats.enabled) tabs.push('Chats');
     if (CONFIG.tabs.faq.enabled) tabs.push('FAQ');
     
-    const headerTitle = isInActiveChat ? 'New conversation' : 'Chat';
+    // Title shown in the shrunk dark card when not on home
+    let cardTitle = 'Chat';
+    if (currentTab === 'Chats' && !isInActiveChat) cardTitle = 'Chats';
+    else if (currentTab === 'FAQ') cardTitle = 'FAQ';
+    else if (isInActiveChat) cardTitle = 'Chat';
     
-    panelContent.innerHTML = \`
-      <div class="vf-accent-stripe"></div>
-      
-      \${isHome ? \`
-        <div id="vf-content" style="flex:1;display:flex;flex-direction:column;overflow:hidden;"></div>
-      \` : \`
-        <div class="vf-header">
-          <div class="vf-header-left">
-            \${showBackButton ? \`
-              <button class="vf-header-btn" onclick="window.vfGoBack()">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>
-              </button>
-            \` : ''}
-            \${CONFIG.appearance.logoUrl ? \`
-              <div class="vf-logo-badge-sm"><img src="\${CONFIG.appearance.logoUrl}" alt="Logo" /></div>
-            \` : ''}
-            <p class="vf-header-title">\${headerTitle}</p>
-          </div>
-          <button class="vf-header-btn" onclick="window.vfCloseWidget()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    // Logo HTML — image if configured, otherwise agent initial
+    const logoInner = CONFIG.appearance.logoUrl
+      ? \`<img src="\${CONFIG.appearance.logoUrl}" alt="Logo" />\`
+      : (CONFIG.agentName || '?').charAt(0).toUpperCase();
+    
+    // On home, the dark card content is rendered by renderHome() into a placeholder.
+    // On other screens, the dark card is a slim header rendered inline here.
+    const darkCardHtml = isHome
+      ? \`
+        <div class="vf-dark-card vf-dark-card-home" id="vf-dark-card">
+          <!-- Content injected by renderHome -->
+        </div>
+      \`
+      : \`
+        <div class="vf-dark-card vf-dark-card-chat" id="vf-dark-card">
+          \${showBackButton ? \`
+            <button class="vf-dark-back" onclick="window.vfGoBack()" aria-label="Back">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+            </button>
+          \` : ''}
+          <div class="vf-logo-badge">\${logoInner}</div>
+          <p class="vf-dark-title">\${cardTitle}</p>
+          <div style="flex:1;"></div>
+          <button class="vf-dark-close" onclick="window.vfCloseWidget()" aria-label="Close">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
           </button>
         </div>
-        <div id="vf-content" style="flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0;"></div>
-      \`}
-      
+      \`;
+    
+    panelContent.innerHTML = \`
+      \${darkCardHtml}
+      <div id="vf-content"></div>
       \${isInActiveChat ? \`
         <div class="vf-input-bar">
           \${isConversationEnded ? \`
@@ -993,27 +1009,33 @@ function generateWidgetScript(config: any): string {
             <div class="vf-input-row">
               \${CONFIG.functions.fileUploadEnabled ? \`
                 <input type="file" id="vf-file-input" accept="image/*,application/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx" style="display:none;" />
-                <button class="vf-attach-btn" onclick="window.vfAttachFile()">
-                  \${icons.paperclip}
+                <button class="vf-attach-btn" onclick="window.vfAttachFile()" aria-label="Attach file">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
                 </button>
               \` : ''}
               <input type="text" class="vf-input-field" id="vf-input" placeholder="Type a message..." />
-              <button class="vf-send-btn" onclick="window.vfSendMessage()">
-                \${icons.send}
+              <button class="vf-send-btn" onclick="window.vfSendMessage()" aria-label="Send">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4 20-7z"/></svg>
               </button>
             </div>
           \`}
         </div>
       \` : ''}
-      
       \${showTabs && tabs.length > 1 ? \`
         <div class="vf-tabs">
-          \${tabs.map(tab => \`
-            <button class="vf-tab \${tab === currentTab ? 'active' : ''}" onclick="window.vfSwitchTab('\${tab}')">
-              \${tab === 'Home' ? icons.home : tab === 'FAQ' ? \`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>\` : icons.messageSquare}
-              <span>\${tab}</span>
-            </button>
-          \`).join('')}
+          \${tabs.map(tab => {
+            const iconSvg = tab === 'Home'
+              ? '<svg viewBox="0 0 24 24" fill="currentColor"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>'
+              : tab === 'FAQ'
+                ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
+                : '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>';
+            return \`
+              <button class="vf-tab \${tab === currentTab ? 'active' : ''}" onclick="window.vfSwitchTab('\${tab}')">
+                \${iconSvg}
+                <span>\${tab}</span>
+              </button>
+            \`;
+          }).join('')}
         </div>
       \` : ''}
     \`;
@@ -1052,46 +1074,65 @@ function generateWidgetScript(config: any): string {
   }
   
   function renderHome(container) {
-    const logoHtml = CONFIG.appearance.logoUrl 
-      ? \`<div class="vf-logo-badge"><img src="\${CONFIG.appearance.logoUrl}" alt="Logo" /></div>\`
-      : \`<div class="vf-logo-badge">\${CONFIG.agentName.charAt(0).toUpperCase()}</div>\`;
+    // Fill the dark card (rendered by renderPanel as an empty placeholder on home).
+    // Logo + close go in the top row. Greeting + status sit at the bottom.
+    const darkCard = document.getElementById('vf-dark-card');
+    if (darkCard) {
+      const logoInner = CONFIG.appearance.logoUrl
+        ? \`<img src="\${CONFIG.appearance.logoUrl}" alt="Logo" />\`
+        : (CONFIG.agentName || '?').charAt(0).toUpperCase();
+      
+      darkCard.innerHTML = \`
+        <div class="vf-dark-top">
+          <div class="vf-logo-badge">\${logoInner}</div>
+          <button class="vf-dark-close" onclick="window.vfCloseWidget()" aria-label="Close">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div class="vf-dark-greeting-wrap">
+          <h2 class="vf-dark-greeting">\${CONFIG.tabs.home.title}</h2>
+          <div class="vf-dark-status">
+            <div class="vf-dark-status-dot"></div>
+            <span class="vf-dark-status-text">\${CONFIG.tabs.home.subtitle || 'Team online now'}</span>
+          </div>
+        </div>
+      \`;
+    }
+    
+    // Action pill cards — first enabled button gets the primary (brand-tinted) icon square.
+    // Subsequent buttons get the neutral grey icon square.
+    const enabledButtons = CONFIG.tabs.home.buttons.filter(btn => btn.enabled);
+    
+    const actionIconSvg = (action) => {
+      if (action === 'call') {
+        return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7 12.8 12.8 0 0 0 .7 2.8 2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4 12.8 12.8 0 0 0 2.8.7A2 2 0 0 1 22 16.9z"></path></svg>';
+      }
+      // Default: speech bubble
+      return '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 8.5-8.5 8.5 8.5 0 0 1 8.5 8.5z"></path></svg>';
+    };
+    
+    const actionSubtitle = (action) => {
+      if (action === 'call') return 'Speak to a team member';
+      if (action === 'new_chat') return 'Chat with our AI assistant';
+      return '';
+    };
     
     container.innerHTML = \`
-      <div class="vf-home">
-        <div class="vf-home-hero">
-          <div class="vf-home-hero-top">
-            \${logoHtml}
-            <button class="vf-header-btn" onclick="window.vfCloseWidget()">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
-          </div>
-          <h2 class="vf-home-title">\${CONFIG.tabs.home.title}</h2>
-          <div class="vf-home-status">
-            <div class="vf-home-status-dot"></div>
-            <span class="vf-home-status-text">\${CONFIG.tabs.home.subtitle || 'We typically reply in minutes'}</span>
-          </div>
-        </div>
-        
-        <div class="vf-home-actions">
-          \${CONFIG.tabs.home.buttons.filter(btn => btn.enabled).map((btn, idx) => \`
-            <button class="vf-home-button" onclick="window.vfHandleHomeAction('\${btn.action}', '\${btn.phoneNumber || ''}')">
-              <div class="vf-home-button-icon \${idx === 0 ? 'primary' : 'secondary'}">
-                \${btn.action === 'call' ? icons.phone : icons.messageSquare}
-              </div>
-              <div class="vf-home-button-text">
-                <strong>\${btn.text}</strong>
-                <span>\${btn.action === 'call' ? 'Speak to a team member' : btn.action === 'new_chat' ? 'Chat with our AI assistant' : ''}</span>
-              </div>
-              <div class="vf-home-button-chevron">\${icons.chevronRight}</div>
-            </button>
-          \`).join('')}
-        </div>
-        
-        \${CONFIG.poweredBy.enabled ? \`
-          <div class="vf-powered-by">
-            <span>Powered by \${CONFIG.poweredBy.text}</span>
-          </div>
-        \` : ''}
+      <div class="vf-home-actions">
+        \${enabledButtons.map((btn, idx) => \`
+          <button class="vf-home-action" onclick="window.vfHandleHomeAction('\${btn.action}', '\${btn.phoneNumber || ''}')">
+            <div class="vf-home-action-icon \${idx === 0 ? 'primary' : 'secondary'}">
+              \${actionIconSvg(btn.action)}
+            </div>
+            <div class="vf-home-action-text">
+              <div class="vf-home-action-label">\${btn.text}</div>
+              \${actionSubtitle(btn.action) ? \`<div class="vf-home-action-sub">\${actionSubtitle(btn.action)}</div>\` : ''}
+            </div>
+            <div class="vf-home-action-chev">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+            </div>
+          </button>
+        \`).join('')}
       </div>
     \`;
   }
