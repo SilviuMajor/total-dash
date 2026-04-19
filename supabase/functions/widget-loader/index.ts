@@ -1040,7 +1040,7 @@ function generateWidgetScript(config: any): string {
           </div>
           <div style="padding: 0 16px 8px;">
             <button class="vf-new-chat-btn" onclick="window.vfStartNewChat()" style="margin:0;width:100%;">
-              \<span style="width:18px;height:18px;flex-shrink:0;display:inline-flex;">${icons.plus}</span>
+              <span style="width:18px;height:18px;flex-shrink:0;display:inline-flex;">\${icons.plus}</span>
               <span style="font-size:14px;font-weight:500;">New Chat</span>
               <span style="margin-left:auto;color:inherit;opacity:0.3;">\${icons.chevronRight}</span>
             </button>
