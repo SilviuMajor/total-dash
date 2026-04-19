@@ -1140,59 +1140,81 @@ function generateWidgetScript(config: any): string {
   function renderChatHistory(container) {
     const history = SessionManager.getConversationHistory();
     
+    // Empty state — first-time user or no prior conversations
     if (history.length === 0) {
       container.innerHTML = \`
         <div class="vf-empty">
-          \${icons.messageCircle}
-          <p>No conversations yet</p>
-          <p>Start a new chat to get going</p>
+          <div class="vf-empty-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <div class="vf-empty-title">No conversations yet</div>
+          <div class="vf-empty-sub">Start a new chat and we'll remember it here for next time.</div>
+          <button class="vf-empty-cta" onclick="window.vfStartNewChat()">New chat</button>
         </div>
       \`;
-    } else {
-      const recent = history[0];
-      const older = history.slice(1);
-      
-      container.innerHTML = \`
-        <div class="vf-chat-list">
-          <div class="vf-chat-list-header">
-            <span class="vf-chat-list-title">Chats</span>
-          </div>
-          <div style="padding: 0 16px 8px;">
-            <button class="vf-new-chat-btn" onclick="window.vfStartNewChat()" style="margin:0;width:100%;">
-              <span style="width:18px;height:18px;flex-shrink:0;display:inline-flex;">\${icons.plus}</span>
-              <span style="font-size:14px;font-weight:500;">New Chat</span>
-              <span style="margin-left:auto;color:inherit;opacity:0.3;">\${icons.chevronRight}</span>
-            </button>
-          </div>
-          <div class="vf-chat-list-scroll">
-            \${recent ? \`
-              <div class="vf-chat-section-label">Continue recent conversation</div>
-              <div class="vf-conv-card" onclick="window.vfLoadConversation('\${recent.id}')">
-                <p class="vf-conv-card-preview">\${recent.preview}</p>
-                <div class="vf-conv-card-meta">
-                  \${icons.clock}
-                  <span>\${formatTimeAgo(recent.timestamp)}</span>
-                  <span class="vf-conv-card-count">\${recent.messageCount}</span>
-                </div>
-              </div>
-            \` : ''}
-            \${older.length > 0 ? \`
-              <div class="vf-chat-section-label">Previous conversations</div>
-              \${older.map(conv => \`
-                <div class="vf-conv-card" onclick="window.vfLoadConversation('\${conv.id}')">
-                  <p class="vf-conv-card-preview">\${conv.preview}</p>
-                  <div class="vf-conv-card-meta">
-                    \${icons.clock}
-                    <span>\${formatTimeAgo(conv.timestamp)}</span>
-                    <span class="vf-conv-card-count">\${conv.messageCount}</span>
-                  </div>
-                </div>
-              \`).join('')}
-            \` : ''}
-          </div>
-        </div>
-      \`;
+      return;
     }
+    
+    // Populated list — tinted CTA + section label + conversation pill cards
+    const recent = history[0];
+    const older = history.slice(1);
+    
+    // Build a single card's HTML — avatar + preview + time (+ unread badge if applicable)
+    const convCardHtml = (conv) => {
+      // Avatar: if the most recent message was from a human agent, use initials;
+      // otherwise show the generic bot icon. We derive this from the last message
+      // with a speaker of 'client_user' if any — otherwise bot.
+      let avatarHtml = \`
+        <div class="vf-conv-avatar bot">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 8.5-8.5 8.5 8.5 0 0 1 8.5 8.5z"/></svg>
+        </div>
+      \`;
+      
+      // Look for a 'client_user' speaker in the stored messages (handover agent)
+      const lastAgentMsg = (conv.messages || []).slice().reverse().find(m => m.speaker === 'client_user');
+      if (lastAgentMsg && lastAgentMsg.agentName) {
+        const initials = lastAgentMsg.agentName.trim().split(/\\s+/).map(w => w.charAt(0).toUpperCase()).slice(0, 2).join('');
+        avatarHtml = \`<div class="vf-conv-avatar">\${initials || '?'}</div>\`;
+      }
+      
+      // Unread count — stored on the conversation if present
+      const unread = conv.unreadCount || 0;
+      const unreadHtml = unread > 0
+        ? \`<div class="vf-conv-unread">\${unread}</div>\`
+        : '';
+      
+      // Safely escape the preview text
+      const safePreview = (conv.preview || 'New conversation')
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      
+      return \`
+        <div class="vf-conv-card" onclick="window.vfLoadConversation('\${conv.id}')">
+          \${avatarHtml}
+          <div class="vf-conv-middle">
+            <div class="vf-conv-preview">\${safePreview}</div>
+            <div class="vf-conv-meta">\${conv.messageCount || 0} messages</div>
+          </div>
+          <div class="vf-conv-right">
+            <div class="vf-conv-time">\${formatTimeAgo(conv.timestamp)}</div>
+            \${unreadHtml}
+          </div>
+        </div>
+      \`;
+    };
+    
+    container.innerHTML = \`
+      <div class="vf-chat-list">
+        <button class="vf-new-chat-tinted" onclick="window.vfStartNewChat()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+          <span>New chat</span>
+        </button>
+        <div class="vf-chat-section-label">Recent</div>
+        <div class="vf-chat-list-scroll">
+          \${recent ? convCardHtml(recent) : ''}
+          \${older.map(convCardHtml).join('')}
+        </div>
+      </div>
+    \`;
   }
   
   function scrollToLatestMessage() {
@@ -1374,12 +1396,22 @@ function generateWidgetScript(config: any): string {
     container.innerHTML = '<div class="vf-messages-wrap" id="vf-messages"></div>';
     const messagesEl = document.getElementById('vf-messages');
     
+    // Helper: derive two-letter initials from an agent name ("Sarah Adams" → "SA", "Mark" → "MA")
+    const agentInitials = (name) => {
+      if (!name) return '?';
+      const parts = name.trim().split(/\\s+/);
+      if (parts.length >= 2) {
+        return (parts[0].charAt(0) + parts[1].charAt(0)).toUpperCase();
+      }
+      return parts[0].substring(0, 2).toUpperCase();
+    };
+    
     messages.forEach(msg => {
       const isUser = msg.speaker === 'user';
       const isSystem = msg.speaker === 'system';
       const isAgent = msg.speaker === 'client_user';
       
-      // Parse file URLs
+      // Parse file URL from message text (widget uses "[Image: foo.png]\\nhttps://..." convention)
       let messageContent = msg.text || '';
       let fileUrl = null;
       let fileName = null;
@@ -1395,6 +1427,7 @@ function generateWidgetScript(config: any): string {
       
       const wrapper = document.createElement('div');
       
+      // System message — centred grey text ("Sarah joined the chat", "Conversation ended")
       if (isSystem) {
         wrapper.className = 'vf-msg-system';
         wrapper.textContent = messageContent;
@@ -1402,6 +1435,7 @@ function generateWidgetScript(config: any): string {
         return;
       }
       
+      // User message — brand-colour pill, right-aligned
       if (isUser) {
         wrapper.className = 'vf-msg-user-wrap';
         wrapper.innerHTML = \`
@@ -1409,7 +1443,7 @@ function generateWidgetScript(config: any): string {
             \${messageContent ? messageContent : ''}
             \${fileUrl ? (isImage 
               ? \`<img src="\${fileUrl}" alt="\${fileName}" class="vf-file-preview" style="display:block;margin-top:6px;" />\`
-              : \`<a href="\${fileUrl}" target="_blank" class="vf-file-link" style="color:rgba(255,255,255,0.8);">\${fileName}</a>\`
+              : \`<a href="\${fileUrl}" target="_blank" class="vf-file-link" style="color:rgba(255,255,255,0.85);">\${fileName}</a>\`
             ) : ''}
           </div>
         \`;
@@ -1417,29 +1451,41 @@ function generateWidgetScript(config: any): string {
         return;
       }
       
-      // Bot or agent message
-      wrapper.style.cssText = 'display:flex;flex-direction:column;gap:0;';
+      // Agent (human handover) — same bubble style as bot, with avatar + name above
+      if (isAgent) {
+        const name = msg.agentName || 'Support';
+        const initials = agentInitials(name);
+        
+        wrapper.className = 'vf-msg-agent-wrap';
+        wrapper.innerHTML = \`
+          <div class="vf-msg-agent-name">\${name}</div>
+          <div class="vf-msg-agent-row">
+            <div class="vf-msg-agent-avatar">\${initials}</div>
+            <p class="vf-msg-bot">
+              \${messageContent}
+              \${fileUrl ? (isImage
+                ? \`<img src="\${fileUrl}" alt="\${fileName}" class="vf-file-preview" style="display:block;margin-top:6px;" />\`
+                : \`<a href="\${fileUrl}" target="_blank" class="vf-file-link">\${fileName}</a>\`
+              ) : ''}
+            </p>
+          </div>
+        \`;
+        messagesEl.appendChild(wrapper);
+        return;
+      }
       
+      // Bot message — grey bubble + optional interactive buttons below
       const isClicked = clickedButtonIds.has(msg.id);
+      wrapper.style.cssText = 'display:flex;flex-direction:column;gap:5px;align-self:flex-start;max-width:100%;';
       
       wrapper.innerHTML = \`
-        \${isAgent ? \`
-          <div class="vf-msg-agent">
-            \${messageContent}
-            \${fileUrl ? (isImage
-              ? \`<img src="\${fileUrl}" alt="\${fileName}" class="vf-file-preview" />\`
-              : \`<a href="\${fileUrl}" target="_blank" class="vf-file-link">\${fileName}</a>\`
-            ) : ''}
-          </div>
-        \` : \`
-          <p class="vf-msg-bot">
-            \${messageContent}
-            \${fileUrl ? (isImage
-              ? \`<img src="\${fileUrl}" alt="\${fileName}" class="vf-file-preview" style="display:block;margin-top:6px;" />\`
-              : \`<a href="\${fileUrl}" target="_blank" class="vf-file-link">\${fileName}</a>\`
-            ) : ''}
-          </p>
-        \`}
+        <p class="vf-msg-bot">
+          \${messageContent}
+          \${fileUrl ? (isImage
+            ? \`<img src="\${fileUrl}" alt="\${fileName}" class="vf-file-preview" style="display:block;margin-top:6px;" />\`
+            : \`<a href="\${fileUrl}" target="_blank" class="vf-file-link">\${fileName}</a>\`
+          ) : ''}
+        </p>
         \${msg.buttons && msg.buttons.length > 0 ? \`
           <div class="vf-buttons">
             \${msg.buttons.map((btn, idx) => {
@@ -1454,12 +1500,12 @@ function generateWidgetScript(config: any): string {
             }).join('')}
           </div>
         \` : ''}
-        <div class="vf-msg-time">\${formatTime(msg.timestamp)}</div>
       \`;
       
       messagesEl.appendChild(wrapper);
     });
     
+    // Typing indicator — three bouncing dots inside a bot-style bubble
     if (isTyping) {
       const typingDiv = document.createElement('div');
       typingDiv.innerHTML = \`
@@ -1478,22 +1524,29 @@ function generateWidgetScript(config: any): string {
   function renderFAQ(container) {
     const items = CONFIG.tabs.faq.items || [];
     
+    // Empty state — consistent with Chats tab empty state
     if (items.length === 0) {
       container.innerHTML = \`
         <div class="vf-empty">
-          <p>No FAQ items yet</p>
+          <div class="vf-empty-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+          </div>
+          <div class="vf-empty-title">No FAQ yet</div>
+          <div class="vf-empty-sub">Common questions will appear here when they're added.</div>
         </div>
       \`;
       return;
     }
     
+    // Pill-card accordion — one item open at a time, chevron rotates 180° when open.
+    // No search bar (by design — it's only useful once the list is long).
     container.innerHTML = \`
       <div class="vf-faq-wrap">
-        \${items.map((item, idx) => \`
+        \${items.map((item) => \`
           <div class="vf-faq-item">
             <button class="vf-faq-q" onclick="this.classList.toggle('open');this.nextElementSibling.classList.toggle('open');">
               <span>\${item.question}</span>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
             </button>
             <div class="vf-faq-a">\${item.answer}</div>
           </div>
