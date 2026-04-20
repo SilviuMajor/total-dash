@@ -578,91 +578,95 @@ BEGIN
   ORDER BY created_at ASC 
   LIMIT 1;
   
-  -- Create Fiveleaf agency
-  INSERT INTO public.agencies (
-    name,
-    slug,
-    domain,
-    logo_url,
-    support_email,
-    primary_color,
-    secondary_color,
-    custom_css,
-    owner_id,
-    trial_ends_at
-  ) VALUES (
-    COALESCE(v_settings.agency_name, 'Fiveleaf'),
-    'fiveleaf',
-    COALESCE(v_settings.agency_domain, 'fiveleaf'),
-    v_settings.agency_logo_url,
-    v_settings.support_email,
-    '#000000',
-    '#ffffff',
-    NULL,
-    v_first_admin_id,
-    NULL -- No trial, full access
-  )
-  RETURNING id INTO v_fiveleaf_agency_id;
-  
-  -- Link agency_settings to new agency
-  UPDATE public.agency_settings
-  SET agency_id = v_fiveleaf_agency_id
-  WHERE id = v_settings.id;
-  
-  -- Create Enterprise subscription for Fiveleaf (unlimited)
-  INSERT INTO public.agency_subscriptions (
-    agency_id,
-    plan_id,
-    status,
-    current_period_start,
-    current_period_end
-  ) VALUES (
-    v_fiveleaf_agency_id,
-    (SELECT id FROM public.subscription_plans WHERE tier = 'enterprise' LIMIT 1),
-    'active',
-    now(),
-    now() + interval '1 year'
-  );
-  
-  -- Add all existing admin users to Fiveleaf agency
-  INSERT INTO public.agency_users (user_id, agency_id, role, page_permissions)
-  SELECT 
-    id,
-    v_fiveleaf_agency_id,
-    CASE 
-      WHEN id = v_first_admin_id THEN 'owner'::agency_role
-      ELSE 'admin'::agency_role
-    END,
-    '{
-      "clients": true,
-      "agents": true,
-      "subscription": true,
-      "settings": true
-    }'::jsonb
-  FROM public.profiles
-  WHERE role = 'admin';
-  
-  -- Assign all existing clients to Fiveleaf
-  UPDATE public.clients
-  SET agency_id = v_fiveleaf_agency_id
-  WHERE agency_id IS NULL;
-  
-  -- Assign all existing agents to Fiveleaf
-  UPDATE public.agents
-  SET agency_id = v_fiveleaf_agency_id
-  WHERE agency_id IS NULL;
-  
-  -- Create first super admin (the owner)
-  INSERT INTO public.super_admin_users (user_id, page_permissions)
-  VALUES (
-    v_first_admin_id,
-    '{
-      "agencies": true,
-      "subscription_plans": true,
-      "settings": true,
-      "agent_types": true
-    }'::jsonb
-  )
-  ON CONFLICT (user_id) DO NOTHING;
-  
+  -- Only run seed block when an admin profile already exists.
+  -- Fresh projects (empty profiles table) skip this; first admin setup is handled elsewhere.
+  IF v_first_admin_id IS NOT NULL THEN
+    -- Create Fiveleaf agency
+    INSERT INTO public.agencies (
+      name,
+      slug,
+      domain,
+      logo_url,
+      support_email,
+      primary_color,
+      secondary_color,
+      custom_css,
+      owner_id,
+      trial_ends_at
+    ) VALUES (
+      COALESCE(v_settings.agency_name, 'Fiveleaf'),
+      'fiveleaf',
+      COALESCE(v_settings.agency_domain, 'fiveleaf'),
+      v_settings.agency_logo_url,
+      v_settings.support_email,
+      '#000000',
+      '#ffffff',
+      NULL,
+      v_first_admin_id,
+      NULL -- No trial, full access
+    )
+    RETURNING id INTO v_fiveleaf_agency_id;
+
+    -- Link agency_settings to new agency
+    UPDATE public.agency_settings
+    SET agency_id = v_fiveleaf_agency_id
+    WHERE id = v_settings.id;
+
+    -- Create Enterprise subscription for Fiveleaf (unlimited)
+    INSERT INTO public.agency_subscriptions (
+      agency_id,
+      plan_id,
+      status,
+      current_period_start,
+      current_period_end
+    ) VALUES (
+      v_fiveleaf_agency_id,
+      (SELECT id FROM public.subscription_plans WHERE tier = 'enterprise' LIMIT 1),
+      'active',
+      now(),
+      now() + interval '1 year'
+    );
+
+    -- Add all existing admin users to Fiveleaf agency
+    INSERT INTO public.agency_users (user_id, agency_id, role, page_permissions)
+    SELECT
+      id,
+      v_fiveleaf_agency_id,
+      CASE
+        WHEN id = v_first_admin_id THEN 'owner'::agency_role
+        ELSE 'admin'::agency_role
+      END,
+      '{
+        "clients": true,
+        "agents": true,
+        "subscription": true,
+        "settings": true
+      }'::jsonb
+    FROM public.profiles
+    WHERE role = 'admin';
+
+    -- Assign all existing clients to Fiveleaf
+    UPDATE public.clients
+    SET agency_id = v_fiveleaf_agency_id
+    WHERE agency_id IS NULL;
+
+    -- Assign all existing agents to Fiveleaf
+    UPDATE public.agents
+    SET agency_id = v_fiveleaf_agency_id
+    WHERE agency_id IS NULL;
+
+    -- Create first super admin (the owner)
+    INSERT INTO public.super_admin_users (user_id, page_permissions)
+    VALUES (
+      v_first_admin_id,
+      '{
+        "agencies": true,
+        "subscription_plans": true,
+        "settings": true,
+        "agent_types": true
+      }'::jsonb
+    )
+    ON CONFLICT (user_id) DO NOTHING;
+  END IF;
+
 END $$;
