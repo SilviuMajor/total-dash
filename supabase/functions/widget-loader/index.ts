@@ -1040,6 +1040,7 @@ function generateWidgetScript(config: any): string {
         border-radius: 0; box-shadow: none; border: none;
         max-width: none; max-height: none;
       }
+    \` : ''}
   \`;
   document.head.appendChild(style);
   
