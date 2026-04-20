@@ -840,6 +840,198 @@ function generateWidgetScript(config: any): string {
       .vf-welcome-bubble { right: 16px; bottom: 96px; max-width: 240px; }
     }
 
+    /* === ATTACHMENT PREVIEW ROW (in input bar, replaces normal input while composing an attachment) === */
+    .vf-attach-preview-row {
+      background: ${theme.surface};
+      border: 0.5px solid ${theme.surfaceBorder};
+      border-radius: 12px;
+      padding: 10px 12px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .vf-attach-preview-header {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .vf-attach-preview-thumb {
+      width: 40px; height: 40px; border-radius: 8px;
+      background: ${theme.botBubble};
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; overflow: hidden;
+      color: #666;
+    }
+    .vf-attach-preview-thumb img {
+      width: 100%; height: 100%; object-fit: cover;
+    }
+    .vf-attach-preview-thumb svg {
+      width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.8;
+    }
+    .vf-attach-preview-meta {
+      flex: 1; min-width: 0;
+    }
+    .vf-attach-preview-name {
+      font-size: 12px; font-weight: 500;
+      color: ${theme.textPrimary}; line-height: 1.2;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .vf-attach-preview-size {
+      font-size: 10.5px; color: ${theme.textMuted};
+      line-height: 1.2; margin-top: 2px;
+    }
+    .vf-attach-preview-close {
+      width: 22px; height: 22px; border-radius: 50%;
+      background: transparent; color: ${theme.textMuted};
+      border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; padding: 0;
+    }
+    .vf-attach-preview-close:hover { background: ${theme.botBubble}; color: ${theme.textPrimary}; }
+    .vf-attach-preview-close svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2; }
+    .vf-attach-preview-caption {
+      width: 100%;
+      border: none; background: transparent;
+      font-family: inherit; font-size: 12px;
+      color: ${theme.textPrimary};
+      outline: none;
+      padding: 4px 0;
+    }
+    .vf-attach-preview-caption::placeholder { color: #aaa; }
+    .vf-attach-preview-actions {
+      display: flex; justify-content: flex-end; gap: 8px;
+    }
+    .vf-attach-preview-btn {
+      padding: 6px 14px; border-radius: 999px;
+      font-family: inherit; font-size: 11px; font-weight: 500;
+      cursor: pointer; border: none;
+      transition: background 0.15s ease, opacity 0.15s ease;
+    }
+    .vf-attach-preview-btn-cancel {
+      background: transparent; color: ${theme.textMuted};
+      border: 0.5px solid ${theme.surfaceBorder};
+    }
+    .vf-attach-preview-btn-cancel:hover { background: ${theme.botBubble}; color: ${theme.textPrimary}; }
+    .vf-attach-preview-btn-send {
+      background: ${accent}; color: #ffffff;
+    }
+    .vf-attach-preview-btn-send:hover { opacity: 0.9; }
+    .vf-attach-preview-btn-send:disabled { opacity: 0.4; cursor: default; }
+    .vf-attach-preview-progress-wrap {
+      width: 100%; height: 4px; border-radius: 2px;
+      background: ${theme.botBubble};
+      overflow: hidden;
+    }
+    .vf-attach-preview-progress-bar {
+      height: 100%; background: ${accent};
+      transition: width 0.15s ease;
+    }
+    .vf-attach-preview-error {
+      color: #ef4444; font-size: 11px; line-height: 1.35;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .vf-attach-preview-error svg {
+      width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2;
+      flex-shrink: 0;
+    }
+
+    /* === DROP ZONE OVERLAY (covers the whole panel when dragging a file over it) === */
+    .vf-dropzone-overlay {
+      position: absolute; inset: 0;
+      background: rgba(0,0,0,0.35);
+      display: none;
+      align-items: center; justify-content: center;
+      border-radius: 16px;
+      z-index: 100;
+      pointer-events: none;
+    }
+    .vf-dropzone-overlay.active { display: flex; }
+    .vf-dropzone-inner {
+      border: 2px dashed rgba(255,255,255,0.6);
+      border-radius: 12px;
+      padding: 24px 32px;
+      color: #ffffff;
+      text-align: center;
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      font-size: 13px; font-weight: 500;
+    }
+    .vf-dropzone-inner svg {
+      width: 28px; height: 28px; stroke: currentColor; fill: none; stroke-width: 1.8;
+    }
+    .vf-dropzone-overlay.invalid .vf-dropzone-inner {
+      border-color: #ef4444;
+      color: #ef4444;
+      background: rgba(239,68,68,0.15);
+    }
+    /* Panel needs position:relative for the absolute overlay to position correctly.
+       The existing .vf-widget-panel is already position:fixed which is a valid
+       containing block, so no extra rule needed here. */
+
+    /* === ATTACHMENT RENDERING (in messages) === */
+    .vf-msg-attach {
+      margin: 4px 0 0;
+      max-width: 240px;
+    }
+    .vf-msg-attach-image {
+      max-width: 240px;
+      max-height: 280px;
+      border-radius: 12px;
+      display: block;
+      cursor: pointer;
+      object-fit: cover;
+    }
+    .vf-msg-attach-video {
+      max-width: 240px;
+      max-height: 280px;
+      border-radius: 12px;
+      display: block;
+      background: #000;
+    }
+    .vf-msg-attach-audio {
+      width: 240px;
+      height: 36px;
+    }
+    .vf-msg-attach-file {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; border-radius: 12px;
+      background: ${theme.surface};
+      border: 0.5px solid ${theme.surfaceBorder};
+      text-decoration: none;
+      color: ${theme.textPrimary};
+      max-width: 240px;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+    .vf-msg-attach-file:hover { background: #FAFAFB; }
+    .vf-msg-attach-file-icon {
+      width: 32px; height: 32px; border-radius: 8px;
+      background: ${accentTint};
+      color: ${accent};
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .vf-msg-attach-file-icon svg {
+      width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8;
+    }
+    .vf-msg-attach-file-meta {
+      flex: 1; min-width: 0;
+    }
+    .vf-msg-attach-file-name {
+      font-size: 12px; font-weight: 500;
+      color: ${theme.textPrimary}; line-height: 1.25;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .vf-msg-attach-file-size {
+      font-size: 10.5px; color: ${theme.textMuted};
+      line-height: 1.2; margin-top: 2px;
+    }
+    .vf-msg-attach-file-dl {
+      color: ${theme.textMuted};
+      flex-shrink: 0;
+    }
+    .vf-msg-attach-file-dl svg {
+      width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2;
+    }
+
+    /* When an attachment message has no text, the attachment sits flush with no gap-before */
+    .vf-msg-attach-only { margin-top: 0; }
+
     /* === EMBEDDED MODE === */
     \${CONFIG.isEmbedded ? \`
       .vf-widget-panel {
@@ -848,7 +1040,6 @@ function generateWidgetScript(config: any): string {
         border-radius: 0; box-shadow: none; border: none;
         max-width: none; max-height: none;
       }
-    \` : ''}
   \`;
   document.head.appendChild(style);
   
