@@ -842,8 +842,8 @@ function generateWidgetScript(config: any): string {
 
     /* === ATTACHMENT PREVIEW ROW (in input bar, replaces normal input while composing an attachment) === */
     .vf-attach-preview-row {
-      background: ${theme.surface};
-      border: 0.5px solid ${theme.surfaceBorder};
+      background: \${theme.surface};
+      border: 0.5px solid \${theme.surfaceBorder};
       border-radius: 12px;
       padding: 10px 12px;
       display: flex; flex-direction: column; gap: 8px;
@@ -853,7 +853,7 @@ function generateWidgetScript(config: any): string {
     }
     .vf-attach-preview-thumb {
       width: 40px; height: 40px; border-radius: 8px;
-      background: ${theme.botBubble};
+      background: \${theme.botBubble};
       display: flex; align-items: center; justify-content: center;
       flex-shrink: 0; overflow: hidden;
       color: #666;
@@ -869,27 +869,27 @@ function generateWidgetScript(config: any): string {
     }
     .vf-attach-preview-name {
       font-size: 12px; font-weight: 500;
-      color: ${theme.textPrimary}; line-height: 1.2;
+      color: \${theme.textPrimary}; line-height: 1.2;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .vf-attach-preview-size {
-      font-size: 10.5px; color: ${theme.textMuted};
+      font-size: 10.5px; color: \${theme.textMuted};
       line-height: 1.2; margin-top: 2px;
     }
     .vf-attach-preview-close {
       width: 22px; height: 22px; border-radius: 50%;
-      background: transparent; color: ${theme.textMuted};
+      background: transparent; color: \${theme.textMuted};
       border: none; cursor: pointer;
       display: flex; align-items: center; justify-content: center;
       flex-shrink: 0; padding: 0;
     }
-    .vf-attach-preview-close:hover { background: ${theme.botBubble}; color: ${theme.textPrimary}; }
+    .vf-attach-preview-close:hover { background: \${theme.botBubble}; color: \${theme.textPrimary}; }
     .vf-attach-preview-close svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2; }
     .vf-attach-preview-caption {
       width: 100%;
       border: none; background: transparent;
       font-family: inherit; font-size: 12px;
-      color: ${theme.textPrimary};
+      color: \${theme.textPrimary};
       outline: none;
       padding: 4px 0;
     }
@@ -904,22 +904,22 @@ function generateWidgetScript(config: any): string {
       transition: background 0.15s ease, opacity 0.15s ease;
     }
     .vf-attach-preview-btn-cancel {
-      background: transparent; color: ${theme.textMuted};
-      border: 0.5px solid ${theme.surfaceBorder};
+      background: transparent; color: \${theme.textMuted};
+      border: 0.5px solid \${theme.surfaceBorder};
     }
-    .vf-attach-preview-btn-cancel:hover { background: ${theme.botBubble}; color: ${theme.textPrimary}; }
+    .vf-attach-preview-btn-cancel:hover { background: \${theme.botBubble}; color: \${theme.textPrimary}; }
     .vf-attach-preview-btn-send {
-      background: ${accent}; color: #ffffff;
+      background: \${accent}; color: #ffffff;
     }
     .vf-attach-preview-btn-send:hover { opacity: 0.9; }
     .vf-attach-preview-btn-send:disabled { opacity: 0.4; cursor: default; }
     .vf-attach-preview-progress-wrap {
       width: 100%; height: 4px; border-radius: 2px;
-      background: ${theme.botBubble};
+      background: \${theme.botBubble};
       overflow: hidden;
     }
     .vf-attach-preview-progress-bar {
-      height: 100%; background: ${accent};
+      height: 100%; background: \${accent};
       transition: width 0.15s ease;
     }
     .vf-attach-preview-error {
@@ -990,10 +990,10 @@ function generateWidgetScript(config: any): string {
     .vf-msg-attach-file {
       display: flex; align-items: center; gap: 10px;
       padding: 10px 12px; border-radius: 12px;
-      background: ${theme.surface};
-      border: 0.5px solid ${theme.surfaceBorder};
+      background: \${theme.surface};
+      border: 0.5px solid \${theme.surfaceBorder};
       text-decoration: none;
-      color: ${theme.textPrimary};
+      color: \${theme.textPrimary};
       max-width: 240px;
       cursor: pointer;
       transition: background 0.15s ease;
@@ -1001,8 +1001,8 @@ function generateWidgetScript(config: any): string {
     .vf-msg-attach-file:hover { background: #FAFAFB; }
     .vf-msg-attach-file-icon {
       width: 32px; height: 32px; border-radius: 8px;
-      background: ${accentTint};
-      color: ${accent};
+      background: \${accentTint};
+      color: \${accent};
       display: flex; align-items: center; justify-content: center;
       flex-shrink: 0;
     }
@@ -1014,15 +1014,15 @@ function generateWidgetScript(config: any): string {
     }
     .vf-msg-attach-file-name {
       font-size: 12px; font-weight: 500;
-      color: ${theme.textPrimary}; line-height: 1.25;
+      color: \${theme.textPrimary}; line-height: 1.25;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .vf-msg-attach-file-size {
-      font-size: 10.5px; color: ${theme.textMuted};
+      font-size: 10.5px; color: \${theme.textMuted};
       line-height: 1.2; margin-top: 2px;
     }
     .vf-msg-attach-file-dl {
-      color: ${theme.textMuted};
+      color: \${theme.textMuted};
       flex-shrink: 0;
     }
     .vf-msg-attach-file-dl svg {
