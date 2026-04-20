@@ -1033,7 +1033,6 @@ function generateWidgetScript(config: any): string {
     .vf-msg-attach-only { margin-top: 0; }
 
     /* === EMBEDDED MODE === */
-    ${CONFIG.isEmbedded ? `
     \${CONFIG.isEmbedded ? \`
       .vf-widget-panel {
         position: relative; bottom: auto; right: auto;
@@ -1041,7 +1040,6 @@ function generateWidgetScript(config: any): string {
         border-radius: 0; box-shadow: none; border: none;
         max-width: none; max-height: none;
       }
-    \` : ''}
   \`;
   document.head.appendChild(style);
   
