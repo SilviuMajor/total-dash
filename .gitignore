@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Migration scripts
+scripts/migration/.env.migration
+scripts/migration/node_modules

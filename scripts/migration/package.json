@@ -1,0 +1,16 @@
+{
+  "name": "totaldash-migration",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "cleanup-duplicates": "bash cleanup-duplicates.sh",
+    "create-buckets": "node create-missing-buckets.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "csv-parse": "^5.5.6",
+    "dotenv": "^16.4.5",
+    "pg": "^8.13.0"
+  }
+}
