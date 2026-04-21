@@ -13,8 +13,8 @@ export async function runImport({ csvPath, tableName, truncate = false, batchSiz
     await pg.query(`TRUNCATE TABLE public.${tableName} CASCADE;`);
   }
 
-  log(`disabling triggers`);
-  await pg.query(`ALTER TABLE public.${tableName} DISABLE TRIGGER ALL;`);
+  log(`disabling user triggers`);
+  await pg.query(`ALTER TABLE public.${tableName} DISABLE TRIGGER USER;`);
 
   let inserted = 0;
   try {
@@ -30,8 +30,8 @@ export async function runImport({ csvPath, tableName, truncate = false, batchSiz
       log(`inserted ${inserted}/${rowCount}`);
     }
   } finally {
-    log(`re-enabling triggers`);
-    await pg.query(`ALTER TABLE public.${tableName} ENABLE TRIGGER ALL;`);
+    log(`re-enabling user triggers`);
+    await pg.query(`ALTER TABLE public.${tableName} ENABLE TRIGGER USER;`);
   }
 
   const { rows: countRows } = await pg.query(`SELECT COUNT(*)::int AS c FROM public.${tableName};`);
