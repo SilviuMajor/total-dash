@@ -33,3 +33,11 @@ export async function closePgAdmin() {
     _pgClient = null;
   }
 }
+
+// Lazy proxy: `pgAdmin.query(...)` auto-connects on first use.
+export const pgAdmin = {
+  async query(...args) {
+    const c = await getPgAdmin();
+    return c.query(...args);
+  },
+};

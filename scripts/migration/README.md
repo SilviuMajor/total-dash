@@ -16,9 +16,18 @@ npm run cleanup-duplicates  # removes duplicate CSV exports
 npm run create-buckets       # creates avatars + widget-attachments buckets
 ```
 
-## Phase B2 — auth users (next)
+## Phase B2 — auth users
 
-Spec coming after auth.users export is dumped from old project.
+**Prerequisite:** `auth_users-export-*.csv` must be in `CSV_EXPORT_DIR`.
+
+```bash
+npm run import-auth                 # append mode (fails on conflicts)
+npm run import-auth -- --truncate   # wipes existing auth users first
+```
+
+Expected output (first run): 7 users created via admin SDK, row count matches.
+
+If you see "Falling back to direct SQL insert" or "Hash mismatch" warnings, the import still succeeds — those are known Supabase SDK edge cases (GH issue #1678) handled by the script. Confirm the final summary shows 7/7.
 
 ## Deleting migration scripts after cutover
 
