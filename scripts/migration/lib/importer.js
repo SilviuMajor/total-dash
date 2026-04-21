@@ -41,4 +41,6 @@ export async function runImport({ csvPath, tableName, truncate = false, batchSiz
   if (actual !== rowCount) {
     throw new Error(`[${tableName}] row count mismatch: got ${actual}, expected ${rowCount}`);
   }
+
+  return { imported: actual, expected: rowCount };
 }

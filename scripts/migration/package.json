@@ -6,7 +6,8 @@
   "scripts": {
     "cleanup-duplicates": "bash cleanup-duplicates.sh",
     "create-buckets": "node create-missing-buckets.mjs",
-    "import-auth": "node import-auth-users.mjs"
+    "import-auth": "node import-auth-users.mjs",
+    "import-tenant": "node import-tenant-hierarchy.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",

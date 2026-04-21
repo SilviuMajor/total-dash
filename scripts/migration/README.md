@@ -29,6 +29,19 @@ Expected output (first run): 7 users created via admin SDK, row count matches.
 
 If you see "Falling back to direct SQL insert" or "Hash mismatch" warnings, the import still succeeds — those are known Supabase SDK edge cases (GH issue #1678) handled by the script. Confirm the final summary shows 7/7.
 
+## Phase B3 — tenant hierarchy
+
+**Prerequisite:** Phase B2 (auth users) must be complete. CSVs for all 8 tenant tables must be in `CSV_EXPORT_DIR`.
+
+```bash
+npm run import-tenant
+npm run import-tenant -- --truncate   # wipes and re-imports (DANGER — cascade-deletes)
+```
+
+Imports 8 tables in FK-dependency order: agencies → agency_settings → clients → client_settings → profiles → super_admin_users → agency_users → client_users.
+
+Aborts on first failure so the DB is never left half-populated.
+
 ## Deleting migration scripts after cutover
 
 Once Phase D (stabilisation) is done and old Lovable Cloud is cancelled, delete the entire `scripts/migration/` folder and remove any `.env.migration*` entries from `.gitignore`.
