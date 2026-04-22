@@ -18,8 +18,13 @@ export async function runImport({ csvPath, tableName, truncate = false, batchSiz
   const pg = await getPgAdmin();
 
   if (truncate) {
-    log(`truncating (no cascade)...`);
-    await pg.query(`TRUNCATE TABLE public.${tableName} RESTART IDENTITY;`);
+    const { rows: existing } = await pg.query(`SELECT COUNT(*)::int AS n FROM public.${tableName};`);
+    if (existing[0].n === 0) {
+      log(`already empty — skipping truncate`);
+    } else {
+      log(`truncating ${existing[0].n} row(s) (no cascade)...`);
+      await pg.query(`TRUNCATE TABLE public.${tableName} RESTART IDENTITY;`);
+    }
   }
 
   log(`disabling user triggers`);
