@@ -14,6 +14,7 @@ const truncate = process.argv.includes('--truncate');
 
 const TABLES_IN_ORDER = [
   'agent_types',
+  'integration_options',
   'departments',
   'client_roles',
   'agents',

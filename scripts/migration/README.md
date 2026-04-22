@@ -51,7 +51,7 @@ npm run import-features
 npm run import-features -- --truncate   # wipes and re-imports
 ```
 
-Imports 14 feature-data tables in FK-dependency order: agent_types → departments → client_roles → role_permission_templates → agents → agent_workflow_categories → agent_workflows → agent_spec_sections → agent_integrations → agent_assignments → auth_contexts → client_user_departments → client_user_permissions → client_user_agent_permissions.
+Imports 15 feature-data tables in FK-dependency order: agent_types → integration_options → departments → client_roles → agents → agent_workflow_categories → agent_workflows → agent_spec_sections → agent_integrations → agent_assignments → role_permission_templates → auth_contexts → client_user_departments → client_user_permissions → client_user_agent_permissions.
 
 Before running imports for the first time, `npm run audit-b4-fks` prints each table's FK-shaped columns so import order can be verified against actual CSV structure.
 

@@ -9,7 +9,7 @@ if (!CSV_DIR) {
 }
 
 const TABLES = [
-  'agent_types', 'departments', 'client_roles', 'agents',
+  'agent_types', 'integration_options', 'departments', 'client_roles', 'agents',
   'agent_workflow_categories', 'agent_workflows', 'agent_spec_sections',
   'agent_integrations', 'agent_assignments', 'role_permission_templates',
   'auth_contexts', 'client_user_departments', 'client_user_permissions',
