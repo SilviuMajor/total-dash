@@ -20,10 +20,10 @@ export async function runImport({ csvPath, tableName, truncate = false, batchSiz
   if (truncate) {
     const { rows: existing } = await pg.query(`SELECT COUNT(*)::int AS n FROM public.${tableName};`);
     if (existing[0].n === 0) {
-      log(`already empty — skipping truncate`);
+      log(`already empty — skipping wipe`);
     } else {
-      log(`truncating ${existing[0].n} row(s) (no cascade)...`);
-      await pg.query(`TRUNCATE TABLE public.${tableName} RESTART IDENTITY;`);
+      log(`deleting ${existing[0].n} row(s) (FK-safe)...`);
+      await pg.query(`DELETE FROM public.${tableName};`);
     }
   }
 
