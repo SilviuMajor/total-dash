@@ -23,6 +23,10 @@ const TABLES_IN_ORDER = [
   'client_users',
 ];
 
+const TABLE_OVERRIDES = {
+  client_users: { nullColumns: ['department_id'] },
+};
+
 function findCsvForTable(tableName) {
   const files = fs
     .readdirSync(CSV_DIR)
@@ -53,11 +57,13 @@ try {
 
     console.log(`[${tableName}] === Starting import ===`);
     try {
+      const override = TABLE_OVERRIDES[tableName] ?? {};
       const result = await runImport({
         csvPath,
         tableName,
         truncate,
         batchSize: 500,
+        ...override,
       });
       results.push({ tableName, ...result, success: true });
       console.log(`[${tableName}] === Done ===\n`);

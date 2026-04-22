@@ -1,10 +1,19 @@
 import { readCsv } from './csv.js';
 import { newSupabase, getPgAdmin } from './client.js';
 
-export async function runImport({ csvPath, tableName, truncate = false, batchSize = 500 }) {
+export async function runImport({ csvPath, tableName, truncate = false, batchSize = 500, nullColumns = [] }) {
   const log = (msg) => console.log(`[${tableName}] ${msg}`);
   const { rows, rowCount } = readCsv(csvPath);
   log(`read ${rowCount} rows from ${csvPath}`);
+
+  if (nullColumns.length > 0) {
+    for (const row of rows) {
+      for (const col of nullColumns) {
+        row[col] = null;
+      }
+    }
+    log(`forced null for columns: ${nullColumns.join(', ')}`);
+  }
 
   const pg = await getPgAdmin();
 
