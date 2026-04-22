@@ -10,7 +10,8 @@
     "import-tenant": "node import-tenant-hierarchy.mjs",
     "cleanup-phase-a-seeds": "node cleanup-phase-a-seeds.mjs",
     "import-features": "node import-feature-data.mjs",
-    "audit-b4-fks": "node audit-b4-fks.mjs"
+    "audit-b4-fks": "node audit-b4-fks.mjs",
+    "import-single": "node import-single-table.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",

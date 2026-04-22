@@ -57,6 +57,24 @@ Before running imports for the first time, `npm run audit-b4-fks` prints each ta
 
 If a table fails, the script aborts. Diagnose the specific failure (inspect CSV values, check FK targets exist, confirm column names match), apply a fix via `TABLE_OVERRIDES` if the column is legacy/orphan, or add a schema fix if the problem is structural.
 
+## Single-table re-import (recovery)
+
+If a single table needs to be re-imported without running a full phase script (e.g. cascade damage, partial run, targeted retry):
+
+```bash
+npm run import-single -- <tableName> [--truncate] [--null-cols=col1,col2]
+```
+
+Examples:
+
+```bash
+# Re-import client_users fresh, nulling the legacy department_id
+npm run import-single -- client_users --truncate --null-cols=department_id
+
+# Append-only import of a logs table
+npm run import-single -- audit_log
+```
+
 ## Deleting migration scripts after cutover
 
 Once Phase D (stabilisation) is done and old Lovable Cloud is cancelled, delete the entire `scripts/migration/` folder and remove any `.env.migration*` entries from `.gitignore`.

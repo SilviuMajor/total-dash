@@ -18,8 +18,8 @@ export async function runImport({ csvPath, tableName, truncate = false, batchSiz
   const pg = await getPgAdmin();
 
   if (truncate) {
-    log(`truncating...`);
-    await pg.query(`TRUNCATE TABLE public.${tableName} CASCADE;`);
+    log(`truncating (no cascade)...`);
+    await pg.query(`TRUNCATE TABLE public.${tableName} RESTART IDENTITY;`);
   }
 
   log(`disabling user triggers`);
