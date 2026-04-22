@@ -16,31 +16,33 @@ export async function runImport({ csvPath, tableName, truncate = false, batchSiz
   log(`disabling user triggers`);
   await pg.query(`ALTER TABLE public.${tableName} DISABLE TRIGGER USER;`);
 
-  let inserted = 0;
+  let insertedCount = 0;
   try {
     for (let i = 0; i < rows.length; i += batchSize) {
       const batch = rows.slice(i, i + batchSize);
-      const { error } = await newSupabase.from(tableName).insert(batch);
+      const { error, count } = await newSupabase
+        .from(tableName)
+        .insert(batch, { count: 'exact' });
       if (error) {
         const badId = batch[0]?.id ?? '?';
         log(`INSERT FAILED at batch starting id=${badId}: ${error.message}`);
         throw error;
       }
-      inserted += batch.length;
-      log(`inserted ${inserted}/${rowCount}`);
+      insertedCount += count ?? batch.length;
+      log(`inserted ${insertedCount}/${rowCount}`);
     }
   } finally {
     log(`re-enabling user triggers`);
     await pg.query(`ALTER TABLE public.${tableName} ENABLE TRIGGER USER;`);
   }
 
-  const { rows: countRows } = await pg.query(`SELECT COUNT(*)::int AS c FROM public.${tableName};`);
-  const actual = countRows[0].c;
-  log(`imported ${actual} / expected ${rowCount}`);
-
-  if (actual !== rowCount) {
-    throw new Error(`[${tableName}] row count mismatch: got ${actual}, expected ${rowCount}`);
+  log(`imported ${insertedCount} / expected ${rowCount}`);
+  if (insertedCount !== rowCount) {
+    throw new Error(`[${tableName}] insert count mismatch: inserted ${insertedCount}, expected ${rowCount}`);
   }
 
-  return { imported: actual, expected: rowCount };
+  const { rows: countRows } = await pg.query(`SELECT COUNT(*)::int AS c FROM public.${tableName};`);
+  log(`total rows in table after import: ${countRows[0].c}`);
+
+  return { imported: insertedCount, expected: rowCount };
 }
