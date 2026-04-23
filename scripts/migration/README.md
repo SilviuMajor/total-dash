@@ -57,6 +57,21 @@ Before running imports for the first time, `npm run audit-b4-fks` prints each ta
 
 If a table fails, the script aborts. Diagnose the specific failure (inspect CSV values, check FK targets exist, confirm column names match), apply a fix via `TABLE_OVERRIDES` if the column is legacy/orphan, or add a schema fix if the problem is structural.
 
+## Phase B5 — conversational data
+
+**Prerequisite:** Phase B4 (feature data) must be complete.
+
+```bash
+npm run import-conversations
+npm run import-conversations -- --truncate
+```
+
+Imports 7 conversational-data tables in FK order: canned_responses → conversations → transcripts → handover_sessions → conversation_tags → conversation_read_status → conversation_status_history.
+
+Special case: `transcripts` CSV is named `text_transcripts-export-*.csv` (not `transcripts-export-*.csv`). The entry script's `TABLE_OVERRIDES` handles this via the `csvPrefix` mechanism.
+
+If a table fails, the script aborts. Diagnose the specific failure, apply a fix (nullColumns / reorder / single-table helper), re-run.
+
 ## Single-table re-import (recovery)
 
 If a single table needs to be re-imported without running a full phase script (e.g. cascade damage, partial run, targeted retry):
