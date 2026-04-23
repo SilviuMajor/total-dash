@@ -72,6 +72,19 @@ Special case: `transcripts` CSV is named `text_transcripts-export-*.csv` (not `t
 
 If a table fails, the script aborts. Diagnose the specific failure, apply a fix (nullColumns / reorder / single-table helper), re-run.
 
+## Phase B6 — logs and metadata
+
+**Prerequisite:** Phase B5 (conversational data) must be complete.
+
+```bash
+npm run import-logs
+npm run import-logs -- --truncate
+```
+
+Imports 13 remaining tables: subscription_plans, platform_branding, email_templates, user_passwords, user_roles, agency/client_subscriptions, analytics_tabs/cards, email_send_log, agent_update_logs, impersonation_sessions, audit_log.
+
+After B6, the only remaining migration work is B7 (storage file copy) and B8 (final verification).
+
 ## Single-table re-import (recovery)
 
 If a single table needs to be re-imported without running a full phase script (e.g. cascade damage, partial run, targeted retry):

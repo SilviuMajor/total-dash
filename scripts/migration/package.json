@@ -14,7 +14,8 @@
     "import-single": "node import-single-table.mjs",
     "import-conversations": "node import-conversational-data.mjs",
     "audit-schema-drift": "node audit-schema-drift.mjs",
-    "apply-migration": "node apply-migration.mjs"
+    "apply-migration": "node apply-migration.mjs",
+    "import-logs": "node import-logs-metadata.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
