@@ -25,9 +25,7 @@ const TABLES_IN_ORDER = [
 // Per-table overrides.
 // - csvPrefix: use a non-default CSV filename prefix (default is the table name)
 // - nullColumns: array of columns to force null before insert (see lib/importer.js)
-const TABLE_OVERRIDES = {
-  transcripts: { csvPrefix: 'text_transcripts' },
-};
+const TABLE_OVERRIDES = {};
 
 function findCsvForTable(tableName, prefix) {
   const effectivePrefix = prefix ?? tableName;
