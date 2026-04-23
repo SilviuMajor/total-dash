@@ -13,7 +13,8 @@
     "audit-b4-fks": "node audit-b4-fks.mjs",
     "import-single": "node import-single-table.mjs",
     "import-conversations": "node import-conversational-data.mjs",
-    "audit-schema-drift": "node audit-schema-drift.mjs"
+    "audit-schema-drift": "node audit-schema-drift.mjs",
+    "apply-migration": "node apply-migration.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
