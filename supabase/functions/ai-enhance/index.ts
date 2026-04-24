@@ -20,9 +20,9 @@ serve(async (req) => {
       });
     }
 
-    const apiKey = Deno.env.get("LOVABLE_API_KEY");
+    const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
     if (!apiKey) {
-      return new Response(JSON.stringify({ error: "API key not configured" }), {
+      return new Response(JSON.stringify({ error: "ANTHROPIC_API_KEY not configured" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 500,
       });
@@ -43,25 +43,26 @@ serve(async (req) => {
         systemPrompt = "You are a writing assistant. Improve the following message. Reply with ONLY the improved message, nothing else.";
     }
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${apiKey}`,
         "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 1024,
+        system: systemPrompt,
         messages: [
-          { role: "system", content: systemPrompt },
           { role: "user", content: message },
         ],
-        max_tokens: 500,
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("AI Gateway error:", response.status, errorText);
+      console.error("Anthropic API error:", response.status, errorText);
 
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit exceeded, please try again later." }), {
@@ -69,21 +70,18 @@ serve(async (req) => {
           status: 429,
         });
       }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "AI credits exhausted. Please add funds in Settings > Workspace > Usage." }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 402,
-        });
-      }
 
       return new Response(JSON.stringify({ error: "AI service error" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 500,
+        status: 502,
       });
     }
 
     const data = await response.json();
-    const enhanced = data.choices?.[0]?.message?.content || message;
+    const textBlock = Array.isArray(data.content)
+      ? data.content.find((b: any) => b?.type === "text")
+      : null;
+    const enhanced = textBlock?.text?.trim() || message;
 
     return new Response(JSON.stringify({ enhanced }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
