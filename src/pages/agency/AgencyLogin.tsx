@@ -89,7 +89,7 @@ export default function AgencyLogin() {
         const agency = (clientUser as any).clients.agencies;
         const redirectUrl = (agency.whitelabel_verified && agency.whitelabel_domain)
           ? `https://${agency.whitelabel_subdomain || 'dashboard'}.${agency.whitelabel_domain}`
-          : `/${agency.slug}`;
+          : `/login/${agency.slug}`;
         setDiverting(true);
         setDiversionUrl(redirectUrl);
         return;

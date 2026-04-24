@@ -122,14 +122,16 @@ serve(async (req) => {
       // Check if it's main domain with agency/client paths
       else if (normalizedDomain.includes('total-dash.com') || normalizedDomain.includes('localhost')) {
         const pathParts = path.split('/').filter((p: string) => p);
-        
+        const RESERVED_FIRST_SEGMENTS = new Set([
+          'agency', 'agencylogin', 'admin', 'super-admin', 'client', 'change-password', 'reset-password', 'auth',
+        ]);
+
         if (path.startsWith('/agencylogin') || path.startsWith('/agency')) {
           contextType = 'agency';
-        } else if (pathParts.length > 0) {
-          // First path part could be agency slug
-          const potentialAgencySlug = pathParts[0];
-          
-          // Check if this is a valid agency slug
+        } else if (pathParts.length >= 2 && pathParts[0] === 'login') {
+          // Slug-based client login lives under /login/:agencySlug[/:clientSlug]
+          const potentialAgencySlug = pathParts[1];
+
           const { data: agency } = await supabase
             .from('agencies')
             .select('id, slug, name, logo_url, primary_color, secondary_color')
@@ -138,15 +140,11 @@ serve(async (req) => {
 
           if (agency) {
             agencySlug = agency.slug;
-            
-            // Check if second path part is 'login' or a client slug
-            if (pathParts.length === 1 || pathParts[1] === 'login') {
-              contextType = 'agency';
-            } else if (pathParts.length > 1) {
-              // This is a client context
+
+            if (pathParts.length > 2) {
               contextType = 'client';
-              clientSlug = pathParts[1];
-              
+              clientSlug = pathParts[2];
+
               whitelabelConfig = {
                 agencyId: agency.id,
                 agencyName: agency.name,
@@ -158,9 +156,11 @@ serve(async (req) => {
               contextType = 'agency';
             }
           } else {
-            // Unknown path, default to agency
             contextType = 'agency';
           }
+        } else if (pathParts.length > 0 && !RESERVED_FIRST_SEGMENTS.has(pathParts[0])) {
+          // Bare first-segment slug URLs are no longer supported; treat as default app context.
+          contextType = 'agency';
         } else {
           contextType = 'agency';
         }

@@ -160,7 +160,6 @@ const App = () => (
                 
                 {/* Slug-based client login route */}
                 <Route path="/login/:agencySlug" element={<SlugBasedAuth />} />
-                <Route path="/:agencySlug" element={<SlugBasedAuth />} />
 
               {/* Client Routes - Isolated */}
               <Route path="/*" element={

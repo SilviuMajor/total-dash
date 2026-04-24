@@ -41,7 +41,7 @@ export default function ClientLoginRedirect() {
       }
 
       const slug = (clientUser as any).clients.agencies.slug;
-      navigate(`/${slug}`, { replace: true });
+      navigate(`/login/${slug}`, { replace: true });
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {

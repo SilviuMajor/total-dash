@@ -113,7 +113,7 @@ export default function AgencySettings() {
         setClientLoginUrl(`https://${subdomain}.${agencyData.whitelabel_domain}/client/login?preview=true`);
       } else if (agencyData?.slug) {
         const baseUrl = window.location.origin;
-        setClientLoginUrl(`${baseUrl}/${agencyData.slug}?preview=true`);
+        setClientLoginUrl(`${baseUrl}/login/${agencyData.slug}?preview=true`);
       } else {
         setClientLoginUrl('/client/login?preview=true');
       }
@@ -617,8 +617,8 @@ export default function AgencySettings() {
                 Changing your agency slug will update your dashboard URL from:
               </p>
               <div className="p-3 bg-muted rounded font-mono text-sm">
-                <div className="line-through text-muted-foreground">total-dash.com/{agency?.original_slug}</div>
-                <div className="text-foreground font-semibold mt-1">total-dash.com/{agency?.slug}</div>
+                <div className="line-through text-muted-foreground">total-dash.com/login/{agency?.original_slug}</div>
+                <div className="text-foreground font-semibold mt-1">total-dash.com/login/{agency?.slug}</div>
               </div>
               <p className="text-destructive font-semibold">
                 ⚠️ This will affect all links and bookmarks to your agency dashboard. Make sure to update any saved links.
