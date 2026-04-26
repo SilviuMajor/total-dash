@@ -35,23 +35,6 @@ Tone: same as the rest of CLAUDE.md — plain language, no fluff, no emoji, dire
 
 ## Tier 1 — must-haves
 
-### N5 — Inactivity timer takeover bug
-
-**Type:** Bug | **Effort:** Small | **Status:** Open
-**Spec:** `TotalDash-Spec-N5-Inactivity-Timer-Takeover-Bug.md`
-
-When an agent manually clicks "Take Over" after the inactivity timer has already fired (or is about to), the system creates a new active handover session but the inactivity timer doesn't reset its baseline correctly. Result: duplicate "chat has ended" notifications or a conversation timing out a second time despite the manual takeover succeeding.
-
-**Decisions already made:**
-- Code review shows the logic *should* work — `handover-timer` already computes baseline as `Math.max(lastCustomerTime, sessionAcceptedTime)`. Hypothesis is a race condition, not a logic bug.
-- Recommended approach: Option A from spec (aggressive) — add explicit `inactivity_reset_at` field on `handover_sessions` and check it in `handover-timer`. Bulletproof against races.
-
-**Touches:** `supabase/functions/handover-actions/index.ts`, `supabase/functions/handover-timer/index.ts`, `handover_sessions` table.
-
-**Open question:** confirm with prod logs whether the issue is genuinely a race or a different bug. Add logging first, observe for a few days, then commit to a fix.
-
----
-
 ### N6 — Manual takeover after timeout bug cluster
 
 **Type:** Bug | **Effort:** Medium | **Status:** Open
@@ -573,6 +556,25 @@ Low priority. Do opportunistically when touching related code.
 ## Completed (recent)
 
 Date-stamped log of items shipped. Don't delete — provides commit-trail context for future work.
+
+**Completed:** 2026-04-26 — `a53474f` — N5 fix: added `inactivity_reset_at` column set on takeover/accept, extended timer baseline to include agent messages (`speaker=client_user`) and the new column, added race guard (re-read + conditional UPDATE) before firing inactivity_timeout, plus structured `[inactivity_check]`/`[inactivity_skip]` logs.
+
+### N5 — Inactivity timer takeover bug
+
+**Type:** Bug | **Effort:** Small | **Status:** Done
+**Spec:** `TotalDash-Spec-N5-Inactivity-Timer-Takeover-Bug.md`
+
+When an agent manually clicks "Take Over" after the inactivity timer has already fired (or is about to), the system creates a new active handover session but the inactivity timer doesn't reset its baseline correctly. Result: duplicate "chat has ended" notifications or a conversation timing out a second time despite the manual takeover succeeding.
+
+**Decisions already made:**
+- Code review shows the logic *should* work — `handover-timer` already computes baseline as `Math.max(lastCustomerTime, sessionAcceptedTime)`. Hypothesis is a race condition, not a logic bug.
+- Recommended approach: Option A from spec (aggressive) — add explicit `inactivity_reset_at` field on `handover_sessions` and check it in `handover-timer`. Bulletproof against races.
+
+**Touches:** `supabase/functions/handover-actions/index.ts`, `supabase/functions/handover-timer/index.ts`, `handover_sessions` table.
+
+**Open question:** confirm with prod logs whether the issue is genuinely a race or a different bug. Add logging first, observe for a few days, then commit to a fix.
+
+---
 
 - 2026-04-26 — Backend cutover complete: Lovable Cloud → standalone Supabase + Vercel. Domain live at `app.total-dash.com`. Edge Functions deploy via GitHub Actions. `ai-enhance` swapped to direct Anthropic API. `create-text-transcripts` cron re-created. Password reset email flow fixed (route collision + hardcoded URL). RLS gaps for client users patched (`get_user_client_id` helper + new SELECT policies on `clients`/`agencies`). Missing FK constraints added (`client_user_agent_permissions.user_id` → `client_users.user_id`, `role_id` → `client_roles.id`, etc.). Bare `/:agencySlug` route removed in favour of `/login/:agencySlug` to fix path collisions with app routes. `check-domain-context` parser updated for new URL shape.
 - 2026-04-25 — Audit produced (C1-C3 critical, I1-I7 important, M1-M8 minor).
