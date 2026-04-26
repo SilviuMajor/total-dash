@@ -501,7 +501,11 @@ export default function Conversations() {
         // Reset the warn flag on a successful refresh so transient blips can
         // re-toast next time they happen.
         warned = false;
-        setPendingConversationIds(new Map(data.map(d => [d.conversation_id, d.created_at])));
+        setPendingConversationIds(new Map(
+          data
+            .filter((d): d is typeof d & { created_at: string } => d.created_at !== null)
+            .map(d => [d.conversation_id, d.created_at])
+        ));
       }
     };
     loadPendingIds();
@@ -786,6 +790,7 @@ export default function Conversations() {
       setAssignedTags(newTags);
       setSelectedConversation(prev => prev ? { ...prev, metadata: { ...prev.metadata, tags: newTags } } : null);
       if (!availableTags.some(t => t.label.toLowerCase() === trimmed.toLowerCase())) {
+        if (!selectedAgentId) return;
         const updatedTags = [...availableTags, { id: crypto.randomUUID(), label: trimmed }];
         await supabase.rpc('update_agent_config', {
           p_agent_id: selectedAgentId,
