@@ -150,6 +150,7 @@ async function handleAcceptHandover(
       agent_name: clientUserName,
       accepted_at: new Date().toISOString(),
       last_activity_at: new Date().toISOString(),
+      inactivity_reset_at: new Date().toISOString(),
     })
     .eq("conversation_id", conversationId)
     .eq("status", "pending")
@@ -322,6 +323,7 @@ async function handleTakeOver(
       requested_at: new Date().toISOString(),
       accepted_at: new Date().toISOString(),
       last_activity_at: new Date().toISOString(),
+      inactivity_reset_at: new Date().toISOString(),
     })
     .select()
     .single();

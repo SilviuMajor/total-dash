@@ -362,17 +362,44 @@ serve(async (req) => {
             .limit(1)
             .maybeSingle();
 
-          // Use the LATER of: last customer message OR session accepted_at
-          // This prevents immediate re-timeout when an agent takes over a needs_review conversation
-          // where the last customer message is old (from before the previous timeout)
-          const lastCustomerTime = lastUserMsg ? new Date(lastUserMsg.timestamp).getTime() : 0;
-          const sessionAcceptedTime = session.accepted_at ? new Date(session.accepted_at).getTime() : 0;
-          const inactivityBaseline = Math.max(lastCustomerTime, sessionAcceptedTime);
+          // Find the last human-agent message (speaker='client_user'). Voiceflow AI uses
+          // 'assistant' and nudges/system pills use 'system' or 'assistant'+metadata; only
+          // 'client_user' represents real agent activity that should keep the chat alive.
+          const { data: lastAgentMsg } = await supabaseClient
+            .from("transcripts")
+            .select("timestamp")
+            .eq("conversation_id", session.conversation_id)
+            .eq("speaker", "client_user")
+            .order("timestamp", { ascending: false })
+            .limit(1)
+            .maybeSingle();
 
-          if (inactivityBaseline === 0) continue; // No customer messages and no accepted_at — skip
+          // Baseline = latest of: customer msg, agent msg, session accepted_at, inactivity_reset_at.
+          // inactivity_reset_at is set by handover-actions on take_over/accept; closes the race
+          // where a takeover lands while this loop is mid-iteration.
+          const lastCustomerTime = lastUserMsg ? new Date(lastUserMsg.timestamp).getTime() : 0;
+          const lastAgentTime = lastAgentMsg ? new Date(lastAgentMsg.timestamp).getTime() : 0;
+          const sessionAcceptedTime = session.accepted_at ? new Date(session.accepted_at).getTime() : 0;
+          const inactivityResetTime = session.inactivity_reset_at ? new Date(session.inactivity_reset_at).getTime() : 0;
+          const inactivityBaseline = Math.max(lastCustomerTime, lastAgentTime, sessionAcceptedTime, inactivityResetTime);
+
+          if (inactivityBaseline === 0) continue; // Nothing to time against — skip
 
           const now = Date.now();
           const minutesSinceCustomer = (now - inactivityBaseline) / 60000;
+
+          console.log("[inactivity_check]", JSON.stringify({
+            sessionId: session.id,
+            conversationId: session.conversation_id,
+            lastCustomerTime,
+            lastAgentTime,
+            sessionAcceptedTime,
+            inactivityResetTime,
+            inactivityBaseline,
+            minutesSinceBaseline: Math.round(minutesSinceCustomer * 10) / 10,
+            hardTimeoutMinutes,
+            willTimeout: hardTimeoutEnabled && minutesSinceCustomer >= hardTimeoutMinutes,
+          }));
 
           // --- NUDGE CHECK ---
           if (nudgeEnabled && minutesSinceCustomer >= nudgeDelayMinutes) {
@@ -424,17 +451,46 @@ serve(async (req) => {
 
           // --- HARD TIMEOUT CHECK ---
           if (hardTimeoutEnabled && minutesSinceCustomer >= hardTimeoutMinutes) {
+            // Defence against race: a takeover may have completed this session
+            // between our initial fetch and now. Re-read before firing.
+            const { data: fresh } = await supabaseClient
+              .from("handover_sessions")
+              .select("status")
+              .eq("id", session.id)
+              .single();
+            if (fresh?.status !== "active") {
+              console.log("[inactivity_skip]", JSON.stringify({
+                sessionId: session.id,
+                reason: "session_no_longer_active",
+                currentStatus: fresh?.status,
+              }));
+              continue;
+            }
+
             console.log("Inactivity timeout for session:", session.id);
 
-            // Complete the session
-            await supabaseClient
+            // Conditional UPDATE: only this run flips active -> inactivity_timeout.
+            // If a concurrent run/takeover beat us to it, bail before emitting side effects
+            // (system messages, conversation flip, Voiceflow resume) — prevents duplicate
+            // "chat ended" pills.
+            const { data: updated } = await supabaseClient
               .from("handover_sessions")
               .update({
                 status: "inactivity_timeout",
                 completed_at: new Date().toISOString(),
                 completion_method: "inactivity",
               })
-              .eq("id", session.id);
+              .eq("id", session.id)
+              .eq("status", "active")
+              .select("id")
+              .maybeSingle();
+            if (!updated) {
+              console.log("[inactivity_skip]", JSON.stringify({
+                sessionId: session.id,
+                reason: "status_changed_during_update",
+              }));
+              continue;
+            }
 
             // Update conversation
             await supabaseClient
