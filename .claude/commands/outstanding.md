@@ -10,6 +10,29 @@ Tier 1 = pre-HeyB-stability must-haves. Tier 2 = strong wants. Tier 3 = post-Hey
 
 ---
 
+## Instructions for Claude when this command is invoked
+
+When Silv runs `/outstanding`, do the following before anything else:
+
+1. **Identify the next item.** The next item is the topmost still-Open entry in Tier 1, then Tier 2, then Tier 3 (in that order). Skip anything marked Status: Done / Mostly complete / Parked.
+2. **Explain it in plain language.** Two short paragraphs, no jargon. Cover:
+   - What's broken / missing today, from the user's point of view (what does Silv or a HeyB agent actually see?).
+   - What "fixed" looks like — what behaviour changes after the work is done.
+   - Why it matters now (link it to HeyB migration readiness if relevant).
+   Avoid file paths, function names, and schema details in this section. If a term is unavoidable (e.g. "handover", "Voiceflow"), define it in one sentence.
+3. **Walk through the implementation outline.** Use the spec link and the "Touches" / "Decisions already made" lines in the entry. Plain bullets, in execution order. Flag anything still undecided as a question for Silv before coding starts.
+4. **Provide test steps timed to the right phase.** Split into three blocks; do not collapse them:
+   - **Local pre-deploy checks** — what can be verified before pushing (e.g. `npm run build`, type-check, reading specific log lines, reviewing a generated SQL file). These run in the worktree.
+   - **Immediately after deploy** — what to hard-refresh and click in `app.total-dash.com`, in what order, with the exact expected outcome. Include Edge Function log tail commands when a function changed (`supabase functions logs <name> --tail`). Default browser refresh to `Cmd+Shift+R`.
+   - **24-hour soak check** — what to watch over the next day to catch races, cron timing bugs, or rare paths. Name the dashboard, log query, or table to inspect, and what "healthy" looks like vs. what "broken" looks like.
+5. **Offer to enter plan mode.** End by asking Silv whether he wants to proceed with this item now, swap to a different one, or refine the plain-language explanation first. Do not exit plan mode or start editing files until he confirms.
+
+Tone: same as the rest of CLAUDE.md — plain language, no fluff, no emoji, direct. If something in the entry is stale or contradicts the current code, surface that before walking through the plan.
+
+---
+
+---
+
 ## Tier 1 — must-haves
 
 ### N5 — Inactivity timer takeover bug
