@@ -81,12 +81,10 @@ export function CannedResponsesSettings({ readOnly, clientId: propClientId }: { 
   const togglePersonal = async (enabled: boolean) => {
     setPersonalEnabled(enabled);
     if (!selectedAgentId) return;
-    // Get current config
-    const { data: agent } = await supabase.from("agents_safe" as any).select("config").eq("id", selectedAgentId).single() as { data: { config: any } | null };
-    const currentConfig = (agent?.config as Record<string, any>) || {};
-    await supabase.from("agents").update({
-      config: { ...currentConfig, canned_responses_personal_enabled: enabled }
-    }).eq("id", selectedAgentId);
+    await supabase.rpc('update_agent_config', {
+      p_agent_id: selectedAgentId,
+      p_config_updates: { canned_responses_personal_enabled: enabled },
+    });
     toast({ title: "Updated", description: `Personal canned responses ${enabled ? "enabled" : "disabled"}` });
   };
 
