@@ -422,50 +422,85 @@ export default function Conversations() {
     const loadClientUser = async () => {
       if (!user?.id) return;
 
-      // First try: direct lookup in client_users
-      const { data: directMatch } = await supabase
-        .from('client_users')
-        .select('id')
-        .eq('user_id', user.id)
-        .maybeSingle();
-      
-      if (directMatch) {
-        setCurrentClientUserId(directMatch.id);
-        console.log('[Handover] Client user ID (direct):', directMatch.id);
-        return;
-      }
-
-      // Preview mode fallback: find the first client_user for the preview client
-      // This lets agency admins test handover actions when previewing
-      if (isClientPreviewMode && previewClient?.id) {
-        const { data: previewUser } = await supabase
+      try {
+        // First try: direct lookup in client_users
+        const { data: directMatch, error: directError } = await supabase
           .from('client_users')
           .select('id')
-          .eq('client_id', previewClient.id)
-          .limit(1)
+          .eq('user_id', user.id)
           .maybeSingle();
-        
-        if (previewUser) {
-          setCurrentClientUserId(previewUser.id);
-          console.log('[Handover] Client user ID (preview fallback):', previewUser.id);
+
+        if (directError) throw directError;
+
+        if (directMatch) {
+          setCurrentClientUserId(directMatch.id);
+          console.log('[Handover] Client user ID (direct):', directMatch.id);
           return;
         }
-      }
 
-      console.warn('No client user ID found for current user');
+        // Preview mode fallback: find the first client_user for the preview client
+        // This lets agency admins test handover actions when previewing
+        if (isClientPreviewMode && previewClient?.id) {
+          const { data: previewUser, error: previewError } = await supabase
+            .from('client_users')
+            .select('id')
+            .eq('client_id', previewClient.id)
+            .limit(1)
+            .maybeSingle();
+
+          if (previewError) throw previewError;
+
+          if (previewUser) {
+            setCurrentClientUserId(previewUser.id);
+            console.log('[Handover] Client user ID (preview fallback):', previewUser.id);
+            return;
+          }
+        }
+
+        console.warn('No client user ID found for current user');
+      } catch (err) {
+        console.error('[Handover] Failed to load client user:', err);
+        toast({
+          title: 'Could not load your user profile',
+          description: 'Some handover actions may be unavailable. Try refreshing the page.',
+          variant: 'destructive',
+        });
+      }
     };
     loadClientUser();
-  }, [user?.id, isClientPreviewMode, previewClient]);
+  }, [user?.id, isClientPreviewMode, previewClient, toast]);
 
   // Load pending handover conversation IDs for pinning
   useEffect(() => {
+    if (!selectedAgentId) return;
+
+    // Track whether we've already toasted in this effect-instance so realtime
+    // re-fires don't spam the user.
+    let warned = false;
+
     const loadPendingIds = async () => {
-      if (!selectedAgentId) return;
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('handover_sessions')
         .select('conversation_id, created_at')
         .eq('status', 'pending');
+
+      if (error) {
+        console.error('[Handover] Failed to load pending session IDs:', error);
+        if (!warned) {
+          warned = true;
+          toast({
+            title: 'Pending handover list out of date',
+            description: 'Refresh to see the latest pending requests.',
+            variant: 'destructive',
+          });
+        }
+        return;
+      }
+
       if (data) {
+        // Reset the warn flag on a successful refresh so transient blips can
+        // re-toast next time they happen.
+        warned = false;
         setPendingConversationIds(new Map(data.map(d => [d.conversation_id, d.created_at])));
       }
     };
@@ -479,7 +514,7 @@ export default function Conversations() {
       .subscribe();
 
     return () => { channel.unsubscribe(); };
-  }, [selectedAgentId]);
+  }, [selectedAgentId, toast]);
 
   // Play sound for NEW pending handover sessions across all conversations
   useEffect(() => {

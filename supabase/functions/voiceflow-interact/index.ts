@@ -6,6 +6,45 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+// Voiceflow user IDs are widget-generated strings — restrict to a sane charset
+// and length so they can't be used to smuggle other content into downstream
+// requests or logs.
+const VF_USER_ID_RE = /^[A-Za-z0-9_\-:.@]{1,128}$/;
+
+function jsonError(status: number, message: string) {
+  return new Response(JSON.stringify({ error: message }), {
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    status,
+  });
+}
+
+// Safely extract the user-visible label from a button-payload JSON string.
+// Returns null if parsing fails or the structure is unexpected — callers
+// fall back to a generic placeholder.
+function safeButtonLabel(message: unknown): string | null {
+  if (typeof message !== "string") return null;
+  try {
+    const parsed = JSON.parse(message);
+    return parsed?.payload?.label ?? null;
+  } catch {
+    return null;
+  }
+}
+
+// Safely parse a button payload to be forwarded to Voiceflow. Returns null
+// if the payload is malformed; callers should reject the request.
+function safeButtonPayload(message: unknown): any | null {
+  if (typeof message !== "string") return null;
+  try {
+    const parsed = JSON.parse(message);
+    if (!parsed || typeof parsed !== "object") return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
 // Helper function to create a transcript for a conversation
 async function createTranscriptForConversation(
   supabaseClient: any,
@@ -141,33 +180,62 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  let body: any;
   try {
-    const { agentId, userId, message, action, conversationId, isTestMode, baseUserId } = await req.json();
+    body = await req.json();
+  } catch {
+    return jsonError(400, "Invalid JSON body");
+  }
 
-    console.log("Voiceflow interact request:", { agentId, userId, action, isTestMode });
+  const { agentId, userId, message, action, conversationId, isTestMode, baseUserId } = body ?? {};
 
+  // Input validation — this endpoint is intentionally anonymous (called from
+  // the public widget by unauthenticated visitors), so the only line of
+  // defense against abuse is strict shape-checking on the inputs.
+  if (typeof agentId !== "string" || !UUID_RE.test(agentId)) {
+    return jsonError(400, "agentId must be a UUID");
+  }
+  if (typeof userId !== "string" || !VF_USER_ID_RE.test(userId)) {
+    return jsonError(400, "userId must be a non-empty string of safe characters");
+  }
+  if (conversationId != null && (typeof conversationId !== "string" || !UUID_RE.test(conversationId))) {
+    return jsonError(400, "conversationId must be a UUID when provided");
+  }
+  if (action != null && typeof action !== "string") {
+    return jsonError(400, "action must be a string");
+  }
+
+  console.log("Voiceflow interact request:", { agentId, userId, action, isTestMode });
+
+  try {
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
     );
 
-    // Fetch agent details
+    // Fetch agent details (also verifies the agent exists and is live)
     const { data: agent, error: agentError } = await supabaseClient
       .from("agents")
-      .select("config")
+      .select("status, config")
       .eq("id", agentId)
       .single();
 
     if (agentError || !agent) {
       console.error("Agent fetch error:", agentError);
-      throw new Error("Agent not found");
+      return jsonError(404, "Agent not found");
+    }
+
+    // Block calls to dormant agents. 'active' and 'testing' are the live
+    // statuses; 'in_development' is treated as not callable from the widget.
+    if (agent.status !== "active" && agent.status !== "testing") {
+      return jsonError(403, "Agent is not currently callable");
     }
 
     const apiKey = agent.config?.api_key;
     const projectId = agent.config?.project_id;
 
     if (!apiKey || !projectId) {
-      throw new Error("Agent missing Voiceflow credentials");
+      return jsonError(500, "Agent missing Voiceflow credentials");
     }
 
     // =============================================
@@ -197,7 +265,7 @@ serve(async (req) => {
 
           // Store the customer's message in transcripts
           const userMessageText =
-            action === "button" ? JSON.parse(message).payload?.label || "Button clicked" : message;
+            action === "button" ? (safeButtonLabel(message) || "Button clicked") : message;
 
           await supabaseClient.from("transcripts").insert({
             conversation_id: conversationId,
@@ -243,7 +311,7 @@ serve(async (req) => {
 
           // Store the customer's message in transcripts
           const userMessageText =
-            action === "button" ? JSON.parse(message).payload?.label || "Button clicked" : message;
+            action === "button" ? (safeButtonLabel(message) || "Button clicked") : message;
 
           await supabaseClient.from("transcripts").insert({
             conversation_id: conversationId,
@@ -345,17 +413,15 @@ serve(async (req) => {
       };
       console.log("Sending launch request to Voiceflow");
     } else if (action === "button") {
-      try {
-        const buttonPayload = JSON.parse(message);
-        voiceflowRequestBody = {
-          action: buttonPayload,
-          config: vfConfig,
-        };
-        console.log("Sending button action to Voiceflow:", buttonPayload);
-      } catch (error) {
-        console.error("Failed to parse button payload:", error);
-        throw new Error("Invalid button payload");
+      const buttonPayload = safeButtonPayload(message);
+      if (!buttonPayload) {
+        return jsonError(400, "Invalid button payload");
       }
+      voiceflowRequestBody = {
+        action: buttonPayload,
+        config: vfConfig,
+      };
+      console.log("Sending button action to Voiceflow:", buttonPayload);
     } else {
       voiceflowRequestBody = {
         action: { type: "text", payload: message },
@@ -499,7 +565,11 @@ serve(async (req) => {
 
     // Store user message in transcripts
     if ((action === "text" || action === "button") && currentConversationId) {
-      const userMessageText = action === "button" ? JSON.parse(message).payload?.label || "Button clicked" : message;
+      const parsedButton = action === "button" ? safeButtonPayload(message) : null;
+      const userMessageText =
+        action === "button"
+          ? (parsedButton?.payload?.label ?? "Button clicked")
+          : message;
 
       await supabaseClient.from("transcripts").insert({
         conversation_id: currentConversationId,
@@ -509,7 +579,7 @@ serve(async (req) => {
           action === "button"
             ? {
                 button_click: true,
-                payload: JSON.parse(message),
+                payload: parsedButton,
                 timestamp: new Date().toISOString(),
               }
             : {},
@@ -647,7 +717,10 @@ serve(async (req) => {
             }
           }
 
-          // Department is open (or fallback is open) — create handover session
+          // Department is open (or fallback is open) — create handover session.
+          // The session row must exist before we flip conversation.status to
+          // "waiting"; otherwise a failed insert leaves the conversation in
+          // limbo with no pending session for the dashboard to pick up.
           console.log("Creating handover session for department:", department.name);
 
           const { error: sessionError } = await supabaseClient.from("handover_sessions").insert({
@@ -664,13 +737,25 @@ serve(async (req) => {
 
           if (sessionError) {
             console.error("Error creating handover session:", sessionError);
+            return jsonError(500, "Failed to start handover");
           }
 
           // Update conversation with department
-          await supabaseClient
+          const { error: convStatusError } = await supabaseClient
             .from("conversations")
             .update({ status: "waiting", department_id: department.id, voiceflow_user_id: userId })
             .eq("id", currentConversationId);
+
+          if (convStatusError) {
+            console.error("Error updating conversation status to waiting:", convStatusError);
+            // Roll back the session row so the conversation isn't half-handed-off
+            await supabaseClient
+              .from("handover_sessions")
+              .delete()
+              .eq("conversation_id", currentConversationId)
+              .eq("status", "pending");
+            return jsonError(500, "Failed to start handover");
+          }
 
           // Store bot responses that came with this handover (e.g. "Let me connect you to our team")
           if (currentConversationId) {

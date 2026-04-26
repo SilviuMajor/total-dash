@@ -195,37 +195,38 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
             .eq('token', tokenParam)
             .eq('is_preview', true)
             .single();
-          
+
           if (error || !authContext) {
             console.error('Invalid preview token:', error);
-            navigate('/admin/agencies', { replace: true });
-            setIsValidatingToken(false);
+            // Boundary crossing — full reload so all hooks reinitialise
+            // from sessionStorage (CLAUDE.md rule #7).
+            window.location.replace('/admin/agencies');
             return;
           }
-          
+
           // Check if token has expired
           if (new Date(authContext.expires_at) < new Date()) {
-            navigate('/admin/agencies', { replace: true });
-            setIsValidatingToken(false);
+            window.location.replace('/admin/agencies');
             return;
           }
-          
+
           // Token is valid - set up preview mode
           if (authContext.context_type === 'agency' && authContext.agency_id) {
             setIsPreviewMode(true);
             setPreviewDepth('agency');
-            
+
             sessionStorage.setItem(PREVIEW_MODE_KEY, 'agency');
             sessionStorage.setItem(PREVIEW_AGENCY_KEY, authContext.agency_id);
             sessionStorage.setItem('preview_token', tokenParam);
-            
+
             await loadPreviewAgency(authContext.agency_id);
-            
-            navigate('/agency/clients', { replace: true });
+
+            // Cross-boundary nav into agency context — full reload required.
+            window.location.replace('/agency/clients');
           }
         } catch (err) {
           console.error('Token validation error:', err);
-          navigate('/admin/agencies', { replace: true });
+          window.location.replace('/admin/agencies');
         } finally {
           setIsValidatingToken(false);
         }
@@ -286,7 +287,9 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
             sessionStorage.removeItem(PREVIEW_MODE_KEY);
             sessionStorage.removeItem(PREVIEW_AGENCY_KEY);
             sessionStorage.removeItem('preview_token');
-            navigate('/admin/agencies', { replace: true });
+            // Boundary exit (preview mode → real mode) — full reload so all
+            // hooks reinitialise from sessionStorage (CLAUDE.md rule #7).
+            window.location.replace('/admin/agencies');
           } else {
             setIsPreviewMode(true);
             setPreviewDepth('agency');
