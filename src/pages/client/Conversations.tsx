@@ -113,7 +113,8 @@ export default function Conversations() {
   // Bulk select
   const [selectedConversationIds, setSelectedConversationIds] = useState<Set<string>>(new Set());
 
-  const { selectedAgentId, agents, clientId } = useClientAgentContext();
+  const { selectedAgentId, agents, clientId, companyCapabilities } = useClientAgentContext();
+  const cannedResponsesEnabled = companyCapabilities?.client_canned_responses_enabled !== false;
   const { toast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const transcriptScrollRef = useRef<HTMLDivElement>(null);
@@ -1670,7 +1671,8 @@ export default function Conversations() {
                 <div className="flex-shrink-0 border-t border-border bg-background p-3">
                   {selectedConversation.status === 'in_handover' && selectedConversation.owner_id === currentClientUserId ? (
                     <div className="flex items-center gap-2">
-                      {/* Canned responses button */}
+                      {/* Canned responses button — hidden entirely when agency has feature off */}
+                      {cannedResponsesEnabled && (
                       <Popover open={showCannedDropdown} onOpenChange={setShowCannedDropdown}>
                         <PopoverTrigger asChild>
                           <Button size="icon" variant="ghost" className="shrink-0">
@@ -1769,6 +1771,7 @@ export default function Conversations() {
                           </Tabs>
                         </PopoverContent>
                       </Popover>
+                      )}
                       {/* AI Enhance button */}
                       <Popover open={aiEnhanceOpen} onOpenChange={setAiEnhanceOpen}>
                         <PopoverTrigger asChild>

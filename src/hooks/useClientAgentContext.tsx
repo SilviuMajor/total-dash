@@ -43,6 +43,10 @@ interface ClientAgentContextType {
   setSelectedAgentId: (id: string) => void;
   selectedAgentPermissions: AgentPermissions | null;
   companySettingsPermissions: CompanySettingsPermissions | null;
+  // Raw client_settings.admin_capabilities flags. Use companySettingsPermissions
+  // for role-gated checks; use this when you need the agency master switch alone
+  // (e.g. hiding a feature in the chat input regardless of role permissions).
+  companyCapabilities: Record<string, any>;
   loading: boolean;
   clientId: string | null;
   userRoleSlug: string | null;
@@ -55,6 +59,7 @@ const ClientAgentContext = createContext<ClientAgentContextType>({
   setSelectedAgentId: () => {},
   selectedAgentPermissions: null,
   companySettingsPermissions: null,
+  companyCapabilities: {},
   loading: true,
   clientId: null,
   userRoleSlug: null,
@@ -80,6 +85,7 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
   const [clientId, setClientId] = useState<string | null>(null);
   const [userRoleSlug, setUserRoleSlug] = useState<string | null>(null);
   const [companySettingsPermissions, setCompanySettingsPermissions] = useState<CompanySettingsPermissions | null>(null);
+  const [companyCapabilities, setCompanyCapabilities] = useState<Record<string, any>>({});
   const [isImpersonationReadOnly, setIsImpersonationReadOnly] = useState(false);
   const { user, profile } = useAuth();
   const { isClientPreviewMode, previewClient, previewDepth, userType } = useMultiTenantAuth();
@@ -304,6 +310,7 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
         settings_general_manage: resolveCompanyPerm('settings_general_manage', 'client_general_enabled'),
         settings_audit_log_view: resolveCompanyPerm('settings_audit_log_view', 'client_audit_log_enabled'),
       });
+      setCompanyCapabilities(adminCaps);
 
       // Build agent list — only agents the TARGET user has permission rows for
       const userPermMap = new Map(userPerms?.map(p => [p.agent_id, p]) || []);
@@ -484,6 +491,7 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
         settings_general_manage: resolveCompanyPerm('settings_general_manage', 'client_general_enabled'),
         settings_audit_log_view: resolveCompanyPerm('settings_audit_log_view', 'client_audit_log_enabled'),
       });
+      setCompanyCapabilities(adminCaps);
 
       // Build agent list — only include agents the user has permission rows for
       const userPermMap = new Map(userPerms?.map(p => [p.agent_id, p]) || []);
@@ -657,6 +665,7 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
         setSelectedAgentId,
         selectedAgentPermissions,
         companySettingsPermissions,
+        companyCapabilities,
         loading,
         clientId,
         userRoleSlug,
