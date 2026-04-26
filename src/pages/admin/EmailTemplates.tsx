@@ -226,7 +226,7 @@ export default function EmailTemplates() {
           <TabsTrigger value="history">Email History</TabsTrigger>
         </TabsList>
 
-        {Object.entries(templatesByCategory).map(([category, categoryTemplates]: [string, any[]]) => (
+        {(Object.entries(templatesByCategory) as [string, any[]][]).map(([category, categoryTemplates]) => (
           <TabsContent key={category} value={category} className="space-y-4">
             {categoryTemplates.map((template) => (
               <Card key={template.id}>
