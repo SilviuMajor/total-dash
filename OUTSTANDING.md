@@ -35,26 +35,6 @@ Tone: same as the rest of CLAUDE.md — plain language, no fluff, no emoji, dire
 
 ## Tier 1 — must-haves
 
-### N6 — Manual takeover after timeout bug cluster
-
-**Type:** Bug | **Effort:** Medium | **Status:** Open
-**Spec:** `TotalDash-Spec-N6-Manual-Takeover-After-Timeout-Bug.md`
-
-A constellation of related bugs that all stem from the same root cause: when an agent takes over a conversation **after** a pending handover has already timed out, the conversation state ends up inconsistent across the dashboard, widget, and Voiceflow. Specific symptoms: first agent message never reaches widget, end-handover action not reflected in dashboard, duplicate "chat has ended" pills, missing system message in transcript.
-
-**Root cause:** widget holds reference to old/timed-out session ID. Voiceflow API messages route to mismatched sessions.
-
-**Decisions already made:**
-- Three fix options scoped (Full / Quick / Observability-first). Recommended: full fix — add `previous_session_id` column for session succession tracking, emit `session_refreshed` event widget listens for, timeout handler checks for new session before resume.
-
-**Open questions:**
-- Should timeout sessions be permanently closed or reopenable by manual takeover? (currently reopenable — confirm intent)
-- Does widget need an explicit `session_refreshed` event, or can it re-query session ID per message?
-
-**Touches:** `handover-actions`, `handover-timer`, `voiceflow-interact`, `widget-loader`, `Conversations.tsx`, `handover_sessions` schema.
-
----
-
 ### N8 — Team-wide conversation archive
 
 **Type:** Feature | **Effort:** Medium | **Status:** Open
@@ -556,6 +536,8 @@ Low priority. Do opportunistically when touching related code.
 ## Completed (recent)
 
 Date-stamped log of items shipped. Don't delete — provides commit-trail context for future work.
+
+**Completed:** 2026-04-26 — `5c50c41` — N6 fix: added `previous_session_id` column on `handover_sessions` for succession tracking; `take_over` captures the prior session id and tags its system transcript with `metadata.type='session_refreshed'` when the prior session was timeout/inactivity_timeout/completed; widget keeps polling for 30 min after `handover_ended` and re-enters handover on `session_refreshed`; pending-timeout path in `handover-timer` now uses an N5-style conditional UPDATE so a takeover that wins the race doesn't emit duplicate "Handover ended" pills.
 
 **Completed:** 2026-04-26 — `a53474f` — N5 fix: added `inactivity_reset_at` column set on takeover/accept, extended timer baseline to include agent messages (`speaker=client_user`) and the new column, added race guard (re-read + conditional UPDATE) before firing inactivity_timeout, plus structured `[inactivity_check]`/`[inactivity_skip]` logs.
 
