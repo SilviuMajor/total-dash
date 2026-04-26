@@ -159,8 +159,10 @@ export default function AgencyAgentDetails() {
   };
 
   const handleToggleAccess = async (key: string, checked: boolean) => {
-    const updatedConfig = { ...agent.config, [key]: checked };
-    await supabase.from("agents").update({ config: updatedConfig }).eq("id", agent.id);
+    await supabase.rpc('update_agent_config', {
+      p_agent_id: agent.id,
+      p_config_updates: { [key]: checked },
+    });
     loadAgentDetails();
   };
 

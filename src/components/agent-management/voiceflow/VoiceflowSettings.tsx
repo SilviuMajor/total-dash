@@ -68,23 +68,26 @@ export function VoiceflowSettings({ agent, onUpdate }: VoiceflowSettingsProps) {
   const handleSave = async () => {
     setLoading(true);
     try {
-      const { error } = await supabase
+      const { error: nameError } = await supabase
         .from("agents")
-        .update({
-          name: formData.name,
-          config: {
-            ...agent.config,
-            api_key: formData.api_key,
-            project_id: formData.project_id,
-            auto_end_hours: formData.auto_end_hours,
-            custom_tracked_variables: customVariables.filter(v => 
-              v.voiceflow_name.trim() && v.display_name.trim()
-            ),
-          },
-        })
+        .update({ name: formData.name })
         .eq("id", agent.id);
 
-      if (error) throw error;
+      if (nameError) throw nameError;
+
+      const { error: configError } = await supabase.rpc('update_agent_config', {
+        p_agent_id: agent.id,
+        p_config_updates: {
+          api_key: formData.api_key,
+          project_id: formData.project_id,
+          auto_end_hours: formData.auto_end_hours,
+          custom_tracked_variables: customVariables.filter(v =>
+            v.voiceflow_name.trim() && v.display_name.trim()
+          ),
+        },
+      });
+
+      if (configError) throw configError;
 
       toast({
         title: "Success",

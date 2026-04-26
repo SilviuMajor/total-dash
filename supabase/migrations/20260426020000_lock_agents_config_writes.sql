@@ -1,0 +1,27 @@
+-- Lock down direct writes to agents.config
+--
+-- The agents_safe view strips api_key / voiceflow_api_key / retell_api_key from
+-- the config JSONB. Any frontend code that does
+--
+--   .from('agents').update({ config: { ...agentFromAgentsSafe.config, ... } })
+--
+-- will silently wipe those API keys and break the live widget. The whole
+-- update_agent_config RPC exists to prevent this — it does a server-side
+-- JSONB merge so callers never need to round-trip the full config.
+--
+-- That rule was previously enforced only by convention. The CannedResponses
+-- "personal toggle" footgun shipped to production this week as proof.
+--
+-- This migration enforces it at the schema level: the authenticated role can
+-- no longer UPDATE the config column directly. All config writes must go
+-- through public.update_agent_config (SECURITY DEFINER).
+--
+-- Other columns on agents (name, status, agency_id, etc.) remain writable
+-- via direct UPDATE under the existing RLS policies. The service_role role
+-- (used by Edge Functions) is not affected — REVOKE FROM authenticated does
+-- not touch it.
+--
+-- INSERTs are not affected either: duplicate-agent and other Edge Functions
+-- can still INSERT new agents with config populated.
+
+REVOKE UPDATE (config) ON public.agents FROM authenticated;

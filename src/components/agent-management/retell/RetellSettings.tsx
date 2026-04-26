@@ -49,18 +49,21 @@ export function RetellSettings({ agent, onUpdate }: RetellSettingsProps) {
   const handleSave = async () => {
     setLoading(true);
     try {
-      const { error } = await supabase
+      const { error: nameError } = await supabase
         .from("agents")
-        .update({
-          name: formData.name,
-          config: {
-            ...agent.config,
-            retell_api_key: formData.retell_api_key,
-          },
-        })
+        .update({ name: formData.name })
         .eq("id", agent.id);
 
-      if (error) throw error;
+      if (nameError) throw nameError;
+
+      const { error: configError } = await supabase.rpc('update_agent_config', {
+        p_agent_id: agent.id,
+        p_config_updates: {
+          retell_api_key: formData.retell_api_key,
+        },
+      });
+
+      if (configError) throw configError;
 
       toast({
         title: "Success",
