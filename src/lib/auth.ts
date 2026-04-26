@@ -50,7 +50,7 @@ export async function getUserProfile() {
 
 export async function resetPassword(email: string) {
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `https://total-dash.com/reset-password`,
+    redirectTo: `${window.location.origin}/change-password`,
   });
   
   return { error };
