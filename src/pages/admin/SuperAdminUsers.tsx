@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageSkeleton } from "@/components/skeletons/PageSkeleton";
 import {
   Dialog,
   DialogContent,
@@ -257,18 +258,11 @@ export default function SuperAdminUsers() {
   });
 
   if (loading) {
-    return (
-      <div className="space-y-8">
-        <div>
-          <h1 className="text-lg font-semibold">Super Admin Users</h1>
-          <p className="text-sm text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
+    return <PageSkeleton />;
   }
 
   return (
-    <div className="p-6 space-y-8">
+    <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-lg font-semibold">Super Admin Users</h1>

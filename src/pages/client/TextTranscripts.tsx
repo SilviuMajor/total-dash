@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Search, Download } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 
 interface TextTranscript {
@@ -181,7 +182,11 @@ ${transcript.messages.map((msg) => `[${msg.speaker}]: ${msg.text}`).join("\n")}
       <ScrollArea className="flex-1">
         <div className="max-w-7xl mx-auto p-6">
           {loading ? (
-            <div className="text-center py-12 text-muted-foreground">Loading...</div>
+            <div className="space-y-2 py-4">
+              {[...Array(6)].map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
+            </div>
           ) : filteredTranscripts.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               No transcripts found

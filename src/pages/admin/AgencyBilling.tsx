@@ -254,7 +254,7 @@ export default function AgencyBilling() {
   }
 
   return (
-    <div className="p-6 space-y-8">
+    <div className="p-6 space-y-6">
       <div>
         <h1 className="text-lg font-semibold">Agency Billing</h1>
         <p className="text-sm text-muted-foreground">

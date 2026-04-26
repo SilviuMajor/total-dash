@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Eye, Save, Link2, Plus, Minus } from "lucide-react";
 import { useImpersonation } from "@/hooks/useImpersonation";
+import { PageSkeleton } from "@/components/skeletons/PageSkeleton";
 
 export default function AgencyDetails() {
   const { id } = useParams();
@@ -298,7 +299,7 @@ export default function AgencyDetails() {
   };
 
   if (loading) {
-    return <div className="p-8">Loading...</div>;
+    return <PageSkeleton />;
   }
 
   return (

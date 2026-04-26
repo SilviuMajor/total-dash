@@ -7,6 +7,7 @@ import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
 import { useImpersonation } from "@/hooks/useImpersonation";
 import { useToast } from "@/hooks/use-toast";
 import { Check, Crown } from "lucide-react";
+import { PageSkeleton } from "@/components/skeletons/PageSkeleton";
 
 export default function AgencySubscription() {
   const { profile, isPreviewMode, previewAgency } = useMultiTenantAuth();
@@ -152,11 +153,11 @@ export default function AgencySubscription() {
   };
 
   if (loading) {
-    return <div className="p-8">Loading...</div>;
+    return <PageSkeleton />;
   }
 
   return (
-    <div className="p-6 space-y-8">
+    <div className="p-6 space-y-6">
       <div>
         <h1 className="text-lg font-semibold">Subscription</h1>
         <p className="text-sm text-muted-foreground">Manage your subscription plan</p>

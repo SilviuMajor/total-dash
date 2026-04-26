@@ -165,7 +165,7 @@ export default function AgencyAgentDetails() {
   };
 
   const content = (
-    <div className="p-6 space-y-8">
+    <div className="p-6 space-y-6">
       <AgentDetailHeader 
         agent={agent} 
         assignedClients={assignedClients} 
