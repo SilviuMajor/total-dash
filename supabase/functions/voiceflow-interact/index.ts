@@ -104,6 +104,12 @@ async function createTranscriptForConversation(
 }
 
 // Helper: check if a department is currently open based on its timezone and hours
+//
+// IMPORTANT: this function is duplicated in
+// src/components/client-management/DepartmentManagement.tsx and the two copies
+// MUST stay in sync. This copy decides actual handover routing; the React
+// copy drives the admin "Open / Closed" badge. Diverging copies = the
+// dashboard lying about whether handover will succeed.
 function isDepartmentOpen(dept: any): boolean {
   try {
     if (dept.always_open) return true;
@@ -233,6 +239,13 @@ serve(async (req) => {
 
     const apiKey = agent.config?.api_key;
     const projectId = agent.config?.project_id;
+    // Voiceflow version: defaults to "production" when not set on the agent.
+    // Set agent.config.voiceflow_version_id to "development" or a numeric
+    // version id to point this agent at a non-prod Voiceflow build.
+    const voiceflowVersionId = (typeof agent.config?.voiceflow_version_id === "string"
+      && agent.config.voiceflow_version_id.length > 0)
+      ? agent.config.voiceflow_version_id
+      : "production";
 
     if (!apiKey || !projectId) {
       return jsonError(500, "Agent missing Voiceflow credentials");
@@ -430,13 +443,13 @@ serve(async (req) => {
       console.log("Sending text message to Voiceflow:", message);
     }
 
-    // Call Voiceflow Interact API (with versionID for production)
+    // Call Voiceflow Interact API
     const voiceflowResponse = await fetch(`https://general-runtime.voiceflow.com/state/user/${userId}/interact`, {
       method: "POST",
       headers: {
         Authorization: apiKey,
         "Content-Type": "application/json",
-        versionID: "production",
+        versionID: voiceflowVersionId,
       },
       body: JSON.stringify(voiceflowRequestBody),
     });
@@ -675,7 +688,7 @@ serve(async (req) => {
                   headers: {
                     Authorization: apiKey,
                     "Content-Type": "application/json",
-                    versionID: "production",
+                    versionID: voiceflowVersionId,
                   },
                   body: JSON.stringify({
                     action: { type: "department_closed" },

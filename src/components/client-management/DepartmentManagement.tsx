@@ -92,6 +92,11 @@ const DEFAULT_ADVANCED_HOURS = Object.fromEntries(
   }])
 );
 
+// IMPORTANT: this function is duplicated in
+// supabase/functions/voiceflow-interact/index.ts and the two copies MUST stay
+// in sync. The Edge Function copy decides actual handover routing; this copy
+// drives the admin "Open / Closed" badge. Diverging copies = the dashboard
+// lying about whether handover will succeed.
 function isDepartmentOpen(dept: Department): boolean {
   try {
     if (dept.always_open) return true;

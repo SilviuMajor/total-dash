@@ -98,7 +98,7 @@ serve(async (req) => {
         .from('agencies')
         .select('id, slug, name, logo_url, primary_color, secondary_color, whitelabel_subdomain, whitelabel_domain')
         .eq('whitelabel_verified', true)
-        .or(`whitelabel_domain.eq.${normalizedDomain}`)
+        .eq('whitelabel_domain', normalizedDomain)
         .single();
 
       if (whitelabelAgency) {

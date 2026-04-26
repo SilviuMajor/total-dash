@@ -30,21 +30,55 @@ serve(async (req) => {
     const { data: { user: caller }, error: authError } = await supabaseClient.auth.getUser(token);
     if (authError || !caller) throw new Error('Invalid authentication token');
 
-    // Verify caller is authorized: must be the claimed user, a super admin, or an agency user with access
+    // Verify caller is authorized to act as the claimed client_user.
+    //
+    // The frontend sends `clientUserId` as the client_users.id (NOT auth.users.id)
+    // for the user being represented. The previous check compared caller.id
+    // (auth.users.id) to clientUserId directly — those live in different
+    // ID spaces, so legitimate client users always failed and got
+    // "Unauthorized". Resolve the relationship via the client_users table
+    // instead.
     const { clientUserId } = body;
-    if (clientUserId && caller.id !== clientUserId) {
-      // Caller is not the claimed user — check if they're a super admin
-      const { data: isSuperAdmin } = await supabaseClient.rpc('is_super_admin', { _user_id: caller.id });
-      if (!isSuperAdmin) {
-        // Check if they're an agency user whose agency owns the relevant client
-        const { data: agencyAccess } = await supabaseClient
-          .from('agency_users')
-          .select('agency_id')
-          .eq('user_id', caller.id)
-          .single();
-        
-        if (!agencyAccess) {
-          throw new Error('Unauthorized: you do not have access to perform this action');
+    if (clientUserId) {
+      // Check 1: caller is the actual client_user behind this id
+      const { data: ownClientUserRow } = await supabaseClient
+        .from('client_users')
+        .select('id')
+        .eq('user_id', caller.id)
+        .eq('id', clientUserId)
+        .maybeSingle();
+
+      if (!ownClientUserRow) {
+        // Check 2: super admin can act on behalf of any client user
+        const { data: isSuperAdmin } = await supabaseClient.rpc('is_super_admin', { _user_id: caller.id });
+        if (!isSuperAdmin) {
+          // Check 3: agency user whose agency owns the client_user's client
+          const { data: targetClientUser } = await supabaseClient
+            .from('client_users')
+            .select('client_id')
+            .eq('id', clientUserId)
+            .maybeSingle();
+
+          if (!targetClientUser) {
+            throw new Error('Unauthorized: target client user not found');
+          }
+
+          const { data: targetClient } = await supabaseClient
+            .from('clients')
+            .select('agency_id')
+            .eq('id', targetClientUser.client_id)
+            .maybeSingle();
+
+          const { data: callerAgencyAccess } = await supabaseClient
+            .from('agency_users')
+            .select('agency_id')
+            .eq('user_id', caller.id)
+            .eq('agency_id', targetClient?.agency_id ?? '')
+            .maybeSingle();
+
+          if (!callerAgencyAccess) {
+            throw new Error('Unauthorized: you do not have access to perform this action');
+          }
         }
       }
     }
