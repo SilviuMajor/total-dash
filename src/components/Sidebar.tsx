@@ -40,7 +40,7 @@ const adminNavigation = [
   { name: "Settings", href: "/admin/settings", icon: Settings },
 ];
 
-export function Sidebar() {
+export function Sidebar({ className }: { className?: string } = {}) {
   const { profile, signOut } = useAuth();
   const { profile: mtProfile, userType, signOut: mtSignOut, isPreviewMode: mtIsPreviewMode, previewAgency, isClientPreviewMode, previewClient, previewClientAgencyId } = useMultiTenantAuth();
   const { selectedAgentPermissions, agents, selectedAgentId } = useClientAgentContext();
@@ -187,7 +187,7 @@ export function Sidebar() {
 
 
   return (
-    <div className="flex flex-col w-[240px] h-screen border-r border-border bg-card overflow-hidden flex-shrink-0">
+    <div className={cn("hidden md:flex flex-col w-[240px] h-screen border-r border-border bg-card overflow-hidden flex-shrink-0", className)}>
       {/* Logo area */}
       <div className="flex justify-center py-8 border-b border-border">
         {branding.logoUrl ? (

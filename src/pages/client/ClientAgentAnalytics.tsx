@@ -31,7 +31,7 @@ export default function ClientAgentAnalytics() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="p-6 space-y-6">
       <div className="space-y-3">
         <h1 className="text-lg font-semibold">Analytics</h1>
         <div className="flex items-center gap-4">

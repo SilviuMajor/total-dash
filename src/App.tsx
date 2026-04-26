@@ -14,6 +14,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AdminProtectedRoute } from "./components/AdminProtectedRoute";
 import { AgencyProtectedRoute } from "./components/AgencyProtectedRoute";
 import { Sidebar } from "./components/Sidebar";
+import { MobileTopBar } from "./components/MobileTopBar";
 import { CommandSearch } from "./components/CommandSearch";
 import { DevSwitch } from "./components/DevSwitch";
 import Auth from "./pages/Auth";
@@ -105,6 +106,7 @@ const App = () => (
                     <div className="flex h-screen w-full bg-background overflow-hidden">
                       <Sidebar />
                       <div className="flex-1 flex flex-col overflow-hidden">
+                        <MobileTopBar />
                         <main className="flex-1 overflow-y-auto">
                         <Routes>
                             <Route index element={<Agencies />} />
@@ -132,6 +134,7 @@ const App = () => (
                     <div className="flex h-screen w-full bg-background overflow-hidden">
                       <Sidebar />
                       <div className="flex-1 flex flex-col overflow-hidden">
+                        <MobileTopBar />
                         <main className="flex-1 overflow-y-auto">
                           <Routes>
                             <Route index element={<Navigate to="/agency/clients" replace />} />
@@ -164,6 +167,7 @@ const App = () => (
                   <div className="flex h-screen w-full bg-background overflow-hidden">
                     <Sidebar />
                     <div className="flex-1 flex flex-col overflow-hidden">
+                      <MobileTopBar />
                       <main className="flex-1 overflow-y-auto">
                         <Routes>
                           <Route path="/" element={<ProtectedRoute requiredPage="conversations"><Conversations /></ProtectedRoute>} />

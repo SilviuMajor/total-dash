@@ -9,7 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, EyeOff } from "lucide-react";
+import { EyeOff } from "lucide-react";
+import { BackButton } from "@/components/BackButton";
+import { PageSkeleton } from "@/components/skeletons/PageSkeleton";
 import { ClientOverview } from "@/components/client-management/ClientOverview";
 import { ClientAgentAssignments } from "@/components/client-management/ClientAgentAssignments";
 import { ClientSettings } from "@/components/client-management/ClientSettings";
@@ -293,13 +295,7 @@ export default function AgencyClientDetails() {
   };
 
   if (loading) {
-    return (
-      <div className="space-y-8">
-        <Card className="p-8 bg-gradient-card border-border/50 animate-pulse">
-          <div className="h-64"></div>
-        </Card>
-      </div>
-    );
+    return <PageSkeleton />;
   }
 
   if (!client) return null;
@@ -307,14 +303,7 @@ export default function AgencyClientDetails() {
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center gap-4">
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => navigate('/agency/clients')}
-          className="border-border/50"
-        >
-          <ArrowLeft className="w-4 h-4" />
-        </Button>
+        <BackButton to="/agency/clients" />
         <div>
           <h1 className="text-lg font-semibold">{client.name}</h1>
           <p className="text-sm text-muted-foreground">Client Management Dashboard</p>

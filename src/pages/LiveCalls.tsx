@@ -10,7 +10,7 @@ const liveCalls = [
 
 export default function LiveCalls() {
   return (
-    <div className="space-y-8">
+    <div className="p-6 space-y-6">
       <div>
         <h1 className="text-lg font-semibold">Live Calls</h1>
         <p className="text-sm text-muted-foreground">Monitor active calls and handle handover requests in real-time.</p>

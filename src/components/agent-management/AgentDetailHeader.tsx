@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Activity, ArrowLeft } from "lucide-react";
+import { Activity } from "lucide-react";
+import { BackButton } from "@/components/BackButton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -101,15 +102,8 @@ export function AgentDetailHeader({ agent, assignedClients, onUpdate, onBack, de
       {/* Row 1: Back Button + Agent Name + Status Dropdown */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={onBack}
-            className="border-border/50"
-          >
-            <ArrowLeft className="w-4 h-4" />
-          </Button>
-          <h1 className="text-4xl font-bold text-foreground">{agent.name}</h1>
+          <BackButton onClick={onBack} />
+          <h1 className="text-lg font-semibold text-foreground">{agent.name}</h1>
         </div>
 
         {isAdmin && (

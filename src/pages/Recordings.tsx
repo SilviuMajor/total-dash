@@ -14,7 +14,7 @@ const recordings = [
 
 export default function Recordings() {
   return (
-    <div className="space-y-8">
+    <div className="p-6 space-y-6">
       <div>
         <h1 className="text-lg font-semibold">Recordings</h1>
         <p className="text-sm text-muted-foreground">Browse and analyze your AI agent call recordings.</p>

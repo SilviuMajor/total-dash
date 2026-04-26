@@ -8,9 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Eye, Save, Link2, Plus, Minus } from "lucide-react";
+import { Eye, Save, Link2, Plus, Minus } from "lucide-react";
 import { useImpersonation } from "@/hooks/useImpersonation";
 import { PageSkeleton } from "@/components/skeletons/PageSkeleton";
+import { BackButton } from "@/components/BackButton";
 
 export default function AgencyDetails() {
   const { id } = useParams();
@@ -306,13 +307,7 @@ export default function AgencyDetails() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate('/admin/agencies')}
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
+          <BackButton to="/admin/agencies" />
           <div>
             <h1 className="text-lg font-semibold">{agency?.name}</h1>
             <p className="text-sm text-muted-foreground">Manage agency details and subscription</p>
