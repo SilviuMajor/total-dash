@@ -1058,6 +1058,13 @@ function generateWidgetScript(config: any): string {
   let isInHandover = false;
   let isConversationEnded = false;
   let realtimeSubscription = null;
+  // N6: keep polling alive after handover_ended so we can detect a session_refreshed
+  // event (agent took over after the prior session timed out). Cleared after the watch
+  // window expires or once a refresh arrives.
+  let postHandoverWatching = false;
+  let pendingExitHandoverTimer = null;
+  let postHandoverWatchTimer = null;
+  const POST_HANDOVER_WATCH_MS = 30 * 60 * 1000;
   
   // Helper to get the Voiceflow user ID (combined with session ID)
   function getVoiceflowUserId() {
@@ -1460,7 +1467,9 @@ function generateWidgetScript(config: any): string {
     let lastTimestamp = new Date(Date.now() - 3000).toISOString();
     
     const pollInterval = setInterval(async () => {
-      if (!isInHandover || !conversationId) {
+      // N6: keep polling while in handover OR while watching for a session_refreshed
+      // event after handover_ended (within POST_HANDOVER_WATCH_MS).
+      if ((!isInHandover && !postHandoverWatching) || !conversationId) {
         clearInterval(pollInterval);
         realtimeSubscription = null;
         return;
@@ -1521,9 +1530,38 @@ function generateWidgetScript(config: any): string {
             messages.push(newMsg);
             hasNewMessages = true;
             
-            // Detect handover end — stop polling after 3s to catch the system message
+            // Detect handover end — exit handover UI after 3s, but keep polling for
+            // POST_HANDOVER_WATCH_MS so we can pick up a session_refreshed event if an
+            // agent takes over post-timeout.
             if (transcript.metadata && transcript.metadata.type === 'handover_ended') {
-              setTimeout(() => stopHandoverRealtime(), 3000);
+              if (pendingExitHandoverTimer) clearTimeout(pendingExitHandoverTimer);
+              pendingExitHandoverTimer = setTimeout(function() {
+                exitHandoverUI();
+              }, 3000);
+              postHandoverWatching = true;
+              if (postHandoverWatchTimer) clearTimeout(postHandoverWatchTimer);
+              postHandoverWatchTimer = setTimeout(function() {
+                postHandoverWatching = false;
+                postHandoverWatchTimer = null;
+              }, POST_HANDOVER_WATCH_MS);
+            }
+
+            // N6: agent took over after the prior session ended. Cancel the pending
+            // exit-UI timer (if still scheduled), drop watch mode, and re-enter handover.
+            if (transcript.metadata && transcript.metadata.type === 'session_refreshed') {
+              if (pendingExitHandoverTimer) {
+                clearTimeout(pendingExitHandoverTimer);
+                pendingExitHandoverTimer = null;
+              }
+              if (postHandoverWatchTimer) {
+                clearTimeout(postHandoverWatchTimer);
+                postHandoverWatchTimer = null;
+              }
+              postHandoverWatching = false;
+              if (!isInHandover) {
+                isInHandover = true;
+                console.log('[VF Widget] Handover resumed by takeover');
+              }
             }
           }
           
@@ -1544,36 +1582,34 @@ function generateWidgetScript(config: any): string {
     realtimeSubscription = pollInterval;
   }
   
-  function stopHandoverRealtime() {
-    if (realtimeSubscription) {
-      console.log('[VF Widget] Stopping handover realtime');
-      clearInterval(realtimeSubscription);
-      realtimeSubscription = null;
-    }
+  // N6: exit the handover UI but keep polling alive in case a takeover refresh arrives.
+  // Called 3s after handover_ended. Used to be the body of stopHandoverRealtime.
+  function exitHandoverUI() {
+    pendingExitHandoverTimer = null;
     isInHandover = false;
     isTyping = false;
-    
+
     // One-time fetch for resume messages (Voiceflow bot responses after handover end)
     if (conversationId) {
       setTimeout(async () => {
         try {
-          const url = SUPABASE_URL + '/rest/v1/transcripts?conversation_id=eq.' + conversationId 
+          const url = SUPABASE_URL + '/rest/v1/transcripts?conversation_id=eq.' + conversationId
             + '&speaker=eq.assistant'
             + '&order=timestamp.desc'
             + '&limit=5'
             + '&select=id,speaker,text,buttons,timestamp,metadata';
-          
+
           const response = await fetch(url, {
             headers: {
               'apikey': SUPABASE_ANON_KEY,
               'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
             }
           });
-          
+
           if (response.ok) {
             const transcripts = await response.json();
             let hasNew = false;
-            
+
             // Process in chronological order (result is desc, reverse it)
             for (const t of transcripts.reverse()) {
               if (t.metadata?.response_type === 'handover_resume' || t.metadata?.response_type === 'handover_resume_buttons') {
@@ -1585,7 +1621,7 @@ function generateWidgetScript(config: any): string {
                       parsedButtons = typeof t.buttons === 'string' ? JSON.parse(t.buttons) : t.buttons;
                     } catch(e) { parsedButtons = null; }
                   }
-                  
+
                   messages.push({
                     id: rtId,
                     speaker: 'assistant',
@@ -1597,7 +1633,7 @@ function generateWidgetScript(config: any): string {
                 }
               }
             }
-            
+
             if (hasNew) {
               renderPanel();
               scrollToLatestMessage();
@@ -1609,9 +1645,30 @@ function generateWidgetScript(config: any): string {
         } catch (e) {
           console.error('[VF Widget] Error fetching resume messages:', e);
         }
-      }, 500); // Fetch resume messages quickly after polling stops
+      }, 500);
     }
-    
+
+    renderPanel();
+  }
+
+  // Hard stop — used by startNewChat. Tears down polling and clears all state.
+  function stopHandoverRealtime() {
+    if (realtimeSubscription) {
+      console.log('[VF Widget] Stopping handover realtime');
+      clearInterval(realtimeSubscription);
+      realtimeSubscription = null;
+    }
+    if (pendingExitHandoverTimer) {
+      clearTimeout(pendingExitHandoverTimer);
+      pendingExitHandoverTimer = null;
+    }
+    if (postHandoverWatchTimer) {
+      clearTimeout(postHandoverWatchTimer);
+      postHandoverWatchTimer = null;
+    }
+    postHandoverWatching = false;
+    isInHandover = false;
+    isTyping = false;
     renderPanel();
   }
   

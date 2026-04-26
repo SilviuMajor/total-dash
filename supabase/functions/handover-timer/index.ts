@@ -151,14 +151,28 @@ serve(async (req) => {
           // No fallback available — timeout the session
           console.log("Timing out session:", session.id);
 
-          await supabaseClient
+          // N6: Conditional UPDATE — only flip pending -> timeout if the session is still
+          // pending. A concurrent take_over may have completed it between our fetch and now;
+          // emitting timeout side effects on a superseded session causes duplicate
+          // "Handover ended" pills and a missing/misordered system message.
+          const { data: timedOut } = await supabaseClient
             .from("handover_sessions")
             .update({
               status: "timeout",
               completed_at: new Date().toISOString(),
               completion_method: "timeout",
             })
-            .eq("id", session.id);
+            .eq("id", session.id)
+            .eq("status", "pending")
+            .select("id")
+            .maybeSingle();
+          if (!timedOut) {
+            console.log("[pending_timeout_skip]", JSON.stringify({
+              sessionId: session.id,
+              reason: "status_changed_during_update",
+            }));
+            continue;
+          }
 
           // Update conversation
           await supabaseClient

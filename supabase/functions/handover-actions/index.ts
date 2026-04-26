@@ -274,6 +274,23 @@ async function handleTakeOver(
   // If conversation is in "waiting" (pending handover), takeover is allowed —
   // the pending session will be completed below and a new active one created.
 
+  // N6: Capture the most recent prior session for succession tracking. Any status —
+  // pending/active/timeout/inactivity_timeout/completed. Used to set previous_session_id
+  // on the new row and to drive the widget's session_refreshed handling.
+  const { data: prevSession } = await supabaseClient
+    .from("handover_sessions")
+    .select("id, status")
+    .eq("conversation_id", conversationId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const prevSessionId = prevSession?.id ?? null;
+  const prevSessionStatus = prevSession?.status ?? null;
+  const isRefreshAfterEnded =
+    prevSessionStatus === "timeout" ||
+    prevSessionStatus === "inactivity_timeout" ||
+    prevSessionStatus === "completed";
+
   // Complete any existing pending sessions for this conversation
   // (e.g., if a proactive takeover happens while a handover request is pending)
   await supabaseClient
@@ -324,6 +341,7 @@ async function handleTakeOver(
       accepted_at: new Date().toISOString(),
       last_activity_at: new Date().toISOString(),
       inactivity_reset_at: new Date().toISOString(),
+      previous_session_id: prevSessionId,
     })
     .select()
     .single();
@@ -369,16 +387,22 @@ async function handleTakeOver(
     );
   }
 
-  // Store system message
+  // Store system message. N6: when the prior session ended (timeout/inactivity/completed),
+  // mark this transcript as a session_refreshed event so the widget can re-enter handover
+  // mode after it received handover_ended on the prior session. Otherwise behave as a
+  // normal handover_accepted notification.
   await supabaseClient.from("transcripts").insert({
     conversation_id: conversationId,
     speaker: "system",
     text: joinedMessage,
     metadata: {
-      type: "handover_accepted",
+      type: isRefreshAfterEnded ? "session_refreshed" : "handover_accepted",
       client_user_id: clientUserId,
       client_user_name: clientUserName,
       takeover_type: "proactive",
+      previous_session_id: prevSessionId,
+      previous_session_status: prevSessionStatus,
+      new_session_id: session.id,
       timestamp: new Date().toISOString(),
     },
   });
