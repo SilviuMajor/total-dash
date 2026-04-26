@@ -17,7 +17,7 @@ Silv is the only person editing this codebase. No team, no reviewers. This means
 
 - **Frontend:** React + Vite + TypeScript + Tailwind + shadcn/ui (`src/`)
 - **Backend:** Supabase — Postgres, Auth, Edge Functions, RLS, Realtime (`supabase/`)
-- **Supabase project ref:** `fkbpxsneprdmiskftteo`
+- **Supabase project ref:** `nznfznjlroycddegwvpt`
 - **Hosting:** Production Supabase directly. No staging environment yet (will add branching when HeyB migrates).
 
 ## How Silv works with Claude

@@ -26,3 +26,4 @@ dist-ssr
 # Migration scripts
 scripts/migration/.env.migration
 scripts/migration/node_modules
+supabase/.temp/
