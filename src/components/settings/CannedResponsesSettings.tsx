@@ -81,10 +81,15 @@ export function CannedResponsesSettings({ readOnly, clientId: propClientId }: { 
   const togglePersonal = async (enabled: boolean) => {
     setPersonalEnabled(enabled);
     if (!selectedAgentId) return;
-    await supabase.rpc('update_agent_config', {
+    const { error } = await supabase.rpc('update_agent_config', {
       p_agent_id: selectedAgentId,
       p_config_updates: { canned_responses_personal_enabled: enabled },
     });
+    if (error) {
+      setPersonalEnabled(!enabled);
+      toast({ title: "Failed to save", description: error.message, variant: "destructive" });
+      return;
+    }
     toast({ title: "Updated", description: `Personal canned responses ${enabled ? "enabled" : "disabled"}` });
   };
 
@@ -98,7 +103,7 @@ export function CannedResponsesSettings({ readOnly, clientId: propClientId }: { 
       sort_order: responses.length,
     });
     if (error) {
-      toast({ title: "Error", description: "Failed to add response", variant: "destructive" });
+      toast({ title: "Failed to add", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Added", description: "Canned response created" });
       setNewTitle(""); setNewBody(""); setShowAdd(false);
@@ -113,15 +118,21 @@ export function CannedResponsesSettings({ readOnly, clientId: propClientId }: { 
       category: editCategory.trim() || "General",
       updated_at: new Date().toISOString(),
     }).eq("id", id);
-    if (!error) {
-      setEditingId(null);
-      loadResponses();
-      toast({ title: "Saved" });
+    if (error) {
+      toast({ title: "Failed to save", description: error.message, variant: "destructive" });
+      return;
     }
+    setEditingId(null);
+    loadResponses();
+    toast({ title: "Saved" });
   };
 
   const deleteResponse = async (id: string) => {
-    await supabase.from("canned_responses").delete().eq("id", id);
+    const { error } = await supabase.from("canned_responses").delete().eq("id", id);
+    if (error) {
+      toast({ title: "Failed to delete", description: error.message, variant: "destructive" });
+      return;
+    }
     setDeleteId(null);
     loadResponses();
     toast({ title: "Deleted" });
