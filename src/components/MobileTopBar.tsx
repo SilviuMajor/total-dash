@@ -13,7 +13,7 @@ export function MobileTopBar() {
   const { isClientPreviewMode, previewClientAgencyId } = useMultiTenantAuth();
   const branding = useBranding({
     isClientView: isClientPreviewMode,
-    agencyId: isClientPreviewMode ? previewClientAgencyId : undefined,
+    agencyId: isClientPreviewMode ? (previewClientAgencyId ?? undefined) : undefined,
     appTheme: effectiveTheme,
   });
 

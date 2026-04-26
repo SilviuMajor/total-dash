@@ -359,9 +359,10 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
 
       setAgents(agentsList.map(({ effectivePermissions, ...agent }: any) => agent));
 
-      if (agentsList.length > 0) {
-        setSelectedAgentId(agentsList[0].id);
-        setSelectedAgentPermissions(agentsList[0].effectivePermissions);
+      const firstAgent = agentsList[0];
+      if (firstAgent) {
+        setSelectedAgentId(firstAgent.id);
+        setSelectedAgentPermissions(firstAgent.effectivePermissions);
       } else {
         setSelectedAgentId(null);
         setSelectedAgentPermissions(null);
@@ -544,9 +545,10 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
 
       setAgents(agentsList.map(({ effectivePermissions, ...agent }: any) => agent));
 
-      if (agentsList.length > 0) {
-        setSelectedAgentId(agentsList[0].id);
-        setSelectedAgentPermissions(agentsList[0].effectivePermissions);
+      const firstAgent = agentsList[0];
+      if (firstAgent) {
+        setSelectedAgentId(firstAgent.id);
+        setSelectedAgentPermissions(firstAgent.effectivePermissions);
       }
     } catch (error) {
       console.error('Error loading client agents:', error);

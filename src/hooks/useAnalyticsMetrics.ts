@@ -167,7 +167,7 @@ function calculateMetrics(conversations: any[], dateRange: DateRange) {
 
 function generateTimeSeriesData(conversations: any[], dateRange: DateRange) {
   const days = differenceInDays(dateRange.to, dateRange.from) + 1;
-  const data = [];
+  const data: Array<{ date: string; fullDate: Date; count: number }> = [];
 
   for (let i = 0; i < days; i++) {
     const date = subDays(dateRange.to, days - i - 1);

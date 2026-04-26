@@ -53,7 +53,7 @@ export function Sidebar({ className }: { className?: string } = {}) {
 
   // Determine branding context
   const isClientView = isClientPreviewMode;
-  const agencyId = isClientView ? previewClientAgencyId : undefined;
+  const agencyId = isClientView ? (previewClientAgencyId ?? undefined) : undefined;
   
   // Use branding hook for dynamic branding
   const branding = useBranding({ isClientView, agencyId, appTheme: effectiveTheme });
@@ -82,7 +82,7 @@ export function Sidebar({ className }: { className?: string } = {}) {
       // settings_page special check — always show in preview mode
       if (item.permissionKey === 'settings_page') return true;
       if (item.permissionKey && selectedAgent) {
-        return selectedAgentPermissions?.[item.permissionKey] === true;
+        return (selectedAgentPermissions as unknown as Record<string, boolean> | null)?.[item.permissionKey] === true;
       }
       return item.permissionKey === null;
     }).filter(item => {
@@ -120,7 +120,7 @@ export function Sidebar({ className }: { className?: string } = {}) {
       }
       
       // Filter by permission
-      return selectedAgentPermissions?.[item.permissionKey] === true;
+      return (selectedAgentPermissions as unknown as Record<string, boolean> | null)?.[item.permissionKey] === true;
     });
   }
 

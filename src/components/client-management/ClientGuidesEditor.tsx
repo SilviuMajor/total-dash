@@ -108,7 +108,6 @@ export function ClientGuidesEditor({ clientId }: ClientGuidesEditorProps) {
         toast({
           title: "Guides saved",
           description: "Your guide sections have been updated successfully.",
-          duration: 3000,
         });
         
         setEditingSection(null);

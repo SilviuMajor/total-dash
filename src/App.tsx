@@ -64,8 +64,8 @@ const BrandingWrapper = ({ children }: { children: React.ReactNode }) => {
   const { isClientPreviewMode, previewClientAgencyId, isPreviewMode, previewAgency } = useMultiTenantAuth();
   const location = useLocation();
   const isClientView = isClientPreviewMode;
-  const relevantAgencyId = isClientPreviewMode 
-    ? previewClientAgencyId 
+  const relevantAgencyId = isClientPreviewMode
+    ? (previewClientAgencyId ?? undefined)
     : (isPreviewMode && previewAgency ? previewAgency.id : undefined);
   const branding = useBranding({ 
     isClientView, 

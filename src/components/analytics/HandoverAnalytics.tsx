@@ -113,7 +113,7 @@ export function HandoverAnalytics({ agentId, dateRange }: HandoverAnalyticsProps
       for (const s of filteredSessions) {
         const dept = (s as any).departments;
         const deptId = s.department_id || "unknown";
-        const existing = deptMap.get(deptId) || { name: dept?.name || "Unknown", color: dept?.color || "#6b7280", count: 0, acceptTimes: [] };
+        const existing = deptMap.get(deptId) || { name: dept?.name || "Unknown", color: dept?.color || "#6b7280", count: 0, acceptTimes: [] as number[] };
         existing.count++;
         if (s.accepted_at) {
           existing.acceptTimes.push((new Date(s.accepted_at).getTime() - new Date(s.requested_at!).getTime()) / 1000);

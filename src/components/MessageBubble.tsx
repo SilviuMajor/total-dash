@@ -43,8 +43,8 @@ export function MessageBubble({
   
   // Parse message for file URLs
   let messageContent = text || '';
-  let fileUrl = null;
-  let fileName = null;
+  let fileUrl: string | null = null;
+  let fileName: string | null = null;
   let isImage = false;
   
   // Detect file patterns: [Image: filename]\nurl or [File: filename]\nurl

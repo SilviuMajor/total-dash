@@ -10,15 +10,15 @@ export function useBrandingQuery(agencyId?: string) {
         .select('*')
         .maybeSingle();
 
-      let agencyData = null;
-      if (agencyId) {
-        const { data } = await supabase
-          .from('agencies')
-          .select('logo_light_url, logo_dark_url, full_logo_light_url, full_logo_dark_url, favicon_light_url, favicon_dark_url, name')
-          .eq('id', agencyId)
-          .single();
-        agencyData = data;
-      }
+      const agencyData = agencyId
+        ? (
+            await supabase
+              .from('agencies')
+              .select('logo_light_url, logo_dark_url, full_logo_light_url, full_logo_dark_url, favicon_light_url, favicon_dark_url, name')
+              .eq('id', agencyId)
+              .single()
+          ).data
+        : null;
 
       return { platformData, agencyData };
     },

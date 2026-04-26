@@ -155,6 +155,7 @@ export default function AgencySettings() {
   };
 
   const handleVerifyDomain = async () => {
+    if (!agency) return;
     setVerifying(true);
     try {
       const { data, error } = await supabase.functions.invoke('verify-whitelabel-domain', {
@@ -188,6 +189,7 @@ export default function AgencySettings() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!agency || !effectiveAgencyId) return;
     setSaving(true);
 
     try {
@@ -274,7 +276,7 @@ export default function AgencySettings() {
                   <Label>Agency Name</Label>
                   <Input
                     value={agency?.name || ''}
-                    onChange={(e) => setAgency({ ...agency, name: e.target.value })}
+                    onChange={(e) => setAgency(prev => prev ? { ...prev, name: e.target.value } : prev)}
                   />
                 </div>
                 
@@ -286,7 +288,7 @@ export default function AgencySettings() {
                       const normalized = e.target.value.toLowerCase()
                         .replace(/[^a-z0-9-]/g, '')
                         .replace(/^-+|-+$/g, '');
-                      setAgency({ ...agency!, slug: normalized });
+                      setAgency(prev => prev ? { ...prev, slug: normalized } : prev);
                       setSlugValidationError('');
                     }}
                     onBlur={async () => {
@@ -335,7 +337,7 @@ export default function AgencySettings() {
                   <Input
                     type="email"
                     value={agency?.support_email || ''}
-                    onChange={(e) => setAgency({ ...agency, support_email: e.target.value })}
+                    onChange={(e) => setAgency(prev => prev ? { ...prev, support_email: e.target.value } : prev)}
                   />
                 </div>
                 <Button type="submit" disabled={saving}>
@@ -382,8 +384,8 @@ export default function AgencySettings() {
                     <BrandingUpload
                       label="Sidebar Logo (Light Mode)"
                       description="Square logo shown in client sidebar (light theme). Leave empty to show platform default."
-                      currentUrl={agency?.logo_light_url}
-                      onUpload={(url) => setAgency({ ...agency, logo_light_url: url })}
+                      currentUrl={agency?.logo_light_url ?? undefined}
+                      onUpload={(url) => setAgency(prev => prev ? { ...prev, logo_light_url: url } : prev)}
                       bucket="agency-logos"
                       acceptedTypes={['.png', '.jpg', '.jpeg', '.svg']}
                       type="logo"
@@ -392,8 +394,8 @@ export default function AgencySettings() {
                     <BrandingUpload
                       label="Sidebar Logo (Dark Mode)"
                       description="Square logo shown in client sidebar (dark theme). Leave empty to show platform default."
-                      currentUrl={agency?.logo_dark_url}
-                      onUpload={(url) => setAgency({ ...agency, logo_dark_url: url })}
+                      currentUrl={agency?.logo_dark_url ?? undefined}
+                      onUpload={(url) => setAgency(prev => prev ? { ...prev, logo_dark_url: url } : prev)}
                       bucket="agency-logos"
                       acceptedTypes={['.png', '.jpg', '.jpeg', '.svg']}
                       type="logo"
@@ -404,8 +406,8 @@ export default function AgencySettings() {
                     <BrandingUpload
                       label="Full Logo (Light Mode)"
                       description="Wide format logo for client login page (light theme). Client sees this on login screen at your custom domain. Leave empty to show platform default."
-                      currentUrl={agency?.full_logo_light_url}
-                      onUpload={(url) => setAgency({ ...agency, full_logo_light_url: url })}
+                      currentUrl={agency?.full_logo_light_url ?? undefined}
+                      onUpload={(url) => setAgency(prev => prev ? { ...prev, full_logo_light_url: url } : prev)}
                       bucket="agency-logos"
                       acceptedTypes={['.png', '.jpg', '.jpeg', '.svg']}
                       type="full-logo"
@@ -414,8 +416,8 @@ export default function AgencySettings() {
                     <BrandingUpload
                       label="Full Logo (Dark Mode)"
                       description="Wide format logo for client login page (dark theme). Client sees this on login screen at your custom domain. Leave empty to show platform default."
-                      currentUrl={agency?.full_logo_dark_url}
-                      onUpload={(url) => setAgency({ ...agency, full_logo_dark_url: url })}
+                      currentUrl={agency?.full_logo_dark_url ?? undefined}
+                      onUpload={(url) => setAgency(prev => prev ? { ...prev, full_logo_dark_url: url } : prev)}
                       bucket="agency-logos"
                       acceptedTypes={['.png', '.jpg', '.jpeg', '.svg']}
                       type="full-logo"
@@ -426,8 +428,8 @@ export default function AgencySettings() {
                     <BrandingUpload
                       label="Favicon (Light Mode)"
                       description="Browser tab icon for client dashboard (light theme). Leave empty to show platform default."
-                      currentUrl={agency?.favicon_light_url}
-                      onUpload={(url) => setAgency({ ...agency, favicon_light_url: url })}
+                      currentUrl={agency?.favicon_light_url ?? undefined}
+                      onUpload={(url) => setAgency(prev => prev ? { ...prev, favicon_light_url: url } : prev)}
                       bucket="agency-logos"
                       acceptedTypes={['.ico', '.png']}
                       type="favicon"
@@ -436,8 +438,8 @@ export default function AgencySettings() {
                     <BrandingUpload
                       label="Favicon (Dark Mode)"
                       description="Browser tab icon for client dashboard (dark theme). Leave empty to show platform default."
-                      currentUrl={agency?.favicon_dark_url}
-                      onUpload={(url) => setAgency({ ...agency, favicon_dark_url: url })}
+                      currentUrl={agency?.favicon_dark_url ?? undefined}
+                      onUpload={(url) => setAgency(prev => prev ? { ...prev, favicon_dark_url: url } : prev)}
                       bucket="agency-logos"
                       acceptedTypes={['.ico', '.png']}
                       type="favicon"
@@ -454,7 +456,7 @@ export default function AgencySettings() {
                       <Label>Subdomain Prefix</Label>
                       <Input
                         value={agency?.whitelabel_subdomain || 'dashboard'}
-                        onChange={(e) => setAgency({ ...agency, whitelabel_subdomain: e.target.value })}
+                        onChange={(e) => setAgency(prev => prev ? { ...prev, whitelabel_subdomain: e.target.value } : prev)}
                         placeholder="dashboard"
                       />
                       <p className="text-xs text-muted-foreground">
@@ -466,7 +468,7 @@ export default function AgencySettings() {
                       <Label>Your Domain</Label>
                       <Input
                         value={agency?.whitelabel_domain || ''}
-                        onChange={(e) => setAgency({ ...agency, whitelabel_domain: e.target.value })}
+                        onChange={(e) => setAgency(prev => prev ? { ...prev, whitelabel_domain: e.target.value } : prev)}
                         placeholder="youragency.com"
                       />
                       <p className="text-xs text-muted-foreground">
@@ -538,12 +540,12 @@ export default function AgencySettings() {
                         <Input
                           type="color"
                           value={agency?.primary_color || '#000000'}
-                          onChange={(e) => setAgency({ ...agency, primary_color: e.target.value })}
+                          onChange={(e) => setAgency(prev => prev ? { ...prev, primary_color: e.target.value } : prev)}
                           className="w-20"
                         />
                         <Input
                           value={agency?.primary_color || '#000000'}
-                          onChange={(e) => setAgency({ ...agency, primary_color: e.target.value })}
+                          onChange={(e) => setAgency(prev => prev ? { ...prev, primary_color: e.target.value } : prev)}
                         />
                       </div>
                     </div>
@@ -553,12 +555,12 @@ export default function AgencySettings() {
                         <Input
                           type="color"
                           value={agency?.secondary_color || '#ffffff'}
-                          onChange={(e) => setAgency({ ...agency, secondary_color: e.target.value })}
+                          onChange={(e) => setAgency(prev => prev ? { ...prev, secondary_color: e.target.value } : prev)}
                           className="w-20"
                         />
                         <Input
                           value={agency?.secondary_color || '#ffffff'}
-                          onChange={(e) => setAgency({ ...agency, secondary_color: e.target.value })}
+                          onChange={(e) => setAgency(prev => prev ? { ...prev, secondary_color: e.target.value } : prev)}
                         />
                       </div>
                     </div>
@@ -627,7 +629,7 @@ export default function AgencySettings() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => {
-              setAgency({ ...agency!, slug: agency?.original_slug || '' });
+              setAgency(prev => prev ? { ...prev, slug: prev.original_slug || '' } : prev);
             }}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={confirmSlugChange} disabled={!!slugValidationError || checkingSlug}>
               Confirm Change

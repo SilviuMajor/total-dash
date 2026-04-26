@@ -56,7 +56,7 @@ export function ClientSettings({ client, onUpdate }: ClientSettingsProps) {
           .eq('id', client.id)
           .single();
 
-        if (clientData) {
+        if (clientData && clientData.agency_id) {
           setFormData(prev => ({ ...prev, slug: clientData.slug }));
           setOriginalSlug(clientData.slug);
 

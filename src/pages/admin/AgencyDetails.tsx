@@ -37,6 +37,7 @@ export default function AgencyDetails() {
   }, [id]);
 
   const loadAgencyDetails = async () => {
+    if (!id) return;
     try {
       const { data: agencyData, error: agencyError } = await supabase
         .from('agencies')
@@ -87,6 +88,7 @@ export default function AgencyDetails() {
   };
 
   const handleSave = async () => {
+    if (!id) return;
     setSaving(true);
     try {
       const { error } = await supabase
@@ -117,6 +119,7 @@ export default function AgencyDetails() {
   };
 
   const handleSaveSubscription = async () => {
+    if (!id) return;
     setSavingSubscription(true);
     try {
       const basePlan = subscription?.subscription_plans;
@@ -210,6 +213,7 @@ export default function AgencyDetails() {
   };
 
   const handleToggleManualOverride = async (enabled: boolean) => {
+    if (!id) return;
     try {
       const { data: { user } } = await supabase.auth.getUser();
       
@@ -239,6 +243,7 @@ export default function AgencyDetails() {
   };
 
   const handleSaveOverrideReason = async () => {
+    if (!id) return;
     try {
       const { error } = await supabase
         .from('agency_subscriptions')

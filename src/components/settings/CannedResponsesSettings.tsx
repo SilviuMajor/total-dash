@@ -22,7 +22,7 @@ interface CannedResponse {
   category: string;
   title: string;
   body: string;
-  sort_order: number;
+  sort_order: number | null;
 }
 
 export function CannedResponsesSettings({ readOnly, clientId: propClientId }: { readOnly?: boolean; clientId?: string } = {}) {

@@ -11,14 +11,14 @@ interface Profile {
   full_name: string | null;
   first_name: string | null;
   last_name: string | null;
-  updated_at: string;
+  updated_at: string | null;
 }
 
 export interface AgencyUser {
   id: string;
   user_id: string;
   role: 'owner' | 'admin' | 'user';
-  created_at: string;
+  created_at: string | null;
   profile: Profile;
 }
 
@@ -102,7 +102,7 @@ export function AgencyUserManagementTable({
                 <PasswordDisplay userId={user.user_id} />
               </td>
               <td className="py-2 px-3 text-xs text-muted-foreground">
-                {format(new Date(user.profile.updated_at), 'MMM d, yyyy')}
+                {user.profile.updated_at ? format(new Date(user.profile.updated_at), 'MMM d, yyyy') : '—'}
               </td>
               <td className="py-2 px-3">
                 <div className="flex items-center justify-end gap-1">

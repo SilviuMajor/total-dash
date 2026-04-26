@@ -145,10 +145,15 @@ export default function EmailTemplates() {
     if (!editingTemplate) return;
 
     try {
+      const userId = (await supabase.auth.getUser()).data.user?.id;
+      if (!userId) {
+        toast.error("Not signed in");
+        return;
+      }
       const { data: profile } = await supabase
         .from("profiles")
         .select("email")
-        .eq("id", (await supabase.auth.getUser()).data.user?.id)
+        .eq("id", userId)
         .single();
 
       if (!profile?.email) {
@@ -221,7 +226,7 @@ export default function EmailTemplates() {
           <TabsTrigger value="history">Email History</TabsTrigger>
         </TabsList>
 
-        {Object.entries(templatesByCategory).map(([category, categoryTemplates]: [string, any[]]) => (
+        {(Object.entries(templatesByCategory) as [string, any[]][]).map(([category, categoryTemplates]) => (
           <TabsContent key={category} value={category} className="space-y-4">
             {categoryTemplates.map((template) => (
               <Card key={template.id}>

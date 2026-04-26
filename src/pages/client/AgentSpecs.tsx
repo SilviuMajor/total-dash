@@ -58,6 +58,7 @@ export default function AgentSpecs() {
   }, [selectedAgentId]);
 
   const loadAgentSpecs = async () => {
+    if (!selectedAgentId) return;
     try {
       // Load agent details
       const { data: agentData } = await supabase
