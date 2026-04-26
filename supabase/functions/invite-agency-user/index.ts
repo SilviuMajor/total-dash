@@ -116,7 +116,7 @@ serve(async (req) => {
       .single();
 
     const platformName = branding?.company_name || 'FiveLeaf';
-    const dashboardUrl = `${Deno.env.get('SUPABASE_URL')?.replace('supabase.co', 'lovable.app') || 'http://localhost:8080'}/agency`;
+    const dashboardUrl = `${Deno.env.get('SITE_URL') || 'https://app.total-dash.com'}/agency`;
 
     // Get support email
     const { data: agencySettings } = await supabase

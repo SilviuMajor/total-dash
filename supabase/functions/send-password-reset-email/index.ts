@@ -54,7 +54,7 @@ serve(async (req) => {
     console.log('Sending password reset email to:', targetEmail);
 
     // Send password reset email using Supabase Auth
-    const siteUrl = Deno.env.get('SITE_URL') || Deno.env.get('SUPABASE_URL')?.replace('.supabase.co', '.lovable.app') || 'https://total-dash.com';
+    const siteUrl = Deno.env.get('SITE_URL') || 'https://app.total-dash.com';
     const { error: resetError } = await supabaseAdmin.auth.resetPasswordForEmail(targetEmail, {
       redirectTo: `${siteUrl}/change-password`,
     });

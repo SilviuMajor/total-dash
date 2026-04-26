@@ -86,7 +86,7 @@ serve(async (req) => {
     // Get context-specific data
     let agencyName = null;
     let clientName = null;
-    const siteUrl = Deno.env.get('SITE_URL') || Deno.env.get('SUPABASE_URL')?.replace('.supabase.co', '.lovable.app') || 'https://total-dash.com';
+    const siteUrl = Deno.env.get('SITE_URL') || 'https://app.total-dash.com';
     let dashboardUrl = `${siteUrl}/`;
 
     if (userType === 'agency' && contextId) {

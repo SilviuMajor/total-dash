@@ -285,14 +285,6 @@ SET
   variables = EXCLUDED.variables,
   description = EXCLUDED.description;
 
--- Create cron job for daily trial reminder emails at 8:00 AM UTC
-SELECT cron.schedule(
-  'send-trial-reminder-emails',
-  '0 8 * * *',
-  $$
-  SELECT net.http_post(
-    url := 'https://fkbpxsneprdmiskftteo.supabase.co/functions/v1/schedule-trial-reminder-emails',
-    headers := '{"Content-Type": "application/json", "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZrYnB4c25lcHJkbWlza2Z0dGVvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkyMDA2NTUsImV4cCI6MjA3NDc3NjY1NX0.djDL3fiLzPa-0WNquI2AISxQxIAjYN80WL-PHrcSbvc"}'::jsonb
-  ) as request_id;
-  $$
-);
+-- The daily trial-reminder cron is scheduled out-of-band by an operational
+-- script (see scripts/migration/) so the project ref and anon key are not
+-- baked into a migration file.

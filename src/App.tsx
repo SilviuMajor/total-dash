@@ -18,7 +18,6 @@ import { Sidebar } from "./components/Sidebar";
 import { CommandSearch } from "./components/CommandSearch";
 import { DevSwitch } from "./components/DevSwitch";
 import Auth from "./pages/Auth";
-import ResetPassword from "./pages/ResetPassword";
 import ChangePassword from "./pages/ChangePassword";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AgencyLogin from "./pages/agency/AgencyLogin";
@@ -98,7 +97,6 @@ const App = () => (
                   <DevSwitch />
               <Routes>
                 {/* Public Routes */}
-                <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/change-password" element={<ChangePassword />} />
                 
                 {/* Admin Routes (Super Admin) */}

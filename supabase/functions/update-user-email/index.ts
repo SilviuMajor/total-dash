@@ -52,7 +52,7 @@ serve(async (req) => {
     await supabaseAdmin.from('profiles').update({ email: newEmail }).eq('id', userId);
 
     // Send password setup email to new address
-    const siteUrl = Deno.env.get('SITE_URL') || Deno.env.get('SUPABASE_URL')?.replace('.supabase.co', '.lovable.app') || 'https://total-dash.com';
+    const siteUrl = Deno.env.get('SITE_URL') || 'https://app.total-dash.com';
     await supabaseAdmin.auth.resetPasswordForEmail(newEmail, {
       redirectTo: `${siteUrl}/change-password`,
     });
