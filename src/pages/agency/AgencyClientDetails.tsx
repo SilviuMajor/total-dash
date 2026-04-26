@@ -35,8 +35,8 @@ interface ClientData {
   scheduled_deletion_date: string | null;
   subscription_status: string | null;
   is_active: boolean | null;
-  created_at: string;
-  agency_id: string;
+  created_at: string | null;
+  agency_id: string | null;
 }
 
 function CompanySettingsPanel({ clientId }: { clientId: string }) {
@@ -263,6 +263,7 @@ export default function AgencyClientDetails() {
   }, [clientId, agencyId]);
 
   const loadClientData = async () => {
+    if (!clientId || !agencyId) return;
     try {
       const { data, error } = await supabase
         .from('clients')
@@ -272,11 +273,11 @@ export default function AgencyClientDetails() {
         .single();
 
       if (error) throw error;
-      
+
       if (!data) {
         throw new Error('Client not found or access denied');
       }
-      
+
       setClient(data);
     } catch (error: any) {
       toast({

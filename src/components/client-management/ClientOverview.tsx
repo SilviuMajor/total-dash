@@ -15,7 +15,7 @@ interface ClientOverviewProps {
     company_address: string | null;
     subscription_status: string | null;
     is_active: boolean | null;
-    created_at: string;
+    created_at: string | null;
   };
   onUpdate: () => void;
 }
@@ -144,7 +144,7 @@ export function ClientOverview({ client }: ClientOverviewProps) {
           <div className="flex items-center justify-between py-3">
             <span className="text-sm text-muted-foreground">Created</span>
             <span className="text-sm text-foreground">
-              {new Date(client.created_at).toLocaleDateString()}
+              {client.created_at ? new Date(client.created_at).toLocaleDateString() : '—'}
             </span>
           </div>
         </div>

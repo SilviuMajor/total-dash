@@ -145,10 +145,15 @@ export default function EmailTemplates() {
     if (!editingTemplate) return;
 
     try {
+      const userId = (await supabase.auth.getUser()).data.user?.id;
+      if (!userId) {
+        toast.error("Not signed in");
+        return;
+      }
       const { data: profile } = await supabase
         .from("profiles")
         .select("email")
-        .eq("id", (await supabase.auth.getUser()).data.user?.id)
+        .eq("id", userId)
         .single();
 
       if (!profile?.email) {

@@ -28,9 +28,9 @@ interface Agent {
   name: string;
   provider: string;
   config: Record<string, any>;
-  created_at: string;
+  created_at: string | null;
   status: 'active' | 'testing' | 'in_development';
-  agency_id: string;
+  agency_id: string | null;
 }
 
 interface AssignedClient {
