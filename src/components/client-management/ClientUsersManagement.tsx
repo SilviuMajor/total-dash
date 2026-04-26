@@ -37,11 +37,11 @@ interface ClientUser {
   has_overrides: boolean;
   profiles: {
     email: string;
-    last_sign_in_at?: string;
+    last_sign_in_at?: string | null;
   };
   departments?: {
     name: string;
-    color?: string;
+    color?: string | null;
   };
   agent_permissions: Record<string, any>;
 }
@@ -66,7 +66,7 @@ interface Agent {
   id: string;
   name: string;
   provider: string;
-  sort_order: number;
+  sort_order: number | null;
 }
 
 interface AgentPermission {

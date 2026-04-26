@@ -53,11 +53,13 @@ export function SupportRequestForm() {
         .single();
 
       // Get client name
-      const { data: clientData } = await supabase
-        .from('clients')
-        .select('name')
-        .eq('id', clientUserData?.client_id)
-        .single();
+      const { data: clientData } = clientUserData?.client_id
+        ? await supabase
+            .from('clients')
+            .select('name')
+            .eq('id', clientUserData.client_id)
+            .single()
+        : { data: null };
 
       // Send email via edge function
       const { error } = await supabase.functions.invoke('send-support-email', {

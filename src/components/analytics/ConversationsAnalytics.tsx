@@ -111,7 +111,8 @@ export function ConversationsAnalytics({ agentId, dateRange }: ConversationsAnal
       // Resolution reason breakdown
       const reasonCounts: Record<string, number> = {};
       conversations.filter(c => c.status === 'resolved' && c.resolution_reason).forEach(c => {
-        reasonCounts[c.resolution_reason] = (reasonCounts[c.resolution_reason] || 0) + 1;
+        const reason = c.resolution_reason!;
+        reasonCounts[reason] = (reasonCounts[reason] || 0) + 1;
       });
       const reasonDist = Object.entries(reasonCounts)
         .sort((a, b) => b[1] - a[1])
