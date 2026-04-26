@@ -206,7 +206,7 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
     if (elapsedMinutes >= 240 && activeSession) {
       endImpersonation();
     }
-  }, [elapsedMinutes]);
+  }, [elapsedMinutes, activeSession, endImpersonation]);
 
 
 

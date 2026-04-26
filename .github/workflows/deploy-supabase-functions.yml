@@ -18,18 +18,69 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install Supabase CLI
         uses: supabase/setup-cli@v1
         with:
           version: latest
 
-      - name: Deploy all Edge Functions
+      - name: Determine changed functions
+        id: changed
+        run: |
+          set -e
+          # On a manual dispatch, deploy everything. On a push, only redeploy
+          # functions whose files changed since the previous commit. Workflow
+          # file changes also force a full redeploy (covers things like CLI
+          # version bumps that should re-run every function).
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            mode="all"
+          else
+            base="${{ github.event.before }}"
+            head="${{ github.sha }}"
+            # First push to a new branch has a zero-SHA "before" — fall back to all.
+            if [ "$base" = "0000000000000000000000000000000000000000" ] || [ -z "$base" ]; then
+              mode="all"
+            else
+              changed=$(git diff --name-only "$base" "$head" || true)
+              if echo "$changed" | grep -q '^\.github/workflows/deploy-supabase-functions\.yml$'; then
+                mode="all"
+              else
+                mode="changed"
+                fns=$(echo "$changed" \
+                  | grep '^supabase/functions/' \
+                  | awk -F/ '{print $3}' \
+                  | sort -u \
+                  | grep -v '^$' || true)
+              fi
+            fi
+          fi
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+          {
+            echo "fns<<EOF"
+            echo "$fns"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Deploy Edge Functions
         run: |
           set -e
           cd supabase/functions
-          for dir in */; do
-            fn_name="${dir%/}"
+          if [ "${{ steps.changed.outputs.mode }}" = "all" ]; then
+            echo "Deploying all functions."
+            targets=$(ls -d */ | sed 's:/$::')
+          else
+            targets="${{ steps.changed.outputs.fns }}"
+            if [ -z "$targets" ]; then
+              echo "No function changes detected; nothing to deploy."
+              exit 0
+            fi
+            echo "Deploying changed functions:"
+            echo "$targets"
+          fi
+          for fn_name in $targets; do
+            [ -d "$fn_name" ] || { echo "::notice::Skipping ${fn_name} (directory removed)"; continue; }
             echo "::group::Deploying ${fn_name}"
             supabase functions deploy "${fn_name}" \
               --project-ref "${SUPABASE_PROJECT_REF}" \

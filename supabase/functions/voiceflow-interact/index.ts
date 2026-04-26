@@ -219,6 +219,27 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
     );
 
+    // Rate limit: 60 requests / minute per (IP, agentId). The endpoint is
+    // anonymous so this is the only line of defense against transcript
+    // flooding / Voiceflow bill abuse. Test-mode traffic is exempt because
+    // the dashboard's test panel can fire requests faster than 60/min while
+    // an operator is iterating.
+    if (!isTestMode) {
+      const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim()
+        || req.headers.get("cf-connecting-ip")
+        || "unknown";
+      const bucketKey = `${ip}:${agentId}`;
+      const { data: allowed, error: rlError } = await supabaseClient.rpc(
+        "widget_rate_limit_check",
+        { p_key: bucketKey, p_max: 60, p_window_seconds: 60 },
+      );
+      if (rlError) {
+        console.error("Rate limit check failed (allowing request):", rlError);
+      } else if (allowed === false) {
+        return jsonError(429, "Too many requests");
+      }
+    }
+
     // Fetch agent details (also verifies the agent exists and is live)
     const { data: agent, error: agentError } = await supabaseClient
       .from("agents")

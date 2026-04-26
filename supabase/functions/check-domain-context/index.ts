@@ -10,6 +10,17 @@ const corsHeaders = {
 const cache = new Map<string, { data: any; timestamp: number }>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
+// Periodic GC so stale entries can't survive past their TTL on low-traffic
+// instances (the size-based cleanup below only fires above 1000 entries).
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, value] of cache.entries()) {
+    if (now - value.timestamp > CACHE_TTL) {
+      cache.delete(key);
+    }
+  }
+}, CACHE_TTL);
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
