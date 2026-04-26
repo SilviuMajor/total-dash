@@ -8,6 +8,7 @@ import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { AddCardModal, NewCardData } from "./AddCardModal";
 import { useAuth } from "@/hooks/useAuth";
+// @ts-expect-error — lodash.debounce ships no types and we don't want to pull in @types/lodash
 import debounce from "lodash.debounce";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";

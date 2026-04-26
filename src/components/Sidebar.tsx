@@ -82,7 +82,7 @@ export function Sidebar({ className }: { className?: string } = {}) {
       // settings_page special check — always show in preview mode
       if (item.permissionKey === 'settings_page') return true;
       if (item.permissionKey && selectedAgent) {
-        return selectedAgentPermissions?.[item.permissionKey] === true;
+        return (selectedAgentPermissions as unknown as Record<string, boolean> | null)?.[item.permissionKey] === true;
       }
       return item.permissionKey === null;
     }).filter(item => {
@@ -120,7 +120,7 @@ export function Sidebar({ className }: { className?: string } = {}) {
       }
       
       // Filter by permission
-      return selectedAgentPermissions?.[item.permissionKey] === true;
+      return (selectedAgentPermissions as unknown as Record<string, boolean> | null)?.[item.permissionKey] === true;
     });
   }
 

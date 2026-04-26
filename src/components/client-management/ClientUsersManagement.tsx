@@ -1256,7 +1256,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                               <button
                                 className="text-[11px] px-2 py-0.5 rounded border border-border text-muted-foreground hover:bg-muted"
                                 onClick={() => {
-                                  const updated = { ...selectedUserClientPerms, settings_page: true };
+                                  const updated: Record<string, boolean> = { ...selectedUserClientPerms, settings_page: true };
                                   COMPANY_SETTINGS_TABS.filter(t => clientCaps[t.capKey] !== false).forEach(t => {
                                     updated[t.key + '_view'] = true;
                                   });
@@ -1268,7 +1268,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                               <button
                                 className="text-[11px] px-2 py-0.5 rounded border border-border text-muted-foreground hover:bg-muted"
                                 onClick={() => {
-                                  const updated = { ...selectedUserClientPerms, settings_page: true };
+                                  const updated: Record<string, boolean> = { ...selectedUserClientPerms, settings_page: true };
                                   COMPANY_SETTINGS_TABS.filter(t => clientCaps[t.capKey] !== false && !t.viewOnly).forEach(t => {
                                     updated[t.key + '_manage'] = true;
                                   });
