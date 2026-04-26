@@ -79,7 +79,7 @@ These are painful rules Silv has learned the hard way. Do NOT violate them witho
 
 ### 1. Agent config save pattern
 
-The `agents_safe` view strips API keys (`api_key`, `project_id`, etc.) from `config` JSONB. If you do `config: { ...agent.config, newKey: value }` where `agent.config` came from `agents_safe`, you'll wipe the API credentials and break the Voiceflow widget.
+The `agents_safe` view strips three API-key fields from `config` JSONB: `api_key`, `voiceflow_api_key`, `retell_api_key`. If you do `config: { ...agent.config, newKey: value }` where `agent.config` came from `agents_safe`, you'll wipe those credentials and break the Voiceflow widget. (Other fields like `project_id` are NOT stripped.)
 
 **Always use the `update_agent_config` RPC for config saves:**
 
@@ -186,11 +186,11 @@ Functions imported from `esm.sh` have failed deploys when esm.sh is flaky. Migra
 
 | File | Lines | Purpose |
 |---|---|---|
-| `pages/client/Conversations.tsx` | ~2200 | Three-panel conversations page (biggest monolith) |
-| `components/client-management/ClientUsersManagement.tsx` | ~1700 | User / department / role admin |
-| `hooks/useMultiTenantAuth.tsx` | ~587 | Auth, user type detection, preview-mode bridge |
-| `hooks/useImpersonation.tsx` | ~507 | Impersonation session management |
-| `hooks/useClientAgentContext.tsx` | ~669 | Permission resolution, agent list |
+| `pages/client/Conversations.tsx` | ~2550 | Three-panel conversations page (biggest monolith) |
+| `components/client-management/ClientUsersManagement.tsx` | ~1850 | User / department / role admin |
+| `hooks/useMultiTenantAuth.tsx` | ~600 | Auth, user type detection, preview-mode bridge |
+| `hooks/useImpersonation.tsx` | ~487 | Impersonation session management |
+| `hooks/useClientAgentContext.tsx` | ~673 | Permission resolution, agent list |
 
 Both large pages and the three large hooks are overdue for splitting. Don't refactor opportunistically without surfacing the scope first.
 
