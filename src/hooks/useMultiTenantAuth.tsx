@@ -395,6 +395,11 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
           .eq('id', userId)
           .single();
 
+        if (!profileData) {
+          setLoading(false);
+          return;
+        }
+
         // If in preview mode, load preview agency as their agency context
         if (isPreviewMode && previewAgency) {
           setProfile({
@@ -436,6 +441,11 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
           .select('*')
           .eq('id', userId)
           .single();
+
+        if (!profileData) {
+          setLoading(false);
+          return;
+        }
 
         // Get whitelabel access
         const { data: subscriptionData } = await supabase

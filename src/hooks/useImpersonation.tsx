@@ -201,15 +201,6 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(interval);
   }, [activeSession?.id]);
 
-  // Auto-timeout: close sessions older than 4 hours
-  useEffect(() => {
-    if (elapsedMinutes >= 240 && activeSession) {
-      endImpersonation();
-    }
-  }, [elapsedMinutes, activeSession, endImpersonation]);
-
-
-
   const loadClientUsers = async (clientId: string) => {
     const { data } = await supabase
       .from('client_users')
@@ -339,6 +330,13 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
       console.error('Failed to end impersonation:', error);
     }
   }, [activeSession]);
+
+  // Auto-timeout: close sessions older than 4 hours
+  useEffect(() => {
+    if (elapsedMinutes >= 240 && activeSession) {
+      endImpersonation();
+    }
+  }, [elapsedMinutes, activeSession, endImpersonation]);
 
   const exitAll = useCallback(async () => {
     try {

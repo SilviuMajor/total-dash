@@ -6,11 +6,11 @@ export interface AnalyticsTab {
   id: string;
   agent_id: string;
   name: string;
-  sort_order: number;
-  is_default: boolean;
-  default_date_range: string;
-  created_at: string;
-  updated_at: string;
+  sort_order: number | null;
+  is_default: boolean | null;
+  default_date_range: string | null;
+  created_at: string | null;
+  updated_at: string | null;
 }
 
 export function useAnalyticsTabs(agentId: string | null) {
@@ -137,7 +137,7 @@ export function useAnalyticsTabs(agentId: string | null) {
     if (!agentId) return;
 
     try {
-      const maxOrder = tabs.length > 0 ? Math.max(...tabs.map(t => t.sort_order)) : -1;
+      const maxOrder = tabs.length > 0 ? Math.max(...tabs.map(t => t.sort_order ?? 0)) : -1;
 
       const { data, error } = await supabase
         .from("analytics_tabs")
