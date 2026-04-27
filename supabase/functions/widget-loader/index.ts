@@ -815,6 +815,10 @@ function generateWidgetScript(config: any): string {
 
     /* === MOBILE — STANDARD (<= 640px): modern phones === */
     @media (max-width: 640px) {
+      .vf-widget-button { width: 68px; height: 68px; }
+      .vf-widget-button.has-custom-icon img { width: 68px; height: 68px; }
+      .vf-widget-button.default-icon svg { width: 29px; height: 29px; }
+
       .vf-widget-panel {
         bottom: 0; right: 0; left: 0; top: 0;
         width: 100%; max-width: 100%;
