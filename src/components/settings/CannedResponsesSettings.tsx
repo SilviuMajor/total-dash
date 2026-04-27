@@ -60,9 +60,16 @@ export function CannedResponsesSettings({ readOnly, clientId: propClientId }: { 
   }, [selectedAgentId]);
 
   const loadSettings = async () => {
-    if (!selectedAgent) return;
-    const config = selectedAgent as any;
-    setPersonalEnabled(config?.config?.canned_responses_personal_enabled !== false);
+    if (!selectedAgentId) return;
+    // Read fresh from DB — the cached agents list in context doesn't refresh
+    // after the toggle saves, so reading from it gave stale "enabled" state on
+    // tab switches.
+    const { data } = await supabase
+      .from('agents_safe' as any)
+      .select('config')
+      .eq('id', selectedAgentId)
+      .single() as { data: { config: any } | null };
+    setPersonalEnabled(data?.config?.canned_responses_personal_enabled !== false);
   };
 
   const loadResponses = async () => {
