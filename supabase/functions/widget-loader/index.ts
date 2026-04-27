@@ -813,7 +813,7 @@ function generateWidgetScript(config: any): string {
     .vf-chat-list-scroll::-webkit-scrollbar-track,
     .vf-faq-wrap::-webkit-scrollbar-track { background: transparent; }
 
-    /* === MOBILE (< 640px) === */
+    /* === MOBILE — STANDARD (<= 640px): modern phones === */
     @media (max-width: 640px) {
       .vf-widget-panel {
         bottom: 0; right: 0; left: 0; top: 0;
@@ -823,21 +823,65 @@ function generateWidgetScript(config: any): string {
         padding-top: env(safe-area-inset-top);
         padding-bottom: env(safe-area-inset-bottom);
       }
-      .vf-dark-card { margin: 10px 12px 0; border-radius: 14px; }
-      .vf-dark-card-home { min-height: 155px; }
-      .vf-dark-card-chat { height: 46px; padding: 0 14px; }
+      .vf-dark-card { margin: 12px 14px 0; border-radius: 16px; padding: 14px 16px; }
+      .vf-dark-card-home { min-height: 40vh; }
+      .vf-dark-card-chat { height: 48px; padding: 0 16px; }
+      .vf-dark-greeting { font-size: 28px; line-height: 1.2; }
+      .vf-dark-status { font-size: 13px; }
+      .vf-dark-status-dot { width: 8px; height: 8px; }
+      .vf-dark-status-text { font-size: 13px; }
+      .vf-logo-badge { width: 28px; height: 28px; font-size: 10px; }
+      .vf-dark-close { width: 28px; height: 28px; }
+      .vf-dark-close svg { width: 13px; height: 13px; }
+
+      .vf-home-actions { padding: 14px 16px 0; gap: 10px; }
+      .vf-home-action { padding: 14px 16px; gap: 14px; }
+      .vf-home-action-icon { width: 38px; height: 38px; border-radius: 10px; }
+      .vf-home-action-icon svg { width: 18px; height: 18px; }
+      .vf-home-action-label { font-size: 15px; }
+      .vf-home-action-sub { font-size: 12.5px; }
+      .vf-home-action-chev svg { width: 14px; height: 14px; }
+
+      .vf-msg-bot, .vf-msg-user { font-size: 14px; padding: 10px 14px; }
+      .vf-input-field { height: 40px; font-size: 16px; padding: 0 16px; }
+      .vf-attach-btn, .vf-send-btn { width: 40px; height: 40px; }
+      .vf-attach-btn svg { width: 20px; height: 20px; }
+      .vf-send-btn svg { width: 16px; height: 16px; }
+
+      .vf-tabs { height: 56px; padding: 8px 0 6px; }
+      .vf-tab svg { width: 18px; height: 18px; }
+      .vf-tab span { font-size: 11px; letter-spacing: 0.1px; }
+
+      .vf-welcome-bubble { right: 16px; bottom: 96px; max-width: calc(100vw - 80px); }
+    }
+
+    /* === MOBILE — SMALL (<= 380px): iPhone SE / mini / small Android === */
+    @media (max-width: 380px) {
+      .vf-dark-card { margin: 10px 10px 0; padding: 12px 14px; }
+      .vf-dark-card-home { min-height: 34vh; }
+      .vf-dark-greeting { font-size: 24px; }
+      .vf-dark-status, .vf-dark-status-text { font-size: 12px; }
+      .vf-dark-status-dot { width: 7px; height: 7px; }
       .vf-logo-badge { width: 26px; height: 26px; font-size: 9px; }
       .vf-dark-close { width: 26px; height: 26px; }
       .vf-dark-close svg { width: 12px; height: 12px; }
-      .vf-home-action { padding: 12px 14px; }
-      .vf-home-action-icon { width: 30px; height: 30px; }
-      .vf-msg-bot, .vf-msg-user { font-size: 12px; padding: 8px 12px; }
-      .vf-input-field { height: 32px; font-size: 11.5px; }
-      .vf-attach-btn, .vf-send-btn { width: 32px; height: 32px; }
-      .vf-tabs { height: 48px; padding: 6px 0 4px; }
-      .vf-tab svg { width: 14px; height: 14px; }
-      .vf-tab span { font-size: 9.5px; }
-      .vf-welcome-bubble { right: 16px; bottom: 96px; max-width: 240px; }
+
+      .vf-home-actions { padding: 12px 12px 0; gap: 8px; }
+      .vf-home-action { padding: 12px 14px; gap: 12px; }
+      .vf-home-action-icon { width: 34px; height: 34px; border-radius: 9px; }
+      .vf-home-action-icon svg { width: 16px; height: 16px; }
+      .vf-home-action-label { font-size: 14px; }
+      .vf-home-action-sub { font-size: 12px; }
+
+      .vf-msg-bot, .vf-msg-user { font-size: 13px; padding: 9px 13px; }
+      .vf-input-field { height: 36px; font-size: 16px; padding: 0 14px; }
+      .vf-attach-btn, .vf-send-btn { width: 36px; height: 36px; }
+      .vf-attach-btn svg { width: 18px; height: 18px; }
+      .vf-send-btn svg { width: 14px; height: 14px; }
+
+      .vf-tabs { height: 52px; padding: 6px 0 4px; }
+      .vf-tab svg { width: 16px; height: 16px; }
+      .vf-tab span { font-size: 10px; }
     }
 
     /* === ATTACHMENT PREVIEW ROW (in input bar, replaces normal input while composing an attachment) === */
