@@ -77,28 +77,24 @@ export function AgentDeletionDialog({
         return;
       }
 
-      // Delete in order: conversations (which will cascade to transcripts), agent_assignments, then agent
-      const { data: conversations } = await supabase
+      // Conversation history is part of the permanent archive and cannot be deleted.
+      // Refuse the delete if any conversations exist for this agent. A future
+      // soft-delete flow on agents will keep the archive intact while hiding the agent.
+      const { count: conversationCount, error: countError } = await supabase
         .from("conversations")
-        .select("id")
+        .select("id", { count: "exact", head: true })
         .eq("agent_id", agentId);
 
-      if (conversations && conversations.length > 0) {
-        const conversationIds = conversations.map((c) => c.id);
-        
-        const { error: transcriptsError } = await supabase
-          .from("transcripts")
-          .delete()
-          .in("conversation_id", conversationIds);
+      if (countError) throw countError;
 
-        if (transcriptsError) throw transcriptsError;
-
-        const { error: conversationsError } = await supabase
-          .from("conversations")
-          .delete()
-          .eq("agent_id", agentId);
-
-        if (conversationsError) throw conversationsError;
+      if ((conversationCount ?? 0) > 0) {
+        toast({
+          title: "Cannot delete agent",
+          description: `This agent has ${conversationCount} conversations in the archive. Conversation history cannot be deleted.`,
+          variant: "destructive",
+        });
+        setDeleting(false);
+        return;
       }
 
       const { error: assignmentsError } = await supabase
