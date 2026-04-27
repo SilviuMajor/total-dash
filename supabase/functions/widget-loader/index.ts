@@ -650,6 +650,25 @@ function generateWidgetScript(config: any): string {
     .vf-send-btn:hover { opacity: 0.9; }
     .vf-send-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; }
 
+    /* === POWERED BY BADGE (home + chat history footer) === */
+    .vf-powered-by {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      padding: 10px 12px 14px;
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: \${theme.textMuted};
+      flex-shrink: 0;
+    }
+    .vf-powered-by .vf-powered-mark {
+      color: \${theme.textPrimary};
+      font-weight: 700;
+    }
+
     /* === BOTTOM TABS === */
     .vf-tabs {
       border-top: 0.5px solid \${theme.divider};
@@ -1117,13 +1136,16 @@ function generateWidgetScript(config: any): string {
   let postHandoverWatchTimer = null;
   const POST_HANDOVER_WATCH_MS = 30 * 60 * 1000;
 
-  // Phase 2: attachment composer state. Upload-on-pick: each picked file enters
-  // uploadQueue and starts uploading immediately; tiles disappear as uploads
-  // commit. Paperclip + drag-and-drop gated on isInHandover (Voiceflow can't
-  // process files). Uploads serialise so per-file transcript timestamps preserve
-  // pick order on the dashboard side.
-  let uploadQueue = [];          // [{ id, file, kind, previewUrl, status, progress, error }]
+  // Phase 2: attachment composer state. Two-phase: pick fires a STAGE upload
+  // (storage only) immediately; the tile shows progress and lands in 'ready'
+  // state. The transcript is only written when the user presses Send — the
+  // ready entries get committed via widget-file-upload (with stagedAttachment),
+  // and the caption (if any) attaches to the FIRST file's bubble.
+  // Paperclip + drag-and-drop gated on isInHandover. Stage uploads serialise so
+  // per-file transcript timestamps preserve pick order on the dashboard.
+  let uploadQueue = [];          // [{ id, file, kind, previewUrl, status, progress, error, staged }]
   let activeUploadXhr = null;
+  let isCommittingSend = false;  // true while Send is committing staged entries
   let isDragging = false;
   let dragInvalid = false;
   let dragCounter = 0;           // for nested dragenter/leave bookkeeping
@@ -1480,7 +1502,16 @@ function generateWidgetScript(config: any): string {
           </button>
         \`).join('')}
       </div>
+      \${renderPoweredByHtml()}
     \`;
+  }
+
+  // Powered-by badge — sits above the tab bar on the Home tab and at the bottom
+  // of Chats list. Off if the agency disables it via widget settings.
+  function renderPoweredByHtml() {
+    if (!CONFIG.poweredBy || !CONFIG.poweredBy.enabled) return '';
+    const text = (CONFIG.poweredBy.text || 'TotalDash').toString();
+    return '<div class="vf-powered-by">Powered by <span class="vf-powered-mark">' + escapeHtml(text) + '</span></div>';
   }
   
   function renderChatHistory(container) {
@@ -1497,6 +1528,7 @@ function generateWidgetScript(config: any): string {
           <div class="vf-empty-sub">Start a new chat and we'll remember it here for next time.</div>
           <button class="vf-empty-cta" onclick="window.vfStartNewChat()">New chat</button>
         </div>
+        \${renderPoweredByHtml()}
       \`;
       return;
     }
@@ -1556,6 +1588,7 @@ function generateWidgetScript(config: any): string {
           \${older.map(convCardHtml).join('')}
         </div>
       </div>
+      \${renderPoweredByHtml()}
     \`;
   }
   
@@ -1958,19 +1991,21 @@ function generateWidgetScript(config: any): string {
     \`;
   }
   
-  // === Phase 2: Attachment composer (paperclip + drag-drop, upload-on-pick, handover-gated) ===
+  // === Phase 2: Attachment composer (paperclip + drag-drop, two-phase, handover-gated) ===
   //
   // Flow:
-  //   1. User picks/drops files → each valid file is added to uploadQueue and
-  //      its XHR fires immediately (serially — one at a time so transcript
-  //      timestamps preserve pick order on the dashboard).
-  //   2. Tile shows a thumbnail (no filename, no size) with a per-tile × that
-  //      either aborts the in-flight XHR or just removes a queued/errored entry.
-  //   3. On per-file success: server writes a transcript row with the
-  //      attachment + the widget pushes a local user bubble carrying the same
-  //      attachment metadata. Tile disappears.
-  //   4. The Send button is unchanged — it only ever sends the caption text via
-  //      the normal sendMessage() path. Caption is independent of attachments.
+  //   1. User picks/drops files → each valid file is added to uploadQueue
+  //      ('queued') and its STAGE upload fires immediately (serially) to
+  //      widget-stage-upload. Tile shows progress.
+  //   2. On stage success: entry.status = 'ready', entry.staged = {url,...}.
+  //      Tile shows the thumbnail (no progress bar). Tile stays visible.
+  //   3. User presses Send. If caption is non-empty AND there are no ready
+  //      attachments, behave as before (text-only message). If there ARE ready
+  //      entries, COMMIT each via widget-file-upload with stagedAttachment.
+  //      Caption (if any) attaches to the FIRST committed file's transcript
+  //      row. Local user bubbles render from the server response.
+  //   4. Tile shows × to remove a queued/uploading/ready/errored entry. If
+  //      removed during stage upload, the in-flight XHR is aborted.
 
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, (c) => ({
@@ -2030,9 +2065,10 @@ function generateWidgetScript(config: any): string {
         file: f,
         kind,
         previewUrl: kind === 'image' ? URL.createObjectURL(f) : null,
-        status: 'queued',  // 'queued' | 'uploading' | 'error'
+        status: 'queued',  // 'queued' | 'uploading' | 'ready' | 'error'
         progress: 0,
         error: null,
+        staged: null,      // { url, fileName, mimeType, size, kind, storagePath }
       };
       uploadQueue.push(entry);
     }
@@ -2055,7 +2091,8 @@ function generateWidgetScript(config: any): string {
 
     const xhr = new XMLHttpRequest();
     activeUploadXhr = xhr;
-    xhr.open('POST', SUPABASE_URL + '/functions/v1/widget-file-upload', true);
+    // STAGE upload: storage only, no transcript write.
+    xhr.open('POST', SUPABASE_URL + '/functions/v1/widget-stage-upload', true);
 
     xhr.upload.onprogress = (ev) => {
       if (!ev.lengthComputable) return;
@@ -2070,32 +2107,18 @@ function generateWidgetScript(config: any): string {
         let body = {};
         try { body = JSON.parse(xhr.responseText || '{}'); } catch (_) {}
         const att = body.attachment || null;
-
-        if (body.conversationId && body.conversationId !== conversationId) {
-          conversationId = body.conversationId;
+        if (!att || !att.url) {
+          entry.status = 'error';
+          entry.error = 'Upload returned no URL';
+          renderAttachPreview();
+          processNextUpload();
+          return;
         }
-
-        // Push a local user bubble carrying the attachment so the user sees their
-        // own send immediately. The poller skips user-speaker rows so we won't
-        // duplicate this when the realtime poll picks up the server-written row.
-        if (att) {
-          messages.push({
-            id: 'msg_attach_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
-            speaker: 'user',
-            text: '',
-            attachments: [att],
-            timestamp: new Date().toISOString(),
-          });
-        }
-
-        disposeUploadEntry(entry);
-        uploadQueue = uploadQueue.filter((u) => u !== entry);
-
-        renderPanel();
-        scrollToLatestMessage();
-        if (conversationId) {
-          SessionManager.saveConversation(conversationId, messages, currentVoiceflowSessionId, true);
-        }
+        // Stage complete — the file is in storage. Wait for Send to commit.
+        entry.status = 'ready';
+        entry.staged = att;
+        entry.progress = 100;
+        renderAttachPreview();
         processNextUpload();
         return;
       }
@@ -2128,12 +2151,44 @@ function generateWidgetScript(config: any): string {
     const form = new FormData();
     form.append('file', entry.file);
     form.append('agentId', CONFIG.agentId);
-    form.append('userId', getVoiceflowUserId());
     if (conversationId) form.append('conversationId', conversationId);
-    if (currentVoiceflowSessionId) form.append('voiceflowSessionId', currentVoiceflowSessionId);
-    form.append('isTestMode', CONFIG.isTestMode ? 'true' : 'false');
-    form.append('text', '');
     xhr.send(form);
+  }
+
+  // Commit one staged entry: tells widget-file-upload to write the transcript
+  // (and forward to voiceflow-interact) using the already-uploaded URL. Returns
+  // the parsed JSON body on success, throws on failure.
+  function commitStagedEntry(entry, captionText) {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', SUPABASE_URL + '/functions/v1/widget-file-upload', true);
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          let body = {};
+          try { body = JSON.parse(xhr.responseText || '{}'); } catch (_) {}
+          resolve(body);
+          return;
+        }
+        let msg = 'Send failed';
+        try {
+          const j = JSON.parse(xhr.responseText || '{}');
+          msg = j.message || j.error || msg;
+        } catch (_) {}
+        reject(new Error(msg));
+      };
+      xhr.onerror = () => reject(new Error('Network error'));
+      xhr.onabort = () => reject(new Error('Aborted'));
+
+      const form = new FormData();
+      form.append('stagedAttachment', JSON.stringify(entry.staged));
+      form.append('agentId', CONFIG.agentId);
+      form.append('userId', getVoiceflowUserId());
+      if (conversationId) form.append('conversationId', conversationId);
+      if (currentVoiceflowSessionId) form.append('voiceflowSessionId', currentVoiceflowSessionId);
+      form.append('isTestMode', CONFIG.isTestMode ? 'true' : 'false');
+      form.append('text', captionText || '');
+      xhr.send(form);
+    });
   }
 
   window.vfAttachFile = function() {
@@ -2148,7 +2203,11 @@ function generateWidgetScript(config: any): string {
 
   // Per-tile remove. If the entry is uploading, abort its XHR. Otherwise drop
   // it from the queue. No batch cancel — each tile owns its own ×.
+  // NOTE: removing a 'ready' entry leaves the staged file orphaned in storage.
+  // Acceptable for now — a future janitor can sweep widget-attachments objects
+  // older than N hours that have no matching transcript row.
   window.vfRemovePendingAttachment = function(id) {
+    if (isCommittingSend) return;
     const entry = uploadQueue.find((u) => u.id === id);
     if (!entry) return;
 
@@ -2208,12 +2267,16 @@ function generateWidgetScript(config: any): string {
             + '</button>'
           : '');
 
+      const closeBtn = isCommittingSend
+        ? ''
+        : '<button class="vf-attach-tile-close" onclick="window.vfRemovePendingAttachment(\\'' + entry.id + '\\')" aria-label="Remove">'
+            + '<svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
+          + '</button>';
+
       return '<div class="vf-attach-tile" data-upload-id="' + entry.id + '">'
         + '<div class="vf-attach-tile-thumb">' + inner + '</div>'
         + overlayHtml
-        + '<button class="vf-attach-tile-close" onclick="window.vfRemovePendingAttachment(\\'' + entry.id + '\\')" aria-label="Remove">'
-        +   '<svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
-        + '</button>'
+        + closeBtn
         + '</div>';
     }).join('');
 
@@ -2623,11 +2686,89 @@ function generateWidgetScript(config: any): string {
     updateFabIcon();
   };
   
-  window.vfSendMessage = function() {
-    // Caption text path only. Attachments upload-on-pick — they don't ride
-    // along with Send. The user can keep typing/sending while uploads run.
+  window.vfSendMessage = async function() {
+    if (isCommittingSend) return;
     const input = document.getElementById('vf-input');
-    if (input) sendMessage(input.value);
+    const captionText = input ? (input.value || '') : '';
+
+    // If there are staged attachments waiting to commit, commit them first.
+    // The caption (if any) attaches to the FIRST committed file's transcript
+    // bubble; subsequent files commit with empty text. Only one widget-file-
+    // upload call per file — but they go in pick-order so the dashboard sees
+    // them in the right order.
+    const ready = uploadQueue.filter((u) => u.status === 'ready');
+    const stillUploading = uploadQueue.some((u) => u.status === 'uploading' || u.status === 'queued');
+
+    if (ready.length === 0 && stillUploading) {
+      // User pressed Send while a file is still uploading. Don't fire — wait
+      // for it to finish. Cheaper UX than a toast: just leave the input alone.
+      return;
+    }
+
+    if (ready.length === 0) {
+      // No attachments → caption-only send (existing path).
+      if (input) sendMessage(input.value);
+      return;
+    }
+
+    // We have files to commit.
+    isCommittingSend = true;
+    if (input) {
+      input.value = '';
+      input.disabled = true;
+    }
+    renderAttachPreview();
+
+    let committedAny = false;
+    let firstError = null;
+    for (let i = 0; i < ready.length; i++) {
+      const entry = ready[i];
+      const captionForThis = i === 0 ? captionText : '';
+      try {
+        const body = await commitStagedEntry(entry, captionForThis);
+        if (body && body.conversationId && body.conversationId !== conversationId) {
+          conversationId = body.conversationId;
+        }
+        const att = body && body.attachment ? body.attachment : entry.staged;
+        // Push a local user bubble carrying the attachment + caption (only on
+        // the first file). Poller skips user-speaker rows, so we won't dup.
+        messages.push({
+          id: 'msg_attach_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+          speaker: 'user',
+          text: captionForThis || '',
+          attachments: [att],
+          timestamp: new Date().toISOString(),
+        });
+        disposeUploadEntry(entry);
+        uploadQueue = uploadQueue.filter((u) => u !== entry);
+        committedAny = true;
+        renderPanel();
+        scrollToLatestMessage();
+      } catch (err) {
+        firstError = err;
+        entry.status = 'error';
+        entry.error = (err && err.message) || 'Send failed';
+        renderAttachPreview();
+        break;
+      }
+    }
+
+    if (committedAny && conversationId) {
+      SessionManager.saveConversation(conversationId, messages, currentVoiceflowSessionId, true);
+    }
+
+    isCommittingSend = false;
+    if (input) {
+      input.disabled = false;
+      input.focus();
+    }
+    renderAttachPreview();
+
+    if (firstError) {
+      // Surface failure inline in the tile (already set above). Caption stays
+      // on the failed entry's row in the user's mind — they can retry.
+      console.warn('[widget] commit failed:', firstError);
+    }
   };
   
   window.vfStartNewChat = startNewChat;

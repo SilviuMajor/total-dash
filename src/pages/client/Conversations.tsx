@@ -1043,15 +1043,36 @@ export default function Conversations() {
 
     setAttachUploading(true);
     try {
+      // Direct fetch (not supabase.functions.invoke) because invoke serialises
+      // the body as JSON in some setups, which clobbers multipart FormData and
+      // makes the edge function reject "Missing fields". With direct fetch the
+      // browser sets Content-Type with the right multipart boundary.
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error('Not authenticated — please re-login.');
+
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+      const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
+      const url = `${supabaseUrl}/functions/v1/agent-file-upload`;
+
       for (const file of list) {
         const form = new FormData();
         form.append('file', file);
         form.append('conversationId', selectedConversation.id);
         form.append('text', '');
 
-        const { data, error } = await supabase.functions.invoke('agent-file-upload', { body: form });
-        if (error) throw error;
-        if (!data?.success) throw new Error(data?.message || data?.error || 'Upload failed');
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            apikey: anonKey,
+          },
+          body: form,
+        });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok || !body?.success) {
+          throw new Error(body?.message || body?.error || `Upload failed (${res.status})`);
+        }
       }
     } catch (err: any) {
       toast({ title: "Upload failed", description: err.message || 'Could not send attachment', variant: "destructive" });

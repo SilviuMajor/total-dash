@@ -195,6 +195,17 @@ serve(async (req) => {
 
   const { agentId, userId, message, action, conversationId, isTestMode, baseUserId } = body ?? {};
 
+  // Attachments (passed through from widget-file-upload). When present:
+  // - `transcripts.attachments` JSONB column gets populated so the dashboard
+  //   can render image/video/audio/file inline previews.
+  // - `transcripts.text` uses `transcriptTextOverride` (caption only) instead
+  //   of the URL-laden message body that was sent to Voiceflow.
+  const incomingAttachments = Array.isArray(body?.attachments) && body.attachments.length > 0
+    ? body.attachments
+    : null;
+  const transcriptTextOverride =
+    typeof body?.transcriptTextOverride === "string" ? body.transcriptTextOverride : null;
+
   // Input validation — this endpoint is intentionally anonymous (called from
   // the public widget by unauthenticated visitors), so the only line of
   // defense against abuse is strict shape-checking on the inputs.
@@ -304,7 +315,8 @@ serve(async (req) => {
           await supabaseClient.from("transcripts").insert({
             conversation_id: conversationId,
             speaker: "user",
-            text: userMessageText,
+            text: transcriptTextOverride !== null ? transcriptTextOverride : userMessageText,
+            attachments: incomingAttachments,
             metadata: { timestamp: new Date().toISOString() },
           });
 
@@ -350,7 +362,8 @@ serve(async (req) => {
           await supabaseClient.from("transcripts").insert({
             conversation_id: conversationId,
             speaker: "user",
-            text: userMessageText,
+            text: transcriptTextOverride !== null ? transcriptTextOverride : userMessageText,
+            attachments: incomingAttachments,
             metadata: { timestamp: new Date().toISOString() },
           });
 
@@ -608,7 +621,8 @@ serve(async (req) => {
       await supabaseClient.from("transcripts").insert({
         conversation_id: currentConversationId,
         speaker: "user",
-        text: userMessageText,
+        text: transcriptTextOverride !== null ? transcriptTextOverride : userMessageText,
+        attachments: incomingAttachments,
         metadata:
           action === "button"
             ? {
