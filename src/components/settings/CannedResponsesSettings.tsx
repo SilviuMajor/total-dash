@@ -86,8 +86,11 @@ export function CannedResponsesSettings({ readOnly, clientId: propClientId }: { 
   };
 
   const togglePersonal = async (enabled: boolean) => {
+    if (!selectedAgentId) {
+      toast({ title: "No agent selected", description: "Cannot save — no agent is selected in the context.", variant: "destructive" });
+      return;
+    }
     setPersonalEnabled(enabled);
-    if (!selectedAgentId) return;
     const { error } = await supabase.rpc('update_agent_config', {
       p_agent_id: selectedAgentId,
       p_config_updates: { canned_responses_personal_enabled: enabled },
@@ -95,6 +98,22 @@ export function CannedResponsesSettings({ readOnly, clientId: propClientId }: { 
     if (error) {
       setPersonalEnabled(!enabled);
       toast({ title: "Failed to save", description: error.message, variant: "destructive" });
+      return;
+    }
+    // Verify the write actually persisted — earlier audit found values silently not landing.
+    const { data: verify } = await supabase
+      .from('agents_safe' as any)
+      .select('config')
+      .eq('id', selectedAgentId)
+      .single() as { data: { config: any } | null };
+    const persisted = verify?.config?.canned_responses_personal_enabled;
+    if (persisted !== enabled) {
+      setPersonalEnabled(!enabled);
+      toast({
+        title: "Save did not persist",
+        description: `Tried to write ${enabled} but DB shows ${JSON.stringify(persisted)}. agent=${selectedAgentId}`,
+        variant: "destructive",
+      });
       return;
     }
     toast({ title: "Updated", description: `Personal canned responses ${enabled ? "enabled" : "disabled"}` });
