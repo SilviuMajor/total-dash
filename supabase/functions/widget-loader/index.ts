@@ -1065,6 +1065,33 @@ function generateWidgetScript(config: any): string {
   let pendingExitHandoverTimer = null;
   let postHandoverWatchTimer = null;
   const POST_HANDOVER_WATCH_MS = 30 * 60 * 1000;
+
+  // Phase 2 Step B: attachment composer state. Multi-file batch with shared trailing caption.
+  // Paperclip + drag-and-drop are gated on isInHandover — Voiceflow can't process files.
+  let pendingAttachments = [];   // File[]
+  let isUploading = false;
+  let uploadProgress = 0;        // 0-100, aggregate across files in the batch
+  let uploadError = null;        // string | null
+  let uploadXhrs = [];           // XMLHttpRequest[] of in-flight uploads (for cancel)
+  let isDragging = false;
+  let dragInvalid = false;
+  let dragCounter = 0;           // for nested dragenter/leave bookkeeping
+  const MAX_BATCH_FILES = 5;
+  const MAX_FILE_BYTES = 10 * 1024 * 1024;
+  const ALLOWED_MIME_TYPES = new Set([
+    'image/jpeg','image/png','image/gif','image/webp',
+    'video/mp4','video/webm','video/quicktime',
+    'audio/mpeg','audio/wav','audio/ogg','audio/mp4','audio/x-m4a',
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-powerpoint',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'text/plain','text/csv',
+    'application/zip',
+  ]);
   
   // Helper to get the Voiceflow user ID (combined with session ID)
   function getVoiceflowUserId() {
@@ -1136,6 +1163,19 @@ function generateWidgetScript(config: any): string {
   const chatButton = CONFIG.isEmbedded ? null : container.querySelector('.vf-widget-button');
   const chatPanel = container.querySelector('.vf-widget-panel');
   const panelContent = document.getElementById('vf-panel-content');
+
+  // Phase 2 Step B: dropzone overlay for drag-and-drop. Inserted once; toggled via classes.
+  if (chatPanel) {
+    const dropzone = document.createElement('div');
+    dropzone.className = 'vf-dropzone-overlay';
+    dropzone.id = 'vf-dropzone';
+    dropzone.innerHTML = '<div class="vf-dropzone-inner">'
+      + '<svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>'
+      + '<span id="vf-dropzone-label">Drop to attach</span>'
+      + '</div>';
+    chatPanel.appendChild(dropzone);
+    attachDragDropHandlers(chatPanel);
+  }
   
   // FAB icon swap: show chat bubble when closed, × when open.
   // When the panel is open, the button acts as a close/minimize affordance, so we
@@ -1240,9 +1280,10 @@ function generateWidgetScript(config: any): string {
               + New Conversation
             </button>
           \` : \`
+            <div id="vf-attach-preview-host"></div>
             <div class="vf-input-row">
-              \${CONFIG.functions.fileUploadEnabled ? \`
-                <input type="file" id="vf-file-input" accept="image/*,application/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx" style="display:none;" />
+              \${CONFIG.functions.fileUploadEnabled && isInHandover ? \`
+                <input type="file" id="vf-file-input" accept="image/*,application/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx" style="display:none;" multiple />
                 <button class="vf-attach-btn" onclick="window.vfAttachFile()" aria-label="Attach file">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
                 </button>
@@ -1286,8 +1327,14 @@ function generateWidgetScript(config: any): string {
     
     const fileInput = document.getElementById('vf-file-input');
     if (fileInput) {
-      fileInput.addEventListener('change', handleFileUpload);
+      fileInput.addEventListener('change', (e) => {
+        handlePickedFiles(e.target.files);
+        // Reset so picking the same file twice in a row still fires change.
+        e.target.value = '';
+      });
     }
+
+    renderAttachPreview();
   }
   
   function renderContent() {
@@ -1811,56 +1858,361 @@ function generateWidgetScript(config: any): string {
     \`;
   }
   
-  // File Upload Functions
-  async function uploadFile(file) {
-    if (file.size > 10 * 1024 * 1024) {
-      alert('File size must be under 10MB');
-      return null;
+  // === Phase 2 Step B: Attachment composer (paperclip + drag-drop, multi-file, handover-gated) ===
+
+  function formatFileSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[c]);
+  }
+
+  function isAllowedMime(type) {
+    return ALLOWED_MIME_TYPES.has(type);
+  }
+
+  function classifyKind(mimeType) {
+    if (!mimeType) return 'file';
+    if (mimeType.startsWith('image/')) return 'image';
+    if (mimeType.startsWith('video/')) return 'video';
+    if (mimeType.startsWith('audio/')) return 'audio';
+    return 'file';
+  }
+
+  // Keep object URLs for image previews so we can revoke them on clear.
+  const previewUrlCache = new WeakMap();
+  function getPreviewUrl(file) {
+    let url = previewUrlCache.get(file);
+    if (!url) {
+      url = URL.createObjectURL(file);
+      previewUrlCache.set(file, url);
     }
-    
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('agentId', CONFIG.agentId);
-      
-      const uploadResponse = await fetch(\`\${SUPABASE_URL}/functions/v1/widget-file-upload\`, {
-        method: 'POST',
-        body: formData
-      });
-      
-      if (!uploadResponse.ok) {
-        const error = await uploadResponse.json();
-        throw new Error(error.error || 'Upload failed');
+    return url;
+  }
+
+  function clearPendingState() {
+    for (const f of pendingAttachments) {
+      const u = previewUrlCache.get(f);
+      if (u) {
+        try { URL.revokeObjectURL(u); } catch (_) {}
+        previewUrlCache.delete(f);
       }
-      
-      const result = await uploadResponse.json();
-      return { fileName: result.fileName, publicUrl: result.publicUrl };
-    } catch (error) {
-      console.error('Upload error:', error);
-      alert('Failed to upload file');
-      return null;
+    }
+    pendingAttachments = [];
+    isUploading = false;
+    uploadProgress = 0;
+    uploadError = null;
+    uploadXhrs = [];
+  }
+
+  function handlePickedFiles(fileList) {
+    if (!isInHandover || isUploading) return;
+    if (!fileList || fileList.length === 0) return;
+
+    const incoming = Array.from(fileList);
+    const remainingSlots = MAX_BATCH_FILES - pendingAttachments.length;
+    if (remainingSlots <= 0) {
+      alert('You can attach up to ' + MAX_BATCH_FILES + ' files at a time.');
+      return;
+    }
+    if (incoming.length > remainingSlots) {
+      alert('You can attach up to ' + MAX_BATCH_FILES + ' files at a time. The first ' + remainingSlots + ' will be added.');
+    }
+    const batch = incoming.slice(0, remainingSlots);
+
+    for (const f of batch) {
+      if (f.size > MAX_FILE_BYTES) {
+        alert('"' + f.name + '" is too large. Files must be under 10MB.');
+        return;
+      }
+      if (!isAllowedMime(f.type)) {
+        alert('"' + f.name + '" is not a supported file type.');
+        return;
+      }
+    }
+
+    pendingAttachments = pendingAttachments.concat(batch);
+    uploadError = null;
+    renderAttachPreview();
+  }
+
+  window.vfAttachFile = function() {
+    if (!isInHandover || isUploading) return;
+    const fileInput = document.getElementById('vf-file-input');
+    if (fileInput) fileInput.click();
+  };
+
+  window.vfRemovePendingAttachment = function(idx) {
+    if (isUploading) return;
+    const f = pendingAttachments[idx];
+    if (f) {
+      const u = previewUrlCache.get(f);
+      if (u) {
+        try { URL.revokeObjectURL(u); } catch (_) {}
+        previewUrlCache.delete(f);
+      }
+    }
+    pendingAttachments = pendingAttachments.filter((_, i) => i !== idx);
+    if (pendingAttachments.length === 0) uploadError = null;
+    renderAttachPreview();
+  };
+
+  window.vfCancelPending = function() {
+    if (isUploading) {
+      // Abort all in-flight uploads. Already-uploaded files stay committed in the chat.
+      for (const xhr of uploadXhrs) {
+        try { xhr.abort(); } catch (_) {}
+      }
+      uploadXhrs = [];
+      isUploading = false;
+      uploadProgress = 0;
+      uploadError = null;
+      // Leave the still-pending files in the preview so the user can retry.
+      renderAttachPreview();
+      return;
+    }
+    clearPendingState();
+    renderAttachPreview();
+  };
+
+  function renderAttachPreview() {
+    const host = document.getElementById('vf-attach-preview-host');
+    if (!host) return;
+
+    // Handover ended (or never started) — drop any in-flight composer state. Uploads in
+    // progress are left alone (they're already past the gate); the user just won't see
+    // the preview row anymore.
+    if (!isInHandover && !isUploading) {
+      if (pendingAttachments.length > 0 || uploadError) clearPendingState();
+      host.innerHTML = '';
+      return;
+    }
+
+    if (pendingAttachments.length === 0 && !uploadError) {
+      host.innerHTML = '';
+      return;
+    }
+
+    const thumbsHtml = pendingAttachments.map((f, idx) => {
+      const kind = classifyKind(f.type);
+      const inner = kind === 'image'
+        ? '<img src="' + escapeHtml(getPreviewUrl(f)) + '" alt="' + escapeHtml(f.name) + '" />'
+        : (kind === 'video'
+          ? '<svg viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>'
+          : (kind === 'audio'
+            ? '<svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>'
+            : '<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'));
+      const closeBtn = isUploading
+        ? ''
+        : '<button class="vf-attach-preview-close" onclick="window.vfRemovePendingAttachment(' + idx + ')" aria-label="Remove">'
+          + '<svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
+          + '</button>';
+      return '<div class="vf-attach-preview-header">'
+        + '<div class="vf-attach-preview-thumb">' + inner + '</div>'
+        + '<div class="vf-attach-preview-meta">'
+        +   '<div class="vf-attach-preview-name">' + escapeHtml(f.name) + '</div>'
+        +   '<div class="vf-attach-preview-size">' + formatFileSize(f.size) + '</div>'
+        + '</div>'
+        + closeBtn
+        + '</div>';
+    }).join('');
+
+    const progressHtml = isUploading
+      ? '<div class="vf-attach-preview-progress-wrap"><div class="vf-attach-preview-progress-bar" style="width:' + uploadProgress + '%"></div></div>'
+      : '';
+
+    const errorHtml = uploadError
+      ? '<div class="vf-attach-preview-error">'
+        + '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'
+        + '<span>' + escapeHtml(uploadError) + '</span>'
+        + '</div>'
+      : '';
+
+    host.innerHTML = '<div class="vf-attach-preview-row">'
+      + thumbsHtml
+      + progressHtml
+      + errorHtml
+      + '<div class="vf-attach-preview-actions">'
+      +   '<button class="vf-attach-preview-btn vf-attach-preview-btn-cancel" onclick="window.vfCancelPending()">' + (isUploading ? 'Abort' : 'Cancel') + '</button>'
+      + '</div>'
+      + '</div>';
+  }
+
+  function attachDragDropHandlers(panel) {
+    const overlay = panel.querySelector('#vf-dropzone');
+    const setOverlay = () => {
+      if (!overlay) return;
+      overlay.classList.toggle('active', isDragging);
+      overlay.classList.toggle('invalid', isDragging && dragInvalid);
+      const label = overlay.querySelector('#vf-dropzone-label');
+      if (label) {
+        label.textContent = dragInvalid ? 'Unsupported file' : 'Drop to attach';
+      }
+    };
+
+    panel.addEventListener('dragenter', (e) => {
+      if (!isInHandover || isUploading) return;
+      e.preventDefault();
+      dragCounter += 1;
+      isDragging = true;
+      // Inspect MIME types from items if available — types is reliable on dragover but not always on drop.
+      let invalid = false;
+      const items = e.dataTransfer ? e.dataTransfer.items : null;
+      if (items && items.length) {
+        for (let i = 0; i < items.length; i += 1) {
+          const it = items[i];
+          if (it.kind !== 'file') continue;
+          if (!isAllowedMime(it.type)) { invalid = true; break; }
+        }
+      }
+      dragInvalid = invalid;
+      setOverlay();
+    });
+
+    panel.addEventListener('dragover', (e) => {
+      if (!isInHandover || isUploading) return;
+      e.preventDefault();
+      // Keep the overlay in sync (dragenter may fire on child elements).
+      setOverlay();
+    });
+
+    panel.addEventListener('dragleave', (e) => {
+      if (!isInHandover || isUploading) return;
+      e.preventDefault();
+      dragCounter = Math.max(0, dragCounter - 1);
+      if (dragCounter === 0) {
+        isDragging = false;
+        dragInvalid = false;
+        setOverlay();
+      }
+    });
+
+    panel.addEventListener('drop', (e) => {
+      if (!isInHandover || isUploading) {
+        // Still need to prevent default so the browser doesn't navigate to the file.
+        e.preventDefault();
+        return;
+      }
+      e.preventDefault();
+      dragCounter = 0;
+      const wasInvalid = dragInvalid;
+      isDragging = false;
+      dragInvalid = false;
+      setOverlay();
+      if (wasInvalid) return;
+      const files = e.dataTransfer ? e.dataTransfer.files : null;
+      if (files && files.length) {
+        handlePickedFiles(files);
+      }
+    });
+  }
+
+  // Sequentially upload pendingAttachments with one shared trailing caption.
+  // Each upload calls widget-file-upload (multipart). On any error, abort the rest,
+  // surface the error in the preview row, and keep remaining files pending for retry.
+  // Already-uploaded files stay committed in the chat (server wrote them).
+  async function uploadBatchAndSend(caption) {
+    if (pendingAttachments.length === 0) return;
+    if (isUploading) return;
+
+    const filesToUpload = pendingAttachments.slice();
+    isUploading = true;
+    uploadProgress = 0;
+    uploadError = null;
+    uploadXhrs = [];
+    renderAttachPreview();
+
+    // Track aggregate progress as a sum of per-file loaded bytes / sum of per-file totals.
+    const totals = filesToUpload.map((f) => f.size);
+    const loaded = filesToUpload.map(() => 0);
+    const totalBytes = totals.reduce((a, b) => a + b, 0) || 1;
+    const tickProgress = () => {
+      const sumLoaded = loaded.reduce((a, b) => a + b, 0);
+      uploadProgress = Math.min(100, Math.round((sumLoaded / totalBytes) * 100));
+      const host = document.getElementById('vf-attach-preview-host');
+      const bar = host && host.querySelector('.vf-attach-preview-progress-bar');
+      if (bar) bar.style.width = uploadProgress + '%';
+    };
+
+    for (let i = 0; i < filesToUpload.length; i += 1) {
+      const f = filesToUpload[i];
+      try {
+        await new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          uploadXhrs.push(xhr);
+          xhr.open('POST', SUPABASE_URL + '/functions/v1/widget-file-upload', true);
+          xhr.upload.onprogress = (ev) => {
+            if (ev.lengthComputable) {
+              loaded[i] = ev.loaded;
+              tickProgress();
+            }
+          };
+          xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              loaded[i] = totals[i];
+              tickProgress();
+              resolve(xhr.responseText);
+            } else {
+              let msg = 'Upload failed';
+              try {
+                const j = JSON.parse(xhr.responseText || '{}');
+                msg = j.message || j.error || msg;
+              } catch (_) {}
+              reject(new Error(msg));
+            }
+          };
+          xhr.onerror = () => reject(new Error('Network error during upload'));
+          xhr.onabort = () => reject(new Error('aborted'));
+
+          const form = new FormData();
+          form.append('file', f);
+          form.append('agentId', CONFIG.agentId);
+          form.append('userId', getVoiceflowUserId());
+          if (conversationId) form.append('conversationId', conversationId);
+          if (currentVoiceflowSessionId) form.append('voiceflowSessionId', currentVoiceflowSessionId);
+          form.append('isTestMode', CONFIG.isTestMode ? 'true' : 'false');
+          // No per-file caption — caption rides as a separate trailing text bubble.
+          form.append('text', '');
+          xhr.send(form);
+        });
+
+        // Remove this file from pending so cancel-during-upload only leaves un-sent ones behind.
+        const u = previewUrlCache.get(f);
+        if (u) {
+          try { URL.revokeObjectURL(u); } catch (_) {}
+          previewUrlCache.delete(f);
+        }
+        pendingAttachments = pendingAttachments.filter((p) => p !== f);
+      } catch (err) {
+        const msg = err && err.message ? err.message : 'Upload failed';
+        if (msg === 'aborted') {
+          // User cancelled. State already reset by vfCancelPending. Stop the loop.
+          return;
+        }
+        isUploading = false;
+        uploadError = msg;
+        uploadXhrs = [];
+        renderAttachPreview();
+        return;
+      }
+    }
+
+    // All files uploaded successfully.
+    isUploading = false;
+    uploadProgress = 0;
+    uploadError = null;
+    uploadXhrs = [];
+    renderAttachPreview();
+
+    if (caption && caption.trim()) {
+      await sendMessage(caption);
     }
   }
-  
-  window.vfAttachFile = function() {
-    const fileInput = document.getElementById('vf-file-input');
-    if (fileInput) {
-      fileInput.onchange = async (e) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        
-        const result = await uploadFile(file);
-        if (result) {
-          const isImage = /\\.(jpg|jpeg|png|gif|webp)$/i.test(file.name);
-          const messageText = \`[\${isImage ? 'Image' : 'File'}: \${result.fileName}]\\n\${result.publicUrl}\`;
-          sendMessage(messageText);
-        }
-        
-        fileInput.value = '';
-      };
-      fileInput.click();
-    }
-  };
   
   // API Functions
   async function sendMessage(text) {
@@ -2200,10 +2552,16 @@ function generateWidgetScript(config: any): string {
   };
   
   window.vfSendMessage = function() {
+    if (isUploading) return;
     const input = document.getElementById('vf-input');
-    if (input) {
-      sendMessage(input.value);
+    const captionRaw = input ? input.value : '';
+    if (pendingAttachments.length > 0) {
+      // Attach flow: clear text immediately so the user can keep typing while uploads run.
+      if (input) input.value = '';
+      uploadBatchAndSend(captionRaw);
+      return;
     }
+    if (input) sendMessage(input.value);
   };
   
   window.vfStartNewChat = startNewChat;
