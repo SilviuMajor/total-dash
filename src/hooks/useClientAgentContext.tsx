@@ -10,6 +10,8 @@ interface Agent {
   provider: string;
   sort_order: number;
   status?: 'active' | 'testing' | 'in_development';
+  // API-key fields (api_key/voiceflow_api_key/retell_api_key) are stripped before this reaches consumers — see hook below.
+  config?: Record<string, any>;
 }
 
 interface AgentPermissions {
@@ -342,12 +344,15 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
             return role?.client_permissions?.[key] || false;
           };
 
+          const { api_key: _ak1, voiceflow_api_key: _ak2, retell_api_key: _ak3, ...safeConfig } = agentConfig;
+
           return {
             id: agent.id,
             name: agent.name,
             provider: agent.provider,
             status: agent.status as Agent['status'],
             sort_order: a.sort_order ?? 0,
+            config: safeConfig,
             effectivePermissions: {
               conversations: resolvePermission('conversations'),
               transcripts: resolvePermission('transcripts'),
@@ -529,12 +534,15 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
             return role?.client_permissions?.[key] || false;
           };
 
+          const { api_key: _ak1, voiceflow_api_key: _ak2, retell_api_key: _ak3, ...safeConfig } = agentConfig;
+
           return {
             id: agent.id,
             name: agent.name,
             provider: agent.provider,
             status: agent.status as Agent['status'],
             sort_order: a.sort_order ?? 0,
+            config: safeConfig,
             effectivePermissions: {
               conversations: resolvePermission('conversations'),
               transcripts: resolvePermission('transcripts'),
