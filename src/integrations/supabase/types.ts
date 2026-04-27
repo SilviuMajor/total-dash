@@ -1547,6 +1547,8 @@ export type Database = {
       conversations: {
         Row: {
           agent_id: string
+          archived_at: string | null
+          archived_by: string | null
           caller_phone: string | null
           customer_base_id: string | null
           department_id: string | null
@@ -1554,6 +1556,7 @@ export type Database = {
           ended_at: string | null
           first_unanswered_message_at: string | null
           id: string
+          is_archived: boolean
           is_widget_test: boolean | null
           last_activity_at: string | null
           last_customer_message_at: string | null
@@ -1570,6 +1573,8 @@ export type Database = {
         }
         Insert: {
           agent_id: string
+          archived_at?: string | null
+          archived_by?: string | null
           caller_phone?: string | null
           customer_base_id?: string | null
           department_id?: string | null
@@ -1577,6 +1582,7 @@ export type Database = {
           ended_at?: string | null
           first_unanswered_message_at?: string | null
           id?: string
+          is_archived?: boolean
           is_widget_test?: boolean | null
           last_activity_at?: string | null
           last_customer_message_at?: string | null
@@ -1593,6 +1599,8 @@ export type Database = {
         }
         Update: {
           agent_id?: string
+          archived_at?: string | null
+          archived_by?: string | null
           caller_phone?: string | null
           customer_base_id?: string | null
           department_id?: string | null
@@ -1600,6 +1608,7 @@ export type Database = {
           ended_at?: string | null
           first_unanswered_message_at?: string | null
           id?: string
+          is_archived?: boolean
           is_widget_test?: boolean | null
           last_activity_at?: string | null
           last_customer_message_at?: string | null
@@ -2569,6 +2578,10 @@ export type Database = {
         Returns: boolean
       }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      set_conversation_archived: {
+        Args: { p_conversation_id: string; p_archived: boolean }
+        Returns: undefined
+      }
       update_agent_config: {
         Args: { p_agent_id: string; p_config_updates: Json }
         Returns: undefined

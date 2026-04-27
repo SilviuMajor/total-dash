@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ConversationsSkeleton } from "@/components/skeletons";
-import { Phone, Clock, CheckCircle, MessageSquare, ArrowDown, X, Plus, Tag, Users, Building2, Send, UserCheck, PhoneOff, ArrowRightLeft, Lock, Loader2, AlertTriangle, Timer, MessageSquareText, Trash2, FolderOpen, Sparkles, Check } from "lucide-react";
+import { Phone, Clock, CheckCircle, MessageSquare, ArrowDown, X, Plus, Tag, Users, Building2, Send, UserCheck, PhoneOff, ArrowRightLeft, Lock, Loader2, AlertTriangle, Timer, MessageSquareText, Trash2, FolderOpen, Sparkles, Check, Archive } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -166,6 +166,10 @@ export default function Conversations() {
   const [aiEnhancing, setAiEnhancing] = useState(false);
   const [aiEnhancedText, setAiEnhancedText] = useState("");
   const [aiEnhanceMode, setAiEnhanceMode] = useState<string | null>(null);
+
+  // Archive (N8) — admin-only via RPC, force-ends + hides the conversation.
+  const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false);
+  const [archiving, setArchiving] = useState(false);
 
   const selectedConversationRef = useRef(selectedConversation);
 
@@ -1060,6 +1064,41 @@ export default function Conversations() {
     setTransferDeptId("");
   };
 
+  const handleArchiveConversation = async () => {
+    if (!selectedConversation?.id) return;
+    setArchiving(true);
+    try {
+      const { error } = await supabase.rpc('set_conversation_archived', {
+        p_conversation_id: selectedConversation.id,
+        p_archived: true,
+      });
+      if (error) {
+        if ((error as any).code === '42501') {
+          toast({
+            title: "Only admins can archive conversations",
+            description: "Ask your admin to do this.",
+            variant: "destructive",
+          });
+        } else if ((error as any).code === '42704') {
+          toast({ title: "Conversation not found", variant: "destructive" });
+        } else {
+          toast({
+            title: "Failed to archive",
+            description: error.message ?? "Please try again.",
+            variant: "destructive",
+          });
+        }
+        return;
+      }
+      setArchiveConfirmOpen(false);
+      setSelectedConversation(null);
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      toast({ title: "Conversation archived" });
+    } finally {
+      setArchiving(false);
+    }
+  };
+
   const handleTakeover = async () => {
     setTakeoverConfirmOpen(false);
     await callHandoverAction('take_over');
@@ -1548,21 +1587,32 @@ export default function Conversations() {
                       {transcripts.length}
                     </p>
                   </div>
-                  {departments.length > 1 && selectedConversation.department_id && (() => {
-                    const dept = departments.find(d => d.id === selectedConversation.department_id);
-                    return dept ? (
-                      <span
-                        className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-medium border shrink-0"
-                        style={{
-                          backgroundColor: `${dept.color || '#6B7280'}15`,
-                          borderColor: `${dept.color || '#6B7280'}40`,
-                          color: dept.color || '#6B7280',
-                        }}
-                      >
-                        {dept.name}
-                      </span>
-                    ) : null;
-                  })()}
+                  <div className="flex items-center gap-2 shrink-0">
+                    {departments.length > 1 && selectedConversation.department_id && (() => {
+                      const dept = departments.find(d => d.id === selectedConversation.department_id);
+                      return dept ? (
+                        <span
+                          className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-medium border"
+                          style={{
+                            backgroundColor: `${dept.color || '#6B7280'}15`,
+                            borderColor: `${dept.color || '#6B7280'}40`,
+                            color: dept.color || '#6B7280',
+                          }}
+                        >
+                          {dept.name}
+                        </span>
+                      ) : null;
+                    })()}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-muted-foreground hover:text-foreground"
+                      onClick={() => setArchiveConfirmOpen(true)}
+                      title="Archive conversation"
+                    >
+                      <Archive className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 </div>
                 <ScrollArea
                   className="flex-1 min-h-0"
@@ -2550,6 +2600,25 @@ export default function Conversations() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleTakeover}>
               Yes, Take Over
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Archive Confirmation (N8) */}
+      <AlertDialog open={archiveConfirmOpen} onOpenChange={setArchiveConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Archive this conversation?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will end the conversation and remove it from your inbox. You can find it again in Transcripts → Include archived. Admin permission is required.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={archiving}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleArchiveConversation} disabled={archiving}>
+              {archiving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Archive className="h-4 w-4 mr-2" />}
+              Archive
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

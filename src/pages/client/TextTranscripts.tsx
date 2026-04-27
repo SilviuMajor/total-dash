@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Search, Download, FileJson } from "lucide-react";
+import { Search, Download, FileJson, ArchiveRestore } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -47,6 +47,7 @@ interface ConversationRow {
   resolution_note: string | null;
   needs_review_reason: string | null;
   is_widget_test: boolean | null;
+  is_archived: boolean | null;
   caller_phone: string | null;
   voiceflow_user_id: string | null;
   metadata: Json | null;
@@ -211,9 +212,11 @@ export default function TextTranscripts() {
   const [departmentFilter, setDepartmentFilter] = useState("all");
   const [staffFilter, setStaffFilter] = useState("all");
   const [includeTest, setIncludeTest] = useState(false);
+  const [includeArchived, setIncludeArchived] = useState(false);
   const [selected, setSelected] = useState<ConversationRow | null>(null);
   const [detail, setDetail] = useState<DetailData | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [unarchiving, setUnarchiving] = useState(false);
   // Conversations that matched a transcript-text search server-side but
   // weren't already in the main list. Merged into the displayed rows.
   const [searchExtras, setSearchExtras] = useState<ConversationRow[]>([]);
@@ -223,7 +226,7 @@ export default function TextTranscripts() {
 
   useEffect(() => {
     if (selectedAgentId) loadConversations();
-  }, [selectedAgentId, dateFilter, customStart, customEnd]);
+  }, [selectedAgentId, dateFilter, customStart, customEnd, includeArchived]);
 
   const buildArchiveQuery = () => {
     // Safety net: include rows that are resolved but missing ended_at (legacy
@@ -233,19 +236,21 @@ export default function TextTranscripts() {
     const baseSelect = `id, agent_id, status, started_at, ended_at, duration,
            last_activity_at, last_customer_message_at,
            sentiment, resolution_reason, resolution_note,
-           needs_review_reason, is_widget_test,
+           needs_review_reason, is_widget_test, is_archived,
            caller_phone, voiceflow_user_id,
            metadata, owner_id, owner_name, department_id,
            departments:department_id ( id, name, color ),
            handover_sessions ( id, status, takeover_type, completion_method, completed_at, agent_name ),
            conversation_tags ( tag_name )`;
-    return supabase
+    let q = supabase
       .from("conversations")
       .select(baseSelect)
       .eq("agent_id", selectedAgentId!)
       .or("ended_at.not.is.null,status.eq.resolved")
       .order("ended_at", { ascending: false, nullsFirst: false })
       .order("last_activity_at", { ascending: false, nullsFirst: false });
+    if (!includeArchived) q = q.eq("is_archived", false);
+    return q;
   };
 
   const loadConversations = async () => {
@@ -424,6 +429,40 @@ export default function TextTranscripts() {
   const handleCloseDetail = () => {
     setSelected(null);
     setDetail(null);
+  };
+
+  const handleUnarchive = async () => {
+    if (!selected?.id) return;
+    setUnarchiving(true);
+    try {
+      const { error } = await supabase.rpc('set_conversation_archived', {
+        p_conversation_id: selected.id,
+        p_archived: false,
+      });
+      if (error) {
+        if ((error as any).code === '42501') {
+          toast({
+            title: "Only admins can unarchive conversations",
+            description: "Ask your admin to do this.",
+            variant: "destructive",
+          });
+        } else if ((error as any).code === '42704') {
+          toast({ title: "Conversation not found", variant: "destructive" });
+        } else {
+          toast({
+            title: "Failed to unarchive",
+            description: error.message ?? "Please try again.",
+            variant: "destructive",
+          });
+        }
+        return;
+      }
+      toast({ title: "Conversation unarchived" });
+      handleCloseDetail();
+      loadConversations();
+    } finally {
+      setUnarchiving(false);
+    }
   };
 
   const resolutionOptions = useMemo(() => {
@@ -667,6 +706,10 @@ export default function TextTranscripts() {
             <Switch id="include-test" checked={includeTest} onCheckedChange={setIncludeTest} />
             <Label htmlFor="include-test" className="text-sm">Include test conversations</Label>
           </div>
+          <div className="flex items-center gap-2">
+            <Switch id="include-archived" checked={includeArchived} onCheckedChange={setIncludeArchived} />
+            <Label htmlFor="include-archived" className="text-sm">Include archived</Label>
+          </div>
         </div>
       </div>
 
@@ -706,11 +749,16 @@ export default function TextTranscripts() {
                       return (
                         <tr
                           key={c.id}
-                          className="hover:bg-muted/50 transition-colors cursor-pointer"
+                          className={`hover:bg-muted/50 transition-colors cursor-pointer ${c.is_archived ? "opacity-60" : ""}`}
                           onClick={() => handleOpenDetail(c)}
                         >
                           <td className="px-4 py-3">
-                            <div className="font-medium">{customerNameOf(c) ?? "Anonymous"}</div>
+                            <div className="font-medium flex items-center gap-2">
+                              <span>{customerNameOf(c) ?? "Anonymous"}</span>
+                              {c.is_archived && (
+                                <Badge variant="secondary" className="text-xs">Archived</Badge>
+                              )}
+                            </div>
                             <div className="text-xs text-muted-foreground">
                               {customerEmailOf(c) ?? customerPhoneOf(c) ?? "—"}
                             </div>
@@ -796,6 +844,17 @@ export default function TextTranscripts() {
                 </div>
               </div>
               <div className="flex gap-2 flex-shrink-0">
+                {selected?.is_archived && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleUnarchive}
+                    disabled={unarchiving}
+                  >
+                    <ArchiveRestore className="h-4 w-4 mr-2" />
+                    {unarchiving ? "Unarchiving..." : "Unarchive"}
+                  </Button>
+                )}
                 <Button variant="outline" size="sm" onClick={exportPlaintext} disabled={!detail}>
                   <Download className="h-4 w-4 mr-2" />
                   Plaintext

@@ -17,6 +17,7 @@ export function useConversations(agentId: string | null, filters?: ConversationF
         .from('conversations')
         .select('*')
         .eq('agent_id', agentId!)
+        .eq('is_archived', false)
         .limit(PAGE_SIZE)
         .order('last_activity_at', { ascending: false });
 
