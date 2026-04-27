@@ -148,14 +148,35 @@ const formatDuration = (seconds: number | null): string => {
   return `${mins}:${secs.toString().padStart(2, "0")}`;
 };
 
-const customerNameOf = (conv: ConversationRow): string | null =>
-  conv.metadata?.variables?.user_name ?? null;
+const customerNameOf = (conv: ConversationRow): string | null => {
+  const v = conv.metadata?.variables ?? {};
+  // Prefer explicit user_name; fall back to full_name (some flows collect that
+  // instead), then first/last combo. Trim and treat empty as missing.
+  const candidates = [
+    v.user_name,
+    v.full_name,
+    v.fullName,
+    v.name,
+    [v.first_name, v.last_name].filter(Boolean).join(" "),
+  ];
+  for (const c of candidates) {
+    if (typeof c === "string" && c.trim()) return c.trim();
+  }
+  return null;
+};
 
 const customerEmailOf = (conv: ConversationRow): string | null =>
-  conv.metadata?.variables?.user_email ?? null;
+  conv.metadata?.variables?.user_email ?? conv.metadata?.variables?.email ?? null;
 
 const customerPhoneOf = (conv: ConversationRow): string | null =>
-  conv.metadata?.variables?.user_phone ?? conv.caller_phone ?? null;
+  conv.metadata?.variables?.user_phone ?? conv.metadata?.variables?.phone ?? conv.caller_phone ?? null;
+
+// "Effective ended" — use ended_at when set; otherwise fall back to
+// last_activity_at for the safety-net rows (resolved without ended_at).
+// Once the backfill migration runs and the new handover-actions deploys,
+// every archive row has ended_at set and this fallback is unused.
+const effectiveEndedAt = (conv: ConversationRow): string | null =>
+  conv.ended_at ?? conv.last_activity_at ?? null;
 
 const finalAcceptorName = (conv: ConversationRow): string | null => {
   const sessions = conv.handover_sessions ?? [];
@@ -184,6 +205,8 @@ export default function TextTranscripts() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFilter, setDateFilter] = useState("7");
+  const [customStart, setCustomStart] = useState("");
+  const [customEnd, setCustomEnd] = useState("");
   const [resolutionFilter, setResolutionFilter] = useState("all");
   const [departmentFilter, setDepartmentFilter] = useState("all");
   const [staffFilter, setStaffFilter] = useState("all");
@@ -191,19 +214,23 @@ export default function TextTranscripts() {
   const [selected, setSelected] = useState<ConversationRow | null>(null);
   const [detail, setDetail] = useState<DetailData | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  // Conversations that matched a transcript-text search server-side but
+  // weren't already in the main list. Merged into the displayed rows.
+  const [searchExtras, setSearchExtras] = useState<ConversationRow[]>([]);
+  // IDs that matched the transcript text search — these bypass the local
+  // hay-matcher so a hit on an old message still surfaces the row.
+  const [textMatchIds, setTextMatchIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (selectedAgentId) loadConversations();
-  }, [selectedAgentId, dateFilter]);
+  }, [selectedAgentId, dateFilter, customStart, customEnd]);
 
-  const loadConversations = async () => {
-    if (!selectedAgentId) return;
-    setLoading(true);
-    try {
-      let query = supabase
-        .from("conversations")
-        .select(
-          `id, agent_id, status, started_at, ended_at, duration,
+  const buildArchiveQuery = () => {
+    // Safety net: include rows that are resolved but missing ended_at (legacy
+    // staff-resolved conversations that pre-date the handover-actions fix).
+    // After the backfill migration runs, every resolved row has ended_at set
+    // and this OR is harmless.
+    const baseSelect = `id, agent_id, status, started_at, ended_at, duration,
            last_activity_at, last_customer_message_at,
            sentiment, resolution_reason, resolution_note,
            needs_review_reason, is_widget_test,
@@ -211,14 +238,31 @@ export default function TextTranscripts() {
            metadata, owner_id, owner_name, department_id,
            departments:department_id ( id, name, color ),
            handover_sessions ( id, status, takeover_type, completion_method, completed_at, agent_name ),
-           conversation_tags ( tag_name )`
-        )
-        .eq("agent_id", selectedAgentId)
-        .not("ended_at", "is", null)
-        .order("ended_at", { ascending: false })
-        .limit(LIST_LIMIT);
+           conversation_tags ( tag_name )`;
+    return supabase
+      .from("conversations")
+      .select(baseSelect)
+      .eq("agent_id", selectedAgentId!)
+      .or("ended_at.not.is.null,status.eq.resolved")
+      .order("ended_at", { ascending: false, nullsFirst: false })
+      .order("last_activity_at", { ascending: false, nullsFirst: false });
+  };
 
-      if (dateFilter !== "all") {
+  const loadConversations = async () => {
+    if (!selectedAgentId) return;
+    setLoading(true);
+    try {
+      let query = buildArchiveQuery().limit(LIST_LIMIT);
+
+      if (dateFilter === "custom") {
+        if (customStart) query = query.gte("ended_at", new Date(customStart).toISOString());
+        if (customEnd) {
+          // Include the whole end-day.
+          const endOfDay = new Date(customEnd);
+          endOfDay.setHours(23, 59, 59, 999);
+          query = query.lte("ended_at", endOfDay.toISOString());
+        }
+      } else if (dateFilter !== "all") {
         const daysAgo = new Date();
         daysAgo.setDate(daysAgo.getDate() - parseInt(dateFilter));
         query = query.gte("ended_at", daysAgo.toISOString());
@@ -238,6 +282,60 @@ export default function TextTranscripts() {
       setLoading(false);
     }
   };
+
+  // Server-side full-text search across transcripts. Triggered with debounce
+  // when the search box has ≥2 chars. Finds conversation IDs whose messages
+  // match, then fetches the conversation rows that aren't already loaded.
+  // Result is merged into the displayed list and these IDs bypass the local
+  // hay matcher so a buried message hit still surfaces the conversation.
+  useEffect(() => {
+    if (!selectedAgentId) {
+      setSearchExtras([]);
+      setTextMatchIds(new Set());
+      return;
+    }
+    const q = searchQuery.trim();
+    if (q.length < 2) {
+      setSearchExtras([]);
+      setTextMatchIds(new Set());
+      return;
+    }
+    const handle = setTimeout(async () => {
+      try {
+        // 1. Find matching transcript rows. RLS scopes to agents this user
+        //    can read, so no agent_id filter is required (transcripts has no
+        //    agent_id column anyway).
+        const escaped = q.replace(/[%_]/g, "\\$&");
+        const { data: matches, error: matchErr } = await supabase
+          .from("transcripts")
+          .select("conversation_id")
+          .ilike("text", `%${escaped}%`)
+          .limit(500);
+        if (matchErr) throw matchErr;
+        const ids = Array.from(new Set((matches ?? []).map((m: any) => m.conversation_id))).filter(Boolean);
+        setTextMatchIds(new Set(ids));
+        if (!ids.length) {
+          setSearchExtras([]);
+          return;
+        }
+        // 2. Fetch conversation rows for those IDs that aren't already loaded.
+        const existing = new Set(conversations.map((c) => c.id));
+        const missing = ids.filter((id) => !existing.has(id));
+        if (!missing.length) {
+          setSearchExtras([]);
+          return;
+        }
+        const { data: extras, error: extrasErr } = await buildArchiveQuery().in("id", missing);
+        if (extrasErr) throw extrasErr;
+        setSearchExtras((extras ?? []) as unknown as ConversationRow[]);
+      } catch (e) {
+        console.error("Transcript text search failed:", e);
+        setSearchExtras([]);
+        setTextMatchIds(new Set());
+      }
+    }, 300);
+    return () => clearTimeout(handle);
+  }, [searchQuery, selectedAgentId, conversations]);
 
   const loadDetail = async (conv: ConversationRow) => {
     setDetailLoading(true);
@@ -329,7 +427,23 @@ export default function TextTranscripts() {
 
   const filtered = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    return conversations.filter((c) => {
+    // Merge main list + transcript-search extras, dedup by id, keep ended order.
+    const seen = new Set<string>();
+    const combined: ConversationRow[] = [];
+    for (const c of [...conversations, ...searchExtras]) {
+      if (seen.has(c.id)) continue;
+      seen.add(c.id);
+      combined.push(c);
+    }
+    combined.sort((a, b) => {
+      const ax = effectiveEndedAt(a);
+      const bx = effectiveEndedAt(b);
+      if (!ax && !bx) return 0;
+      if (!ax) return 1;
+      if (!bx) return -1;
+      return ax > bx ? -1 : ax < bx ? 1 : 0;
+    });
+    return combined.filter((c) => {
       if (!includeTest && c.is_widget_test) return false;
       if (resolutionFilter !== "all" && c.resolution_reason !== resolutionFilter) return false;
       if (departmentFilter !== "all" && c.department_id !== departmentFilter) return false;
@@ -341,6 +455,8 @@ export default function TextTranscripts() {
         if (!involved.includes(staffFilter)) return false;
       }
       if (q) {
+        // Transcript text matches (server-side) bypass the local hay check.
+        if (textMatchIds.has(c.id)) return true;
         const hay = [
           customerNameOf(c),
           customerEmailOf(c),
@@ -353,11 +469,14 @@ export default function TextTranscripts() {
           .filter(Boolean)
           .join(" ")
           .toLowerCase();
-        if (!hay.includes(q)) return false;
+        // Match if every whitespace-separated word appears somewhere — lets
+        // staff search "john refund" and find "John … refund request".
+        const terms = q.split(/\s+/).filter(Boolean);
+        if (!terms.every((t) => hay.includes(t))) return false;
       }
       return true;
     });
-  }, [conversations, searchQuery, resolutionFilter, departmentFilter, staffFilter, includeTest]);
+  }, [conversations, searchExtras, textMatchIds, searchQuery, resolutionFilter, departmentFilter, staffFilter, includeTest]);
 
   const exportPlaintext = () => {
     if (!selected || !detail) return;
@@ -369,7 +488,8 @@ export default function TextTranscripts() {
     lines.push(`Email: ${customerEmailOf(selected) ?? "N/A"}`);
     lines.push(`Phone: ${customerPhoneOf(selected) ?? "N/A"}`);
     lines.push(`Started: ${format(new Date(selected.started_at), "PPpp")}`);
-    if (selected.ended_at) lines.push(`Ended: ${format(new Date(selected.ended_at), "PPpp")}`);
+    const endedDisplay = effectiveEndedAt(selected);
+    if (endedDisplay) lines.push(`Ended: ${format(new Date(endedDisplay), "PPpp")}`);
     lines.push(`Duration: ${formatDuration(selected.duration)}`);
     lines.push(`Status: ${selected.status ?? "—"}`);
     lines.push(`Final department: ${selected.departments?.name ?? "—"}`);
@@ -466,8 +586,28 @@ export default function TextTranscripts() {
               <SelectItem value="30">Last 30 days</SelectItem>
               <SelectItem value="90">Last 90 days</SelectItem>
               <SelectItem value="all">All time</SelectItem>
+              <SelectItem value="custom">Custom range</SelectItem>
             </SelectContent>
           </Select>
+          {dateFilter === "custom" && (
+            <>
+              <Input
+                type="date"
+                value={customStart}
+                onChange={(e) => setCustomStart(e.target.value)}
+                className="w-[150px]"
+                aria-label="Start date"
+              />
+              <span className="text-sm text-muted-foreground">to</span>
+              <Input
+                type="date"
+                value={customEnd}
+                onChange={(e) => setCustomEnd(e.target.value)}
+                className="w-[150px]"
+                aria-label="End date"
+              />
+            </>
+          )}
           <Select value={resolutionFilter} onValueChange={setResolutionFilter}>
             <SelectTrigger className="w-[180px]"><SelectValue placeholder="Resolution" /></SelectTrigger>
             <SelectContent>
@@ -548,7 +688,10 @@ export default function TextTranscripts() {
                             </div>
                           </td>
                           <td className="px-4 py-3 text-sm">
-                            {c.ended_at ? format(new Date(c.ended_at), "MMM d, yyyy HH:mm") : "—"}
+                            {(() => {
+                              const e = effectiveEndedAt(c);
+                              return e ? format(new Date(e), "MMM d, yyyy HH:mm") : "—";
+                            })()}
                           </td>
                           <td className="px-4 py-3 text-sm">{formatDuration(c.duration)}</td>
                           <td className="px-4 py-3">
@@ -613,11 +756,12 @@ export default function TextTranscripts() {
                     {selected ? customerEmailOf(selected) ?? customerPhoneOf(selected) ?? "No contact info" : ""}
                   </p>
                   <p>
-                    {selected?.ended_at
-                      ? `Ended ${format(new Date(selected.ended_at), "PPpp")}`
-                      : selected
-                      ? `Started ${format(new Date(selected.started_at), "PPpp")}`
-                      : ""}
+                    {(() => {
+                      if (!selected) return "";
+                      const e = effectiveEndedAt(selected);
+                      if (e) return `Ended ${format(new Date(e), "PPpp")}`;
+                      return `Started ${format(new Date(selected.started_at), "PPpp")}`;
+                    })()}
                     {" · "}
                     {formatDuration(selected?.duration ?? null)}
                   </p>
@@ -652,7 +796,6 @@ export default function TextTranscripts() {
                 </TabsTrigger>
                 <TabsTrigger value="tags">Tags & Notes</TabsTrigger>
                 <TabsTrigger value="staff">Staff</TabsTrigger>
-                <TabsTrigger value="variables">Variables</TabsTrigger>
               </TabsList>
 
               <TabsContent value="conversation" className="flex-1 overflow-hidden mt-3">
@@ -669,9 +812,6 @@ export default function TextTranscripts() {
               </TabsContent>
               <TabsContent value="staff" className="flex-1 overflow-hidden mt-3">
                 <StaffTab conv={selected} handovers={detail.handovers} transcripts={detail.transcripts} tags={detail.tags} readBy={detail.readBy} />
-              </TabsContent>
-              <TabsContent value="variables" className="flex-1 overflow-hidden mt-3">
-                <VariablesTab variables={selected?.metadata?.variables ?? null} />
               </TabsContent>
             </Tabs>
           )}
@@ -1029,23 +1169,3 @@ function StaffTab({
   );
 }
 
-function VariablesTab({ variables }: { variables: Json | null }) {
-  const entries = variables && typeof variables === "object" ? Object.entries(variables) : [];
-  if (!entries.length) {
-    return <div className="text-center text-sm text-muted-foreground py-8">No variables captured.</div>;
-  }
-  return (
-    <ScrollArea className="h-full">
-      <div className="space-y-2 pr-2">
-        {entries.map(([key, value]) => (
-          <div key={key} className="text-sm">
-            <div className="font-mono text-xs text-muted-foreground">{key}</div>
-            <div className="font-medium break-words whitespace-pre-wrap">
-              {typeof value === "object" ? JSON.stringify(value, null, 2) : String(value)}
-            </div>
-          </div>
-        ))}
-      </div>
-    </ScrollArea>
-  );
-}

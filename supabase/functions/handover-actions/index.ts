@@ -455,13 +455,30 @@ async function handleEndHandover(
     .eq("id", session.id);
 
   // Update conversation status
+  const nowIso = new Date().toISOString();
   const convUpdate: Record<string, any> = {
     status: newStatus,
-    last_activity_at: new Date().toISOString(),
+    last_activity_at: nowIso,
   };
-  if (resolve && resolution_reason) {
-    convUpdate.resolution_reason = resolution_reason;
-    convUpdate.resolution_note = resolution_note || null;
+  if (resolve) {
+    // Resolved is a terminal state — stamp the archive marker so the
+    // Transcripts page treats this conversation as ended.
+    const { data: convForDuration } = await supabaseClient
+      .from("conversations")
+      .select("started_at")
+      .eq("id", conversationId)
+      .single();
+    convUpdate.ended_at = nowIso;
+    if (convForDuration?.started_at) {
+      convUpdate.duration = Math.max(
+        0,
+        Math.floor((Date.parse(nowIso) - Date.parse(convForDuration.started_at)) / 1000)
+      );
+    }
+    if (resolution_reason) {
+      convUpdate.resolution_reason = resolution_reason;
+      convUpdate.resolution_note = resolution_note || null;
+    }
   }
   await supabaseClient
     .from("conversations")
@@ -884,10 +901,24 @@ async function handleMarkResolved(
     );
   }
 
+  const nowIso = new Date().toISOString();
+  const { data: convForDuration } = await supabaseClient
+    .from("conversations")
+    .select("started_at")
+    .eq("id", conversationId)
+    .single();
+
   const convUpdate: Record<string, any> = {
     status: "resolved",
-    last_activity_at: new Date().toISOString(),
+    last_activity_at: nowIso,
+    ended_at: nowIso,
   };
+  if (convForDuration?.started_at) {
+    convUpdate.duration = Math.max(
+      0,
+      Math.floor((Date.parse(nowIso) - Date.parse(convForDuration.started_at)) / 1000)
+    );
+  }
   if (resolution_reason) {
     convUpdate.resolution_reason = resolution_reason;
     convUpdate.resolution_note = resolution_note || null;
