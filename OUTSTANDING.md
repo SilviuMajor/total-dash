@@ -35,24 +35,12 @@ Tone: same as the rest of CLAUDE.md — plain language, no fluff, no emoji, dire
 
 ## Tier 1 — must-haves
 
-### N8 — Team-wide conversation archive
+### N8 — Team-wide conversation archive ✅ DONE (2026-04-27)
 
-**Type:** Feature | **Effort:** Medium | **Status:** Open
+**Type:** Feature | **Effort:** Medium | **Status:** Shipped
 **Spec:** `TotalDash-Spec-N8-Team-Conversation-Archive.md`
 
-Add an archive flag separate from status. Archiving hides a conversation from all team members' lists but preserves data and state. Differs from "resolved" — a resolved conversation can stay visible for reference; archive is opt-in visibility control.
-
-**Decisions already made:**
-- Use a separate boolean column `is_archived` on `conversations`, not a new status enum value. Status tracks workflow; archive tracks organisational visibility.
-- Default views hide archived; "Show archived" toggle in filter bar reveals them.
-- Archive is team-wide (not per-user). Single click in row context menu.
-- Visual: faded row + "Archived" badge.
-
-**Open questions:**
-- Should archive affect analytics/dashboards? Recommendation: no, archive is UX-only.
-- Bulk archive in MVP? Recommendation: no, single-row action only initially.
-
-**Touches:** migration adding `is_archived`, `useConversations.ts` query, Conversations.tsx UI.
+Shipped: `is_archived` / `archived_at` / `archived_by` columns + `set_conversation_archived` RPC (super_admin / agency / client admin tier; 42501 vs 42704 split). /conversations always filters archived out; Archive button on the middle-panel header with a confirmation dialog (forces ended_at + status=resolved). Transcripts gains an "Include archived" toggle, faded rows + Archived badge, and an Unarchive button on the detail dialog. Non-admins see the buttons but get a toast on click. No partial index in v1.
 
 ---
 
