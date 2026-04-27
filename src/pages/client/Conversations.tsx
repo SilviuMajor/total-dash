@@ -238,13 +238,9 @@ export default function Conversations() {
     loadCanned();
   }, [clientId, selectedAgentId, user?.id]);
 
-  // Personal-canned-responses gating depends on `agents` (loaded async via context).
-  // Keep this in its own effect so a stale `agents` closure can't pin it to true.
   useEffect(() => {
-    const agent = agents.find(a => a.id === selectedAgentId);
-    const agentConfig = (agent as any)?.config;
-    setPersonalEnabled(agentConfig?.canned_responses_personal_enabled !== false);
-  }, [agents, selectedAgentId]);
+    setPersonalEnabled(companyCapabilities?.canned_responses_personal_enabled !== false);
+  }, [companyCapabilities]);
 
 
   useEffect(() => {

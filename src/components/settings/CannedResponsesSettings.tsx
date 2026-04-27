@@ -27,9 +27,8 @@ interface CannedResponse {
 
 export function CannedResponsesSettings({ readOnly, clientId: propClientId }: { readOnly?: boolean; clientId?: string } = {}) {
   const { toast } = useToast();
-  const { agents, selectedAgentId, clientId: contextClientId } = useClientAgentContext();
+  const { clientId: contextClientId } = useClientAgentContext();
   const clientId = propClientId || contextClientId;
-  const selectedAgent = agents.find(a => a.id === selectedAgentId);
 
   const [responses, setResponses] = useState<CannedResponse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,26 +49,19 @@ export function CannedResponsesSettings({ readOnly, clientId: propClientId }: { 
   useEffect(() => {
     if (clientId) {
       loadResponses();
+      loadSettings();
     }
   }, [clientId]);
 
-  useEffect(() => {
-    if (selectedAgentId) {
-      loadSettings();
-    }
-  }, [selectedAgentId]);
-
   const loadSettings = async () => {
-    if (!selectedAgentId) return;
-    // Read fresh from DB — the cached agents list in context doesn't refresh
-    // after the toggle saves, so reading from it gave stale "enabled" state on
-    // tab switches.
+    if (!clientId) return;
     const { data } = await supabase
-      .from('agents_safe' as any)
-      .select('config')
-      .eq('id', selectedAgentId)
-      .single() as { data: { config: any } | null };
-    setPersonalEnabled(data?.config?.canned_responses_personal_enabled !== false);
+      .from('client_settings')
+      .select('admin_capabilities')
+      .eq('client_id', clientId)
+      .maybeSingle();
+    const caps = (data?.admin_capabilities || {}) as Record<string, any>;
+    setPersonalEnabled(caps.canned_responses_personal_enabled !== false);
   };
 
   const loadResponses = async () => {
@@ -86,34 +78,26 @@ export function CannedResponsesSettings({ readOnly, clientId: propClientId }: { 
   };
 
   const togglePersonal = async (enabled: boolean) => {
-    if (!selectedAgentId) {
-      toast({ title: "No agent selected", description: "Cannot save — no agent is selected in the context.", variant: "destructive" });
+    if (!clientId) {
+      toast({ title: "No client context", description: "Cannot save — clientId missing.", variant: "destructive" });
       return;
     }
     setPersonalEnabled(enabled);
-    const { error } = await supabase.rpc('update_agent_config', {
-      p_agent_id: selectedAgentId,
-      p_config_updates: { canned_responses_personal_enabled: enabled },
-    });
+    const { data: existing } = await supabase
+      .from('client_settings')
+      .select('admin_capabilities')
+      .eq('client_id', clientId)
+      .maybeSingle();
+    const merged = {
+      ...((existing?.admin_capabilities as Record<string, any>) || {}),
+      canned_responses_personal_enabled: enabled,
+    };
+    const { error } = await supabase
+      .from('client_settings')
+      .upsert({ client_id: clientId, admin_capabilities: merged }, { onConflict: 'client_id' });
     if (error) {
       setPersonalEnabled(!enabled);
       toast({ title: "Failed to save", description: error.message, variant: "destructive" });
-      return;
-    }
-    // Verify the write actually persisted — earlier audit found values silently not landing.
-    const { data: verify } = await supabase
-      .from('agents_safe' as any)
-      .select('config')
-      .eq('id', selectedAgentId)
-      .single() as { data: { config: any } | null };
-    const persisted = verify?.config?.canned_responses_personal_enabled;
-    if (persisted !== enabled) {
-      setPersonalEnabled(!enabled);
-      toast({
-        title: "Save did not persist",
-        description: `Tried to write ${enabled} but DB shows ${JSON.stringify(persisted)}. agent=${selectedAgentId}`,
-        variant: "destructive",
-      });
       return;
     }
     toast({ title: "Updated", description: `Personal canned responses ${enabled ? "enabled" : "disabled"}` });

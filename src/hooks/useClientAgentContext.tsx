@@ -188,7 +188,7 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
 
       if (agentsList.length > 0) {
         setSelectedAgentId(agentsList[0].id);
-        
+
         // Admin preview mode: grant full permissions to all tabs
         setSelectedAgentPermissions({
           conversations: true,
@@ -211,6 +211,15 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
         settings_general_view: true, settings_general_manage: true,
         settings_audit_log_view: true,
       });
+
+      // Load actual admin_capabilities so client-policy toggles
+      // (e.g. canned_responses_personal_enabled) reflect the DB in preview.
+      const { data: settings } = await supabase
+        .from('client_settings')
+        .select('admin_capabilities')
+        .eq('client_id', previewClientId)
+        .maybeSingle();
+      setCompanyCapabilities((settings?.admin_capabilities || {}) as Record<string, any>);
     } catch (error) {
       console.error('Error loading client agents for preview:', error);
     } finally {
