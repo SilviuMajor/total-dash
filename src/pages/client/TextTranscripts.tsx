@@ -302,17 +302,45 @@ export default function TextTranscripts() {
     }
     const handle = setTimeout(async () => {
       try {
-        // 1. Find matching transcript rows. RLS scopes to agents this user
-        //    can read, so no agent_id filter is required (transcripts has no
-        //    agent_id column anyway).
+        // Find conversation IDs whose transcripts contain the query, in any
+        // form: spoken text (any speaker — customer, AI, staff, system),
+        // button labels, or attachment file names. RLS scopes to agents this
+        // user can read; transcripts has no agent_id column anyway.
         const escaped = q.replace(/[%_]/g, "\\$&");
-        const { data: matches, error: matchErr } = await supabase
-          .from("transcripts")
-          .select("conversation_id")
-          .ilike("text", `%${escaped}%`)
-          .limit(500);
-        if (matchErr) throw matchErr;
-        const ids = Array.from(new Set((matches ?? []).map((m: any) => m.conversation_id))).filter(Boolean);
+        const pat = `%${escaped}%`;
+        const [textRes, buttonsRes, attachmentsRes] = await Promise.all([
+          supabase
+            .from("transcripts")
+            .select("conversation_id")
+            .ilike("text", pat)
+            .order("timestamp", { ascending: false })
+            .limit(2000),
+          // JSONB casts: ?col::text=ilike.*foo* — Postgrest understands the
+          // cast and so does supabase-js. If a future supabase-js update
+          // breaks this, the catch below keeps text search working.
+          supabase
+            .from("transcripts")
+            .select("conversation_id")
+            .ilike("buttons::text", pat)
+            .order("timestamp", { ascending: false })
+            .limit(2000),
+          supabase
+            .from("transcripts")
+            .select("conversation_id")
+            .ilike("attachments::text", pat)
+            .order("timestamp", { ascending: false })
+            .limit(2000),
+        ]);
+        if (textRes.error) throw textRes.error;
+        // Buttons / attachments errors are non-fatal — text is the primary path.
+        if (buttonsRes.error) console.warn("Buttons search failed:", buttonsRes.error);
+        if (attachmentsRes.error) console.warn("Attachments search failed:", attachmentsRes.error);
+        const merged = [
+          ...(textRes.data ?? []),
+          ...(buttonsRes.data ?? []),
+          ...(attachmentsRes.data ?? []),
+        ];
+        const ids = Array.from(new Set(merged.map((m: any) => m.conversation_id))).filter(Boolean);
         setTextMatchIds(new Set(ids));
         if (!ids.length) {
           setSearchExtras([]);
