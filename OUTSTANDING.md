@@ -44,20 +44,190 @@ Shipped: `is_archived` / `archived_at` / `archived_by` columns + `set_conversati
 
 ---
 
-### N11 — Permission system audit
+### N11 — Permission system audit ✅ DONE (2026-04-27)
 
-**Type:** Audit + Bug Hunt | **Effort:** Medium (4-8h systematic + testing) | **Status:** Open
+**Type:** Audit + Bug Hunt | **Effort:** Medium | **Status:** Shipped (audit complete; 16 follow-up bugs filed as N11-F1 through N11-F16 below)
 **Spec:** `TotalDash-Spec-N11-Permission-System-Audit.md`
+**Report:** `docs/audits/2026-04-N11-permissions-audit.md`
 
-The four-layer permission resolution system has known inconsistencies. Symptoms: Company Settings sub-tab toggles don't always persist or block access; page-level visibility toggles don't work for all permission types; "Reset to role defaults" button does nothing visible; UI wording is ambiguous about role-level vs user-level toggles.
+Audit found 16 confirmed bugs (1 Critical, 5 High, 7 Medium, 3 Low) and rejected 2 false alarms (admin_tier does NOT bypass ceilings; agent-scoped pages ARE gated by `ProtectedRoute requiredPage` even though page bodies don't double-check). Each finding is filed as a separate entry below — see the report for full repro and fix sketch on each.
 
-**Audit scope locked in spec:**
-- 7 agent-scoped permission keys (conversations, transcripts, analytics, specs, knowledge_base, guides, agent_settings)
-- 9 client-scoped keys (settings_page, settings_departments_view/manage, settings_team_view/manage, settings_canned_responses_view/manage, settings_general_view/manage, settings_audit_log_view)
-- 6 affected components: useClientAgentContext (671 lines), RolesManagement (667), ClientUsersManagement (1568), Settings.tsx, AgencyClientDetails, AgencyAgentDetails
-- Full test matrix in spec
+---
 
-**Touches:** read-only audit first; bugs filed separately as found. Don't change behaviour without writing them up.
+### N11-F1 — Role change "Keep current permissions" leaks orphan role_id + drops UI edits
+
+**Type:** Bug (Critical) | **Effort:** Small | **Status:** Open
+
+In `ClientUsersManagement.tsx:1746-1767`, the role-change modal's "Keep current permissions" path updates `client_user_agent_permissions.role_id` and `has_overrides=true` but: (a) never updates `client_user_permissions.role_id` (orphan reference to old role), (b) doesn't write the in-memory `permissions` so any unsaved toggle changes the admin made are silently discarded while toast says "Kept current permissions". Same orphan-role_id bug also present in the modal's "Reset to defaults" path (`:1771-1828`).
+
+**Touches:** `src/components/client-management/ClientUsersManagement.tsx:1746-1828`.
+
+---
+
+### N11-F2 — Silent failures on every Roles toggle
+
+**Type:** Bug (High) | **Effort:** Small | **Status:** Open
+
+`togglePermission` (`:156-176`), `toggleClientPermissions` (`:178-192`), `applyToAllUsers` (`:203-218`) in `RolesManagement.tsx` call `await supabase...update(...)` without checking `error`. UI updates optimistically and shows "Saved" toast even on failure. Likely root cause of the original spec's "toggles don't persist" symptom.
+
+**Touches:** `src/components/settings/RolesManagement.tsx`.
+
+---
+
+### N11-F3 — Active sessions don't see role-permission changes until reload
+
+**Type:** Bug (High) | **Effort:** Medium | **Status:** Open
+
+After `RolesManagement` toggles persist to DB, no signal reaches `useClientAgentContext` in active client-user sessions. They keep stale `selectedAgentPermissions` until manual refresh. Likely root cause of the spec's "toggles don't take effect" symptom.
+
+**Decision needed:** Supabase Realtime subscription on `role_permission_templates` + `client_roles`, OR a manual broadcast channel. Realtime is cleaner but may add per-tab subscription overhead.
+
+**Touches:** `src/hooks/useClientAgentContext.tsx`, `src/components/settings/RolesManagement.tsx`.
+
+---
+
+### N11-F4 — Settings Departments sub-tab not gated by its own permission
+
+**Type:** Bug (High) | **Effort:** Tiny | **Status:** Open
+
+`Settings.tsx:88-89` computes `showDepartments` but the variable is dead code — the Departments sub-tab is rendered inside the `team-permissions` tab (`:127-164`) and only gated by `showTeam`. So `client_departments_enabled` ceiling and `settings_departments_view` permission are silently ignored.
+
+**Touches:** `src/pages/Settings.tsx:127-164`. One-line fix: gate the Departments button + content by `showDepartments`.
+
+---
+
+### N11-F5 — Settings.tsx audit log uses `=== true` while other tabs use `!== false`
+
+**Type:** Bug (High) | **Effort:** Tiny | **Status:** Open
+
+`Settings.tsx:88-95` uses `!== false` (default-allow) for Departments / Team / Canned Responses / General; `:96-97` uses `=== true` (default-deny) for Audit Log. Pick one — recommend `!== false` for parity, OR `=== true` everywhere if default-deny is desired (safer).
+
+**Touches:** `src/pages/Settings.tsx:88-97`.
+
+---
+
+### N11-F6 — RolesManagement rendered without readOnly prop in Settings.tsx (privilege escalation)
+
+**Type:** Bug (High) | **Effort:** Small | **Status:** Open
+
+`Settings.tsx:163` renders `<RolesManagement clientId={clientId} />` with no `readOnly` prop. Component has no internal manage-permission check. Result: a client user with `settings_team_view: true, settings_team_manage: false` can edit role permissions for the entire client. Real exposure once HeyB has multiple seats with mixed tiers.
+
+**Touches:** `src/pages/Settings.tsx:163`, `src/components/settings/RolesManagement.tsx` (add `readOnly` prop, disable inputs/buttons when set), and arguably gate the Roles sub-tab itself by `settings_team_manage`.
+
+---
+
+### N11-F7 — Cross-scope mixing in `resolveClientScoped`
+
+**Type:** Bug (Medium, latent) | **Effort:** Small | **Status:** Open
+
+`useClientAgentContext.tsx:539-544`, `:349-354`, `:654-659` — `resolveClientScoped` uses agent-scoped `hasOverrides` and `userOverrides` JSON to gate client-scoped overrides. Should use `hasClientOverrides` and `userClientOverrides` (the correct path is implemented in `resolveCompanyPerm` at `:489-494`). Latent today because nobody writes `settings_page`/`audit_log` keys into the agent-scoped JSON, but a future write path or manual SQL would silently ride this.
+
+**Touches:** `src/hooks/useClientAgentContext.tsx`. Best fixed alongside F8 + F15.
+
+---
+
+### N11-F8 — Settings link gated by per-agent value instead of canonical client-scoped one
+
+**Type:** Bug (Medium) | **Effort:** Small | **Status:** Open
+
+`Sidebar.tsx:107`, `ProtectedRoute.tsx:60-78`, and `App.tsx:181` (via `requiredPage="settings_page"`) all read `selectedAgentPermissions.settings_page` — produced by the F7-affected resolver. The canonical client-scoped value lives on `companySettingsPermissions.settings_page` (correctly resolved). Same for `audit_log`.
+
+**Touches:** `src/components/Sidebar.tsx:107`, `src/components/ProtectedRoute.tsx`, `src/hooks/useClientAgentContext.tsx` (consider removing `settings_page` and `audit_log` from `AgentPermissions` interface).
+
+---
+
+### N11-F9 — No cache invalidation when agency flips a Layer-2 ceiling
+
+**Type:** Bug (Medium) | **Effort:** Medium | **Status:** Open
+
+`AgencyClientDetails.tsx:66-76` upserts `client_settings.admin_capabilities` with no broadcast. Client users mid-session don't see the change. Same fix family as F3.
+
+**Touches:** `src/pages/agency/AgencyClientDetails.tsx`, `src/hooks/useClientAgentContext.tsx`.
+
+---
+
+### N11-F10 — `loadAgentPermissions` errors swallowed silently
+
+**Type:** Bug (Medium) | **Effort:** Tiny | **Status:** Open
+
+`useClientAgentContext.tsx:593-673` — async function inside useEffect with no try/catch. A failed Supabase query throws into the dropped promise; previous agent's permissions stay in state.
+
+**Touches:** `src/hooks/useClientAgentContext.tsx:593-673`.
+
+---
+
+### N11-F11 — User-level toggles always-clickable when ceiling blocks
+
+**Type:** Bug (Medium) | **Effort:** Small | **Status:** Open
+
+`ClientUsersManagement.tsx` per-user toggles ignore the ceiling. Admin flips a switch, sees "Saved", change has zero effect on resolved permissions because ceiling short-circuits in resolution. `RolesManagement.tsx:148-153` already does this correctly via `getVisiblePermKeys`/`getVisibleCompanyTabs` — apply the same pattern at the user level.
+
+**Touches:** `src/components/client-management/ClientUsersManagement.tsx`.
+
+---
+
+### N11-F12 — New-user agent grant hardcodes `has_overrides: false` even with custom perms
+
+**Type:** Bug (Medium) | **Effort:** Tiny | **Status:** Open
+
+`ClientUsersManagement.tsx:1535-1550` — when granting new agent access, hardcodes `has_overrides: false`. If admin customised perms in the panel, those values get persisted but the flag claims they're not overrides; resolver then ignores them.
+
+**Touches:** `src/components/client-management/ClientUsersManagement.tsx:1535-1550`. Compare against template like the UPDATE path does (`:1516-1518`).
+
+---
+
+### N11-F13 — Client-scoped override flag set by "any keys present" rather than diff vs template
+
+**Type:** Bug (Medium) | **Effort:** Tiny | **Status:** Open
+
+`ClientUsersManagement.tsx:1564-1572` upserts with `has_overrides: Object.keys(selectedUserClientPerms).length > 0`. So a fresh save (no actual changes) flags the user as having overrides, which then makes the "Reset to role defaults" button appear with nothing to reset.
+
+**Touches:** `src/components/client-management/ClientUsersManagement.tsx:1564-1572`. Diff against `roles.find(r => r.id === user.role_id)?.client_permissions`.
+
+---
+
+### N11-F14 — `AgencyAgentDetails` reads `agents` directly instead of `agents_safe`
+
+**Type:** Cleanup (Low) | **Effort:** Tiny | **Status:** Open
+
+`AgencyAgentDetails.tsx:69` reads `agents` directly. Safe today (route is agency-only), but inconsistent with CLAUDE.md rule #2.
+
+**Touches:** `src/pages/agency/AgencyAgentDetails.tsx:69`.
+
+---
+
+### N11-F15 — Resolution functions duplicated 4× in `useClientAgentContext.tsx`
+
+**Type:** Refactor (Low) | **Effort:** Medium | **Status:** Open
+
+`resolveCompanyPerm` and `resolveClientScoped`/`resolvePermission` defined separately in `loadClientAgentsForPreview`, `loadClientAgentsAsUser`, `loadClientAgents`, and the per-agent useEffect. Drift already exists (see F7). Extract once at module scope.
+
+**Touches:** `src/hooks/useClientAgentContext.tsx`. Best done together with F7 + F8.
+
+---
+
+### N11-F16 — RolesManagement "Save" button is a no-op when role has 0 users
+
+**Type:** UX Polish (Low) | **Effort:** Tiny | **Status:** Open
+
+`RolesManagement.tsx:194-201`, `:482`, `:608` — toggles already persist on change. The Save button only triggers the "Apply to all users" modal when `userCounts[roleId] > 0`; otherwise just shows a "Saved" toast. Confusing — admin may think Save is required.
+
+**Touches:** `src/components/settings/RolesManagement.tsx`. Either hide Save when count=0, or change copy to make immediate-save behaviour explicit.
+
+---
+
+### N11-F17 — Permission UI wording is ambiguous about scope
+
+**Type:** UX Polish (Low) | **Effort:** Small | **Status:** Open
+
+Tracked as a single follow-up:
+- `RolesManagement.tsx` toggles use raw permission labels — no "Role default" / "All users with this role" indicator
+- `ClientUsersManagement.tsx` per-user toggles — no "Override" / "Override for this user only" indicator
+- `AgencyClientDetails.tsx` ceiling toggles — no "Agency-wide ceiling" language
+- `AgencyAgentDetails.tsx` ceiling toggles — same
+- Settings sub-tabs don't visually distinguish "View only" vs "Can edit" mode
+
+**Touches:** label/copy changes across 4 files.
 
 ---
 
@@ -524,6 +694,8 @@ Low priority. Do opportunistically when touching related code.
 ## Completed (recent)
 
 Date-stamped log of items shipped. Don't delete — provides commit-trail context for future work.
+
+**Completed:** 2026-04-27 — N11 audit: read-only walkthrough of the 4-layer permission system. Wrote `docs/audits/2026-04-N11-permissions-audit.md` with 16 confirmed bugs (1 Critical, 5 High, 7 Medium, 3 Low) + 1 UX wording cluster. Filed each as N11-F1 through N11-F17 above. Rejected 2 false alarms (admin_tier doesn't bypass ceilings; agent-scoped pages ARE gated by `ProtectedRoute`).
 
 **Completed:** 2026-04-26 — `5c50c41` — N6 fix: added `previous_session_id` column on `handover_sessions` for succession tracking; `take_over` captures the prior session id and tags its system transcript with `metadata.type='session_refreshed'` when the prior session was timeout/inactivity_timeout/completed; widget keeps polling for 30 min after `handover_ended` and re-enters handover on `session_refreshed`; pending-timeout path in `handover-timer` now uses an N5-style conditional UPDATE so a takeover that wins the race doesn't emit duplicate "Handover ended" pills.
 
