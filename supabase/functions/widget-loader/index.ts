@@ -195,13 +195,29 @@ function generateWidgetScript(config: any): string {
       const existingIndex = session.conversations.findIndex(c => c.id === conversationId);
       const existingConv = existingIndex >= 0 ? session.conversations[existingIndex] : null;
       
+      // Compute preview: prefer the last message's text; if empty but the
+      // message has attachments, render an emoji + filename instead so the
+      // chat-history list shows something meaningful for image/file-only sends.
+      let preview = 'New conversation';
+      if (messages.length > 0) {
+        const last = messages[messages.length - 1];
+        if (last.text && last.text.trim()) {
+          preview = last.text.substring(0, 60);
+        } else if (Array.isArray(last.attachments) && last.attachments.length > 0) {
+          const att = last.attachments[0];
+          const emoji = att.kind === 'image' ? '📷'
+            : att.kind === 'video' ? '🎥'
+            : att.kind === 'audio' ? '🎤'
+            : '📎';
+          preview = emoji + ' ' + (att.fileName || 'Attachment');
+        }
+      }
+
       const conversation = {
         id: conversationId,
         messages,
         timestamp: new Date().toISOString(),
-        preview: messages.length > 0 
-          ? (messages[messages.length - 1].text?.substring(0, 60) || 'New conversation')
-          : 'New conversation',
+        preview,
         messageCount: messages.length,
         voiceflowSessionId: voiceflowSessionId || existingConv?.voiceflowSessionId || conversationId,
         hasUserInteraction: hasUserInteraction || existingConv?.hasUserInteraction || false
@@ -903,94 +919,67 @@ function generateWidgetScript(config: any): string {
     }
 
     /* === ATTACHMENT PREVIEW ROW (in input bar, replaces normal input while composing an attachment) === */
+    /* Preview row: horizontal strip of square tiles above the input bar.
+       One tile per pending upload — thumbnail only, no filename, no size. */
     .vf-attach-preview-row {
-      background: \${theme.surface};
-      border: 0.5px solid \${theme.surfaceBorder};
-      border-radius: 12px;
-      padding: 10px 12px;
-      display: flex; flex-direction: column; gap: 8px;
+      display: flex; flex-wrap: wrap; gap: 8px;
+      padding: 8px 12px 0;
     }
-    .vf-attach-preview-header {
-      display: flex; align-items: center; gap: 10px;
-    }
-    .vf-attach-preview-thumb {
-      width: 40px; height: 40px; border-radius: 8px;
-      background: \${theme.botBubble};
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0; overflow: hidden;
-      color: #666;
-    }
-    .vf-attach-preview-thumb img {
-      width: 100%; height: 100%; object-fit: cover;
-    }
-    .vf-attach-preview-thumb svg {
-      width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.8;
-    }
-    .vf-attach-preview-meta {
-      flex: 1; min-width: 0;
-    }
-    .vf-attach-preview-name {
-      font-size: 12px; font-weight: 500;
-      color: \${theme.textPrimary}; line-height: 1.2;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
-    .vf-attach-preview-size {
-      font-size: 10.5px; color: \${theme.textMuted};
-      line-height: 1.2; margin-top: 2px;
-    }
-    .vf-attach-preview-close {
-      width: 22px; height: 22px; border-radius: 50%;
-      background: transparent; color: \${theme.textMuted};
-      border: none; cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0; padding: 0;
-    }
-    .vf-attach-preview-close:hover { background: \${theme.botBubble}; color: \${theme.textPrimary}; }
-    .vf-attach-preview-close svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2; }
-    .vf-attach-preview-caption {
-      width: 100%;
-      border: none; background: transparent;
-      font-family: inherit; font-size: 12px;
-      color: \${theme.textPrimary};
-      outline: none;
-      padding: 4px 0;
-    }
-    .vf-attach-preview-caption::placeholder { color: #aaa; }
-    .vf-attach-preview-actions {
-      display: flex; justify-content: flex-end; gap: 8px;
-    }
-    .vf-attach-preview-btn {
-      padding: 6px 14px; border-radius: 999px;
-      font-family: inherit; font-size: 11px; font-weight: 500;
-      cursor: pointer; border: none;
-      transition: background 0.15s ease, opacity 0.15s ease;
-    }
-    .vf-attach-preview-btn-cancel {
-      background: transparent; color: \${theme.textMuted};
-      border: 0.5px solid \${theme.surfaceBorder};
-    }
-    .vf-attach-preview-btn-cancel:hover { background: \${theme.botBubble}; color: \${theme.textPrimary}; }
-    .vf-attach-preview-btn-send {
-      background: \${accent}; color: #ffffff;
-    }
-    .vf-attach-preview-btn-send:hover { opacity: 0.9; }
-    .vf-attach-preview-btn-send:disabled { opacity: 0.4; cursor: default; }
-    .vf-attach-preview-progress-wrap {
-      width: 100%; height: 4px; border-radius: 2px;
+    .vf-attach-tile {
+      position: relative;
+      width: 56px; height: 56px;
+      border-radius: 10px;
       background: \${theme.botBubble};
       overflow: hidden;
+      flex-shrink: 0;
+      color: #666;
+      display: flex; align-items: center; justify-content: center;
     }
-    .vf-attach-preview-progress-bar {
+    .vf-attach-tile-thumb {
+      width: 100%; height: 100%;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .vf-attach-tile-thumb img {
+      width: 100%; height: 100%; object-fit: cover; display: block;
+    }
+    .vf-attach-tile-thumb svg {
+      width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8;
+    }
+    .vf-attach-tile-close {
+      position: absolute; top: -4px; right: -4px;
+      width: 18px; height: 18px; border-radius: 50%;
+      background: \${theme.dark}; color: #ffffff;
+      border: 1.5px solid \${theme.canvas};
+      cursor: pointer; padding: 0;
+      display: flex; align-items: center; justify-content: center;
+      z-index: 2;
+    }
+    .vf-attach-tile-close svg {
+      width: 9px; height: 9px; stroke: currentColor; fill: none; stroke-width: 2.5;
+    }
+    .vf-attach-tile-close:hover { opacity: 0.85; }
+    /* Per-tile progress bar overlays the bottom edge while uploading */
+    .vf-attach-tile-progress {
+      position: absolute; left: 0; right: 0; bottom: 0;
+      height: 3px; background: rgba(0,0,0,0.15);
+      z-index: 1;
+    }
+    .vf-attach-tile-progress-bar {
       height: 100%; background: \${accent};
+      width: 0%;
       transition: width 0.15s ease;
     }
-    .vf-attach-preview-error {
-      color: #ef4444; font-size: 11px; line-height: 1.35;
-      display: flex; align-items: center; gap: 6px;
+    /* Error state — red retry overlay */
+    .vf-attach-tile-error {
+      position: absolute; inset: 0;
+      background: rgba(239,68,68,0.9);
+      color: #ffffff;
+      border: none; padding: 0; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      z-index: 1;
     }
-    .vf-attach-preview-error svg {
-      width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2;
-      flex-shrink: 0;
+    .vf-attach-tile-error svg {
+      width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2;
     }
 
     /* === DROP ZONE OVERLAY (covers the whole panel when dragging a file over it) === */
@@ -1128,13 +1117,13 @@ function generateWidgetScript(config: any): string {
   let postHandoverWatchTimer = null;
   const POST_HANDOVER_WATCH_MS = 30 * 60 * 1000;
 
-  // Phase 2 Step B: attachment composer state. Multi-file batch with shared trailing caption.
-  // Paperclip + drag-and-drop are gated on isInHandover — Voiceflow can't process files.
-  let pendingAttachments = [];   // File[]
-  let isUploading = false;
-  let uploadProgress = 0;        // 0-100, aggregate across files in the batch
-  let uploadError = null;        // string | null
-  let uploadXhrs = [];           // XMLHttpRequest[] of in-flight uploads (for cancel)
+  // Phase 2: attachment composer state. Upload-on-pick: each picked file enters
+  // uploadQueue and starts uploading immediately; tiles disappear as uploads
+  // commit. Paperclip + drag-and-drop gated on isInHandover (Voiceflow can't
+  // process files). Uploads serialise so per-file transcript timestamps preserve
+  // pick order on the dashboard side.
+  let uploadQueue = [];          // [{ id, file, kind, previewUrl, status, progress, error }]
+  let activeUploadXhr = null;
   let isDragging = false;
   let dragInvalid = false;
   let dragCounter = 0;           // for nested dragenter/leave bookkeeping
@@ -1345,7 +1334,7 @@ function generateWidgetScript(config: any): string {
             <div id="vf-attach-preview-host"></div>
             <div class="vf-input-row">
               \${CONFIG.functions.fileUploadEnabled && isInHandover ? \`
-                <input type="file" id="vf-file-input" accept="image/*,application/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx" style="display:none;" multiple />
+                <input type="file" id="vf-file-input" accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,video/quicktime,audio/mpeg,audio/wav,audio/ogg,audio/mp4,audio/x-m4a,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain,text/csv,application/zip" style="display:none;" multiple />
                 <button class="vf-attach-btn" onclick="window.vfAttachFile()" aria-label="Attach file">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
                 </button>
@@ -1599,10 +1588,10 @@ function generateWidgetScript(config: any): string {
       }
       
       try {
-        const url = SUPABASE_URL + '/rest/v1/transcripts?conversation_id=eq.' + conversationId 
-          + '&timestamp=gt.' + encodeURIComponent(lastTimestamp) 
+        const url = SUPABASE_URL + '/rest/v1/transcripts?conversation_id=eq.' + conversationId
+          + '&timestamp=gt.' + encodeURIComponent(lastTimestamp)
           + '&order=timestamp.asc'
-          + '&select=id,speaker,text,buttons,timestamp,metadata';
+          + '&select=id,speaker,text,buttons,timestamp,metadata,attachments';
         
         const response = await fetch(url, {
           headers: {
@@ -1644,11 +1633,16 @@ function generateWidgetScript(config: any): string {
               speaker: transcript.speaker === 'client_user' ? 'assistant' : transcript.speaker,
               text: transcript.text || '',
               buttons: transcript.buttons || null,
+              attachments: Array.isArray(transcript.attachments) ? transcript.attachments : null,
               timestamp: transcript.timestamp,
             };
-            
-            // Skip truly empty messages (no text AND no buttons)
-            if ((!newMsg.text || !newMsg.text.trim()) && (!newMsg.buttons || !newMsg.buttons.length)) continue;
+
+            // Skip truly empty messages (no text AND no buttons AND no attachments)
+            if (
+              (!newMsg.text || !newMsg.text.trim())
+              && (!newMsg.buttons || !newMsg.buttons.length)
+              && (!newMsg.attachments || !newMsg.attachments.length)
+            ) continue;
             
             messages.push(newMsg);
             hasNewMessages = true;
@@ -1720,7 +1714,7 @@ function generateWidgetScript(config: any): string {
             + '&speaker=eq.assistant'
             + '&order=timestamp.desc'
             + '&limit=5'
-            + '&select=id,speaker,text,buttons,timestamp,metadata';
+            + '&select=id,speaker,text,buttons,timestamp,metadata,attachments';
 
           const response = await fetch(url, {
             headers: {
@@ -1750,6 +1744,7 @@ function generateWidgetScript(config: any): string {
                     speaker: 'assistant',
                     text: t.text || '',
                     buttons: parsedButtons,
+                    attachments: Array.isArray(t.attachments) ? t.attachments : null,
                     timestamp: t.timestamp,
                   });
                   hasNew = true;
@@ -1795,79 +1790,108 @@ function generateWidgetScript(config: any): string {
     renderPanel();
   }
   
+  // Build the HTML for a single attachment object: { url, fileName, mimeType, size, kind }
+  function attachmentHtml(att) {
+    if (!att || !att.url) return '';
+    const url = escapeHtml(att.url);
+    const name = escapeHtml(att.fileName || 'Attachment');
+    const kind = att.kind || classifyKind(att.mimeType || '');
+    if (kind === 'image') {
+      return '<a href="' + url + '" target="_blank" rel="noopener" class="vf-msg-attach"><img src="' + url + '" alt="' + name + '" class="vf-msg-attach-image" /></a>';
+    }
+    if (kind === 'video') {
+      return '<video src="' + url + '" controls preload="metadata" class="vf-msg-attach vf-msg-attach-video"></video>';
+    }
+    if (kind === 'audio') {
+      return '<audio src="' + url + '" controls preload="metadata" class="vf-msg-attach vf-msg-attach-audio"></audio>';
+    }
+    return '<a href="' + url + '" target="_blank" rel="noopener" download class="vf-msg-attach vf-msg-attach-file">'
+      +   '<span class="vf-msg-attach-file-icon">'
+      +     '<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'
+      +   '</span>'
+      +   '<span class="vf-msg-attach-file-meta">'
+      +     '<span class="vf-msg-attach-file-name">' + name + '</span>'
+      +   '</span>'
+      +   '<span class="vf-msg-attach-file-dl">'
+      +     '<svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>'
+      +   '</span>'
+      + '</a>';
+  }
+
   function renderMessages(container) {
     container.innerHTML = '<div class="vf-messages-wrap" id="vf-messages"></div>';
     const messagesEl = document.getElementById('vf-messages');
-    
+
     messages.forEach(msg => {
       const isUser = msg.speaker === 'user';
       const isSystem = msg.speaker === 'system';
       const isAgent = msg.speaker === 'client_user';
-      
-      // Parse file URLs
+
+      // Prefer the structured attachments column (new path). Fall back to the
+      // legacy "[Image|File: name]\\nurl" inline string for older messages still
+      // in the wild.
       let messageContent = msg.text || '';
-      let fileUrl = null;
-      let fileName = null;
-      let isImage = false;
-      
-      const fileMatch = messageContent.match(/\\[(Image|File): ([^\\]]+)\\]\\n(https?:\\/\\/[^\\s]+)/);
-      if (fileMatch) {
-        fileName = fileMatch[2];
-        fileUrl = fileMatch[3];
-        isImage = fileMatch[1] === 'Image' || /\\.(jpg|jpeg|png|gif|webp)$/i.test(fileUrl);
-        messageContent = messageContent.replace(/\\[(Image|File): [^\\]]+\\]\\n[^\\s]+/, '').trim();
+      let attachmentsHtml = '';
+      const hasStructuredAttachments = Array.isArray(msg.attachments) && msg.attachments.length > 0;
+      if (hasStructuredAttachments) {
+        attachmentsHtml = msg.attachments.map(attachmentHtml).join('');
+      } else {
+        const fileMatch = messageContent.match(/\\[(Image|File): ([^\\]]+)\\]\\n(https?:\\/\\/[^\\s]+)/);
+        if (fileMatch) {
+          const fileName = escapeHtml(fileMatch[2]);
+          const fileUrl = escapeHtml(fileMatch[3]);
+          const isImage = fileMatch[1] === 'Image' || /\\.(jpg|jpeg|png|gif|webp)$/i.test(fileMatch[3]);
+          attachmentsHtml = isImage
+            ? '<a href="' + fileUrl + '" target="_blank" rel="noopener" class="vf-msg-attach"><img src="' + fileUrl + '" alt="' + fileName + '" class="vf-msg-attach-image" /></a>'
+            : '<a href="' + fileUrl + '" target="_blank" rel="noopener" download class="vf-msg-attach vf-msg-attach-file">'
+              +   '<span class="vf-msg-attach-file-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>'
+              +   '<span class="vf-msg-attach-file-meta"><span class="vf-msg-attach-file-name">' + fileName + '</span></span>'
+              + '</a>';
+          messageContent = messageContent.replace(/\\[(Image|File): [^\\]]+\\]\\n[^\\s]+/, '').trim();
+        }
       }
-      
+
       const wrapper = document.createElement('div');
-      
+
       if (isSystem) {
         wrapper.className = 'vf-msg-system';
         wrapper.textContent = messageContent;
         messagesEl.appendChild(wrapper);
         return;
       }
-      
+
       if (isUser) {
         wrapper.className = 'vf-msg-user-wrap';
-        wrapper.innerHTML = \`
-          <div class="vf-msg-user">
-            \${messageContent ? messageContent : ''}
-            \${fileUrl ? (isImage 
-              ? \`<img src="\${fileUrl}" alt="\${fileName}" class="vf-file-preview" style="display:block;margin-top:6px;" />\`
-              : \`<a href="\${fileUrl}" target="_blank" class="vf-file-link" style="color:rgba(255,255,255,0.8);">\${fileName}</a>\`
-            ) : ''}
-          </div>
-        \`;
+        // If there's no text (attachment-only), drop the bubble chrome around
+        // the attachment so it stands on its own — much cleaner for images.
+        const textOnly = messageContent && messageContent.trim();
+        if (textOnly && attachmentsHtml) {
+          wrapper.innerHTML = '<div class="vf-msg-user">' + escapeHtml(messageContent) + '</div>' + attachmentsHtml;
+        } else if (attachmentsHtml) {
+          wrapper.innerHTML = attachmentsHtml;
+        } else {
+          wrapper.innerHTML = '<div class="vf-msg-user">' + escapeHtml(messageContent) + '</div>';
+        }
         messagesEl.appendChild(wrapper);
         return;
       }
-      
+
       // Bot message — grey bubble ONLY if there's text or a file.
       // When Voiceflow sends { text: '', buttons: [...] } we must skip the
       // empty <p class="vf-msg-bot"> or it renders as an empty grey bubble
       // above the buttons. That was the "empty bubble before buttons" bug.
       const isClicked = clickedButtonIds.has(msg.id);
       wrapper.style.cssText = 'display:flex;flex-direction:column;gap:5px;align-self:flex-start;max-width:100%;';
-      
-      const hasBotBody = (messageContent && messageContent.trim()) || fileUrl;
-      
+
+      const hasBotBody = (messageContent && messageContent.trim()) || attachmentsHtml;
+
       wrapper.innerHTML = \`
         \${isAgent ? \`
-          <div class="vf-msg-agent">
-            \${messageContent}
-            \${fileUrl ? (isImage
-              ? \`<img src="\${fileUrl}" alt="\${fileName}" class="vf-file-preview" />\`
-              : \`<a href="\${fileUrl}" target="_blank" class="vf-file-link">\${fileName}</a>\`
-            ) : ''}
-          </div>
+          \${messageContent && messageContent.trim() ? \`<div class="vf-msg-agent">\${escapeHtml(messageContent)}</div>\` : ''}
+          \${attachmentsHtml || ''}
         \` : (hasBotBody ? \`
-          <p class="vf-msg-bot">
-            \${messageContent}
-            \${fileUrl ? (isImage
-              ? \`<img src="\${fileUrl}" alt="\${fileName}" class="vf-file-preview" style="display:block;margin-top:6px;" />\`
-              : \`<a href="\${fileUrl}" target="_blank" class="vf-file-link">\${fileName}</a>\`
-            ) : ''}
-          </p>
+          \${messageContent && messageContent.trim() ? \`<p class="vf-msg-bot">\${messageContent}</p>\` : ''}
+          \${attachmentsHtml || ''}
         \` : '')}
         \${msg.buttons && msg.buttons.length > 0 ? \`
           <div class="vf-buttons">
@@ -1934,13 +1958,19 @@ function generateWidgetScript(config: any): string {
     \`;
   }
   
-  // === Phase 2 Step B: Attachment composer (paperclip + drag-drop, multi-file, handover-gated) ===
-
-  function formatFileSize(bytes) {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-  }
+  // === Phase 2: Attachment composer (paperclip + drag-drop, upload-on-pick, handover-gated) ===
+  //
+  // Flow:
+  //   1. User picks/drops files → each valid file is added to uploadQueue and
+  //      its XHR fires immediately (serially — one at a time so transcript
+  //      timestamps preserve pick order on the dashboard).
+  //   2. Tile shows a thumbnail (no filename, no size) with a per-tile × that
+  //      either aborts the in-flight XHR or just removes a queued/errored entry.
+  //   3. On per-file success: server writes a transcript row with the
+  //      attachment + the widget pushes a local user bubble carrying the same
+  //      attachment metadata. Tile disappears.
+  //   4. The Send button is unchanged — it only ever sends the caption text via
+  //      the normal sendMessage() path. Caption is independent of attachments.
 
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, (c) => ({
@@ -1960,38 +1990,19 @@ function generateWidgetScript(config: any): string {
     return 'file';
   }
 
-  // Keep object URLs for image previews so we can revoke them on clear.
-  const previewUrlCache = new WeakMap();
-  function getPreviewUrl(file) {
-    let url = previewUrlCache.get(file);
-    if (!url) {
-      url = URL.createObjectURL(file);
-      previewUrlCache.set(file, url);
+  function disposeUploadEntry(entry) {
+    if (entry && entry.previewUrl) {
+      try { URL.revokeObjectURL(entry.previewUrl); } catch (_) {}
+      entry.previewUrl = null;
     }
-    return url;
-  }
-
-  function clearPendingState() {
-    for (const f of pendingAttachments) {
-      const u = previewUrlCache.get(f);
-      if (u) {
-        try { URL.revokeObjectURL(u); } catch (_) {}
-        previewUrlCache.delete(f);
-      }
-    }
-    pendingAttachments = [];
-    isUploading = false;
-    uploadProgress = 0;
-    uploadError = null;
-    uploadXhrs = [];
   }
 
   function handlePickedFiles(fileList) {
-    if (!isInHandover || isUploading) return;
+    if (!isInHandover) return;
     if (!fileList || fileList.length === 0) return;
 
     const incoming = Array.from(fileList);
-    const remainingSlots = MAX_BATCH_FILES - pendingAttachments.length;
+    const remainingSlots = MAX_BATCH_FILES - uploadQueue.length;
     if (remainingSlots <= 0) {
       alert('You can attach up to ' + MAX_BATCH_FILES + ' files at a time.');
       return;
@@ -2012,111 +2023,201 @@ function generateWidgetScript(config: any): string {
       }
     }
 
-    pendingAttachments = pendingAttachments.concat(batch);
-    uploadError = null;
+    for (const f of batch) {
+      const kind = classifyKind(f.type);
+      const entry = {
+        id: 'up_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+        file: f,
+        kind,
+        previewUrl: kind === 'image' ? URL.createObjectURL(f) : null,
+        status: 'queued',  // 'queued' | 'uploading' | 'error'
+        progress: 0,
+        error: null,
+      };
+      uploadQueue.push(entry);
+    }
     renderAttachPreview();
+    processNextUpload();
+  }
+
+  function processNextUpload() {
+    if (activeUploadXhr) return;
+    const next = uploadQueue.find((u) => u.status === 'queued');
+    if (!next) return;
+    startUpload(next);
+  }
+
+  function startUpload(entry) {
+    entry.status = 'uploading';
+    entry.progress = 0;
+    entry.error = null;
+    renderAttachPreview();
+
+    const xhr = new XMLHttpRequest();
+    activeUploadXhr = xhr;
+    xhr.open('POST', SUPABASE_URL + '/functions/v1/widget-file-upload', true);
+
+    xhr.upload.onprogress = (ev) => {
+      if (!ev.lengthComputable) return;
+      entry.progress = Math.min(99, Math.round((ev.loaded / ev.total) * 100));
+      const bar = document.querySelector('[data-upload-id="' + entry.id + '"] .vf-attach-tile-progress-bar');
+      if (bar) bar.style.width = entry.progress + '%';
+    };
+
+    xhr.onload = () => {
+      activeUploadXhr = null;
+      if (xhr.status >= 200 && xhr.status < 300) {
+        let body = {};
+        try { body = JSON.parse(xhr.responseText || '{}'); } catch (_) {}
+        const att = body.attachment || null;
+
+        if (body.conversationId && body.conversationId !== conversationId) {
+          conversationId = body.conversationId;
+        }
+
+        // Push a local user bubble carrying the attachment so the user sees their
+        // own send immediately. The poller skips user-speaker rows so we won't
+        // duplicate this when the realtime poll picks up the server-written row.
+        if (att) {
+          messages.push({
+            id: 'msg_attach_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+            speaker: 'user',
+            text: '',
+            attachments: [att],
+            timestamp: new Date().toISOString(),
+          });
+        }
+
+        disposeUploadEntry(entry);
+        uploadQueue = uploadQueue.filter((u) => u !== entry);
+
+        renderPanel();
+        scrollToLatestMessage();
+        if (conversationId) {
+          SessionManager.saveConversation(conversationId, messages, currentVoiceflowSessionId, true);
+        }
+        processNextUpload();
+        return;
+      }
+
+      let msg = 'Upload failed';
+      try {
+        const j = JSON.parse(xhr.responseText || '{}');
+        msg = j.message || j.error || msg;
+      } catch (_) {}
+      entry.status = 'error';
+      entry.error = msg;
+      renderAttachPreview();
+      processNextUpload();
+    };
+
+    xhr.onerror = () => {
+      activeUploadXhr = null;
+      entry.status = 'error';
+      entry.error = 'Network error';
+      renderAttachPreview();
+      processNextUpload();
+    };
+
+    xhr.onabort = () => {
+      activeUploadXhr = null;
+      // Per-tile remove already handled state; just kick the queue.
+      processNextUpload();
+    };
+
+    const form = new FormData();
+    form.append('file', entry.file);
+    form.append('agentId', CONFIG.agentId);
+    form.append('userId', getVoiceflowUserId());
+    if (conversationId) form.append('conversationId', conversationId);
+    if (currentVoiceflowSessionId) form.append('voiceflowSessionId', currentVoiceflowSessionId);
+    form.append('isTestMode', CONFIG.isTestMode ? 'true' : 'false');
+    form.append('text', '');
+    xhr.send(form);
   }
 
   window.vfAttachFile = function() {
-    if (!isInHandover || isUploading) return;
+    if (!isInHandover) return;
+    if (uploadQueue.length >= MAX_BATCH_FILES) {
+      alert('You can attach up to ' + MAX_BATCH_FILES + ' files at a time.');
+      return;
+    }
     const fileInput = document.getElementById('vf-file-input');
     if (fileInput) fileInput.click();
   };
 
-  window.vfRemovePendingAttachment = function(idx) {
-    if (isUploading) return;
-    const f = pendingAttachments[idx];
-    if (f) {
-      const u = previewUrlCache.get(f);
-      if (u) {
-        try { URL.revokeObjectURL(u); } catch (_) {}
-        previewUrlCache.delete(f);
-      }
+  // Per-tile remove. If the entry is uploading, abort its XHR. Otherwise drop
+  // it from the queue. No batch cancel — each tile owns its own ×.
+  window.vfRemovePendingAttachment = function(id) {
+    const entry = uploadQueue.find((u) => u.id === id);
+    if (!entry) return;
+
+    if (entry.status === 'uploading' && activeUploadXhr) {
+      try { activeUploadXhr.abort(); } catch (_) {}
+      // onabort handler clears activeUploadXhr.
     }
-    pendingAttachments = pendingAttachments.filter((_, i) => i !== idx);
-    if (pendingAttachments.length === 0) uploadError = null;
+    disposeUploadEntry(entry);
+    uploadQueue = uploadQueue.filter((u) => u !== entry);
     renderAttachPreview();
+    processNextUpload();
   };
 
-  window.vfCancelPending = function() {
-    if (isUploading) {
-      // Abort all in-flight uploads. Already-uploaded files stay committed in the chat.
-      for (const xhr of uploadXhrs) {
-        try { xhr.abort(); } catch (_) {}
-      }
-      uploadXhrs = [];
-      isUploading = false;
-      uploadProgress = 0;
-      uploadError = null;
-      // Leave the still-pending files in the preview so the user can retry.
-      renderAttachPreview();
-      return;
-    }
-    clearPendingState();
+  // Retry an errored entry. Re-queues it and kicks the worker.
+  window.vfRetryUpload = function(id) {
+    const entry = uploadQueue.find((u) => u.id === id);
+    if (!entry || entry.status !== 'error') return;
+    entry.status = 'queued';
+    entry.error = null;
+    entry.progress = 0;
     renderAttachPreview();
+    processNextUpload();
   };
 
   function renderAttachPreview() {
     const host = document.getElementById('vf-attach-preview-host');
     if (!host) return;
 
-    // Handover ended (or never started) — drop any in-flight composer state. Uploads in
-    // progress are left alone (they're already past the gate); the user just won't see
-    // the preview row anymore.
-    if (!isInHandover && !isUploading) {
-      if (pendingAttachments.length > 0 || uploadError) clearPendingState();
+    // Handover ended — drop pending work and hide the row. In-flight uploads
+    // continue (the server commits and the user just won't see the tile).
+    if (!isInHandover) {
+      for (const e of uploadQueue) disposeUploadEntry(e);
+      uploadQueue = [];
       host.innerHTML = '';
       return;
     }
 
-    if (pendingAttachments.length === 0 && !uploadError) {
+    if (uploadQueue.length === 0) {
       host.innerHTML = '';
       return;
     }
 
-    const thumbsHtml = pendingAttachments.map((f, idx) => {
-      const kind = classifyKind(f.type);
-      const inner = kind === 'image'
-        ? '<img src="' + escapeHtml(getPreviewUrl(f)) + '" alt="' + escapeHtml(f.name) + '" />'
-        : (kind === 'video'
+    const tilesHtml = uploadQueue.map((entry) => {
+      const inner = entry.kind === 'image' && entry.previewUrl
+        ? '<img src="' + escapeHtml(entry.previewUrl) + '" alt="" />'
+        : (entry.kind === 'video'
           ? '<svg viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>'
-          : (kind === 'audio'
+          : (entry.kind === 'audio'
             ? '<svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>'
             : '<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'));
-      const closeBtn = isUploading
-        ? ''
-        : '<button class="vf-attach-preview-close" onclick="window.vfRemovePendingAttachment(' + idx + ')" aria-label="Remove">'
-          + '<svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
-          + '</button>';
-      return '<div class="vf-attach-preview-header">'
-        + '<div class="vf-attach-preview-thumb">' + inner + '</div>'
-        + '<div class="vf-attach-preview-meta">'
-        +   '<div class="vf-attach-preview-name">' + escapeHtml(f.name) + '</div>'
-        +   '<div class="vf-attach-preview-size">' + formatFileSize(f.size) + '</div>'
-        + '</div>'
-        + closeBtn
+
+      const overlayHtml = entry.status === 'uploading'
+        ? '<div class="vf-attach-tile-progress"><div class="vf-attach-tile-progress-bar" style="width:' + entry.progress + '%"></div></div>'
+        : (entry.status === 'error'
+          ? '<button class="vf-attach-tile-error" onclick="window.vfRetryUpload(\\'' + entry.id + '\\')" title="' + escapeHtml(entry.error || 'Upload failed') + ' — click to retry">'
+              + '<svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>'
+            + '</button>'
+          : '');
+
+      return '<div class="vf-attach-tile" data-upload-id="' + entry.id + '">'
+        + '<div class="vf-attach-tile-thumb">' + inner + '</div>'
+        + overlayHtml
+        + '<button class="vf-attach-tile-close" onclick="window.vfRemovePendingAttachment(\\'' + entry.id + '\\')" aria-label="Remove">'
+        +   '<svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
+        + '</button>'
         + '</div>';
     }).join('');
 
-    const progressHtml = isUploading
-      ? '<div class="vf-attach-preview-progress-wrap"><div class="vf-attach-preview-progress-bar" style="width:' + uploadProgress + '%"></div></div>'
-      : '';
-
-    const errorHtml = uploadError
-      ? '<div class="vf-attach-preview-error">'
-        + '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'
-        + '<span>' + escapeHtml(uploadError) + '</span>'
-        + '</div>'
-      : '';
-
-    host.innerHTML = '<div class="vf-attach-preview-row">'
-      + thumbsHtml
-      + progressHtml
-      + errorHtml
-      + '<div class="vf-attach-preview-actions">'
-      +   '<button class="vf-attach-preview-btn vf-attach-preview-btn-cancel" onclick="window.vfCancelPending()">' + (isUploading ? 'Abort' : 'Cancel') + '</button>'
-      + '</div>'
-      + '</div>';
+    host.innerHTML = '<div class="vf-attach-preview-row">' + tilesHtml + '</div>';
   }
 
   function attachDragDropHandlers(panel) {
@@ -2132,11 +2233,10 @@ function generateWidgetScript(config: any): string {
     };
 
     panel.addEventListener('dragenter', (e) => {
-      if (!isInHandover || isUploading) return;
+      if (!isInHandover) return;
       e.preventDefault();
       dragCounter += 1;
       isDragging = true;
-      // Inspect MIME types from items if available — types is reliable on dragover but not always on drop.
       let invalid = false;
       const items = e.dataTransfer ? e.dataTransfer.items : null;
       if (items && items.length) {
@@ -2151,14 +2251,13 @@ function generateWidgetScript(config: any): string {
     });
 
     panel.addEventListener('dragover', (e) => {
-      if (!isInHandover || isUploading) return;
+      if (!isInHandover) return;
       e.preventDefault();
-      // Keep the overlay in sync (dragenter may fire on child elements).
       setOverlay();
     });
 
     panel.addEventListener('dragleave', (e) => {
-      if (!isInHandover || isUploading) return;
+      if (!isInHandover) return;
       e.preventDefault();
       dragCounter = Math.max(0, dragCounter - 1);
       if (dragCounter === 0) {
@@ -2169,8 +2268,7 @@ function generateWidgetScript(config: any): string {
     });
 
     panel.addEventListener('drop', (e) => {
-      if (!isInHandover || isUploading) {
-        // Still need to prevent default so the browser doesn't navigate to the file.
+      if (!isInHandover) {
         e.preventDefault();
         return;
       }
@@ -2186,108 +2284,6 @@ function generateWidgetScript(config: any): string {
         handlePickedFiles(files);
       }
     });
-  }
-
-  // Sequentially upload pendingAttachments with one shared trailing caption.
-  // Each upload calls widget-file-upload (multipart). On any error, abort the rest,
-  // surface the error in the preview row, and keep remaining files pending for retry.
-  // Already-uploaded files stay committed in the chat (server wrote them).
-  async function uploadBatchAndSend(caption) {
-    if (pendingAttachments.length === 0) return;
-    if (isUploading) return;
-
-    const filesToUpload = pendingAttachments.slice();
-    isUploading = true;
-    uploadProgress = 0;
-    uploadError = null;
-    uploadXhrs = [];
-    renderAttachPreview();
-
-    // Track aggregate progress as a sum of per-file loaded bytes / sum of per-file totals.
-    const totals = filesToUpload.map((f) => f.size);
-    const loaded = filesToUpload.map(() => 0);
-    const totalBytes = totals.reduce((a, b) => a + b, 0) || 1;
-    const tickProgress = () => {
-      const sumLoaded = loaded.reduce((a, b) => a + b, 0);
-      uploadProgress = Math.min(100, Math.round((sumLoaded / totalBytes) * 100));
-      const host = document.getElementById('vf-attach-preview-host');
-      const bar = host && host.querySelector('.vf-attach-preview-progress-bar');
-      if (bar) bar.style.width = uploadProgress + '%';
-    };
-
-    for (let i = 0; i < filesToUpload.length; i += 1) {
-      const f = filesToUpload[i];
-      try {
-        await new Promise((resolve, reject) => {
-          const xhr = new XMLHttpRequest();
-          uploadXhrs.push(xhr);
-          xhr.open('POST', SUPABASE_URL + '/functions/v1/widget-file-upload', true);
-          xhr.upload.onprogress = (ev) => {
-            if (ev.lengthComputable) {
-              loaded[i] = ev.loaded;
-              tickProgress();
-            }
-          };
-          xhr.onload = () => {
-            if (xhr.status >= 200 && xhr.status < 300) {
-              loaded[i] = totals[i];
-              tickProgress();
-              resolve(xhr.responseText);
-            } else {
-              let msg = 'Upload failed';
-              try {
-                const j = JSON.parse(xhr.responseText || '{}');
-                msg = j.message || j.error || msg;
-              } catch (_) {}
-              reject(new Error(msg));
-            }
-          };
-          xhr.onerror = () => reject(new Error('Network error during upload'));
-          xhr.onabort = () => reject(new Error('aborted'));
-
-          const form = new FormData();
-          form.append('file', f);
-          form.append('agentId', CONFIG.agentId);
-          form.append('userId', getVoiceflowUserId());
-          if (conversationId) form.append('conversationId', conversationId);
-          if (currentVoiceflowSessionId) form.append('voiceflowSessionId', currentVoiceflowSessionId);
-          form.append('isTestMode', CONFIG.isTestMode ? 'true' : 'false');
-          // No per-file caption — caption rides as a separate trailing text bubble.
-          form.append('text', '');
-          xhr.send(form);
-        });
-
-        // Remove this file from pending so cancel-during-upload only leaves un-sent ones behind.
-        const u = previewUrlCache.get(f);
-        if (u) {
-          try { URL.revokeObjectURL(u); } catch (_) {}
-          previewUrlCache.delete(f);
-        }
-        pendingAttachments = pendingAttachments.filter((p) => p !== f);
-      } catch (err) {
-        const msg = err && err.message ? err.message : 'Upload failed';
-        if (msg === 'aborted') {
-          // User cancelled. State already reset by vfCancelPending. Stop the loop.
-          return;
-        }
-        isUploading = false;
-        uploadError = msg;
-        uploadXhrs = [];
-        renderAttachPreview();
-        return;
-      }
-    }
-
-    // All files uploaded successfully.
-    isUploading = false;
-    uploadProgress = 0;
-    uploadError = null;
-    uploadXhrs = [];
-    renderAttachPreview();
-
-    if (caption && caption.trim()) {
-      await sendMessage(caption);
-    }
   }
   
   // API Functions
@@ -2628,15 +2624,9 @@ function generateWidgetScript(config: any): string {
   };
   
   window.vfSendMessage = function() {
-    if (isUploading) return;
+    // Caption text path only. Attachments upload-on-pick — they don't ride
+    // along with Send. The user can keep typing/sending while uploads run.
     const input = document.getElementById('vf-input');
-    const captionRaw = input ? input.value : '';
-    if (pendingAttachments.length > 0) {
-      // Attach flow: clear text immediately so the user can keep typing while uploads run.
-      if (input) input.value = '';
-      uploadBatchAndSend(captionRaw);
-      return;
-    }
     if (input) sendMessage(input.value);
   };
   

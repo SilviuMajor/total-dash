@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ConversationsSkeleton } from "@/components/skeletons";
-import { Phone, Clock, CheckCircle, MessageSquare, ArrowDown, X, Plus, Tag, Users, Building2, Send, UserCheck, PhoneOff, ArrowRightLeft, Lock, Loader2, AlertTriangle, Timer, MessageSquareText, Trash2, FolderOpen, Sparkles, Check, Archive } from "lucide-react";
+import { Phone, Clock, CheckCircle, MessageSquare, ArrowDown, X, Plus, Tag, Users, Building2, Send, UserCheck, PhoneOff, ArrowRightLeft, Lock, Loader2, AlertTriangle, Timer, MessageSquareText, Trash2, FolderOpen, Sparkles, Check, Archive, Paperclip } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -73,12 +73,21 @@ interface Conversation {
   resolution_note?: string;
 }
 
+interface Attachment {
+  url: string;
+  fileName: string;
+  mimeType: string;
+  size: number;
+  kind: 'image' | 'video' | 'audio' | 'file';
+}
+
 interface Transcript {
   id: string;
   speaker: 'user' | 'assistant' | 'client_user' | 'system';
   text?: string;
   buttons?: Array<{ text: string; payload: any }>;
   timestamp: string;
+  attachments?: Attachment[] | null;
   metadata?: {
     button_click?: boolean;
     client_user_id?: string;
@@ -166,6 +175,10 @@ export default function Conversations() {
   const [aiEnhancing, setAiEnhancing] = useState(false);
   const [aiEnhancedText, setAiEnhancedText] = useState("");
   const [aiEnhanceMode, setAiEnhanceMode] = useState<string | null>(null);
+
+  // Agent attachment upload state
+  const attachInputRef = useRef<HTMLInputElement>(null);
+  const [attachUploading, setAttachUploading] = useState(false);
 
   // Archive (N8) — admin-only via RPC, force-ends + hides the conversation.
   const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false);
@@ -731,7 +744,7 @@ export default function Conversations() {
     try {
       const { data, error } = await supabase
         .from('transcripts')
-        .select('id, speaker, text, buttons, timestamp, metadata')
+        .select('id, speaker, text, buttons, timestamp, metadata, attachments')
         .eq('conversation_id', conversationId)
         .order('timestamp', { ascending: true });
       if (error) throw error;
@@ -986,6 +999,66 @@ export default function Conversations() {
   const dismissEnhanced = () => {
     setAiEnhancedText("");
     setAiEnhanceMode(null);
+  };
+
+  // Same allowlist as supabase/functions/agent-file-upload/index.ts
+  const AGENT_ATTACH_ALLOWED_MIME = new Set<string>([
+    'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+    'video/mp4', 'video/webm', 'video/quicktime',
+    'audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/mp4', 'audio/x-m4a',
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-powerpoint',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'text/plain', 'text/csv',
+    'application/zip',
+  ]);
+  const AGENT_ATTACH_MAX_SIZE = 10 * 1024 * 1024; // 10 MB
+
+  const handleAgentAttach = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    if (!selectedConversation || attachUploading) return;
+    if (selectedConversation.status !== 'in_handover' || selectedConversation.owner_id !== currentClientUserId) {
+      toast({ title: "Cannot attach", description: "Attachments only work during your active handover.", variant: "destructive" });
+      return;
+    }
+
+    const list: File[] = [];
+    for (let i = 0; i < files.length && i < 5; i++) {
+      const f = files[i];
+      if (f.size > AGENT_ATTACH_MAX_SIZE) {
+        toast({ title: "File too large", description: `${f.name} is over 10MB.`, variant: "destructive" });
+        return;
+      }
+      if (!AGENT_ATTACH_ALLOWED_MIME.has(f.type)) {
+        toast({ title: "File type not allowed", description: `${f.name} (${f.type || 'unknown'}) is not supported.`, variant: "destructive" });
+        return;
+      }
+      list.push(f);
+    }
+    if (list.length === 0) return;
+
+    setAttachUploading(true);
+    try {
+      for (const file of list) {
+        const form = new FormData();
+        form.append('file', file);
+        form.append('conversationId', selectedConversation.id);
+        form.append('text', '');
+
+        const { data, error } = await supabase.functions.invoke('agent-file-upload', { body: form });
+        if (error) throw error;
+        if (!data?.success) throw new Error(data?.message || data?.error || 'Upload failed');
+      }
+    } catch (err: any) {
+      toast({ title: "Upload failed", description: err.message || 'Could not send attachment', variant: "destructive" });
+    } finally {
+      setAttachUploading(false);
+      if (attachInputRef.current) attachInputRef.current.value = '';
+    }
   };
 
   const handleSendChatMessage = async () => {
@@ -1642,6 +1715,8 @@ export default function Conversations() {
                           // Client user messages render with name label and distinct style
                           if (transcript.speaker === 'client_user') {
                             const name = transcript.metadata?.client_user_name || 'Agent';
+                            const atts = transcript.attachments;
+                            const hasText = !!transcript.text?.trim();
                             return (
                               <div key={transcript.id || index} className="flex gap-2 mb-4">
                                 <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 text-[11px] font-bold text-primary">
@@ -1650,7 +1725,27 @@ export default function Conversations() {
                                 <div>
                                   <span className="text-[11px] font-medium text-primary mb-0.5 block">{name}</span>
                                   <div className="bg-card border border-border px-3 py-2 rounded-xl rounded-tl-sm text-sm max-w-[400px]">
-                                    {transcript.text}
+                                    {hasText && <div className="whitespace-pre-wrap">{transcript.text}</div>}
+                                    {atts && atts.length > 0 && atts.map((att, idx) => {
+                                      if (att.kind === 'image') {
+                                        return (
+                                          <a key={idx} href={att.url} target="_blank" rel="noreferrer" className="block mt-2 first:mt-0">
+                                            <img src={att.url} alt={att.fileName} className="max-w-full max-h-[260px] rounded-lg cursor-pointer object-cover" />
+                                          </a>
+                                        );
+                                      }
+                                      if (att.kind === 'video') {
+                                        return <video key={idx} src={att.url} controls preload="metadata" className="max-w-full max-h-[260px] rounded-lg mt-2 first:mt-0 block bg-black" />;
+                                      }
+                                      if (att.kind === 'audio') {
+                                        return <audio key={idx} src={att.url} controls preload="metadata" className="w-full mt-2 first:mt-0 block" />;
+                                      }
+                                      return (
+                                        <a key={idx} href={att.url} target="_blank" rel="noreferrer" download className="flex items-center gap-2 p-2 mt-2 first:mt-0 bg-muted rounded-lg hover:bg-muted/80 transition-colors">
+                                          <span className="text-xs truncate flex-1">{att.fileName}</span>
+                                        </a>
+                                      );
+                                    })}
                                   </div>
                                   <span className="text-[10px] text-muted-foreground mt-0.5 ml-1">{format(new Date(transcript.timestamp), 'h:mm a')}</span>
                                 </div>
@@ -1667,6 +1762,7 @@ export default function Conversations() {
                               speaker={speaker}
                               timestamp={transcript.timestamp}
                               buttons={transcript.buttons}
+                              attachments={transcript.attachments}
                               appearance={{
                                 primaryColor: '#3b82f6',
                                 secondaryColor: '#ffffff',
@@ -1881,6 +1977,24 @@ export default function Conversations() {
                           )}
                         </PopoverContent>
                       </Popover>
+                      <input
+                        ref={attachInputRef}
+                        type="file"
+                        multiple
+                        className="hidden"
+                        accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,video/quicktime,audio/mpeg,audio/wav,audio/ogg,audio/mp4,audio/x-m4a,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain,text/csv,application/zip"
+                        onChange={(e) => handleAgentAttach(e.target.files)}
+                      />
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="shrink-0"
+                        onClick={() => attachInputRef.current?.click()}
+                        disabled={attachUploading || sendingMessage}
+                        title="Attach file"
+                      >
+                        {attachUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
+                      </Button>
                       <Input
                         value={chatMessage}
                         onChange={(e) => setChatMessage(e.target.value)}

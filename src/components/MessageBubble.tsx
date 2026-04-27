@@ -1,15 +1,24 @@
 import { Avatar } from "@/components/ui/avatar";
-import { CheckCircle, Bot } from "lucide-react";
+import { CheckCircle, Bot, FileText, Download } from "lucide-react";
 
 interface Button {
   text: string;
   payload: any;
 }
 
+interface Attachment {
+  url: string;
+  fileName: string;
+  mimeType: string;
+  size: number;
+  kind: 'image' | 'video' | 'audio' | 'file';
+}
+
 interface MessageBubbleProps {
   speaker: 'user' | 'assistant' | 'client_user' | 'system';
   text?: string;
   buttons?: Button[];
+  attachments?: Attachment[] | null;
   timestamp: string;
   appearance: {
     primaryColor: string;
@@ -28,10 +37,39 @@ interface MessageBubbleProps {
   buttonsDisabled?: boolean;
 }
 
+function renderAttachment(att: Attachment, key: string | number) {
+  if (!att?.url) return null;
+  if (att.kind === 'image') {
+    return (
+      <a key={key} href={att.url} target="_blank" rel="noreferrer" className="block mt-2">
+        <img src={att.url} alt={att.fileName} className="max-w-full max-h-[320px] rounded-lg cursor-pointer object-cover" />
+      </a>
+    );
+  }
+  if (att.kind === 'video') {
+    return (
+      <video key={key} src={att.url} controls preload="metadata" className="max-w-full max-h-[320px] rounded-lg mt-2 block bg-black" />
+    );
+  }
+  if (att.kind === 'audio') {
+    return (
+      <audio key={key} src={att.url} controls preload="metadata" className="w-full mt-2 block" />
+    );
+  }
+  return (
+    <a key={key} href={att.url} target="_blank" rel="noreferrer" download className="flex items-center gap-2 p-2 mt-2 bg-muted rounded-lg hover:bg-muted/80 transition-colors">
+      <FileText className="w-4 h-4 flex-shrink-0" />
+      <span className="text-xs truncate flex-1">{att.fileName}</span>
+      <Download className="w-3 h-3 flex-shrink-0 opacity-50" />
+    </a>
+  );
+}
+
 export function MessageBubble({
   speaker,
   text,
   buttons,
+  attachments,
   timestamp,
   appearance,
   selectedButton,
@@ -135,7 +173,9 @@ export function MessageBubble({
           {messageContent && (
             <p className="leading-relaxed whitespace-pre-wrap">{messageContent}</p>
           )}
-          
+
+          {attachments && attachments.length > 0 && attachments.map((att, idx) => renderAttachment(att, idx))}
+
           {fileUrl && (
             isImage ? (
               <img 
