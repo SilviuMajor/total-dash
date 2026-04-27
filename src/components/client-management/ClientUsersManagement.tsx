@@ -1748,22 +1748,75 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
               onClick={async () => {
                 if (!roleChangeModal) return;
                 const { user, newRoleId } = roleChangeModal;
-                await supabase
+                const errors: string[] = [];
+                const isExpanded = expandedUserId === user.user_id;
+
+                // Update agent-scoped permission rows: new role_id, mark as overrides
+                // (since existing perms may differ from new role's template).
+                const { error: agentUpdateErr } = await supabase
                   .from('client_user_agent_permissions')
                   .update({ role_id: newRoleId, has_overrides: true })
                   .eq('user_id', user.user_id)
                   .eq('client_id', clientId);
+                if (agentUpdateErr) errors.push(`Agent perms: ${agentUpdateErr.message}`);
+
+                // Persist any in-memory agent-permission edits the admin made
+                // before triggering the role change (only if this user's panel
+                // is expanded — otherwise the in-memory state isn't theirs).
+                if (isExpanded) {
+                  for (const agent of agents) {
+                    const perms = selectedUserAgentPermissions[agent.id];
+                    if (!perms) continue;
+                    const { agent_id: _stripId, ...cleanPerms } = perms as any;
+                    const { error: e } = await supabase
+                      .from('client_user_agent_permissions')
+                      .update({ permissions: cleanPerms })
+                      .eq('user_id', user.user_id)
+                      .eq('agent_id', agent.id)
+                      .eq('client_id', clientId);
+                    if (e) errors.push(`Agent ${agent.name}: ${e.message}`);
+                  }
+                }
+
+                // Update client-scoped permission row: new role_id, mark as
+                // overrides, and persist current client_permissions (in-memory
+                // if expanded, otherwise whatever's in DB stays via upsert with
+                // the new role_id but old client_permissions).
+                const newClientPerms = isExpanded
+                  ? selectedUserClientPerms
+                  : (await supabase
+                      .from('client_user_permissions')
+                      .select('client_permissions')
+                      .eq('user_id', user.user_id)
+                      .eq('client_id', clientId)
+                      .maybeSingle()).data?.client_permissions || {};
+                const { error: clientPermErr } = await supabase
+                  .from('client_user_permissions')
+                  .upsert({
+                    user_id: user.user_id,
+                    client_id: clientId,
+                    role_id: newRoleId,
+                    client_permissions: newClientPerms,
+                    has_overrides: true,
+                  }, { onConflict: 'user_id,client_id' });
+                if (clientPermErr) errors.push(`Client perms: ${clientPermErr.message}`);
+
                 setRoleChangeModal(null);
                 await loadUserAgentPermissions(user.user_id);
                 await loadUserClientPermissions(user.user_id);
                 const updatedTemplates = await loadRoleTemplates(newRoleId);
                 setRoleTemplates(prev => ({ ...prev, [user.user_id]: updatedTemplates }));
-                setUsers(prev => prev.map(u => 
-                  u.user_id === user.user_id 
+                setUsers(prev => prev.map(u =>
+                  u.user_id === user.user_id
                     ? { ...u, role_id: newRoleId, role_name: roles.find(r => r.id === newRoleId)?.name || null, role_slug: roles.find(r => r.id === newRoleId)?.slug || null, is_admin_tier: roles.find(r => r.id === newRoleId)?.is_admin_tier || false }
                     : u
                 ));
-                toast({ title: "Role changed", description: "Kept current permissions as overrides" });
+
+                if (errors.length > 0) {
+                  toast({ title: "Role changed with errors", description: errors.join('. '), variant: "destructive" });
+                } else {
+                  toast({ title: "Role changed", description: "Kept current permissions as overrides" });
+                }
               }}
             >
               Keep current permissions
@@ -1772,32 +1825,35 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
               onClick={async () => {
                 if (!roleChangeModal) return;
                 const { user, newRoleId } = roleChangeModal;
+                const errors: string[] = [];
                 const templates = await loadRoleTemplates(newRoleId);
-                
-                // First, update role_id on ALL of this user's permission rows
-                await supabase
+
+                // First, update role_id on ALL of this user's agent-scoped rows
+                const { error: roleIdErr } = await supabase
                   .from('client_user_agent_permissions')
                   .update({ role_id: newRoleId })
                   .eq('user_id', user.user_id)
                   .eq('client_id', clientId);
-                
+                if (roleIdErr) errors.push(`Agent role_id: ${roleIdErr.message}`);
+
                 // Then update permissions for each agent that has a template
                 for (const [agentId, perms] of Object.entries(templates)) {
-                  await supabase
+                  const { error: e } = await supabase
                     .from('client_user_agent_permissions')
                     .update({ permissions: perms, has_overrides: false })
                     .eq('user_id', user.user_id)
                     .eq('agent_id', agentId)
                     .eq('client_id', clientId);
+                  if (e) errors.push(`Agent ${agentId}: ${e.message}`);
                 }
-                
+
                 // For agents WITHOUT a template, reset to all-false
                 const templateAgentIds = Object.keys(templates);
                 const allAgentIds = agents.map(a => a.id);
                 const untemplatedAgentIds = allAgentIds.filter(id => !templateAgentIds.includes(id));
-                
+
                 for (const agentId of untemplatedAgentIds) {
-                  await supabase
+                  const { error: e } = await supabase
                     .from('client_user_agent_permissions')
                     .update({
                       permissions: {
@@ -1809,19 +1865,40 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                     .eq('user_id', user.user_id)
                     .eq('agent_id', agentId)
                     .eq('client_id', clientId);
+                  if (e) errors.push(`Agent ${agentId}: ${e.message}`);
                 }
-                
+
+                // Reset client-scoped row: new role_id, new role's client defaults,
+                // and clear has_overrides. Without this, role_id on the
+                // client_user_permissions row was orphaned to the OLD role.
+                const newRoleClientPerms = roles.find(r => r.id === newRoleId)?.client_permissions || {};
+                const { error: clientPermErr } = await supabase
+                  .from('client_user_permissions')
+                  .upsert({
+                    user_id: user.user_id,
+                    client_id: clientId,
+                    role_id: newRoleId,
+                    client_permissions: newRoleClientPerms,
+                    has_overrides: false,
+                  }, { onConflict: 'user_id,client_id' });
+                if (clientPermErr) errors.push(`Client perms: ${clientPermErr.message}`);
+
                 setRoleChangeModal(null);
                 await loadUserAgentPermissions(user.user_id);
                 await loadUserClientPermissions(user.user_id);
                 const updatedTemplates2 = await loadRoleTemplates(newRoleId);
                 setRoleTemplates(prev => ({ ...prev, [user.user_id]: updatedTemplates2 }));
-                setUsers(prev => prev.map(u => 
-                  u.user_id === user.user_id 
+                setUsers(prev => prev.map(u =>
+                  u.user_id === user.user_id
                     ? { ...u, role_id: newRoleId, role_name: roles.find(r => r.id === newRoleId)?.name || null, role_slug: roles.find(r => r.id === newRoleId)?.slug || null, is_admin_tier: roles.find(r => r.id === newRoleId)?.is_admin_tier || false }
                     : u
                 ));
-                toast({ title: "Role changed", description: "Permissions reset to new role defaults" });
+
+                if (errors.length > 0) {
+                  toast({ title: "Role changed with errors", description: errors.join('. '), variant: "destructive" });
+                } else {
+                  toast({ title: "Role changed", description: "Permissions reset to new role defaults" });
+                }
               }}
             >
               Reset to defaults

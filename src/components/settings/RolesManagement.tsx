@@ -158,37 +158,56 @@ export function RolesManagement({ clientId }: RolesManagementProps) {
     const template = templates.find(t => t.agent_id === agentId);
     if (!template) return;
 
+    const previousPermissions = template.permissions;
     const updatedPermissions = { ...template.permissions, [permKey]: value };
 
-    await supabase
-      .from("role_permission_templates")
-      .update({ permissions: updatedPermissions })
-      .eq("role_id", roleId)
-      .eq("agent_id", agentId)
-      .eq("client_id", clientId);
-
+    // Optimistic UI update
     setRoleTemplates(prev => ({
       ...prev,
       [roleId]: (prev[roleId] || []).map(t =>
         t.agent_id === agentId ? { ...t, permissions: updatedPermissions } : t
       ),
     }));
+
+    const { error } = await supabase
+      .from("role_permission_templates")
+      .update({ permissions: updatedPermissions })
+      .eq("role_id", roleId)
+      .eq("agent_id", agentId)
+      .eq("client_id", clientId);
+
+    if (error) {
+      // Roll back optimistic state and surface the failure
+      setRoleTemplates(prev => ({
+        ...prev,
+        [roleId]: (prev[roleId] || []).map(t =>
+          t.agent_id === agentId ? { ...t, permissions: previousPermissions } : t
+        ),
+      }));
+      toast({ title: "Failed to save", description: error.message, variant: "destructive" });
+    }
   };
 
   const toggleClientPermissions = async (roleId: string, updates: Record<string, boolean>) => {
     const role = roles.find(r => r.id === roleId);
     if (!role) return;
 
+    const previousPerms = role.client_permissions;
     const updatedPerms = { ...role.client_permissions, ...updates };
 
-    // Update local state immediately for responsive UI
+    // Optimistic UI update
     setRoles(prev => prev.map(r => r.id === roleId ? { ...r, client_permissions: updatedPerms } : r));
 
-    // Persist to database
-    await supabase
+    const { error } = await supabase
       .from("client_roles")
       .update({ client_permissions: updatedPerms })
       .eq("id", roleId);
+
+    if (error) {
+      // Roll back optimistic state
+      setRoles(prev => prev.map(r => r.id === roleId ? { ...r, client_permissions: previousPerms } : r));
+      toast({ title: "Failed to save", description: error.message, variant: "destructive" });
+    }
   };
 
   const handleSaveRole = (roleId: string, roleName: string) => {
@@ -202,19 +221,25 @@ export function RolesManagement({ clientId }: RolesManagementProps) {
 
   const applyToAllUsers = async (roleId: string) => {
     const templates = roleTemplates[roleId] || [];
+    const errors: string[] = [];
 
     for (const template of templates) {
-      await supabase
+      const { error } = await supabase
         .from("client_user_agent_permissions")
         .update({ permissions: template.permissions })
         .eq("role_id", roleId)
         .eq("agent_id", template.agent_id)
         .eq("client_id", clientId)
         .eq("has_overrides", false);
+      if (error) errors.push(`${template.agent_name || template.agent_id}: ${error.message}`);
     }
 
     setApplyAllModal(null);
-    toast({ title: "Applied", description: "All users with this role have been updated" });
+    if (errors.length > 0) {
+      toast({ title: "Apply finished with errors", description: errors.join('. '), variant: "destructive" });
+    } else {
+      toast({ title: "Applied", description: "All users with this role have been updated" });
+    }
   };
 
   const addRole = async () => {

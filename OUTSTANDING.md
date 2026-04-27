@@ -54,21 +54,21 @@ Audit found 16 confirmed bugs (1 Critical, 5 High, 7 Medium, 3 Low) and rejected
 
 ---
 
-### N11-F1 — Role change "Keep current permissions" leaks orphan role_id + drops UI edits
+### N11-F1 — Role change "Keep current permissions" leaks orphan role_id + drops UI edits ✅ DONE (2026-04-27)
 
-**Type:** Bug (Critical) | **Effort:** Small | **Status:** Open
+**Type:** Bug (Critical) | **Effort:** Small | **Status:** Shipped
 
-In `ClientUsersManagement.tsx:1746-1767`, the role-change modal's "Keep current permissions" path updates `client_user_agent_permissions.role_id` and `has_overrides=true` but: (a) never updates `client_user_permissions.role_id` (orphan reference to old role), (b) doesn't write the in-memory `permissions` so any unsaved toggle changes the admin made are silently discarded while toast says "Kept current permissions". Same orphan-role_id bug also present in the modal's "Reset to defaults" path (`:1771-1828`).
+Both modal paths now update `client_user_permissions.role_id` (no more orphan), persist in-memory permission edits when the affected user is the expanded one (no more silently dropped toggles), and surface DB errors via destructive toast instead of always claiming success.
 
-**Touches:** `src/components/client-management/ClientUsersManagement.tsx:1746-1828`.
+**Touches:** `src/components/client-management/ClientUsersManagement.tsx:1746-1903`.
 
 ---
 
-### N11-F2 — Silent failures on every Roles toggle
+### N11-F2 — Silent failures on every Roles toggle ✅ DONE (2026-04-27)
 
-**Type:** Bug (High) | **Effort:** Small | **Status:** Open
+**Type:** Bug (High) | **Effort:** Small | **Status:** Shipped
 
-`togglePermission` (`:156-176`), `toggleClientPermissions` (`:178-192`), `applyToAllUsers` (`:203-218`) in `RolesManagement.tsx` call `await supabase...update(...)` without checking `error`. UI updates optimistically and shows "Saved" toast even on failure. Likely root cause of the original spec's "toggles don't persist" symptom.
+`togglePermission` and `toggleClientPermissions` now apply optimistic UI, await the update, roll back on error, and toast destructively. `applyToAllUsers` collects per-agent errors across the loop and surfaces them. No more false "Saved" toasts on RLS or network failures.
 
 **Touches:** `src/components/settings/RolesManagement.tsx`.
 
@@ -86,33 +86,33 @@ After `RolesManagement` toggles persist to DB, no signal reaches `useClientAgent
 
 ---
 
-### N11-F4 — Settings Departments sub-tab not gated by its own permission
+### N11-F4 — Settings Departments sub-tab not gated by its own permission ✅ DONE (2026-04-27)
 
-**Type:** Bug (High) | **Effort:** Tiny | **Status:** Open
+**Type:** Bug (High) | **Effort:** Tiny | **Status:** Shipped
 
-`Settings.tsx:88-89` computes `showDepartments` but the variable is dead code — the Departments sub-tab is rendered inside the `team-permissions` tab (`:127-164`) and only gated by `showTeam`. So `client_departments_enabled` ceiling and `settings_departments_view` permission are silently ignored.
+Departments sub-tab button and content are now gated by `showDepartments`. A `SubTabGuard` helper auto-redirects the active sub-tab to "team" if the user lands on a hidden one (e.g. their permission gets revoked while the page is open).
 
-**Touches:** `src/pages/Settings.tsx:127-164`. One-line fix: gate the Departments button + content by `showDepartments`.
-
----
-
-### N11-F5 — Settings.tsx audit log uses `=== true` while other tabs use `!== false`
-
-**Type:** Bug (High) | **Effort:** Tiny | **Status:** Open
-
-`Settings.tsx:88-95` uses `!== false` (default-allow) for Departments / Team / Canned Responses / General; `:96-97` uses `=== true` (default-deny) for Audit Log. Pick one — recommend `!== false` for parity, OR `=== true` everywhere if default-deny is desired (safer).
-
-**Touches:** `src/pages/Settings.tsx:88-97`.
+**Touches:** `src/pages/Settings.tsx`.
 
 ---
 
-### N11-F6 — RolesManagement rendered without readOnly prop in Settings.tsx (privilege escalation)
+### N11-F5 — Settings.tsx audit log uses `=== true` while other tabs use `!== false` ✅ DONE (2026-04-27)
 
-**Type:** Bug (High) | **Effort:** Small | **Status:** Open
+**Type:** Bug (High) | **Effort:** Tiny | **Status:** Shipped
 
-`Settings.tsx:163` renders `<RolesManagement clientId={clientId} />` with no `readOnly` prop. Component has no internal manage-permission check. Result: a client user with `settings_team_view: true, settings_team_manage: false` can edit role permissions for the entire client. Real exposure once HeyB has multiple seats with mixed tiers.
+Audit Log now uses `!== false` for both Layer-2 ceiling and view permission, matching the other Company Settings tabs. To keep Audit Log default-off, set the capability/permission to `false` explicitly in seeds — no more silent operator drift.
 
-**Touches:** `src/pages/Settings.tsx:163`, `src/components/settings/RolesManagement.tsx` (add `readOnly` prop, disable inputs/buttons when set), and arguably gate the Roles sub-tab itself by `settings_team_manage`.
+**Touches:** `src/pages/Settings.tsx`.
+
+---
+
+### N11-F6 — RolesManagement rendered without readOnly prop in Settings.tsx (privilege escalation) ✅ DONE (2026-04-27)
+
+**Type:** Bug (High) | **Effort:** Small | **Status:** Shipped
+
+Roles sub-tab is now gated by `canManageTeam` (i.e. `settings_team_manage`) — both the button and the content. View-only users can still see Departments and Users tabs but cannot reach the Roles editor at all. The `SubTabGuard` redirects to Users if the user is on the Roles tab when their manage permission is revoked. Read-only mode for RolesManagement itself was deferred — gating the entry point is the simpler, safer cut.
+
+**Touches:** `src/pages/Settings.tsx`.
 
 ---
 
@@ -694,6 +694,8 @@ Low priority. Do opportunistically when touching related code.
 ## Completed (recent)
 
 Date-stamped log of items shipped. Don't delete — provides commit-trail context for future work.
+
+**Completed:** 2026-04-27 — N11 follow-ups F1, F2, F4, F5, F6 landed in one pass. F1: both role-change modal paths now sync `client_user_permissions.role_id`, persist in-memory permission edits when the affected user is expanded, and surface DB errors. F2: optimistic-with-rollback + destructive toasts on RolesManagement saves. F4: Departments sub-tab gated by `showDepartments` with auto-redirect. F5: Audit Log unified to `!== false` parity. F6: Roles sub-tab gated by `settings_team_manage`. F3 (Realtime invalidation), F7-F16 still open.
 
 **Completed:** 2026-04-27 — N11 audit: read-only walkthrough of the 4-layer permission system. Wrote `docs/audits/2026-04-N11-permissions-audit.md` with 16 confirmed bugs (1 Critical, 5 High, 7 Medium, 3 Low) + 1 UX wording cluster. Filed each as N11-F1 through N11-F17 above. Rejected 2 false alarms (admin_tier doesn't bypass ceilings; agent-scoped pages ARE gated by `ProtectedRoute`).
 

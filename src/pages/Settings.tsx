@@ -14,6 +14,30 @@ import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 
+// Auto-corrects teamSubTab to a visible value when the current selection is
+// hidden by permissions. Lives at module scope so the effect can be co-located
+// with the visibility props rather than added to the parent's effect list.
+function SubTabGuard({
+  showDepartments,
+  canManageTeam,
+  teamSubTab,
+  setTeamSubTab,
+}: {
+  showDepartments: boolean;
+  canManageTeam: boolean;
+  teamSubTab: "departments" | "team" | "roles";
+  setTeamSubTab: (v: "departments" | "team" | "roles") => void;
+}) {
+  useEffect(() => {
+    if (teamSubTab === "departments" && !showDepartments) {
+      setTeamSubTab("team");
+    } else if (teamSubTab === "roles" && !canManageTeam) {
+      setTeamSubTab("team");
+    }
+  }, [teamSubTab, showDepartments, canManageTeam, setTeamSubTab]);
+  return null;
+}
+
 export default function Settings() {
   const { user } = useAuth();
   const { isClientPreviewMode, previewClient, previewDepth } = useMultiTenantAuth();
@@ -93,8 +117,11 @@ export default function Settings() {
     (isInPreviewOrImpersonating || companySettingsPermissions?.settings_canned_responses_view !== false);
   const showGeneral = capabilities.client_general_enabled !== false &&
     (isInPreviewOrImpersonating || companySettingsPermissions?.settings_general_view !== false);
-  const showAuditLog = isInPreviewOrImpersonating ||
-    (capabilities.client_audit_log_enabled === true && companySettingsPermissions?.settings_audit_log_view === true);
+  // Audit Log uses the same default-allow pattern (!== false) as the other tabs
+  // for consistency. To keep a tab default-off, set the capability/permission
+  // explicitly to false in seeds/templates rather than relying on operator drift.
+  const showAuditLog = capabilities.client_audit_log_enabled !== false &&
+    (isInPreviewOrImpersonating || companySettingsPermissions?.settings_audit_log_view !== false);
 
   const canManageDepartments = !isImpersonationViewAsUser && (isInPreview || companySettingsPermissions?.settings_departments_manage === true);
   const canManageTeam = !isImpersonationViewAsUser && (isInPreview || companySettingsPermissions?.settings_team_manage === true);
@@ -125,17 +152,33 @@ export default function Settings() {
 
         {showTeam && (
           <TabsContent value="team-permissions" className="space-y-6">
+            {/*
+              Sub-tab visibility:
+              - Departments: gated by showDepartments (Layer-2 ceiling + Layer-3/4 view)
+              - Users: always shown when the parent Team tab is visible
+              - Roles: management-only (settings_team_manage). Hidden for view-only
+                users so they can't open a UI whose toggles silently fail at the DB.
+              The active sub-tab is auto-corrected if it points at a hidden one.
+            */}
+            <SubTabGuard
+              showDepartments={showDepartments}
+              canManageTeam={canManageTeam}
+              teamSubTab={teamSubTab}
+              setTeamSubTab={setTeamSubTab}
+            />
             <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1 w-fit">
-              <button
-                onClick={() => setTeamSubTab("departments")}
-                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                  teamSubTab === "departments"
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-muted"
-                }`}
-              >
-                Departments
-              </button>
+              {showDepartments && (
+                <button
+                  onClick={() => setTeamSubTab("departments")}
+                  className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                    teamSubTab === "departments"
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  Departments
+                </button>
+              )}
               <button
                 onClick={() => setTeamSubTab("team")}
                 className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
@@ -146,21 +189,23 @@ export default function Settings() {
               >
                 Users
               </button>
-              <button
-                onClick={() => setTeamSubTab("roles")}
-                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                  teamSubTab === "roles"
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-muted"
-                }`}
-              >
-                Roles
-              </button>
+              {canManageTeam && (
+                <button
+                  onClick={() => setTeamSubTab("roles")}
+                  className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                    teamSubTab === "roles"
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  Roles
+                </button>
+              )}
             </div>
 
-            {teamSubTab === "departments" && <DepartmentManagement clientId={clientId} readOnly={!canManageDepartments} />}
+            {teamSubTab === "departments" && showDepartments && <DepartmentManagement clientId={clientId} readOnly={!canManageDepartments} />}
             {teamSubTab === "team" && <ClientUsersManagement clientId={clientId} readOnly={!canManageTeam} />}
-            {teamSubTab === "roles" && <RolesManagement clientId={clientId} />}
+            {teamSubTab === "roles" && canManageTeam && <RolesManagement clientId={clientId} />}
           </TabsContent>
         )}
 
