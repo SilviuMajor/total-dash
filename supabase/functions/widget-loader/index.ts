@@ -1398,7 +1398,7 @@ function generateWidgetScript(config: any): string {
   function renderContent() {
     const contentEl = document.getElementById('vf-content');
     if (!contentEl) return;
-    
+
     if (currentTab === 'Home' && !isInActiveChat) {
       renderHome(contentEl);
     } else if (currentTab === 'Chats' || isInActiveChat) {
@@ -1410,6 +1410,20 @@ function generateWidgetScript(config: any): string {
     } else if (currentTab === 'FAQ') {
       renderFAQ(contentEl);
     }
+  }
+
+  // Soft refresh: only rebuild the messages list, leave the input bar alone.
+  // The iOS keyboard is bound to the focused input element — destroying that
+  // element (which renderPanel does) dismisses the keyboard. As long as we're
+  // in an active chat and the layout hasn't changed (no end-of-conversation
+  // swap), we can update messages without touching the input.
+  function refreshChatMessages() {
+    const inputEl = document.getElementById('vf-input');
+    if (isInActiveChat && !isConversationEnded && inputEl) {
+      renderContent();
+      return;
+    }
+    renderPanel();
   }
   
   function renderHome(container) {
@@ -1672,7 +1686,7 @@ function generateWidgetScript(config: any): string {
           
           if (hasNewMessages) {
             isTyping = false;
-            renderPanel();
+            refreshChatMessages();
             scrollToLatestMessage();
             if (conversationId) {
               SessionManager.saveConversation(conversationId, messages, currentVoiceflowSessionId, true);
@@ -2289,9 +2303,9 @@ function generateWidgetScript(config: any): string {
     if (!isInHandover) {
       isTyping = true;
     }
-    renderPanel();
+    refreshChatMessages();
     scrollToLatestMessage();
-    
+
     try {
       const response = await fetch(INTERACT_URL, {
         method: 'POST',
@@ -2358,14 +2372,14 @@ function generateWidgetScript(config: any): string {
           
           messages.push(botMsg);
           isTyping = false;
-          renderPanel();
+          refreshChatMessages();
           scrollToLatestMessage();
         }
       } else {
         isTyping = false;
-        renderPanel();
+        refreshChatMessages();
       }
-      
+
       // Show conversation ended indicator
       if (data.conversationEnded) {
         isTyping = false;
@@ -2380,17 +2394,17 @@ function generateWidgetScript(config: any): string {
         renderPanel();
         scrollToLatestMessage();
       }
-      
+
       if (conversationId) {
         SessionManager.saveConversation(conversationId, messages, currentVoiceflowSessionId, true);
       }
     } catch (error) {
       console.error('Send message error:', error);
       isTyping = false;
-      renderPanel();
+      refreshChatMessages();
     }
   }
-  
+
   async function startNewChat() {
     stopHandoverRealtime();
     messages = [];
@@ -2465,13 +2479,13 @@ function generateWidgetScript(config: any): string {
           
           messages.push(botMsg);
           isTyping = false;
-          renderPanel();
+          refreshChatMessages();
         }
       } else {
         isTyping = false;
-        renderPanel();
+        refreshChatMessages();
       }
-      
+
       // Save conversation immediately after bot responses (launch only, no user interaction yet)
       if (conversationId && messages.length > 0) {
         SessionManager.saveConversation(conversationId, messages, currentVoiceflowSessionId, false);
@@ -2479,7 +2493,7 @@ function generateWidgetScript(config: any): string {
     } catch (error) {
       console.error('Start chat error:', error);
       isTyping = false;
-      renderPanel();
+      refreshChatMessages();
     }
   }
   
@@ -2502,8 +2516,8 @@ function generateWidgetScript(config: any): string {
     if (!isInHandover) {
       isTyping = true;
     }
-    renderPanel();
-    
+    refreshChatMessages();
+
     try {
       const response = await fetch(INTERACT_URL, {
         method: 'POST',
@@ -2570,13 +2584,13 @@ function generateWidgetScript(config: any): string {
           
           messages.push(botMsg);
           isTyping = false;
-          renderPanel();
+          refreshChatMessages();
         }
       } else {
         isTyping = false;
-        renderPanel();
+        refreshChatMessages();
       }
-      
+
       // Show conversation ended indicator
       if (data.conversationEnded) {
         isTyping = false;
@@ -2591,14 +2605,14 @@ function generateWidgetScript(config: any): string {
         renderPanel();
         scrollToLatestMessage();
       }
-      
+
       if (conversationId) {
         SessionManager.saveConversation(conversationId, messages, currentVoiceflowSessionId, true);
       }
     } catch (error) {
       console.error('Button click error:', error);
       isTyping = false;
-      renderPanel();
+      refreshChatMessages();
     }
   }
   
