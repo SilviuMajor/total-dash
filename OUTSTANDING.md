@@ -231,6 +231,37 @@ Tracked as a single follow-up:
 
 ---
 
+### N27 — Create user fails (longstanding)
+
+**Type:** Bug | **Effort:** Small (suspected) | **Status:** Open
+
+Adding a new client user from Settings → Users → "Add User" produces an error toast. Pre-existing — unrelated to N11 follow-up work. Real exposure once HeyB onboarding starts.
+
+**Suspected cause (needs confirmation with the actual error message):** `handleAddUser` in `ClientUsersManagement.tsx:663-686` inserts permission rows from the frontend AFTER `create-client-user/index.ts:306-324` already inserted rows for every assigned agent. If a unique constraint exists on `(user_id, agent_id, client_id)`, the frontend insert hits a duplicate-key error. Two fixes possible:
+- Drop the redundant frontend insert and let the EF own all permission writes (simpler).
+- Switch frontend to upsert with `onConflict: 'user_id,agent_id,client_id'` and let the EF skip if frontend is sending custom perms.
+
+Frontend insert was added when the EF didn't yet seed permissions; EF behaviour caught up but frontend wasn't deduplicated.
+
+**Repro:** Open Settings → Users → Add User. Fill out the form. Click "Add User". Capture (a) toast text, (b) browser-console error line starting `[ClientUsersManagement] User creation failed:`, (c) Network tab response body for the `create-client-user` POST.
+
+**Touches:** `src/components/client-management/ClientUsersManagement.tsx:641-712`, `supabase/functions/create-client-user/index.ts` (only if the EF path also has a bug).
+
+---
+
+### N28 — User-settings dialog width + Settings page density
+
+**Type:** UX Polish | **Effort:** Tiny | **Status:** Open
+
+Two small layout issues on Settings → Users:
+
+1. **User-settings overlay/dialog is too narrow.** When expanding a user (or opening the settings overlay for one), the menu doesn't have enough horizontal room — content feels cramped. Widen the dialog max-width.
+2. **Settings page padding is excessive.** `Settings.tsx` wraps everything in `p-6 space-y-6`, plus child cards add their own `p-6`. Reduce wrapper padding (or child padding) where it doesn't compromise breathing room. Especially noticeable on the Users sub-tab where dense permission tables get squeezed sideways while top/bottom whitespace eats vertical real estate.
+
+**Touches:** `src/pages/Settings.tsx` (page-level `p-6`), `src/components/client-management/ClientUsersManagement.tsx` (user dialog/overlay max-width — search `Dialog` / `DialogContent` / `max-w-`).
+
+---
+
 ### N20 — Production deployment planning
 
 **Type:** Infrastructure | **Effort:** Was Large; mostly DONE | **Status:** Mostly complete (revisit residuals)
