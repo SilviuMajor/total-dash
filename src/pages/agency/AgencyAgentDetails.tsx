@@ -192,16 +192,11 @@ export default function AgencyAgentDetails() {
         </TabsList>
 
         <TabsContent value="client-access" className="space-y-6">
-          {/* Scope label — destructive accent to signal "this caps things" */}
-          <div className="border-l-2 border-destructive pl-3 py-1">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-destructive">Per-agent ceiling</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">Caps what client users can see for this agent. Disabling a toggle hides that feature for every client user assigned to this agent.</p>
-          </div>
-          {/* Agency-only banner */}
-          <div className="flex items-center gap-3 p-3 border border-dashed border-primary/40 rounded-lg bg-primary/5">
-            <Lock className="w-4 h-4 text-primary shrink-0" />
+          {/* Agency-only banner — destructive accent signals per-agent cap */}
+          <div className="flex items-start gap-3 p-3 border-l-4 border-l-destructive border-y border-r border-y-border/50 border-r-border/50 rounded-lg bg-destructive/5">
+            <Lock className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
             <p className="text-sm text-muted-foreground">
-              <span className="font-medium text-foreground">Agency only</span> — These controls determine what your client can see for this agent. Clients do not see this page.
+              <span className="font-medium text-foreground">Agency only — per-agent cap.</span> These toggles control what client users can see for this specific agent. Disabling a toggle hides that feature for every client user assigned to this agent. Clients never see this page.
             </p>
           </div>
 

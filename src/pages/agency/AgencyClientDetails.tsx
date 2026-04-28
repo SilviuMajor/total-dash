@@ -87,22 +87,12 @@ function CompanySettingsPanel({ clientId }: { clientId: string }) {
 
   return (
     <div className="space-y-6">
-      {/* Scope label — destructive accent to signal "this caps things" */}
-      <div className="border-l-2 border-destructive pl-3 py-1">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-destructive">Agency-wide ceiling</h3>
-        <p className="text-xs text-muted-foreground mt-0.5">Caps what this client's roles and users can be granted. Disabling here hides the feature for every user at this client.</p>
-      </div>
-      {/* Master toggle */}
-      <Card className="p-4 bg-card border-border/50">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-md bg-primary/10 flex items-center justify-center">
-              <Switch checked={masterEnabled} onCheckedChange={(v) => updateCapability('settings_page_enabled', v)} className="scale-75" />
-            </div>
-            <div>
-              <p className="text-sm font-medium">Company Settings Page Visibility</p>
-              <p className="text-xs text-muted-foreground">Show or hide the entire Company Settings page for this client. Disabling hides the page for every user.</p>
-            </div>
+      {/* Master toggle — destructive border signals agency-wide cap */}
+      <Card className="p-4 bg-destructive/5 border-l-4 border-l-destructive border-y-border/50 border-r-border/50">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium">Show Company Settings page to this client</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Agency-wide cap — turning this off hides the entire Company Settings page for every user at this client. Individual tabs below also have their own toggles.</p>
           </div>
           <Switch checked={masterEnabled} onCheckedChange={(v) => updateCapability('settings_page_enabled', v)} />
         </div>
