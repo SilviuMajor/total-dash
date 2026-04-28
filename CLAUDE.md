@@ -40,6 +40,10 @@ Silv keeps broader architecture docs in the planning-Claude project knowledge (`
 
 **Testing.** Silv tests by hitting the live URL after deploy. The widget embed lives on a Framer page. After shipping, tell Silv explicitly what's deployed and what to hard-refresh (Cmd+Shift+R) to see it.
 
+**Browser testing via Claude in Chrome.** When an implementation needs significant testing (multi-step user flows, permission changes, anything beyond a quick visual check), **offer to drive the test via Chrome MCP before doing it** — let Silv accept or decline. Don't auto-execute browser tests; he wants the choice. Available tabs in Silv's Chrome (use `tabs_context_mcp` to see current state):
+- A super-admin session in another tab — useful for cross-role testing (e.g. admin makes a change, client user observes).
+- Gmail tabs for `support@fiveleaf.co.uk` and `silviu.major@fiveleaf.co.uk` — use these for email confirmation flows (invite acceptance, password reset, etc.) when creating or testing users.
+
 **When something breaks.** Diagnose before guessing. Read the actual file. Check browser console for JS errors, Supabase logs for Edge Function errors. Don't propose speculative fixes without checking what broke.
 
 **If the first fix fails.** Investigate root cause; try a different angle. Don't defer to "tech debt" unless Silv explicitly agrees it's not worth fixing now.
