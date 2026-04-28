@@ -43,6 +43,7 @@ import {
 } from "@/hooks/queries/useConversationMutations";
 import { useAuth } from "@/hooks/useAuth";
 import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
+import { useImpersonation } from "@/hooks/useImpersonation";
 import { getSoundPreferences, playHandoverRequestSound, playNewMessageSound, sendBrowserNotification } from "@/lib/notificationSounds";
 
 interface Conversation {
@@ -130,6 +131,17 @@ export default function Conversations() {
   const queryClient = useQueryClient();
   const { user, profile } = useAuth();
   const { isClientPreviewMode, previewClient } = useMultiTenantAuth();
+  // Pull impersonation state directly so loadClientUser can resolve the acting
+  // client_user even before the previewClient bridge has finished loading, and
+  // so view_as_user mode resolves to the *specific* impersonated user instead
+  // of an arbitrary client_user for the client.
+  const {
+    isImpersonating,
+    impersonationMode,
+    targetUserId: impersonationTargetUserId,
+    targetClientId: impersonationTargetClientId,
+    loading: impersonationLoading,
+  } = useImpersonation();
 
   // Handover state
   const [chatMessage, setChatMessage] = useState("");
@@ -435,13 +447,24 @@ export default function Conversations() {
     };
   }, [selectedConversation?.id, queryClient]);
 
-  // Load current client user ID (handles both real client and preview mode)
+  // Load current client user ID. Resolution order:
+  //   1. Direct match — caller's auth.users.id has a client_users row.
+  //   2. Impersonation view_as_user — impersonating a SPECIFIC client user;
+  //      resolve via client_users.user_id = activeSession.target_user_id.
+  //   3. Impersonation full_access OR legacy preview-mode bridge — the caller
+  //      acts on behalf of "any" client_user for the previewed client. We pick
+  //      the deterministic earliest-created row so messages always attribute
+  //      to the same human in this preview session.
+  //
+  // Waits for impersonation state to finish loading before falling through to
+  // the preview-mode branch, so we don't fire the previewClient bridge race.
   useEffect(() => {
     const loadClientUser = async () => {
       if (!user?.id) return;
+      if (impersonationLoading) return;
 
       try {
-        // First try: direct lookup in client_users
+        // 1. Direct lookup
         const { data: directMatch, error: directError } = await supabase
           .from('client_users')
           .select('id')
@@ -456,13 +479,38 @@ export default function Conversations() {
           return;
         }
 
-        // Preview mode fallback: find the first client_user for the preview client
-        // This lets agency admins test handover actions when previewing
-        if (isClientPreviewMode && previewClient?.id) {
+        // 2. view_as_user impersonation — resolve to the specific target user's
+        //    client_user row.
+        if (isImpersonating && impersonationMode === 'view_as_user' && impersonationTargetUserId) {
+          const { data: targetClientUser, error: targetError } = await supabase
+            .from('client_users')
+            .select('id')
+            .eq('user_id', impersonationTargetUserId)
+            .maybeSingle();
+
+          if (targetError) throw targetError;
+
+          if (targetClientUser) {
+            setCurrentClientUserId(targetClientUser.id);
+            console.log('[Handover] Client user ID (view_as_user):', targetClientUser.id);
+            return;
+          }
+          console.warn('[Handover] view_as_user target has no client_users row:', impersonationTargetUserId);
+        }
+
+        // 3. Full-access impersonation OR legacy preview-mode bridge — pick the
+        //    earliest client_user for the previewed client deterministically.
+        const fallbackClientId =
+          (isImpersonating && impersonationTargetClientId) ||
+          (isClientPreviewMode && previewClient?.id) ||
+          null;
+
+        if (fallbackClientId) {
           const { data: previewUser, error: previewError } = await supabase
             .from('client_users')
             .select('id')
-            .eq('client_id', previewClient.id)
+            .eq('client_id', fallbackClientId)
+            .order('created_at', { ascending: true })
             .limit(1)
             .maybeSingle();
 
@@ -475,7 +523,7 @@ export default function Conversations() {
           }
         }
 
-        console.warn('No client user ID found for current user');
+        console.warn('[Handover] No client user ID found for current user');
       } catch (err) {
         console.error('[Handover] Failed to load client user:', err);
         toast({
@@ -486,7 +534,17 @@ export default function Conversations() {
       }
     };
     loadClientUser();
-  }, [user?.id, isClientPreviewMode, previewClient, toast]);
+  }, [
+    user?.id,
+    isClientPreviewMode,
+    previewClient,
+    isImpersonating,
+    impersonationMode,
+    impersonationTargetUserId,
+    impersonationTargetClientId,
+    impersonationLoading,
+    toast,
+  ]);
 
   // Load pending handover conversation IDs for pinning
   useEffect(() => {

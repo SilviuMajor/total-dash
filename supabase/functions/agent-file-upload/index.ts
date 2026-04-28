@@ -207,20 +207,27 @@ serve(async (req) => {
       );
     }
 
-    // Check the conversation's agent belongs to the caller's client
-    const { data: agentRow, error: agentError } = await adminClient
-      .from('agents')
-      .select('id, client_id, status')
-      .eq('id', conv.agent_id)
-      .single();
+    // Check the conversation's agent is assigned to the caller's client.
+    // Agents → clients is a many-to-many through agent_assignments — there is
+    // no client_id column on agents directly. (The earlier select for
+    // 'id, client_id, status' on agents was always returning a PostgREST
+    // error because client_id doesn't exist, which surfaced as the
+    // "Agent not accessible" toast.)
+    const { data: assignment, error: assignmentError } = await adminClient
+      .from('agent_assignments')
+      .select('id')
+      .eq('agent_id', conv.agent_id)
+      .eq('client_id', clientUser.client_id)
+      .maybeSingle();
 
-    if (agentError || !agentRow) {
+    if (assignmentError) {
+      console.error('[agent-file-upload] agent_assignments lookup failed:', assignmentError);
       return jsonResponse(
-        { error: 'Forbidden', message: 'Agent not accessible.' },
+        { error: 'Forbidden', message: 'Could not verify agent access.' },
         403
       );
     }
-    if (agentRow.client_id !== clientUser.client_id) {
+    if (!assignment) {
       return jsonResponse(
         { error: 'Forbidden', message: 'You do not have access to this conversation.' },
         403

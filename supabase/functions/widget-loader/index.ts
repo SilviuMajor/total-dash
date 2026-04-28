@@ -946,22 +946,28 @@ function generateWidgetScript(config: any): string {
        One tile per pending upload — thumbnail only, no filename, no size. */
     .vf-attach-preview-row {
       display: flex; flex-wrap: wrap; gap: 8px;
-      /* Bottom padding gives the tile breathing room above the input field —
-         without it, the thumbnail sits flush against the text box. */
-      padding: 10px 12px 8px;
+      /* Top padding kept >=4px so the \u00d7 close button (positioned at top:-4px on the
+         tile) doesn't get clipped by the row's bounding box. Bottom padding keeps
+         the tile from sitting flush against the text input below. */
+      padding: 6px 12px 8px;
     }
     .vf-attach-tile {
       position: relative;
       width: 56px; height: 56px;
       border-radius: 10px;
       background: \${theme.botBubble};
-      overflow: hidden;
+      /* Intentionally NO overflow:hidden here \u2014 the close button overlays the
+         tile at top:-4px / right:-4px and would be clipped otherwise. The
+         thumbnail child has its own overflow:hidden + border-radius so the
+         image still gets clean rounded corners. */
       flex-shrink: 0;
       color: #666;
       display: flex; align-items: center; justify-content: center;
     }
     .vf-attach-tile-thumb {
       width: 100%; height: 100%;
+      border-radius: 10px;
+      overflow: hidden;
       display: flex; align-items: center; justify-content: center;
     }
     .vf-attach-tile-thumb img {
@@ -1141,6 +1147,14 @@ function generateWidgetScript(config: any): string {
   let pendingExitHandoverTimer = null;
   let postHandoverWatchTimer = null;
   const POST_HANDOVER_WATCH_MS = 30 * 60 * 1000;
+  // Pre-handover watch: keep the transcript poll alive during the AI portion of a
+  // conversation so we can detect an agent doing "take over conversation" early
+  // (before the user requested human help). Without this, the system message
+  // "Now speaking with X" inserted by handover-actions never reaches the widget
+  // because the poll only ran while isInHandover=true.
+  // Anon RLS on transcripts opens up automatically once the takeover creates an
+  // active handover_session, so the poll succeeds at that point.
+  let preHandoverWatching = false;
 
   // Phase 2: attachment composer state. Two-phase: pick fires a STAGE upload
   // (storage only) immediately; the tile shows progress and lands in 'ready'
@@ -1293,6 +1307,7 @@ function generateWidgetScript(config: any): string {
       currentVoiceflowSessionId = conv.voiceflowSessionId || conv.id;
       isInActiveChat = true;
       currentTab = 'Chats';
+      ensurePreHandoverWatch();
     }
   }
   
@@ -1607,6 +1622,17 @@ function generateWidgetScript(config: any): string {
     }
   }
   
+  // Begin watching transcripts during the AI portion of a conversation so we
+  // can detect an agent doing "take over conversation" before the user ever
+  // requested human help. No-op if a handover poll is already running, or if
+  // we're already in handover (the regular poll covers it).
+  function ensurePreHandoverWatch() {
+    if (!conversationId) return;
+    if (isInHandover || preHandoverWatching) return;
+    preHandoverWatching = true;
+    startHandoverRealtime();
+  }
+
   function startHandoverRealtime() {
     if (realtimeSubscription || !conversationId) return;
     
@@ -1616,9 +1642,11 @@ function generateWidgetScript(config: any): string {
     let lastTimestamp = new Date(Date.now() - 3000).toISOString();
     
     const pollInterval = setInterval(async () => {
-      // N6: keep polling while in handover OR while watching for a session_refreshed
-      // event after handover_ended (within POST_HANDOVER_WATCH_MS).
-      if ((!isInHandover && !postHandoverWatching) || !conversationId) {
+      // Keep polling while:
+      //   - in handover (live transcript stream), OR
+      //   - watching for a session_refreshed event after handover_ended (N6), OR
+      //   - watching for an early agent takeover during the AI portion (preHandover).
+      if ((!isInHandover && !postHandoverWatching && !preHandoverWatching) || !conversationId) {
         clearInterval(pollInterval);
         realtimeSubscription = null;
         return;
@@ -1698,6 +1726,21 @@ function generateWidgetScript(config: any): string {
                 postHandoverWatching = false;
                 postHandoverWatchTimer = null;
               }, POST_HANDOVER_WATCH_MS);
+            }
+
+            // Early takeover: agent clicked "Take Over Conversation" while the user
+            // was still mid-AI-flow (no prior handover request). The handover_accepted
+            // system message arrives via this poll because preHandoverWatching kept
+            // it alive. Flip into the handover UI so the paperclip appears, the
+            // input bar is rebuilt, and the realtime stream takes over from here.
+            if (
+              transcript.metadata && transcript.metadata.type === 'handover_accepted' &&
+              !isInHandover
+            ) {
+              isInHandover = true;
+              preHandoverWatching = false;
+              console.log('[VF Widget] Handover started by agent takeover');
+              renderPanel();
             }
 
             // N6: agent took over after the prior session ended. Cancel the pending
@@ -1825,6 +1868,7 @@ function generateWidgetScript(config: any): string {
       postHandoverWatchTimer = null;
     }
     postHandoverWatching = false;
+    preHandoverWatching = false;
     isInHandover = false;
     isTyping = false;
     renderPanel();
@@ -2461,7 +2505,11 @@ function generateWidgetScript(config: any): string {
         console.log('[VF Widget] Conversation ID updated:', conversationId, '->', data.conversationId);
         conversationId = data.conversationId;
       }
-      
+
+      // Now that we have a conversationId, start the pre-handover transcript
+      // watch so an early agent takeover during the AI portion is detected.
+      ensurePreHandoverWatch();
+
       // Handle handover state
       if (data.handoverActive || data.handoverPending) {
         // Display any bot responses that came with this handover response
@@ -2485,6 +2533,7 @@ function generateWidgetScript(config: any): string {
         // the paperclip hidden until the user sent another message.
         if (!isInHandover) {
           isInHandover = true;
+          preHandoverWatching = false;
           startHandoverRealtime();
         }
         renderPanel();
@@ -2600,8 +2649,11 @@ function generateWidgetScript(config: any): string {
       
       if (data.conversationId) {
         conversationId = data.conversationId;
+        // Start pre-handover transcript watch so an early agent takeover is
+        // detected even before the user sends their first message.
+        ensurePreHandoverWatch();
       }
-      
+
       if (data.botResponses) {
         for (const resp of data.botResponses) {
           await new Promise(resolve => setTimeout(resolve, CONFIG.functions.typingDelayMs + 1000));
@@ -2677,6 +2729,10 @@ function generateWidgetScript(config: any): string {
         conversationId = data.conversationId;
       }
 
+      // Now that we have a conversationId, start the pre-handover transcript
+      // watch so an early agent takeover during the AI portion is detected.
+      ensurePreHandoverWatch();
+
       // Handle handover state
       if (data.handoverActive || data.handoverPending) {
         // Display Voiceflow bot responses that came before the handover action
@@ -2699,6 +2755,7 @@ function generateWidgetScript(config: any): string {
         // the paperclip visible immediately on handover start.
         if (!isInHandover) {
           isInHandover = true;
+          preHandoverWatching = false;
           startHandoverRealtime();
         }
         renderPanel();
@@ -2858,6 +2915,7 @@ function generateWidgetScript(config: any): string {
       isInActiveChat = true;
       renderPanel();
       scrollToLatestMessage();
+      ensurePreHandoverWatch();
     }
   };
   
