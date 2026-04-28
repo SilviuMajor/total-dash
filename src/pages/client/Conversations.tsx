@@ -2107,15 +2107,28 @@ export default function Conversations() {
                             );
                           }
 
-                          // User and assistant messages use the existing MessageBubble
+                          // User and assistant messages use the existing MessageBubble.
+                          // For user button-click messages, surface which choice the
+                          // customer picked: pull the preceding assistant message's
+                          // buttons and pass selectedButton so MessageBubble highlights
+                          // the matching one (mirrors Transcripts.tsx).
                           const speaker = transcript.speaker === 'user' ? 'user' : 'assistant';
+                          const selectedButton = transcript.metadata?.button_click
+                            ? transcript.text
+                            : undefined;
+                          const prevTranscript = index > 0 ? transcripts[index - 1] : null;
+                          const buttonsToDisplay =
+                            transcript.speaker === 'user' && selectedButton && prevTranscript?.buttons
+                              ? prevTranscript.buttons
+                              : transcript.buttons;
                           return (
                             <MessageBubble
                               key={transcript.id || index}
                               text={transcript.text}
                               speaker={speaker}
                               timestamp={transcript.timestamp}
-                              buttons={transcript.buttons}
+                              buttons={buttonsToDisplay}
+                              selectedButton={selectedButton}
                               attachments={transcript.attachments}
                               appearance={{
                                 primaryColor: '#3b82f6',
