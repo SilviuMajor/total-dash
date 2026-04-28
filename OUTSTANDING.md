@@ -1,6 +1,6 @@
 # TotalDash — Backlog
 
-> Last revised: 28 April 2026 (eve)
+> Last revised: 28 April 2026 (late eve)
 > Purpose: living document. Single source of truth for everything outstanding.
 > Workflow: pick an item, open a fresh Claude Code session, paste the entry into plan mode, work through clarifications, execute. Mark items done with date + commit hash; consolidate older done entries into the Completed log so this file stays focused on what's left.
 
@@ -390,28 +390,29 @@ After successful sign-in on `Auth.tsx` (client), success toast shows but user re
 
 ---
 
-### Attachments Phase 2 — Widget UI for file uploads
+### Attachments — remaining work
 
-**Type:** Feature | **Effort:** Large | **Status:** Paused mid-Phase-2
-**Spec:** `TotalDash-Spec-17-Attachments.md`, state in `TotalDash-Spec-17-Phase2-State.md`
+**Type:** Feature | **Effort:** Tiny remaining (config flip) + later phases | **Status:** Phase 2 shipped 28 April; Phases 3-5 parked
+**Spec:** `TotalDash-Spec-17-Attachments.md`
 
-Phase 1 (backend) shipped before cutover. Phase 2 (widget UI) is paused. Resuming requires:
-- **Step B** — state additions + paperclip flow (pendingAttachment state, XHR upload with progress, cancel handling, drag-and-drop).
-- **Step C** — `renderMessages` updated to render `attachments[0]` based on kind (image/video/audio/file). Lightbox for images is Phase 3; widget v1 opens new tab.
-- **Step D** — input bar `<input type="file">` accept allowlist matches Edge Function server-side allowlist.
-- **Step E** — chat history preview derives from `attachments[0]` when text empty (📷/🎥/🎤/📎 emoji prefix format).
-- **Step F** — push (auto-deploys via GitHub Actions).
-- **Step G** — flip `fileUploadEnabled` toggle in agent settings for HeyB test agent (`415f07ba-ebb3-4867-bb9f-3207b9994bd0`).
+Phase 1 (backend) and Phase 2 (widget + dashboard UI) are complete. See the Completed log entries for 2026-04-28 for the full feature list.
 
-**Lessons learned and locked in (from Phase 1):**
-- Upload-on-send pattern (not upload-on-pick). No orphans.
-- `widget-file-upload` is atomic combined upload+send. `agent-file-upload` is JWT-auth'd version for agency side.
-- Template literal escaping in `widget-loader` — every `${}` referencing browser-runtime variables must be `\${}`. Single mistake silently kills the widget.
-- `agent-file-upload` uses `jsr:@supabase/supabase-js@2`, not esm.sh.
+**Still outstanding:**
 
-**Step A (CSS) was applied** before pause — verify it's still working before resuming Step B.
+- **Step G — flip `fileUploadEnabled`** in agent settings for the HeyB test agent (`415f07ba-ebb3-4867-bb9f-3207b9994bd0`). Pure config change in the dashboard, not code. Held until Silv decides it's ready for HeyB testers — flip when wanted.
 
-**Phases 3-5 of attachments spec** (central attachments tab in right panel, lightbox, advanced search/filter on attachments) — separate items, can wait until Phase 2 is shipped.
+**Phase 3 — Central attachments tab in right panel.** New tab next to Notes/Tags/etc. shows all attachments from the conversation as a grid (images thumbed, files as tiles). Click-through to the message in transcript. No code yet — design + plan needed.
+
+**Phase 4 — Image lightbox.** Click an image bubble (widget or dashboard) opens a full-screen overlay with prev/next, download, close. Today's behaviour is "open in new tab" — works but feels primitive vs. modern chat. Lightbox component goes in shared UI lib so it works on both surfaces.
+
+**Phase 5 — Attachment search and filter.** "Show only conversations with attachments", "search by filename", "filter by file kind". Likely needs a denormalised `has_attachments` column on `conversations` (set by trigger) for the list filter, and a small search RPC for filename grep.
+
+**Lessons locked in for future attachment work:**
+- Two-phase upload pattern (stage to storage in `widget-stage-upload`, then commit via `widget-file-upload` with `stagedAttachment` JSON). Reliable, no orphans, fast UI feedback. `agent-file-upload` is the JWT-auth'd dashboard equivalent (single-call, agent-side).
+- Storage URLs for non-inline kinds (CSV, text, etc.) need `?download=<filename>` to force `Content-Disposition: attachment` — browsers ignore the HTML `download` attribute cross-origin. Helper is `withDownloadParam` in widget-loader, MessageBubble, and Conversations.
+- Drag-and-drop reliability requires the `relatedTarget` pattern (not a counter), a `dataTransfer.types.includes('Files')` guard, and a window-level `dragend`/`drop` reset failsafe. Counter-based implementations drift on Safari and stick the overlay visible.
+- `min-w-0` on the inner flex item is required for `truncate` to actually clip long filenames — default `min-width: auto` blocks it.
+- File-only message bubbles (no text) collapse the wrapping bubble to nothing and let the `bg-muted` file-tile chip be the visual on its own. Avoids the "double border" look where a coloured user/agent bubble wraps a grey chip.
 
 ---
 
@@ -479,6 +480,11 @@ Low priority. Do opportunistically when touching related code.
 
 Date-stamped log of items shipped. Older entries are intentionally terse — open the commit if you need detail. Newer entries keep slightly more context while still relevant.
 
+- **2026-04-28** — `846eea8` / `d8c3643` — Inactivity nudge fix. The "Are you still there?" nudge had two bugs sharing one root cause: it was inserted with `speaker='assistant'` but the existence-check was filtered to `speaker='system'`, so (a) the "once" toggle was silently broken — every cron tick re-emitted the nudge — and (b) the widget's handover poll skips assistant-speaker transcripts (those belong to the pre-handover AI flow), so customers never saw the nudge. Switched the insert to `speaker='client_user'` with `metadata.client_user_name` from `handover_sessions.agent_name` so it renders as a proper agent message in both surfaces (named bubble in dashboard, normal agent bubble in widget). Critical secondary fix in the same commit: the `lastAgentMsg` baseline query now filters `metadata->>type=inactivity_nudge` out, otherwise the nudge would mark itself as the latest agent activity and reset the inactivity clock — breaking subsequent nudges AND the hard timeout.
+- **2026-04-28** — `e7522b4` — Attachments Phase 2 finishing touches: drag-and-drop on the dashboard transcript panel + widget drag-drop reliability fix. Dashboard agents can now drop files anywhere on the transcript panel during their active handover; same `handleAgentAttach` validation as the paperclip. Widget drag-drop replaced the `dragCounter` pattern (which drifted on Safari and stuck the overlay) with a `relatedTarget` check + `dataTransfer.types.includes('Files')` guard + window-level `dragend`/`drop` failsafe. Drag-and-drop is now deterministic on both surfaces.
+- **2026-04-28** — `82fea11` — Cleaner file-attachment chips in the dashboard transcript. File-only messages (no text) now collapse the wrapping bubble entirely so the `bg-muted` file-tile chip is the visual on its own — eliminates the "double border" look where a coloured user/agent bubble wrapped a grey chip. Tile gets explicit `text-foreground` / `text-muted-foreground` colours, a 9×9 icon container, filename + human-readable size in two lines, and a download icon. Same pattern applied to MessageBubble and the inline `client_user` transcript path.
+- **2026-04-28** — `af2f58e` / `47ad0eb` — Attachments Phase 2 polish round: dashboard pending-state preview (mirror of widget two-phase flow — picked files queue with thumbnails + per-tile remove + caption-on-first-file send), widget-side CSV download fix (`withDownloadParam` helper appends `?download=<filename>` so Supabase serves with `Content-Disposition: attachment`; cross-origin `download` attr is ignored), long-filename overflow fix (`min-w-0` on the inner flex item so `truncate` actually clips), thin-padding for image-only user bubbles (px-4 py-2.5 only when text/buttons present, else p-1).
+- **2026-04-28** — Attachments Phase 2 main shipment (commits `fb2dcca` → `0c0dc70` → `53833d0` → `a15316a`): paperclip + drag-drop + multi-file on widget; two-phase upload (`widget-stage-upload` for storage, `widget-file-upload` to commit a `stagedAttachment` JSON); dashboard agent-side paperclip with JWT-auth'd `agent-file-upload`; `renderMessages` rendering of image / video / audio / file attachments by kind; chat history preview derives from `attachments[0]` when text empty (📷 🎥 🎤 📎 emoji prefixes); accept-allowlist on the file input matches the server-side allowlist exactly. Step G (flip `fileUploadEnabled` for HeyB) still pending — held until Silv decides to switch HeyB testers on.
 - **2026-04-28** — `34ebf78` / `e4b8f28` / `3717f08` — N11-F17 + N28 + UI clarity bundle. Added scope subheadings (Role defaults / Per-user / cap-coloured ceiling banners), inline role-default + reset on per-user override rows, View-only badges on Settings sub-tabs, user-count chips on Roles, dialog widths bumped to `max-w-3xl`, sticky dialog footer, Settings page padding tightened. Bonus: switched `ClientAgentAssignments.tsx` to `agents_safe` to close a CLAUDE.md rule #2 gap.
 - **2026-04-28** — Audit verification pass: **C2** is a false alarm (column projection strips api_key/voiceflow_api_key/retell_api_key from `agents_safe` regardless of `security_invoker` mode — flipping to DEFINER would be a no-op). **I1** has rate limit (60/min per IP+agent), agent existence/status check, and userId regex validation already in place. **I2** all `JSON.parse` calls (3 inline + early `req.json()`) wrapped, returns 400 not 500. **I5** both `AgentSpecs.tsx` and `Guides.tsx` already query `agents_safe` (audit entry was stale). **I7** `voiceflow_version_id` is configurable via `agent.config`, with `"production"` only as fallback. No code changes needed.
 - **2026-04-28** — `6b56bba` — N27 (Add User dup-key error): replaced post-EF INSERT loop with reconciliation pass; per-row error aggregation toasted on partial failure.
