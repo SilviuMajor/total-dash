@@ -1,5 +1,5 @@
 import { Avatar } from "@/components/ui/avatar";
-import { CheckCircle, Bot, FileText, Download } from "lucide-react";
+import { Bot, FileText, Download } from "lucide-react";
 
 // Append `?download=<filename>` so Supabase storage serves the file with
 // Content-Disposition: attachment instead of inline. Without this, browsers
@@ -264,7 +264,7 @@ export function MessageBubble({
                     disabled={!isWidget || buttonsDisabled}
                     className={`px-4 py-2 rounded-lg font-medium transition-all ${
                       (!isWidget || buttonsDisabled) ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-md cursor-pointer'
-                    } ${isSelected ? 'ring-2 ring-green-500' : ''}`}
+                    }`}
                     style={{
                       ...getButtonStyle(isSelected),
                       opacity: (!isWidget && !isSelected) || buttonsDisabled ? 0.6 : 1
@@ -272,7 +272,6 @@ export function MessageBubble({
                   >
                     <span className="flex items-center gap-2 justify-center">
                       {button.text}
-                      {isSelected && <CheckCircle className="h-4 w-4" />}
                     </span>
                   </button>
                 );
