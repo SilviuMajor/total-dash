@@ -59,6 +59,35 @@ Use plan mode (Shift+Tab) by default for anything more complex than a typo fix. 
 
 For migration / infra work specifically, halt-and-review between plan and execute is mandatory. For everyday feature work, plan-then-execute in one flow is fine.
 
+## Code tweak flow (separate from OUTSTANDING.md)
+
+Silv sometimes pastes minor fixes directly into a session ("the X button does Y when it should do Z"). These are **not** OUTSTANDING.md items — they're ad-hoc, do not need plain-language framing or three-phase test plans, and do not get logged to OUTSTANDING.md unless Silv asks.
+
+When Silv invokes the code tweak role (or pastes a small fix without going through `/outstanding`), the loop per tweak is:
+
+1. **Clarify intent.** Ask 1–3 logic-building questions only if the desired behaviour is genuinely ambiguous. Skip questions whose answers are obvious from the request or the code.
+2. **Explore.** Read the relevant files / trace the flow. Use Explore subagent only if scope is uncertain.
+3. **Propose a fix plan.** Files, changes, risks, verification — same shape as Plan mode protocol step 3 but tighter.
+4. **Wait for approval, then execute.** Edit, build (if frontend touched), commit, push. Standard "Workflow defaults" rules apply.
+5. **Tell Silv how to test.** After shipping, give targeted test steps:
+   - What to hard-refresh (Cmd+Shift+R) and where (live URL, embedded widget page, specific dashboard route).
+   - Exact click path and expected outcome.
+   - Edge Function log tail command if a function changed (`supabase functions logs <name> --tail`).
+   - Skip the three-phase split (local / post-deploy / 24h soak) used by `/outstanding` — tweaks just need the post-deploy block, unless the change has cron/race surface, in which case add a soak note.
+6. **Offer Chrome MCP testing if the tweak warrants it.** Same rule as Workflow defaults: for multi-step flows, permission changes, or anything beyond a quick visual check, **offer to drive the test via Chrome MCP before doing it** — let Silv accept or decline. Don't auto-execute browser tests.
+7. **No backlog entry by default.** Don't add the tweak to OUTSTANDING.md. If the tweak surfaces a deeper issue worth tracking, surface it to Silv and ask whether to log it.
+
+Memory vs. doc: cross-tweak preferences (e.g. "always X") go to memory or here in CLAUDE.md, not into a per-session scratchpad. State is stateless between tweaks unless Silv says otherwise.
+
+Distinguishing the two flows:
+
+| | `/outstanding` items | Code tweak |
+|---|---|---|
+| Source | OUTSTANDING.md backlog | Pasted ad-hoc by Silv |
+| Framing | Plain-language explanation required | Skip framing |
+| Tests | Local + post-deploy + 24h soak | Post-deploy steps; soak only if cron/race risk; offer Chrome MCP for non-trivial flows |
+| Logging | Mark done in OUTSTANDING.md with date + commit | No backlog entry by default |
+
 ## Multi-tenant hierarchy
 
 ```
