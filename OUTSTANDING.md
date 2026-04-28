@@ -56,17 +56,6 @@ These are real follow-ups from the 25 April audit. C1, C2, C3 (critical tier) al
 
 ## Tier 2 — strong wants
 
-### N2 — Per-conversation message counts in right panel
-
-**Type:** Enhancement | **Effort:** Small | **Status:** Open
-**Spec:** `TotalDash-Spec-N2-Per-Conversation-Message-Counts.md`
-
-Show count of customer / AI-or-agent / system messages in the right panel of selected conversation, between Contact Info and Previous Conversations sections. Phase 1 client-side (count from loaded transcripts). Phase 2 (later) denormalise to a `message_count_*` column on `conversations` populated by trigger.
-
-**Touches:** `Conversations.tsx` right panel (lines ~1882-2062), `MetricCard` component reuse.
-
----
-
 ### N3 — Waiting timer on `waiting` status
 
 **Type:** Enhancement | **Effort:** Small (~2h) | **Status:** Open
