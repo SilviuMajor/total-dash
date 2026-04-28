@@ -376,14 +376,19 @@ serve(async (req) => {
             .limit(1)
             .maybeSingle();
 
-          // Find the last human-agent message (speaker='client_user'). Voiceflow AI uses
-          // 'assistant' and nudges/system pills use 'system' or 'assistant'+metadata; only
-          // 'client_user' represents real agent activity that should keep the chat alive.
+          // Find the last *human* agent message. Inactivity nudges are inserted
+          // with speaker='client_user' so they appear as proper agent messages
+          // in both the widget and dashboard — but they're automated, not human
+          // activity, so we explicitly exclude them from the baseline. Without
+          // this filter, the nudge itself would reset the inactivity clock and
+          // permanently disable both the follow-up nudge ("repeat" mode) and
+          // the hard timeout.
           const { data: lastAgentMsg } = await supabaseClient
             .from("transcripts")
             .select("timestamp")
             .eq("conversation_id", session.conversation_id)
             .eq("speaker", "client_user")
+            .not("metadata->>type", "eq", "inactivity_nudge")
             .order("timestamp", { ascending: false })
             .limit(1)
             .maybeSingle();
@@ -455,19 +460,26 @@ serve(async (req) => {
             if (shouldNudge) {
               console.log("Sending inactivity nudge for session:", session.id);
 
-              // speaker: 'system' so:
-              //   (a) the existence-check above finds it on the next tick
-               //  (b) the widget handover poll displays it (it skips 'assistant'
-              //      messages during handover), and
-              //   (c) it renders consistently as a centered pill in both the
-              //      dashboard transcript and the widget — visual language
-              //      that already exists for automated/system messages.
+              // speaker: 'client_user' so the nudge renders as a proper agent
+              // message — bubble in the widget, named bubble with avatar in the
+              // dashboard transcript — rather than a small grey system pill.
+              // The agent name comes from handover_sessions.agent_name (set at
+              // accept time by handover-actions); fall back to "Support" if it
+              // wasn't recorded.
+              //
+              // metadata.type='inactivity_nudge' is preserved because:
+              //   (a) the existence-check above uses it as the dedup key, and
+              //   (b) the lastAgentMsg baseline query (above) filters it out
+              //       so the automated nudge doesn't reset the inactivity clock.
+              const nudgeAgentName = session.agent_name || "Support";
               await supabaseClient.from("transcripts").insert({
                 conversation_id: session.conversation_id,
-                speaker: "system",
+                speaker: "client_user",
                 text: nudgeMessage,
                 metadata: {
                   type: "inactivity_nudge",
+                  client_user_id: session.client_user_id ?? null,
+                  client_user_name: nudgeAgentName,
                   minutes_inactive: Math.floor(minutesSinceCustomer),
                   timestamp: new Date().toISOString(),
                 },
