@@ -1,6 +1,6 @@
 # TotalDash — Backlog
 
-> Last revised: 28 April 2026
+> Last revised: 28 April 2026 (eve)
 > Purpose: living document. Single source of truth for everything outstanding.
 > Workflow: pick an item, open a fresh Claude Code session, paste the entry into plan mode, work through clarifications, execute. Mark items done with date + commit hash; don't delete.
 
@@ -74,15 +74,13 @@ Both modal paths now update `client_user_permissions.role_id` (no more orphan), 
 
 ---
 
-### N11-F3 — Active sessions don't see role-permission changes until reload
+### N11-F3 — Active sessions don't see role-permission changes until reload ✅ DONE (2026-04-28)
 
-**Type:** Bug (High) | **Effort:** Medium | **Status:** Open
+**Type:** Bug (High) | **Effort:** Medium | **Status:** Shipped — `0208d4f`
 
-After `RolesManagement` toggles persist to DB, no signal reaches `useClientAgentContext` in active client-user sessions. They keep stale `selectedAgentPermissions` until manual refresh. Likely root cause of the spec's "toggles don't take effect" symptom.
+`useClientAgentContext.tsx` now opens two Supabase Realtime channels: a stable channel filtered by client/user listening to `role_permission_templates`, `client_roles`, `client_settings`, `client_user_permissions`, `client_user_agent_permissions`; and a per-agent channel listening to the selected `agents` row (covers Layer-1 ceiling). Any change triggers a 250 ms-debounced refetch via the existing `loadClientAgents` / `loadClientAgentsAsUser` loaders, which now preserve the user's currently-selected agent across reloads. Preview mode short-circuits and is skipped.
 
-**Decision needed:** Supabase Realtime subscription on `role_permission_templates` + `client_roles`, OR a manual broadcast channel. Realtime is cleaner but may add per-tab subscription overhead.
-
-**Touches:** `src/hooks/useClientAgentContext.tsx`, `src/components/settings/RolesManagement.tsx`.
+**Touches:** `src/hooks/useClientAgentContext.tsx`.
 
 ---
 
@@ -138,13 +136,13 @@ The redundant `settings_page` and `audit_log` keys remain on the `AgentPermissio
 
 ---
 
-### N11-F9 — No cache invalidation when agency flips a Layer-2 ceiling
+### N11-F9 — No cache invalidation when agency flips a Layer-2 ceiling ✅ DONE (2026-04-28)
 
-**Type:** Bug (Medium) | **Effort:** Medium | **Status:** Open
+**Type:** Bug (Medium) | **Effort:** Medium | **Status:** Shipped — `0208d4f` (bundled with F3)
 
-`AgencyClientDetails.tsx:66-76` upserts `client_settings.admin_capabilities` with no broadcast. Client users mid-session don't see the change. Same fix family as F3.
+The Realtime subscription added for F3 includes `client_settings` filtered by client_id, so Layer-2 ceiling flips from `AgencyClientDetails` propagate to active client-user sessions within ~250 ms. Same channel also covers per-agent (Layer-1) ceiling flips from `AgencyAgentDetails`.
 
-**Touches:** `src/pages/agency/AgencyClientDetails.tsx`, `src/hooks/useClientAgentContext.tsx`.
+**Touches:** `src/hooks/useClientAgentContext.tsx`.
 
 ---
 
@@ -731,6 +729,8 @@ Low priority. Do opportunistically when touching related code.
 ## Completed (recent)
 
 Date-stamped log of items shipped. Don't delete — provides commit-trail context for future work.
+
+**Completed:** 2026-04-28 — `0208d4f` — N11-F3 + F9: live permission invalidation. `useClientAgentContext` now opens two Supabase Realtime channels — a stable per-user/client channel covering `role_permission_templates`, `client_roles`, `client_settings`, `client_user_permissions`, `client_user_agent_permissions`, and a per-agent channel on the `agents` row. Any change triggers a 250 ms-debounced refetch through the existing loaders, which now preserve the user's currently-selected agent across reloads. Bundled F9 (Layer-2 ceiling invalidation) into the same channel; also covers Layer-1 (`AgencyAgentDetails` config edits). Preview mode is skipped (already short-circuits to all-true). RLS already permits client-user reads on every subscribed table — no migration needed. Build green. Still open from N11: F17 (UX wording).
 
 **Completed:** 2026-04-28 — N11-F15: extracted the four duplicate copies of `resolvePermission`/`resolveClientScoped` from `useClientAgentContext.tsx` into module-scope helpers (`resolveAgentScopedKey`, `resolveClientScopedKey`, `buildAgentPermissions`, `buildCompanySettingsPermissions`). The three real call sites (`loadClientAgentsAsUser`, `loadClientAgents`, per-agent useEffect) now delegate to the same builders — no more silent drift. Behaviour-preserving; build green. Still open: F3, F9 (Realtime invalidation — design call), F17 (UX wording).
 
