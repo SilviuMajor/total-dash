@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { X, Pencil, Trash2, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface Props {
   agent: { id: string; name: string; config: Record<string, any> };
@@ -19,6 +20,7 @@ const TAGS_PER_PAGE = 5;
 
 export function VoiceflowConversationSettings({ agent, onUpdate }: Props) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [autoEndHours, setAutoEndHours] = useState(agent.config?.auto_end_hours || 12);
   const [autoEndMode, setAutoEndMode] = useState<'since_start' | 'since_last_message'>(agent.config?.auto_end_mode || 'since_last_message');
@@ -125,6 +127,7 @@ export function VoiceflowConversationSettings({ agent, onUpdate }: Props) {
         },
       });
       if (error) throw error;
+      await queryClient.invalidateQueries({ queryKey: ['agent-config', agent.id] });
       toast({ title: "Success", description: "Conversation settings saved" });
       onUpdate();
     } catch (e) {
