@@ -1530,6 +1530,24 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                                   } else if (hasAccess && !hadAccess) {
                                     const perms = selectedUserAgentPermissions[agent.id];
                                     if (perms) {
+                                      // F12 fix: was hardcoding has_overrides:false. If the
+                                      // admin customised perms before granting access, those
+                                      // values would persist but the resolver would treat
+                                      // them as non-overrides and ignore them. Diff against
+                                      // the role template the same way the UPDATE path does.
+                                      const templatePerms = roleTemplates[user.user_id]?.[agent.id] || {};
+                                      const insertPerms = {
+                                        conversations: perms.conversations,
+                                        transcripts: perms.transcripts,
+                                        analytics: perms.analytics,
+                                        specs: perms.specs,
+                                        knowledge_base: perms.knowledge_base,
+                                        guides: perms.guides,
+                                        agent_settings: perms.agent_settings,
+                                      };
+                                      const hasOverrides = Object.keys(insertPerms).some(
+                                        k => (insertPerms as any)[k] !== (templatePerms[k] ?? false)
+                                      );
                                       const { error } = await supabase
                                         .from('client_user_agent_permissions')
                                         .insert({
@@ -1537,16 +1555,8 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                                           agent_id: agent.id,
                                           client_id: clientId,
                                           role_id: user.role_id,
-                                          has_overrides: false,
-                                          permissions: {
-                                            conversations: perms.conversations,
-                                            transcripts: perms.transcripts,
-                                            analytics: perms.analytics,
-                                            specs: perms.specs,
-                                            knowledge_base: perms.knowledge_base,
-                                            guides: perms.guides,
-                                            agent_settings: perms.agent_settings,
-                                          },
+                                          has_overrides: hasOverrides,
+                                          permissions: insertPerms,
                                         });
                                       if (error) errors.push(`Grant ${agent.name}: ${error.message}`);
                                     }
@@ -1560,7 +1570,16 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                                     if (error) errors.push(`Revoke ${agent.name}: ${error.message}`);
                                   }
                                 }
-                                // Save client-scoped permissions
+                                // Save client-scoped permissions.
+                                // F13 fix: previously set has_overrides to "any keys
+                                // present" — a fresh save with no real changes would
+                                // flag the user as overridden and surface a hollow
+                                // "Reset to role defaults" button. Diff against the
+                                // role's client_permissions template instead.
+                                const roleClientTemplate = (roles.find(r => r.id === user.role_id)?.client_permissions || {}) as Record<string, boolean>;
+                                const clientHasOverrides = Object.keys(selectedUserClientPerms).some(
+                                  k => selectedUserClientPerms[k] !== (roleClientTemplate[k] ?? false)
+                                );
                                 const { error: clientPermError } = await supabase
                                   .from('client_user_permissions')
                                   .upsert({
@@ -1568,7 +1587,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                                     client_id: clientId,
                                     role_id: user.role_id,
                                     client_permissions: selectedUserClientPerms,
-                                    has_overrides: Object.keys(selectedUserClientPerms).length > 0,
+                                    has_overrides: clientHasOverrides,
                                   }, { onConflict: 'user_id,client_id' });
                                 if (clientPermError) errors.push(`Company settings: ${clientPermError.message}`);
                                 if (errors.length > 0) {

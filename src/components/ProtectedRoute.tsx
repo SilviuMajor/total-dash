@@ -19,8 +19,21 @@ export function ProtectedRoute({
   requiredPage 
 }: ProtectedRouteProps) {
   const { user, profile, loading: authLoading } = useAuth();
-  const { selectedAgentPermissions } = useClientAgentContext();
+  const { selectedAgentPermissions, companySettingsPermissions } = useClientAgentContext();
   const { isImpersonating, impersonationMode } = useImpersonation();
+
+  // F8 fix: settings_page and audit_log are client-scoped, so they should
+  // come from companySettingsPermissions (canonical, computed once per client),
+  // not from selectedAgentPermissions (per-agent). Returns the merged map
+  // the gating logic below reads against.
+  const effectivePermissions = (() => {
+    if (!selectedAgentPermissions) return null;
+    return {
+      ...selectedAgentPermissions,
+      settings_page: companySettingsPermissions?.settings_page === true,
+      audit_log: companySettingsPermissions?.settings_audit_log_view === true,
+    };
+  })();
   const { 
     userType, 
     loading: mtLoading,
@@ -57,12 +70,12 @@ export function ProtectedRoute({
       } else if (requireClient && profile?.role === 'admin' && !hasPreviewAccess && !isImpersonationFullAccess) {
         navigate('/admin/clients');
       } else if (requiredPage && !hasPreviewAccess && !isImpersonationFullAccess) {
-        if (profile?.role === 'client' && selectedAgentPermissions) {
-          const hasAccess = selectedAgentPermissions[requiredPage as keyof typeof selectedAgentPermissions];
+        if (profile?.role === 'client' && effectivePermissions) {
+          const hasAccess = effectivePermissions[requiredPage as keyof typeof effectivePermissions];
           if (!hasAccess) {
             const redirectOrder = ['conversations', 'transcripts', 'analytics', 'knowledge_base', 'agent_settings', 'specs', 'guides'];
             for (const page of redirectOrder) {
-              if (selectedAgentPermissions[page as keyof typeof selectedAgentPermissions]) {
+              if (effectivePermissions[page as keyof typeof effectivePermissions]) {
                 const pathMap: Record<string, string> = {
                   conversations: '/',
                   transcripts: '/text-transcripts',
@@ -81,7 +94,7 @@ export function ProtectedRoute({
         }
       }
     }
-  }, [user, profile, loading, navigate, requireAdmin, requireClient, requiredPage, selectedAgentPermissions, location.pathname, hasPreviewAccess, isImpersonationFullAccess, userType]);
+  }, [user, profile, loading, navigate, requireAdmin, requireClient, requiredPage, selectedAgentPermissions, companySettingsPermissions, location.pathname, hasPreviewAccess, isImpersonationFullAccess, userType]);
 
   if (loading) {
     return (
@@ -104,8 +117,8 @@ export function ProtectedRoute({
     return null;
   }
 
-  if (requiredPage && profile?.role === 'client' && selectedAgentPermissions && !hasPreviewAccess && !isImpersonationFullAccess) {
-    const hasAccess = selectedAgentPermissions[requiredPage as keyof typeof selectedAgentPermissions];
+  if (requiredPage && profile?.role === 'client' && effectivePermissions && !hasPreviewAccess && !isImpersonationFullAccess) {
+    const hasAccess = effectivePermissions[requiredPage as keyof typeof effectivePermissions];
     if (!hasAccess) {
       return null;
     }

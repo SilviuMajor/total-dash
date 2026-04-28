@@ -503,9 +503,18 @@ export function RolesManagement({ clientId }: RolesManagementProps) {
                         )}
                       </div>
                     )}
-                    <div className="flex justify-end pt-2">
-                      <Button size="sm" onClick={() => handleSaveRole(role.id, role.name)}>Save</Button>
-                    </div>
+                    {/* F16 fix: Save only does something useful when the role
+                        has users (it opens the "Apply to all users" modal).
+                        When count is 0, every toggle already persisted on
+                        change — Save was a no-op that just toasted "Saved" and
+                        confused admins into thinking it was required. Hide it. */}
+                    {(userCounts[role.id] || 0) > 0 && (
+                      <div className="flex justify-end pt-2">
+                        <Button size="sm" onClick={() => handleSaveRole(role.id, role.name)}>
+                          Apply to {userCounts[role.id]} {userCounts[role.id] === 1 ? 'user' : 'users'}
+                        </Button>
+                      </div>
+                    )}
                   </>
                 ) : (
                   <>
@@ -629,9 +638,18 @@ export function RolesManagement({ clientId }: RolesManagementProps) {
                         )}
                       </div>
                     )}
-                    <div className="flex justify-end pt-2">
-                      <Button size="sm" onClick={() => handleSaveRole(role.id, role.name)}>Save</Button>
-                    </div>
+                    {/* F16 fix: Save only does something useful when the role
+                        has users (it opens the "Apply to all users" modal).
+                        When count is 0, every toggle already persisted on
+                        change — Save was a no-op that just toasted "Saved" and
+                        confused admins into thinking it was required. Hide it. */}
+                    {(userCounts[role.id] || 0) > 0 && (
+                      <div className="flex justify-end pt-2">
+                        <Button size="sm" onClick={() => handleSaveRole(role.id, role.name)}>
+                          Apply to {userCounts[role.id]} {userCounts[role.id] === 1 ? 'user' : 'users'}
+                        </Button>
+                      </div>
+                    )}
                   </>
                 )}
               </div>

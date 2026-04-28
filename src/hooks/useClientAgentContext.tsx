@@ -346,10 +346,11 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
             return template[key] || false;
           };
 
+          // F7 fix: see equivalent comment in loadClientAgents.
           const resolveClientScoped = (key: string, capKey: string): boolean => {
             if (adminCaps[capKey] === false) return false;
             if (role?.is_admin_tier) return true;
-            if (hasOverrides && userOverrides[key] !== undefined) return userOverrides[key];
+            if (hasClientOverrides && userClientOverrides[key] !== undefined) return userClientOverrides[key];
             return role?.client_permissions?.[key] || false;
           };
 
@@ -535,11 +536,14 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
             return template[key] || false;
           };
 
-          // Client-scoped permissions (not agent-dependent)
+          // F7 fix: client-scoped resolver must use client_user_permissions
+          // overrides (hasClientOverrides/userClientOverrides), not the
+          // agent-scoped JSON. The latter would only ever contain client-scoped
+          // keys via manual SQL — silently riding the wrong override path.
           const resolveClientScoped = (key: string, capKey: string): boolean => {
             if (adminCaps[capKey] === false) return false;
             if (role?.is_admin_tier) return true;
-            if (hasOverrides && userOverrides[key] !== undefined) return userOverrides[key];
+            if (hasClientOverrides && userClientOverrides[key] !== undefined) return userClientOverrides[key];
             return role?.client_permissions?.[key] || false;
           };
 
@@ -591,84 +595,108 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
     if (selectedAgentId && user && clientId && shouldResolve) {
       const resolveUserId = (isImpersonating && targetUserId) ? targetUserId : user.id;
       const loadAgentPermissions = async () => {
-        // Get agent config (ceiling)
-        const { data: agentData } = await supabase
-          .from('agents_safe' as any)
-          .select('config')
-          .eq('id', selectedAgentId)
-          .single() as { data: { config: any } | null };
-        const rawConfig = (agentData?.config || {}) as Record<string, any>;
-        // Strip API keys from config for security
-        const { api_key, voiceflow_api_key, retell_api_key, ...agentConfig } = rawConfig as any;
+        try {
+          // Get agent config (ceiling)
+          const { data: agentData, error: agentErr } = await supabase
+            .from('agents_safe' as any)
+            .select('config')
+            .eq('id', selectedAgentId)
+            .single() as { data: { config: any } | null; error: any };
+          if (agentErr) throw agentErr;
+          const rawConfig = (agentData?.config || {}) as Record<string, any>;
+          // Strip API keys from config for security
+          const { api_key, voiceflow_api_key, retell_api_key, ...agentConfig } = rawConfig as any;
 
-        // Get user's permission row
-        const { data: userPerm } = await supabase
-          .from('client_user_agent_permissions')
-          .select('permissions, role_id, has_overrides')
-          .eq('user_id', resolveUserId)
-          .eq('agent_id', selectedAgentId)
-          .eq('client_id', clientId)
-          .single();
-        
-        const userOverrides = (userPerm?.permissions || {}) as Record<string, any>;
-        const hasOverrides = userPerm?.has_overrides || false;
-        const roleId = userPerm?.role_id;
-
-        // Get role details
-        let role: any = null;
-        let template: Record<string, any> = {};
-        if (roleId) {
-          const { data: roleData } = await supabase
-            .from('client_roles')
-            .select('*')
-            .eq('id', roleId)
-            .single();
-          role = roleData;
-
-          const { data: templateData } = await supabase
-            .from('role_permission_templates')
-            .select('permissions')
-            .eq('role_id', roleId)
+          // Get user's agent-scoped permission row
+          const { data: userPerm, error: userPermErr } = await supabase
+            .from('client_user_agent_permissions')
+            .select('permissions, role_id, has_overrides')
+            .eq('user_id', resolveUserId)
             .eq('agent_id', selectedAgentId)
             .eq('client_id', clientId)
             .single();
-          template = (templateData?.permissions || {}) as Record<string, any>;
+          if (userPermErr) throw userPermErr;
+
+          const userOverrides = (userPerm?.permissions || {}) as Record<string, any>;
+          const hasOverrides = userPerm?.has_overrides || false;
+          const roleId = userPerm?.role_id;
+
+          // Get role details
+          let role: any = null;
+          let template: Record<string, any> = {};
+          if (roleId) {
+            const { data: roleData, error: roleErr } = await supabase
+              .from('client_roles')
+              .select('*')
+              .eq('id', roleId)
+              .single();
+            if (roleErr) throw roleErr;
+            role = roleData;
+
+            const { data: templateData } = await supabase
+              .from('role_permission_templates')
+              .select('permissions')
+              .eq('role_id', roleId)
+              .eq('agent_id', selectedAgentId)
+              .eq('client_id', clientId)
+              .maybeSingle();
+            template = (templateData?.permissions || {}) as Record<string, any>;
+          }
+
+          // Client settings for client-scoped ceiling
+          const { data: clientSettings } = await supabase
+            .from('client_settings')
+            .select('admin_capabilities')
+            .eq('client_id', clientId)
+            .maybeSingle();
+          const adminCaps = (clientSettings?.admin_capabilities || {}) as Record<string, any>;
+
+          // F7 fix: client-scoped overrides come from client_user_permissions,
+          // NOT from the agent-scoped permissions JSON. Previously this resolver
+          // gated client-scoped keys (settings_page, audit_log) by hasOverrides
+          // /userOverrides which are agent-scoped — wrong source of truth.
+          const { data: userClientPerms } = await supabase
+            .from('client_user_permissions')
+            .select('client_permissions, has_overrides')
+            .eq('user_id', resolveUserId)
+            .eq('client_id', clientId)
+            .maybeSingle();
+          const userClientOverrides = (userClientPerms?.client_permissions || {}) as Record<string, any>;
+          const hasClientOverrides = userClientPerms?.has_overrides || false;
+
+          const resolvePermission = (key: string): boolean => {
+            const ceilingKey = 'client_' + key + '_enabled';
+            if (agentConfig[ceilingKey] === false) return false;
+            if (role?.is_admin_tier) return true;
+            if (hasOverrides && userOverrides[key] !== undefined) return userOverrides[key];
+            return template[key] || false;
+          };
+
+          const resolveClientScoped = (key: string, capKey: string): boolean => {
+            if (adminCaps[capKey] === false) return false;
+            if (role?.is_admin_tier) return true;
+            if (hasClientOverrides && userClientOverrides[key] !== undefined) return userClientOverrides[key];
+            return role?.client_permissions?.[key] || false;
+          };
+
+          setSelectedAgentPermissions({
+            conversations: resolvePermission('conversations'),
+            transcripts: resolvePermission('transcripts'),
+            analytics: resolvePermission('analytics'),
+            specs: resolvePermission('specs'),
+            knowledge_base: resolvePermission('knowledge_base'),
+            guides: resolvePermission('guides'),
+            agent_settings: resolvePermission('agent_settings'),
+            settings_page: resolveClientScoped('settings_page', 'settings_page_enabled'),
+            audit_log: resolveClientScoped('audit_log', 'client_audit_log_enabled'),
+          });
+        } catch (err) {
+          // F10 fix: don't leave stale permissions from a previous agent on
+          // screen if this resolve fails — fail closed (null clears all
+          // gated UI). Surfaces in console so the failure is visible.
+          console.error('[useClientAgentContext] loadAgentPermissions failed:', err);
+          setSelectedAgentPermissions(null);
         }
-
-        // Client settings for client-scoped ceiling
-        const { data: clientSettings } = await supabase
-          .from('client_settings')
-          .select('admin_capabilities')
-          .eq('client_id', clientId)
-          .single();
-        const adminCaps = (clientSettings?.admin_capabilities || {}) as Record<string, any>;
-
-        const resolvePermission = (key: string): boolean => {
-          const ceilingKey = 'client_' + key + '_enabled';
-          if (agentConfig[ceilingKey] === false) return false;
-          if (role?.is_admin_tier) return true;
-          if (hasOverrides && userOverrides[key] !== undefined) return userOverrides[key];
-          return template[key] || false;
-        };
-
-        const resolveClientScoped = (key: string, capKey: string): boolean => {
-          if (adminCaps[capKey] === false) return false;
-          if (role?.is_admin_tier) return true;
-          if (hasOverrides && userOverrides[key] !== undefined) return userOverrides[key];
-          return role?.client_permissions?.[key] || false;
-        };
-
-        setSelectedAgentPermissions({
-          conversations: resolvePermission('conversations'),
-          transcripts: resolvePermission('transcripts'),
-          analytics: resolvePermission('analytics'),
-          specs: resolvePermission('specs'),
-          knowledge_base: resolvePermission('knowledge_base'),
-          guides: resolvePermission('guides'),
-          agent_settings: resolvePermission('agent_settings'),
-          settings_page: resolveClientScoped('settings_page', 'settings_page_enabled'),
-          audit_log: resolveClientScoped('audit_log', 'client_audit_log_enabled'),
-        });
       };
       loadAgentPermissions();
     }

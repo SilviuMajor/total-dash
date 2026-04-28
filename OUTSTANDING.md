@@ -116,23 +116,25 @@ Roles sub-tab is now gated by `canManageTeam` (i.e. `settings_team_manage`) — 
 
 ---
 
-### N11-F7 — Cross-scope mixing in `resolveClientScoped`
+### N11-F7 — Cross-scope mixing in `resolveClientScoped` ✅ DONE (2026-04-28)
 
-**Type:** Bug (Medium, latent) | **Effort:** Small | **Status:** Open
+**Type:** Bug (Medium, latent) | **Effort:** Small | **Status:** Shipped
 
-`useClientAgentContext.tsx:539-544`, `:349-354`, `:654-659` — `resolveClientScoped` uses agent-scoped `hasOverrides` and `userOverrides` JSON to gate client-scoped overrides. Should use `hasClientOverrides` and `userClientOverrides` (the correct path is implemented in `resolveCompanyPerm` at `:489-494`). Latent today because nobody writes `settings_page`/`audit_log` keys into the agent-scoped JSON, but a future write path or manual SQL would silently ride this.
+All three real-data copies of `resolveClientScoped` (in `loadClientAgents`, `loadClientAgentsAsUser`, and the per-agent useEffect) now use `hasClientOverrides`/`userClientOverrides` from `client_user_permissions` instead of the agent-scoped JSON. The useEffect copy gained the missing `client_user_permissions` query.
 
-**Touches:** `src/hooks/useClientAgentContext.tsx`. Best fixed alongside F8 + F15.
+**Touches:** `src/hooks/useClientAgentContext.tsx`.
 
 ---
 
-### N11-F8 — Settings link gated by per-agent value instead of canonical client-scoped one
+### N11-F8 — Settings link gated by per-agent value instead of canonical client-scoped one ✅ DONE (2026-04-28)
 
-**Type:** Bug (Medium) | **Effort:** Small | **Status:** Open
+**Type:** Bug (Medium) | **Effort:** Small | **Status:** Shipped
 
-`Sidebar.tsx:107`, `ProtectedRoute.tsx:60-78`, and `App.tsx:181` (via `requiredPage="settings_page"`) all read `selectedAgentPermissions.settings_page` — produced by the F7-affected resolver. The canonical client-scoped value lives on `companySettingsPermissions.settings_page` (correctly resolved). Same for `audit_log`.
+`Sidebar.tsx` now reads `companySettingsPermissions.settings_page` for the Company Settings link. `ProtectedRoute.tsx` builds a merged `effectivePermissions` map that overrides `settings_page` and `audit_log` with the canonical client-scoped values from `companySettingsPermissions`, then gates `requiredPage` against that. With F7 fixed both paths now produce the same answer for users without overrides — but they diverge for users with `client_user_permissions` overrides, so this matters.
 
-**Touches:** `src/components/Sidebar.tsx:107`, `src/components/ProtectedRoute.tsx`, `src/hooks/useClientAgentContext.tsx` (consider removing `settings_page` and `audit_log` from `AgentPermissions` interface).
+The redundant `settings_page` and `audit_log` keys remain on the `AgentPermissions` interface for now to avoid a sweep across consumers; consider removing them in the F15 refactor.
+
+**Touches:** `src/components/Sidebar.tsx`, `src/components/ProtectedRoute.tsx`.
 
 ---
 
@@ -146,53 +148,57 @@ Roles sub-tab is now gated by `canManageTeam` (i.e. `settings_team_manage`) — 
 
 ---
 
-### N11-F10 — `loadAgentPermissions` errors swallowed silently
+### N11-F10 — `loadAgentPermissions` errors swallowed silently ✅ DONE (2026-04-28)
 
-**Type:** Bug (Medium) | **Effort:** Tiny | **Status:** Open
+**Type:** Bug (Medium) | **Effort:** Tiny | **Status:** Shipped
 
-`useClientAgentContext.tsx:593-673` — async function inside useEffect with no try/catch. A failed Supabase query throws into the dropped promise; previous agent's permissions stay in state.
+`loadAgentPermissions` is now wrapped in try/catch. Required queries (`agents_safe`, agent-permission row, role row) explicitly throw on error. On any failure the resolver clears `selectedAgentPermissions` to `null` (fail-closed — gated UI hides) and logs to console with a tagged prefix.
 
-**Touches:** `src/hooks/useClientAgentContext.tsx:593-673`.
+**Touches:** `src/hooks/useClientAgentContext.tsx`.
 
 ---
 
-### N11-F11 — User-level toggles always-clickable when ceiling blocks
+### N11-F11 — User-level toggles always-clickable when ceiling blocks ✅ FALSE ALARM (2026-04-28)
 
-**Type:** Bug (Medium) | **Effort:** Small | **Status:** Open
+**Type:** Bug (Medium) | **Effort:** N/A | **Status:** Verified-not-reproducing
 
-`ClientUsersManagement.tsx` per-user toggles ignore the ceiling. Admin flips a switch, sees "Saved", change has zero effect on resolved permissions because ceiling short-circuits in resolution. `RolesManagement.tsx:148-153` already does this correctly via `getVisiblePermKeys`/`getVisibleCompanyTabs` — apply the same pattern at the user level.
+Re-reading the live code, `ClientUsersManagement.tsx` already filters all per-user toggles by ceiling:
+- Per-agent grid: `:1164-1167` filters keys by `agentConfig['client_'+key+'_enabled'] !== false`
+- Company-settings outer block: `:1249` gated by `clientCaps['settings_page_enabled'] !== false`
+- Company-settings sub-tabs: `:1297` filters by `clientCaps[tab.capKey] !== false`
+- New-user dialog grid: `:1726-1728` same per-key ceiling filter
+
+Audit was looking at older code that has since been fixed. No new work needed.
+
+---
+
+### N11-F12 — New-user agent grant hardcodes `has_overrides: false` even with custom perms ✅ DONE (2026-04-28)
+
+**Type:** Bug (Medium) | **Effort:** Tiny | **Status:** Shipped
+
+The grant-access INSERT path now diffs the new permissions against the role template (matching the UPDATE path's logic) and sets `has_overrides` accordingly. Admin-customised perms now resolve correctly instead of being silently discarded by the resolver.
 
 **Touches:** `src/components/client-management/ClientUsersManagement.tsx`.
 
 ---
 
-### N11-F12 — New-user agent grant hardcodes `has_overrides: false` even with custom perms
+### N11-F13 — Client-scoped override flag set by "any keys present" rather than diff vs template ✅ DONE (2026-04-28)
 
-**Type:** Bug (Medium) | **Effort:** Tiny | **Status:** Open
+**Type:** Bug (Medium) | **Effort:** Tiny | **Status:** Shipped
 
-`ClientUsersManagement.tsx:1535-1550` — when granting new agent access, hardcodes `has_overrides: false`. If admin customised perms in the panel, those values get persisted but the flag claims they're not overrides; resolver then ignores them.
+Per-user save now diffs `selectedUserClientPerms` against the role's `client_permissions` template and only flags `has_overrides=true` when at least one key actually differs. Fresh saves with no real changes no longer summon a hollow "Reset to role defaults" button.
 
-**Touches:** `src/components/client-management/ClientUsersManagement.tsx:1535-1550`. Compare against template like the UPDATE path does (`:1516-1518`).
-
----
-
-### N11-F13 — Client-scoped override flag set by "any keys present" rather than diff vs template
-
-**Type:** Bug (Medium) | **Effort:** Tiny | **Status:** Open
-
-`ClientUsersManagement.tsx:1564-1572` upserts with `has_overrides: Object.keys(selectedUserClientPerms).length > 0`. So a fresh save (no actual changes) flags the user as having overrides, which then makes the "Reset to role defaults" button appear with nothing to reset.
-
-**Touches:** `src/components/client-management/ClientUsersManagement.tsx:1564-1572`. Diff against `roles.find(r => r.id === user.role_id)?.client_permissions`.
+**Touches:** `src/components/client-management/ClientUsersManagement.tsx`.
 
 ---
 
-### N11-F14 — `AgencyAgentDetails` reads `agents` directly instead of `agents_safe`
+### N11-F14 — `AgencyAgentDetails` reads `agents` directly instead of `agents_safe` ✅ DONE (2026-04-28)
 
-**Type:** Cleanup (Low) | **Effort:** Tiny | **Status:** Open
+**Type:** Cleanup (Low) | **Effort:** Tiny | **Status:** Shipped
 
-`AgencyAgentDetails.tsx:69` reads `agents` directly. Safe today (route is agency-only), but inconsistent with CLAUDE.md rule #2.
+Switched to `agents_safe`. Page only reads ceiling-toggle keys for display and writes via the `update_agent_config` RPC, so stripping API keys at read is safe and consistent with CLAUDE.md rule #2.
 
-**Touches:** `src/pages/agency/AgencyAgentDetails.tsx:69`.
+**Touches:** `src/pages/agency/AgencyAgentDetails.tsx`.
 
 ---
 
@@ -206,13 +212,13 @@ Roles sub-tab is now gated by `canManageTeam` (i.e. `settings_team_manage`) — 
 
 ---
 
-### N11-F16 — RolesManagement "Save" button is a no-op when role has 0 users
+### N11-F16 — RolesManagement "Save" button is a no-op when role has 0 users ✅ DONE (2026-04-28)
 
-**Type:** UX Polish (Low) | **Effort:** Tiny | **Status:** Open
+**Type:** UX Polish (Low) | **Effort:** Tiny | **Status:** Shipped
 
-`RolesManagement.tsx:194-201`, `:482`, `:608` — toggles already persist on change. The Save button only triggers the "Apply to all users" modal when `userCounts[roleId] > 0`; otherwise just shows a "Saved" toast. Confusing — admin may think Save is required.
+Save button is now hidden entirely when the role has 0 users. When ≥1 user, the label is now `Apply to N users` (or `Apply to 1 user`) so the action is unambiguous.
 
-**Touches:** `src/components/settings/RolesManagement.tsx`. Either hide Save when count=0, or change copy to make immediate-save behaviour explicit.
+**Touches:** `src/components/settings/RolesManagement.tsx`.
 
 ---
 
@@ -725,6 +731,8 @@ Low priority. Do opportunistically when touching related code.
 ## Completed (recent)
 
 Date-stamped log of items shipped. Don't delete — provides commit-trail context for future work.
+
+**Completed:** 2026-04-28 — N11 follow-ups F7, F8, F10, F12, F13, F14, F16 landed in one pass; F11 marked false-alarm against current code. F7: all three duplicate `resolveClientScoped` callsites now use `client_user_permissions` overrides; useEffect copy gained the missing query. F8: Sidebar + ProtectedRoute now read `settings_page` and `audit_log` from canonical `companySettingsPermissions`. F10: try/catch + fail-closed in the per-agent useEffect resolver. F12: new-user grant diffs vs template instead of hardcoding has_overrides. F13: client-scoped save diffs vs template instead of "any keys". F14: `AgencyAgentDetails` swapped to `agents_safe`. F16: RolesManagement Save button hidden when count=0; relabeled "Apply to N users" otherwise. Still open: F3, F9 (Realtime invalidation — design call), F15 (resolver extract refactor), F17 (UX wording).
 
 **Completed:** 2026-04-27 — `3bd2171` — N11 follow-ups F1, F2, F4, F5, F6 landed in one pass; tested in app on 2026-04-28 by Silv (smoke pass — no regressions surfaced beyond pre-existing N27/N28). F1: both role-change modal paths now sync `client_user_permissions.role_id`, persist in-memory permission edits when the affected user is expanded, and surface DB errors. F2: optimistic-with-rollback + destructive toasts on RolesManagement saves. F4: Departments sub-tab gated by `showDepartments` with auto-redirect. F5: Audit Log unified to `!== false` parity. F6: Roles sub-tab gated by `settings_team_manage`. F3 (Realtime invalidation), F7-F16 still open.
 

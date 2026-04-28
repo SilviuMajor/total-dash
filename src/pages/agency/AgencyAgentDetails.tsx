@@ -65,12 +65,15 @@ export default function AgencyAgentDetails() {
 
     setLoading(true);
     try {
+      // F14 fix: read from agents_safe (CLAUDE.md rule #2) — page only
+      // displays ceiling toggles, never API keys. Writes go through the
+      // update_agent_config RPC (handleToggleAccess), which preserves keys.
       const { data: agentData, error: agentError } = await supabase
-        .from("agents")
+        .from("agents_safe" as any)
         .select("*")
         .eq("id", agentId)
         .eq("agency_id", agencyId)
-        .single();
+        .single() as { data: any; error: any };
 
       if (agentError) {
         toast({

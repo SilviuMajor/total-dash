@@ -43,7 +43,7 @@ const adminNavigation = [
 export function Sidebar({ className }: { className?: string } = {}) {
   const { profile, signOut } = useAuth();
   const { profile: mtProfile, userType, signOut: mtSignOut, isPreviewMode: mtIsPreviewMode, previewAgency, isClientPreviewMode, previewClient, previewClientAgencyId } = useMultiTenantAuth();
-  const { selectedAgentPermissions, agents, selectedAgentId } = useClientAgentContext();
+  const { selectedAgentPermissions, agents, selectedAgentId, companySettingsPermissions } = useClientAgentContext();
   const { effectiveTheme } = useTheme();
   const location = useLocation();
   const { isImpersonating, activeSession, impersonationMode, targetUserName, elapsedMinutes, endImpersonation, exitAll, backToAgency, switchTarget, clientUsers, getReturnUrl } = useImpersonation();
@@ -103,8 +103,13 @@ export function Sidebar({ className }: { className?: string } = {}) {
   } else {
     // Client navigation with filtering
     navigation = clientNavigation.filter(item => {
-      // settings_page special check
-      if (item.permissionKey === 'settings_page') return selectedAgentPermissions?.settings_page === true;
+      // F8 fix: settings_page is client-scoped (not agent-scoped). The
+      // canonical resolved value lives on companySettingsPermissions, which
+      // is computed once per (user, client) — not once per (user, agent).
+      // Reading from selectedAgentPermissions worked while F7 was broken
+      // because both paths produced the same answer; with F7 fixed they
+      // now diverge for users with client_user_permissions overrides.
+      if (item.permissionKey === 'settings_page') return companySettingsPermissions?.settings_page === true;
       
       // Items with null permissionKey are always visible
       if (item.permissionKey === null) {
