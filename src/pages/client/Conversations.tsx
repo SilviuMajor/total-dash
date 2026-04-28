@@ -153,7 +153,7 @@ export default function Conversations() {
   const transcriptScrollRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
   const { user, profile } = useAuth();
-  const { isClientPreviewMode, previewClient } = useMultiTenantAuth();
+  const { isClientPreviewMode, previewClient, userType } = useMultiTenantAuth();
   // Pull impersonation state directly so loadClientUser can resolve the acting
   // client_user even before the previewClient bridge has finished loading, and
   // so view_as_user mode resolves to the *specific* impersonated user instead
@@ -1546,16 +1546,39 @@ export default function Conversations() {
     return <NoAgentsAssigned />;
   }
 
+  // "Mine" only has a meaningful subject when the viewer is acting as a real
+  // client user — direct client login, or an impersonation session that is
+  // explicitly view-as-user. Full-access impersonation / preview-as-client has
+  // no single owner to filter by, so the toggle is disabled with a tooltip.
+  const canUseMineFilter =
+    userType === 'client' ||
+    (isImpersonating && impersonationMode === 'view_as_user');
+
   return (
     <div className="flex flex-col h-full">
       {/* ── Unified header ── */}
       <div className="bg-card flex-shrink-0">
-        {/* Row 1: Title + count */}
+        {/* Row 1: Title + count + Mine toggle */}
         <div className="px-4 pt-3 pb-0 flex items-center gap-2">
           <h1 className="text-[15px] font-semibold">Conversations</h1>
           <span className="text-xs text-muted-foreground px-2 py-0.5 bg-muted rounded border">
             {filteredConversations.length}
           </span>
+          <Button
+            size="sm"
+            variant={myOnly ? 'default' : 'ghost'}
+            onClick={() => setMyOnly(v => !v)}
+            disabled={!canUseMineFilter || !currentClientUserId}
+            className="h-7 text-xs px-2 ml-auto"
+            title={
+              canUseMineFilter
+                ? 'Show only conversations assigned to me'
+                : 'Switch to view-as-user mode to use this filter'
+            }
+          >
+            <UserCheck className="h-3.5 w-3.5 mr-1" />
+            Mine
+          </Button>
         </div>
 
         {/* Row 2: Status filters (multi-select toggle) */}
@@ -1596,24 +1619,6 @@ export default function Conversations() {
               </Button>
             );
           })}
-        </div>
-
-        {/* Row 2c: Scope filter — show only conversations I own */}
-        <div className="px-4 py-1.5 flex items-center gap-1">
-          <Button
-            size="sm"
-            variant={myOnly ? 'default' : 'ghost'}
-            onClick={() => setMyOnly(v => !v)}
-            disabled={!currentClientUserId}
-            className="h-7 text-xs px-3"
-            title="Show only conversations assigned to me"
-          >
-            <span className={cn(
-              "w-1.5 h-1.5 rounded-full mr-1.5",
-              myOnly ? 'bg-primary-foreground' : 'bg-muted-foreground'
-            )} />
-            Mine
-          </Button>
         </div>
 
         {/* Row 2b: Department filters (multi-select toggle, hidden for single department) */}
