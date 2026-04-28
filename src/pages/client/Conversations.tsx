@@ -1055,10 +1055,15 @@ export default function Conversations() {
       const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
       const url = `${supabaseUrl}/functions/v1/agent-file-upload`;
 
+      if (!currentClientUserId) {
+        throw new Error('Could not resolve your agent identity — try refreshing.');
+      }
+
       for (const file of list) {
         const form = new FormData();
         form.append('file', file);
         form.append('conversationId', selectedConversation.id);
+        form.append('clientUserId', currentClientUserId);
         form.append('text', '');
 
         const res = await fetch(url, {

@@ -650,7 +650,10 @@ function generateWidgetScript(config: any): string {
     .vf-send-btn:hover { opacity: 0.9; }
     .vf-send-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; }
 
-    /* === POWERED BY BADGE (home + chat history footer) === */
+    /* === POWERED BY BADGE (home only) === */
+    /* margin-top:auto pushes the badge to the bottom of #vf-content (which is
+       a flex column), so it sits flush above the tab nav regardless of how
+       tall the action pills above it are. */
     .vf-powered-by {
       display: flex;
       align-items: center;
@@ -663,6 +666,7 @@ function generateWidgetScript(config: any): string {
       text-transform: uppercase;
       color: \${theme.textMuted};
       flex-shrink: 0;
+      margin-top: auto;
     }
     .vf-powered-by .vf-powered-mark {
       color: \${theme.textPrimary};
@@ -942,7 +946,9 @@ function generateWidgetScript(config: any): string {
        One tile per pending upload — thumbnail only, no filename, no size. */
     .vf-attach-preview-row {
       display: flex; flex-wrap: wrap; gap: 8px;
-      padding: 8px 12px 0;
+      /* Bottom padding gives the tile breathing room above the input field —
+         without it, the thumbnail sits flush against the text box. */
+      padding: 10px 12px 8px;
     }
     .vf-attach-tile {
       position: relative;
@@ -1528,7 +1534,6 @@ function generateWidgetScript(config: any): string {
           <div class="vf-empty-sub">Start a new chat and we'll remember it here for next time.</div>
           <button class="vf-empty-cta" onclick="window.vfStartNewChat()">New chat</button>
         </div>
-        \${renderPoweredByHtml()}
       \`;
       return;
     }
@@ -1588,7 +1593,6 @@ function generateWidgetScript(config: any): string {
           \${older.map(convCardHtml).join('')}
         </div>
       </div>
-      \${renderPoweredByHtml()}
     \`;
   }
   
@@ -1711,10 +1715,13 @@ function generateWidgetScript(config: any): string {
               if (!isInHandover) {
                 isInHandover = true;
                 console.log('[VF Widget] Handover resumed by takeover');
+                // Re-render the panel so the paperclip + drag-drop come back.
+                // refreshChatMessages alone doesn't rebuild the input bar.
+                renderPanel();
               }
             }
           }
-          
+
           if (hasNewMessages) {
             isTyping = false;
             refreshChatMessages();
@@ -1851,105 +1858,169 @@ function generateWidgetScript(config: any): string {
       + '</a>';
   }
 
-  function renderMessages(container) {
-    container.innerHTML = '<div class="vf-messages-wrap" id="vf-messages"></div>';
-    const messagesEl = document.getElementById('vf-messages');
+  // Build the inner HTML for a single message based on its data + click state.
+  // Pulled out so the incremental renderer can use it for both initial inserts
+  // and live updates (e.g. button click state).
+  function buildMessageMarkup(msg) {
+    const isUser = msg.speaker === 'user';
+    const isSystem = msg.speaker === 'system';
+    const isAgent = msg.speaker === 'client_user';
 
-    messages.forEach(msg => {
-      const isUser = msg.speaker === 'user';
-      const isSystem = msg.speaker === 'system';
-      const isAgent = msg.speaker === 'client_user';
+    // Prefer the structured attachments column (new path). Fall back to the
+    // legacy "[Image|File: name]\\nurl" inline string for older messages still
+    // in the wild.
+    let messageContent = msg.text || '';
+    let attachmentsHtml = '';
+    const hasStructuredAttachments = Array.isArray(msg.attachments) && msg.attachments.length > 0;
+    if (hasStructuredAttachments) {
+      attachmentsHtml = msg.attachments.map(attachmentHtml).join('');
+    } else {
+      const fileMatch = messageContent.match(/\\[(Image|File): ([^\\]]+)\\]\\n(https?:\\/\\/[^\\s]+)/);
+      if (fileMatch) {
+        const fileName = escapeHtml(fileMatch[2]);
+        const fileUrl = escapeHtml(fileMatch[3]);
+        const isImage = fileMatch[1] === 'Image' || /\\.(jpg|jpeg|png|gif|webp)$/i.test(fileMatch[3]);
+        attachmentsHtml = isImage
+          ? '<a href="' + fileUrl + '" target="_blank" rel="noopener" class="vf-msg-attach"><img src="' + fileUrl + '" alt="' + fileName + '" class="vf-msg-attach-image" /></a>'
+          : '<a href="' + fileUrl + '" target="_blank" rel="noopener" download class="vf-msg-attach vf-msg-attach-file">'
+            +   '<span class="vf-msg-attach-file-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>'
+            +   '<span class="vf-msg-attach-file-meta"><span class="vf-msg-attach-file-name">' + fileName + '</span></span>'
+            + '</a>';
+        messageContent = messageContent.replace(/\\[(Image|File): [^\\]]+\\]\\n[^\\s]+/, '').trim();
+      }
+    }
 
-      // Prefer the structured attachments column (new path). Fall back to the
-      // legacy "[Image|File: name]\\nurl" inline string for older messages still
-      // in the wild.
-      let messageContent = msg.text || '';
-      let attachmentsHtml = '';
-      const hasStructuredAttachments = Array.isArray(msg.attachments) && msg.attachments.length > 0;
-      if (hasStructuredAttachments) {
-        attachmentsHtml = msg.attachments.map(attachmentHtml).join('');
+    if (isSystem) {
+      return { className: 'vf-msg-system', cssText: '', html: escapeHtml(messageContent), useTextContent: true, text: messageContent };
+    }
+
+    if (isUser) {
+      const textOnly = messageContent && messageContent.trim();
+      let html;
+      if (textOnly && attachmentsHtml) {
+        html = '<div class="vf-msg-user">' + escapeHtml(messageContent) + '</div>' + attachmentsHtml;
+      } else if (attachmentsHtml) {
+        html = attachmentsHtml;
       } else {
-        const fileMatch = messageContent.match(/\\[(Image|File): ([^\\]]+)\\]\\n(https?:\\/\\/[^\\s]+)/);
-        if (fileMatch) {
-          const fileName = escapeHtml(fileMatch[2]);
-          const fileUrl = escapeHtml(fileMatch[3]);
-          const isImage = fileMatch[1] === 'Image' || /\\.(jpg|jpeg|png|gif|webp)$/i.test(fileMatch[3]);
-          attachmentsHtml = isImage
-            ? '<a href="' + fileUrl + '" target="_blank" rel="noopener" class="vf-msg-attach"><img src="' + fileUrl + '" alt="' + fileName + '" class="vf-msg-attach-image" /></a>'
-            : '<a href="' + fileUrl + '" target="_blank" rel="noopener" download class="vf-msg-attach vf-msg-attach-file">'
-              +   '<span class="vf-msg-attach-file-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>'
-              +   '<span class="vf-msg-attach-file-meta"><span class="vf-msg-attach-file-name">' + fileName + '</span></span>'
-              + '</a>';
-          messageContent = messageContent.replace(/\\[(Image|File): [^\\]]+\\]\\n[^\\s]+/, '').trim();
-        }
+        html = '<div class="vf-msg-user">' + escapeHtml(messageContent) + '</div>';
       }
+      return { className: 'vf-msg-user-wrap', cssText: '', html, useTextContent: false };
+    }
 
-      const wrapper = document.createElement('div');
+    // Bot / client_user message
+    const isClicked = clickedButtonIds.has(msg.id);
+    const hasBotBody = (messageContent && messageContent.trim()) || attachmentsHtml;
+    const html = \`
+      \${isAgent ? \`
+        \${messageContent && messageContent.trim() ? \`<div class="vf-msg-agent">\${escapeHtml(messageContent)}</div>\` : ''}
+        \${attachmentsHtml || ''}
+      \` : (hasBotBody ? \`
+        \${messageContent && messageContent.trim() ? \`<p class="vf-msg-bot">\${messageContent}</p>\` : ''}
+        \${attachmentsHtml || ''}
+      \` : '')}
+      \${msg.buttons && msg.buttons.length > 0 ? \`
+        <div class="vf-buttons">
+          \${msg.buttons.map((btn, idx) => {
+            const isSelected = clickedButtonSelections[msg.id] === idx;
+            return \`
+              <button
+                class="vf-btn-option \${isSelected ? 'selected' : ''}"
+                \${isClicked ? 'disabled' : ''}
+                onclick="window.vfHandleButtonClick('\${msg.id}', \${idx})"
+              >\${btn.text}</button>
+            \`;
+          }).join('')}
+        </div>
+      \` : ''}
+      <div class="vf-msg-time">\${formatTime(msg.timestamp)}</div>
+    \`;
+    return {
+      className: '',
+      cssText: 'display:flex;flex-direction:column;gap:5px;align-self:flex-start;max-width:100%;',
+      html,
+      useTextContent: false,
+    };
+  }
 
-      if (isSystem) {
-        wrapper.className = 'vf-msg-system';
-        wrapper.textContent = messageContent;
-        messagesEl.appendChild(wrapper);
-        return;
-      }
+  // Incremental message renderer.
+  // Previously this nuked the entire #vf-messages list on every call, causing a
+  // visible flash on every send/receive/button click — the "glitchy refresh"
+  // Silv flagged. Now we:
+  //   1. Reuse #vf-messages if it already exists.
+  //   2. For each message in state, find its DOM node by data-msg-id. If it
+  //      exists AND is unchanged, leave it alone. If it's a bot message with
+  //      buttons whose click state changed, only re-render that single node's
+  //      inner HTML (buttons are the only mutable part — text/attachments are
+  //      immutable once the message arrives).
+  //   3. Append new messages.
+  //   4. Drop stale typing indicator; add a fresh one when isTyping.
+  function renderMessages(container) {
+    let messagesEl = document.getElementById('vf-messages');
+    if (!messagesEl) {
+      container.innerHTML = '<div class="vf-messages-wrap" id="vf-messages"></div>';
+      messagesEl = document.getElementById('vf-messages');
+    }
 
-      if (isUser) {
-        wrapper.className = 'vf-msg-user-wrap';
-        // If there's no text (attachment-only), drop the bubble chrome around
-        // the attachment so it stands on its own — much cleaner for images.
-        const textOnly = messageContent && messageContent.trim();
-        if (textOnly && attachmentsHtml) {
-          wrapper.innerHTML = '<div class="vf-msg-user">' + escapeHtml(messageContent) + '</div>' + attachmentsHtml;
-        } else if (attachmentsHtml) {
-          wrapper.innerHTML = attachmentsHtml;
-        } else {
-          wrapper.innerHTML = '<div class="vf-msg-user">' + escapeHtml(messageContent) + '</div>';
-        }
-        messagesEl.appendChild(wrapper);
-        return;
-      }
+    // Pull the typing indicator out (we'll re-append at the end if still typing).
+    const oldTyping = messagesEl.querySelector('.vf-typing');
+    if (oldTyping) oldTyping.remove();
 
-      // Bot message — grey bubble ONLY if there's text or a file.
-      // When Voiceflow sends { text: '', buttons: [...] } we must skip the
-      // empty <p class="vf-msg-bot"> or it renders as an empty grey bubble
-      // above the buttons. That was the "empty bubble before buttons" bug.
-      const isClicked = clickedButtonIds.has(msg.id);
-      wrapper.style.cssText = 'display:flex;flex-direction:column;gap:5px;align-self:flex-start;max-width:100%;';
-
-      const hasBotBody = (messageContent && messageContent.trim()) || attachmentsHtml;
-
-      wrapper.innerHTML = \`
-        \${isAgent ? \`
-          \${messageContent && messageContent.trim() ? \`<div class="vf-msg-agent">\${escapeHtml(messageContent)}</div>\` : ''}
-          \${attachmentsHtml || ''}
-        \` : (hasBotBody ? \`
-          \${messageContent && messageContent.trim() ? \`<p class="vf-msg-bot">\${messageContent}</p>\` : ''}
-          \${attachmentsHtml || ''}
-        \` : '')}
-        \${msg.buttons && msg.buttons.length > 0 ? \`
-          <div class="vf-buttons">
-            \${msg.buttons.map((btn, idx) => {
-              const isSelected = clickedButtonSelections[msg.id] === idx;
-              return \`
-                <button 
-                  class="vf-btn-option \${isSelected ? 'selected' : ''}" 
-                  \${isClicked ? 'disabled' : ''}
-                  onclick="window.vfHandleButtonClick('\${msg.id}', \${idx})"
-                >\${btn.text}</button>
-              \`;
-            }).join('')}
-          </div>
-        \` : ''}
-        <div class="vf-msg-time">\${formatTime(msg.timestamp)}</div>
-      \`;
-      
-      messagesEl.appendChild(wrapper);
+    // Index existing nodes by msg id. Anything left over after the loop is stale.
+    const existing = new Map();
+    messagesEl.querySelectorAll('[data-msg-id]').forEach((node) => {
+      existing.set(node.getAttribute('data-msg-id'), node);
     });
-    
-    // Typing indicator — append .vf-typing directly (no outer wrapper div).
-    // The old code wrapped it in a plain <div> which became a block-level
-    // flex child, stretched to full width, and ignored align-self:flex-start.
-    // That was the "typing stretches across full width" bug.
+
+    let lastNode = null;
+
+    messages.forEach((msg) => {
+      const markup = buildMessageMarkup(msg);
+      const prior = existing.get(msg.id);
+
+      if (prior) {
+        // Update mutable parts only when the rendered HTML signature changes.
+        // We stamp data-render-key so we can cheaply detect "did the visible
+        // state of this message change since we last rendered it?".
+        const newKey = msg.id + '|' + (clickedButtonIds.has(msg.id) ? '1' : '0') + '|' +
+          (clickedButtonSelections[msg.id] != null ? clickedButtonSelections[msg.id] : '-');
+        const oldKey = prior.getAttribute('data-render-key');
+        if (oldKey !== newKey) {
+          if (markup.useTextContent) {
+            prior.textContent = markup.text;
+          } else {
+            prior.innerHTML = markup.html;
+          }
+          prior.setAttribute('data-render-key', newKey);
+        }
+        existing.delete(msg.id);
+        lastNode = prior;
+        return;
+      }
+
+      // New message — create + append.
+      const wrapper = document.createElement('div');
+      wrapper.setAttribute('data-msg-id', msg.id);
+      wrapper.setAttribute(
+        'data-render-key',
+        msg.id + '|' + (clickedButtonIds.has(msg.id) ? '1' : '0') + '|' +
+          (clickedButtonSelections[msg.id] != null ? clickedButtonSelections[msg.id] : '-')
+      );
+      if (markup.className) wrapper.className = markup.className;
+      if (markup.cssText) wrapper.style.cssText = markup.cssText;
+      if (markup.useTextContent) {
+        wrapper.textContent = markup.text;
+      } else {
+        wrapper.innerHTML = markup.html;
+      }
+      messagesEl.appendChild(wrapper);
+      lastNode = wrapper;
+    });
+
+    // Remove any DOM nodes whose msg id is no longer in state (rare — usually
+    // only happens when starting a new chat resets the array).
+    existing.forEach((node) => node.remove());
+
+    // Re-attach typing indicator after the latest message if still typing.
     if (isTyping) {
       const typingEl = document.createElement('div');
       typingEl.className = 'vf-typing';
@@ -1960,7 +2031,7 @@ function generateWidgetScript(config: any): string {
       \`;
       messagesEl.appendChild(typingEl);
     }
-    
+
     scrollToLatestMessage();
   }
   
@@ -2409,22 +2480,25 @@ function generateWidgetScript(config: any): string {
           }
         }
         isTyping = false;
-        renderPanel();
-        scrollToLatestMessage();
+        // Flip isInHandover BEFORE renderPanel so the input bar is rebuilt with
+        // the paperclip visible immediately. Was previously after, which left
+        // the paperclip hidden until the user sent another message.
         if (!isInHandover) {
           isInHandover = true;
           startHandoverRealtime();
         }
+        renderPanel();
+        scrollToLatestMessage();
         if (conversationId) {
           SessionManager.saveConversation(conversationId, messages, currentVoiceflowSessionId, true);
         }
         return;
       }
-      
+
       if (data.botResponses) {
         for (const resp of data.botResponses) {
           await new Promise(resolve => setTimeout(resolve, CONFIG.functions.typingDelayMs));
-          
+
           const botMsg = {
             id: 'msg_' + Date.now(),
             speaker: 'assistant',
@@ -2432,7 +2506,7 @@ function generateWidgetScript(config: any): string {
             buttons: resp.buttons,
             timestamp: new Date().toISOString()
           };
-          
+
           messages.push(botMsg);
           isTyping = false;
           refreshChatMessages();
@@ -2621,22 +2695,24 @@ function generateWidgetScript(config: any): string {
           }
         }
         isTyping = false;
-        renderPanel();
-        scrollToLatestMessage();
+        // Flip isInHandover BEFORE renderPanel so the input bar is rebuilt with
+        // the paperclip visible immediately on handover start.
         if (!isInHandover) {
           isInHandover = true;
           startHandoverRealtime();
         }
+        renderPanel();
+        scrollToLatestMessage();
         if (conversationId) {
           SessionManager.saveConversation(conversationId, messages, currentVoiceflowSessionId, true);
         }
         return;
       }
-      
+
       if (data.botResponses) {
         for (const resp of data.botResponses) {
           await new Promise(resolve => setTimeout(resolve, CONFIG.functions.typingDelayMs));
-          
+
           const botMsg = {
             id: 'msg_' + Date.now(),
             speaker: 'assistant',
@@ -2644,7 +2720,7 @@ function generateWidgetScript(config: any): string {
             buttons: resp.buttons,
             timestamp: new Date().toISOString()
           };
-          
+
           messages.push(botMsg);
           isTyping = false;
           refreshChatMessages();

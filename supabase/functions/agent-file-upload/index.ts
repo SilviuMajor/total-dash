@@ -60,9 +60,8 @@ serve(async (req) => {
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-  const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
 
-  // service-role client for writes/bypass RLS
+  // service-role client for writes/bypass RLS + JWT verification
   const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
   let uploadedStoragePath: string | null = null;
@@ -75,12 +74,8 @@ serve(async (req) => {
       return jsonResponse({ error: 'Unauthorized', message: 'Missing auth token.' }, 401);
     }
 
-    // Verify the JWT and get the auth user
-    const userClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: `Bearer ${jwt}` } },
-    });
-    const { data: { user: authUser }, error: authError } = await userClient.auth.getUser();
-    if (authError || !authUser) {
+    const { data: { user: caller }, error: authError } = await adminClient.auth.getUser(jwt);
+    if (authError || !caller) {
       return jsonResponse({ error: 'Unauthorized', message: 'Invalid auth token.' }, 401);
     }
 
@@ -89,10 +84,15 @@ serve(async (req) => {
     const file = formData.get('file') as File | null;
     const conversationId = formData.get('conversationId') as string | null;
     const caption = (formData.get('text') as string | null) ?? '';
+    // The frontend resolves the acting client_user via its loadClientUser hook
+    // (which itself supports preview/impersonation fallback) and passes the
+    // resulting client_users.id here. We then verify the JWT caller is allowed
+    // to act as that client_user — same trust model as handover-actions.
+    const claimedClientUserId = formData.get('clientUserId') as string | null;
 
-    if (!file || !conversationId) {
+    if (!file || !conversationId || !claimedClientUserId) {
       return jsonResponse(
-        { error: 'Missing fields', message: 'file and conversationId are required.' },
+        { error: 'Missing fields', message: 'file, conversationId and clientUserId are required.' },
         400
       );
     }
@@ -111,33 +111,80 @@ serve(async (req) => {
       );
     }
 
-    // ---- Resolve caller to a client_users row ----
-    // Profiles link auth users to their profile; client_users is the agent record
-    // linked to that profile for a specific client.
+    // ---- Authorisation: confirm caller can act as the claimed client_user ----
+    // Three valid paths (mirrors handover-actions):
+    //   1. The caller IS the client_user behind that id (auth.uid matches client_users.user_id)
+    //   2. The caller is a super admin
+    //   3. The caller is an agency_user whose agency owns the target client
+    let authorised = false;
+
+    // Path 1
+    const { data: ownClientUserRow } = await adminClient
+      .from('client_users')
+      .select('id')
+      .eq('user_id', caller.id)
+      .eq('id', claimedClientUserId)
+      .maybeSingle();
+
+    if (ownClientUserRow) {
+      authorised = true;
+    } else {
+      // Path 2: super admin
+      const { data: isSuperAdmin } = await adminClient.rpc('is_super_admin', { _user_id: caller.id });
+      if (isSuperAdmin) {
+        authorised = true;
+      } else {
+        // Path 3: agency user with access to the client behind the target client_user
+        const { data: targetClientUser } = await adminClient
+          .from('client_users')
+          .select('client_id')
+          .eq('id', claimedClientUserId)
+          .maybeSingle();
+        if (targetClientUser) {
+          const { data: targetClient } = await adminClient
+            .from('clients')
+            .select('agency_id')
+            .eq('id', targetClientUser.client_id)
+            .maybeSingle();
+          const { data: callerAgencyAccess } = await adminClient
+            .from('agency_users')
+            .select('agency_id')
+            .eq('user_id', caller.id)
+            .eq('agency_id', targetClient?.agency_id ?? '')
+            .maybeSingle();
+          if (callerAgencyAccess) authorised = true;
+        }
+      }
+    }
+
+    if (!authorised) {
+      return jsonResponse(
+        { error: 'Forbidden', message: 'Not authorised to act as this client user.' },
+        403
+      );
+    }
+
+    // ---- Resolve the acting client_user row (we know it exists from auth above) ----
     const { data: clientUser, error: cuError } = await adminClient
       .from('client_users')
-      .select('id, client_id, profile_id, status')
-      .eq('profile_id', authUser.id)
+      .select('id, client_id, user_id')
+      .eq('id', claimedClientUserId)
       .single();
 
     if (cuError || !clientUser) {
       return jsonResponse(
-        { error: 'Forbidden', message: 'No client_user record for this account.' },
-        403
-      );
-    }
-    if (clientUser.status === 'suspended') {
-      return jsonResponse(
-        { error: 'Forbidden', message: 'Account is suspended.' },
+        { error: 'Forbidden', message: 'Acting client user not found.' },
         403
       );
     }
 
-    // Get the caller's display name for transcript metadata
+    // Display name: prefer the *acting* user's profile (the one being impersonated
+    // in preview mode), not the JWT caller's profile. Falls back to caller if
+    // the acting user has no profile row.
     const { data: profile } = await adminClient
       .from('profiles')
       .select('id, full_name, email')
-      .eq('id', authUser.id)
+      .eq('id', clientUser.user_id)
       .single();
 
     const agentName =
