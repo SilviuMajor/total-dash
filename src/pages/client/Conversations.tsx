@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ConversationsSkeleton } from "@/components/skeletons";
-import { Phone, Clock, CheckCircle, MessageSquare, ArrowDown, X, Plus, Tag, Users, Building2, Send, UserCheck, PhoneOff, ArrowRightLeft, Lock, Loader2, AlertTriangle, Timer, MessageSquareText, Trash2, FolderOpen, Sparkles, Check, Archive, Paperclip } from "lucide-react";
+import { Phone, Clock, CheckCircle, MessageSquare, ArrowDown, X, Plus, Tag, Users, Building2, Send, UserCheck, PhoneOff, ArrowRightLeft, Lock, Loader2, AlertTriangle, Timer, MessageSquareText, Trash2, FolderOpen, Sparkles, Check, Archive, Paperclip, FileText } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -100,6 +100,21 @@ interface Transcript {
 
 const PAGE_SIZE = 30;
 
+// Append `?download=<filename>` so Supabase storage serves the file with
+// Content-Disposition: attachment instead of inline. Without this, browsers
+// try to render text/csv (and similar) inline, which on some browsers shows
+// "missing plugin" instead of downloading. Skip for already-inline kinds
+// (image/video/audio) since we want those to render in the bubble.
+function withDownloadParam(url: string, fileName: string): string {
+  try {
+    const u = new URL(url);
+    u.searchParams.set('download', fileName);
+    return u.toString();
+  } catch {
+    return url;
+  }
+}
+
 export default function Conversations() {
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [transcripts, setTranscripts] = useState<Transcript[]>([]);
@@ -188,9 +203,19 @@ export default function Conversations() {
   const [aiEnhancedText, setAiEnhancedText] = useState("");
   const [aiEnhanceMode, setAiEnhanceMode] = useState<string | null>(null);
 
-  // Agent attachment upload state
+  // Agent attachment upload state. Two-phase like the widget:
+  //   1. User picks file(s) -> queued in `attachQueue`, preview tile renders
+  //      above the input. NO upload yet, NO transcript yet.
+  //   2. User types optional caption + clicks Send -> each queued file is
+  //      uploaded via agent-file-upload. The caption (if any) attaches to the
+  //      FIRST committed file's transcript bubble; subsequent files commit
+  //      with empty text. Mirrors the widget's send semantics.
   const attachInputRef = useRef<HTMLInputElement>(null);
   const [attachUploading, setAttachUploading] = useState(false);
+  // Each queued file gets a stable id so React keys + remove-by-id stay correct
+  // across re-renders. previewUrl is an object URL we revoke on remove/send.
+  type AttachQueueEntry = { id: string; file: File; previewUrl: string | null; kind: 'image' | 'video' | 'audio' | 'file' };
+  const [attachQueue, setAttachQueue] = useState<AttachQueueEntry[]>([]);
 
   // Archive (N8) — admin-only via RPC, force-ends + hides the conversation.
   const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false);
@@ -1075,36 +1100,126 @@ export default function Conversations() {
     'application/zip',
   ]);
   const AGENT_ATTACH_MAX_SIZE = 10 * 1024 * 1024; // 10 MB
+  const AGENT_ATTACH_MAX_QUEUE = 5;
 
-  const handleAgentAttach = async (files: FileList | null) => {
+  const classifyAttachKind = (mimeType: string): 'image' | 'video' | 'audio' | 'file' => {
+    if (mimeType.startsWith('image/')) return 'image';
+    if (mimeType.startsWith('video/')) return 'video';
+    if (mimeType.startsWith('audio/')) return 'audio';
+    return 'file';
+  };
+
+  // Pick handler: validate and queue files for preview. NO upload yet.
+  // The actual upload happens on Send (see handleSendChatMessage).
+  const handleAgentAttach = (files: FileList | null) => {
     if (!files || files.length === 0) return;
-    if (!selectedConversation || attachUploading) return;
+    if (!selectedConversation) return;
     if (selectedConversation.status !== 'in_handover' || selectedConversation.owner_id !== currentClientUserId) {
       toast({ title: "Cannot attach", description: "Attachments only work during your active handover.", variant: "destructive" });
       return;
     }
 
-    const list: File[] = [];
-    for (let i = 0; i < files.length && i < 5; i++) {
+    // Reset the input so picking the same file twice still fires onChange.
+    const resetInput = () => { if (attachInputRef.current) attachInputRef.current.value = ''; };
+
+    const remainingSlots = Math.max(0, AGENT_ATTACH_MAX_QUEUE - attachQueue.length);
+    if (remainingSlots === 0) {
+      toast({ title: "Too many files", description: `You can attach up to ${AGENT_ATTACH_MAX_QUEUE} files at a time.`, variant: "destructive" });
+      resetInput();
+      return;
+    }
+
+    const additions: AttachQueueEntry[] = [];
+    const revokeAdditions = () => additions.forEach(a => { if (a.previewUrl) URL.revokeObjectURL(a.previewUrl); });
+
+    for (let i = 0; i < files.length && additions.length < remainingSlots; i++) {
       const f = files[i];
       if (f.size > AGENT_ATTACH_MAX_SIZE) {
         toast({ title: "File too large", description: `${f.name} is over 10MB.`, variant: "destructive" });
+        revokeAdditions();
+        resetInput();
         return;
       }
       if (!AGENT_ATTACH_ALLOWED_MIME.has(f.type)) {
         toast({ title: "File type not allowed", description: `${f.name} (${f.type || 'unknown'}) is not supported.`, variant: "destructive" });
+        revokeAdditions();
+        resetInput();
         return;
       }
-      list.push(f);
+      const kind = classifyAttachKind(f.type);
+      const previewUrl = kind === 'image' ? URL.createObjectURL(f) : null;
+      additions.push({
+        id: `${Date.now()}-${i}-${Math.random().toString(36).slice(2, 8)}`,
+        file: f,
+        previewUrl,
+        kind,
+      });
     }
-    if (list.length === 0) return;
 
+    if (additions.length === 0) {
+      resetInput();
+      return;
+    }
+
+    setAttachQueue(prev => [...prev, ...additions]);
+    resetInput();
+  };
+
+  const removeFromAttachQueue = (id: string) => {
+    setAttachQueue(prev => {
+      const target = prev.find(e => e.id === id);
+      if (target?.previewUrl) URL.revokeObjectURL(target.previewUrl);
+      return prev.filter(e => e.id !== id);
+    });
+  };
+
+  const handleSendChatMessage = async () => {
+    const messageText = chatMessage.trim();
+    const queued = attachQueue;
+    if (!messageText && queued.length === 0) return;
+    if (sendingMessage || attachUploading) return;
+    if (!selectedConversation) return;
+
+    // ---- Path A: queue empty -> text-only via handover-actions (legacy path) ----
+    if (queued.length === 0) {
+      setChatMessage("");
+      setSendingMessage(true);
+      try {
+        const { data, error } = await supabase.functions.invoke('handover-actions', {
+          body: {
+            action: 'send_message',
+            conversationId: selectedConversation.id,
+            clientUserId: currentClientUserId,
+            clientUserName: profile?.full_name || (profile as any)?.first_name || 'Agent',
+            message: messageText,
+          },
+        });
+        if (error) throw error;
+        if (!data?.success) throw new Error(data?.error || 'Failed to send');
+      } catch (err: any) {
+        toast({ title: "Error", description: err.message || 'Failed to send message', variant: "destructive" });
+        setChatMessage(messageText);
+      } finally {
+        setSendingMessage(false);
+      }
+      return;
+    }
+
+    // ---- Path B: queue has files -> drain via agent-file-upload ----
+    // Caption attaches to the FIRST file's transcript bubble; subsequent files
+    // commit with empty text. Mirrors the widget multi-file send semantics.
+    // Direct fetch (not supabase.functions.invoke) because invoke serialises
+    // the body as JSON, which clobbers multipart FormData and makes the edge
+    // function reject "Missing fields". With direct fetch the browser sets
+    // Content-Type with the right multipart boundary.
+    if (!currentClientUserId) {
+      toast({ title: "Cannot send", description: "Could not resolve your agent identity — try refreshing.", variant: "destructive" });
+      return;
+    }
+    setChatMessage("");
     setAttachUploading(true);
+    setSendingMessage(true);
     try {
-      // Direct fetch (not supabase.functions.invoke) because invoke serialises
-      // the body as JSON in some setups, which clobbers multipart FormData and
-      // makes the edge function reject "Missing fields". With direct fetch the
-      // browser sets Content-Type with the right multipart boundary.
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
       if (!token) throw new Error('Not authenticated — please re-login.');
@@ -1113,16 +1228,14 @@ export default function Conversations() {
       const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
       const url = `${supabaseUrl}/functions/v1/agent-file-upload`;
 
-      if (!currentClientUserId) {
-        throw new Error('Could not resolve your agent identity — try refreshing.');
-      }
-
-      for (const file of list) {
+      for (let i = 0; i < queued.length; i++) {
+        const entry = queued[i];
         const form = new FormData();
-        form.append('file', file);
+        form.append('file', entry.file);
         form.append('conversationId', selectedConversation.id);
         form.append('clientUserId', currentClientUserId);
-        form.append('text', '');
+        // Caption only on the first file
+        form.append('text', i === 0 ? messageText : '');
 
         const res = await fetch(url, {
           method: 'POST',
@@ -1136,37 +1249,17 @@ export default function Conversations() {
         if (!res.ok || !body?.success) {
           throw new Error(body?.message || body?.error || `Upload failed (${res.status})`);
         }
+        // On per-file success, revoke its object URL and remove from queue so
+        // partial-failure leaves only un-sent files visible for retry.
+        if (entry.previewUrl) URL.revokeObjectURL(entry.previewUrl);
+        setAttachQueue(prev => prev.filter(e => e.id !== entry.id));
       }
     } catch (err: any) {
       toast({ title: "Upload failed", description: err.message || 'Could not send attachment', variant: "destructive" });
-    } finally {
-      setAttachUploading(false);
-      if (attachInputRef.current) attachInputRef.current.value = '';
-    }
-  };
-
-  const handleSendChatMessage = async () => {
-    if (!chatMessage.trim() || sendingMessage) return;
-    const messageText = chatMessage.trim();
-    setChatMessage("");
-    setSendingMessage(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('handover-actions', {
-        body: {
-          action: 'send_message',
-          conversationId: selectedConversation?.id,
-          clientUserId: currentClientUserId,
-          clientUserName: profile?.full_name || (profile as any)?.first_name || 'Agent',
-          message: messageText,
-        },
-      });
-      if (error) throw error;
-      if (!data?.success) throw new Error(data?.error || 'Failed to send');
-      // Don't reload transcripts — the Realtime subscription will pick up the new message
-    } catch (err: any) {
-      toast({ title: "Error", description: err.message || 'Failed to send message', variant: "destructive" });
+      // Restore caption so the user can retry without retyping
       setChatMessage(messageText);
     } finally {
+      setAttachUploading(false);
       setSendingMessage(false);
     }
   };
@@ -1808,7 +1901,7 @@ export default function Conversations() {
                                 </div>
                                 <div>
                                   <span className="text-[11px] font-medium text-primary mb-0.5 block">{name}</span>
-                                  <div className="bg-card border border-border px-3 py-2 rounded-xl rounded-tl-sm text-sm max-w-[400px]">
+                                  <div className={`bg-card border border-border rounded-xl rounded-tl-sm text-sm max-w-[400px] ${hasText ? 'px-3 py-2' : 'p-1'}`}>
                                     {hasText && <div className="whitespace-pre-wrap">{transcript.text}</div>}
                                     {atts && atts.length > 0 && atts.map((att, idx) => {
                                       if (att.kind === 'image') {
@@ -1824,9 +1917,13 @@ export default function Conversations() {
                                       if (att.kind === 'audio') {
                                         return <audio key={idx} src={att.url} controls preload="metadata" className="w-full mt-2 first:mt-0 block" />;
                                       }
+                                      // Non-image kinds: append ?download= so Supabase serves with
+                                      // Content-Disposition: attachment (the HTML `download` attr is
+                                      // ignored cross-origin, so we need server cooperation).
                                       return (
-                                        <a key={idx} href={att.url} target="_blank" rel="noreferrer" download className="flex items-center gap-2 p-2 mt-2 first:mt-0 bg-muted rounded-lg hover:bg-muted/80 transition-colors">
-                                          <span className="text-xs truncate flex-1">{att.fileName}</span>
+                                        <a key={idx} href={withDownloadParam(att.url, att.fileName)} target="_blank" rel="noreferrer" className="flex items-center gap-2 p-2 mt-2 first:mt-0 bg-muted rounded-lg hover:bg-muted/80 transition-colors">
+                                          <FileText className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
+                                          <span className="text-xs truncate flex-1 min-w-0">{att.fileName}</span>
                                         </a>
                                       );
                                     })}
@@ -1896,7 +1993,52 @@ export default function Conversations() {
                 {/* Chat Input */}
                 <div className="flex-shrink-0 border-t border-border bg-background p-3">
                   {selectedConversation.status === 'in_handover' && selectedConversation.owner_id === currentClientUserId ? (
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-col gap-2">
+                      {/* Pending attachment preview row — shown above the input
+                          bar while files are queued. Each tile has its own ×
+                          to remove just that file from the pending list. */}
+                      {attachQueue.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {attachQueue.map(entry => (
+                            <div
+                              key={entry.id}
+                              className="relative flex items-center gap-2 bg-muted rounded-lg p-1.5 pr-7 max-w-[220px]"
+                            >
+                              {entry.kind === 'image' && entry.previewUrl ? (
+                                <img
+                                  src={entry.previewUrl}
+                                  alt={entry.file.name}
+                                  className="w-10 h-10 rounded object-cover flex-shrink-0"
+                                />
+                              ) : (
+                                <div className="w-10 h-10 rounded bg-background border border-border flex items-center justify-center flex-shrink-0">
+                                  <FileText className="w-4 h-4 text-muted-foreground" />
+                                </div>
+                              )}
+                              <div className="flex flex-col min-w-0">
+                                <span className="text-xs font-medium truncate">{entry.file.name}</span>
+                                <span className="text-[10px] text-muted-foreground">
+                                  {entry.file.size < 1024
+                                    ? `${entry.file.size} B`
+                                    : entry.file.size < 1024 * 1024
+                                      ? `${(entry.file.size / 1024).toFixed(0)} KB`
+                                      : `${(entry.file.size / (1024 * 1024)).toFixed(1)} MB`}
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => removeFromAttachQueue(entry.id)}
+                                disabled={attachUploading}
+                                className="absolute top-1 right-1 w-5 h-5 rounded-full bg-background border border-border flex items-center justify-center hover:bg-destructive hover:text-destructive-foreground hover:border-destructive transition-colors disabled:opacity-50 disabled:pointer-events-none"
+                                title="Remove"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2">
                       {/* Canned responses button — hidden entirely when agency has feature off */}
                       {cannedResponsesEnabled && (
                       <Popover open={showCannedDropdown} onOpenChange={setShowCannedDropdown}>
@@ -2074,15 +2216,15 @@ export default function Conversations() {
                         variant="ghost"
                         className="shrink-0"
                         onClick={() => attachInputRef.current?.click()}
-                        disabled={attachUploading || sendingMessage}
-                        title="Attach file"
+                        disabled={attachUploading || sendingMessage || attachQueue.length >= AGENT_ATTACH_MAX_QUEUE}
+                        title={attachQueue.length >= AGENT_ATTACH_MAX_QUEUE ? `Up to ${AGENT_ATTACH_MAX_QUEUE} files at a time` : "Attach file"}
                       >
-                        {attachUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
+                        <Paperclip className="h-4 w-4" />
                       </Button>
                       <Input
                         value={chatMessage}
                         onChange={(e) => setChatMessage(e.target.value)}
-                        placeholder="Type a message..."
+                        placeholder={attachQueue.length > 0 ? "Add a caption (optional)..." : "Type a message..."}
                         className="flex-1"
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' && !e.shiftKey) {
@@ -2090,15 +2232,16 @@ export default function Conversations() {
                             handleSendChatMessage();
                           }
                         }}
-                        disabled={sendingMessage}
+                        disabled={sendingMessage || attachUploading}
                       />
                       <Button
                         size="icon"
                         onClick={handleSendChatMessage}
-                        disabled={sendingMessage || !chatMessage.trim()}
+                        disabled={sendingMessage || attachUploading || (!chatMessage.trim() && attachQueue.length === 0)}
                       >
-                        {sendingMessage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                        {(sendingMessage || attachUploading) ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                       </Button>
+                      </div>
                     </div>
                   ) : (
                     <div className="flex items-center gap-2 text-muted-foreground">

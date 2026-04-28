@@ -1,6 +1,19 @@
 import { Avatar } from "@/components/ui/avatar";
 import { CheckCircle, Bot, FileText, Download } from "lucide-react";
 
+// Append `?download=<filename>` so Supabase storage serves the file with
+// Content-Disposition: attachment instead of inline. Without this, browsers
+// try to render text/csv (and similar) inline and may show "missing plugin".
+function withDownloadParam(url: string, fileName: string): string {
+  try {
+    const u = new URL(url);
+    u.searchParams.set('download', fileName);
+    return u.toString();
+  } catch {
+    return url;
+  }
+}
+
 interface Button {
   text: string;
   payload: any;
@@ -57,9 +70,9 @@ function renderAttachment(att: Attachment, key: string | number) {
     );
   }
   return (
-    <a key={key} href={att.url} target="_blank" rel="noreferrer" download className="flex items-center gap-2 p-2 mt-2 bg-muted rounded-lg hover:bg-muted/80 transition-colors">
+    <a key={key} href={withDownloadParam(att.url, att.fileName)} target="_blank" rel="noreferrer" className="flex items-center gap-2 p-2 mt-2 bg-muted rounded-lg hover:bg-muted/80 transition-colors">
       <FileText className="w-4 h-4 flex-shrink-0" />
-      <span className="text-xs truncate flex-1">{att.fileName}</span>
+      <span className="text-xs truncate flex-1 min-w-0">{att.fileName}</span>
       <Download className="w-3 h-3 flex-shrink-0 opacity-50" />
     </a>
   );
