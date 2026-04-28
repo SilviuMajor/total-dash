@@ -52,25 +52,27 @@ interface MessageBubbleProps {
 
 function renderAttachment(att: Attachment, key: string | number) {
   if (!att?.url) return null;
+  // `first:mt-0` so an image-only bubble (no preceding text) sits flush
+  // against the parent's thin p-1 padding, giving an even border around it.
   if (att.kind === 'image') {
     return (
-      <a key={key} href={att.url} target="_blank" rel="noreferrer" className="block mt-2">
+      <a key={key} href={att.url} target="_blank" rel="noreferrer" className="block mt-2 first:mt-0">
         <img src={att.url} alt={att.fileName} className="max-w-full max-h-[320px] rounded-lg cursor-pointer object-cover" />
       </a>
     );
   }
   if (att.kind === 'video') {
     return (
-      <video key={key} src={att.url} controls preload="metadata" className="max-w-full max-h-[320px] rounded-lg mt-2 block bg-black" />
+      <video key={key} src={att.url} controls preload="metadata" className="max-w-full max-h-[320px] rounded-lg mt-2 first:mt-0 block bg-black" />
     );
   }
   if (att.kind === 'audio') {
     return (
-      <audio key={key} src={att.url} controls preload="metadata" className="w-full mt-2 block" />
+      <audio key={key} src={att.url} controls preload="metadata" className="w-full mt-2 first:mt-0 block" />
     );
   }
   return (
-    <a key={key} href={withDownloadParam(att.url, att.fileName)} target="_blank" rel="noreferrer" className="flex items-center gap-2 p-2 mt-2 bg-muted rounded-lg hover:bg-muted/80 transition-colors">
+    <a key={key} href={withDownloadParam(att.url, att.fileName)} target="_blank" rel="noreferrer" className="flex items-center gap-2 p-2 mt-2 first:mt-0 bg-muted rounded-lg hover:bg-muted/80 transition-colors">
       <FileText className="w-4 h-4 flex-shrink-0" />
       <span className="text-xs truncate flex-1 min-w-0">{att.fileName}</span>
       <Download className="w-3 h-3 flex-shrink-0 opacity-50" />
@@ -172,12 +174,12 @@ export function MessageBubble({
       
       <div className={`flex flex-col gap-1 max-w-[80%] ${isUser ? 'items-end' : 'items-start'}`}>
         <div
-          className={`${getBubbleStyle()} px-4 py-2.5 shadow-sm`}
+          className={`${getBubbleStyle()} ${messageContent || buttons?.length ? 'px-4 py-2.5' : 'p-1'} shadow-sm`}
           style={{
-            backgroundColor: isUser 
+            backgroundColor: isUser
               ? appearance.primaryColor
               : appearance.messageBgColor || '#f3f4f6',
-            color: isUser 
+            color: isUser
               ? appearance.secondaryColor
               : appearance.messageTextColor || '#1f2937',
             fontSize: `${appearance.fontSize || 14}px`

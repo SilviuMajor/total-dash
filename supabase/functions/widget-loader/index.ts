@@ -1874,6 +1874,21 @@ function generateWidgetScript(config: any): string {
     renderPanel();
   }
   
+  // Append ?download=<filename> so Supabase serves the file with
+  // Content-Disposition: attachment instead of inline. The HTML download
+  // attribute is ignored cross-origin, so we need server cooperation —
+  // otherwise CSV / text files render inline and Chrome shows
+  // "missing plugin".
+  function withDownloadParam(rawUrl, fileName) {
+    try {
+      const u = new URL(rawUrl);
+      u.searchParams.set('download', fileName || 'file');
+      return u.toString();
+    } catch (e) {
+      return rawUrl;
+    }
+  }
+
   // Build the HTML for a single attachment object: { url, fileName, mimeType, size, kind }
   function attachmentHtml(att) {
     if (!att || !att.url) return '';
@@ -1889,7 +1904,8 @@ function generateWidgetScript(config: any): string {
     if (kind === 'audio') {
       return '<audio src="' + url + '" controls preload="metadata" class="vf-msg-attach vf-msg-attach-audio"></audio>';
     }
-    return '<a href="' + url + '" target="_blank" rel="noopener" download class="vf-msg-attach vf-msg-attach-file">'
+    const fileUrl = escapeHtml(withDownloadParam(att.url, att.fileName || 'file'));
+    return '<a href="' + fileUrl + '" target="_blank" rel="noopener" class="vf-msg-attach vf-msg-attach-file">'
       +   '<span class="vf-msg-attach-file-icon">'
       +     '<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'
       +   '</span>'
@@ -1921,12 +1937,17 @@ function generateWidgetScript(config: any): string {
     } else {
       const fileMatch = messageContent.match(/\\[(Image|File): ([^\\]]+)\\]\\n(https?:\\/\\/[^\\s]+)/);
       if (fileMatch) {
-        const fileName = escapeHtml(fileMatch[2]);
-        const fileUrl = escapeHtml(fileMatch[3]);
-        const isImage = fileMatch[1] === 'Image' || /\\.(jpg|jpeg|png|gif|webp)$/i.test(fileMatch[3]);
+        const rawFileName = fileMatch[2];
+        const rawFileUrl = fileMatch[3];
+        const fileName = escapeHtml(rawFileName);
+        const fileUrl = escapeHtml(rawFileUrl);
+        const isImage = fileMatch[1] === 'Image' || /\\.(jpg|jpeg|png|gif|webp)$/i.test(rawFileUrl);
+        // For non-images, route through withDownloadParam so Supabase serves
+        // with Content-Disposition: attachment (otherwise CSV/text inline -> "missing plugin").
+        const fileLinkUrl = isImage ? fileUrl : escapeHtml(withDownloadParam(rawFileUrl, rawFileName));
         attachmentsHtml = isImage
           ? '<a href="' + fileUrl + '" target="_blank" rel="noopener" class="vf-msg-attach"><img src="' + fileUrl + '" alt="' + fileName + '" class="vf-msg-attach-image" /></a>'
-          : '<a href="' + fileUrl + '" target="_blank" rel="noopener" download class="vf-msg-attach vf-msg-attach-file">'
+          : '<a href="' + fileLinkUrl + '" target="_blank" rel="noopener" class="vf-msg-attach vf-msg-attach-file">'
             +   '<span class="vf-msg-attach-file-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>'
             +   '<span class="vf-msg-attach-file-meta"><span class="vf-msg-attach-file-name">' + fileName + '</span></span>'
             + '</a>';
