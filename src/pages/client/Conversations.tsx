@@ -2020,6 +2020,14 @@ export default function Conversations() {
                     ) : (
                       <div className="space-y-4">
                         {transcripts.map((transcript, index) => {
+                          // Hide user button-click messages. In the widget the
+                          // selection is reflected by ringing the chosen button
+                          // on the prior assistant bubble, not a separate user
+                          // message — mirror that here.
+                          if (transcript.speaker === 'user' && transcript.metadata?.button_click) {
+                            return null;
+                          }
+
                           // System messages render as centered indicators
                           if (transcript.speaker === 'system') {
                             if (!transcript.text?.trim()) return null; // Don't render empty system messages
@@ -2108,26 +2116,23 @@ export default function Conversations() {
                           }
 
                           // User and assistant messages use the existing MessageBubble.
-                          // For user button-click messages, surface which choice the
-                          // customer picked: pull the preceding assistant message's
-                          // buttons and pass selectedButton so MessageBubble highlights
-                          // the matching one (mirrors Transcripts.tsx).
+                          // Mirror the widget: keep the buttons visible on the
+                          // assistant message and ring the chosen one. The user's
+                          // button-click "bubble" is hidden (handled by the early
+                          // return at the top of this map).
                           const speaker = transcript.speaker === 'user' ? 'user' : 'assistant';
-                          const selectedButton = transcript.metadata?.button_click
-                            ? transcript.text
-                            : undefined;
-                          const prevTranscript = index > 0 ? transcripts[index - 1] : null;
-                          const buttonsToDisplay =
-                            transcript.speaker === 'user' && selectedButton && prevTranscript?.buttons
-                              ? prevTranscript.buttons
-                              : transcript.buttons;
+                          const nextTranscript = transcripts[index + 1];
+                          const selectedButton =
+                            nextTranscript?.speaker === 'user' && nextTranscript?.metadata?.button_click
+                              ? nextTranscript.text
+                              : undefined;
                           return (
                             <MessageBubble
                               key={transcript.id || index}
                               text={transcript.text}
                               speaker={speaker}
                               timestamp={transcript.timestamp}
-                              buttons={buttonsToDisplay}
+                              buttons={transcript.buttons}
                               selectedButton={selectedButton}
                               attachments={transcript.attachments}
                               appearance={{
