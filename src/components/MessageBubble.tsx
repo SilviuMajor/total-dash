@@ -14,6 +14,13 @@ function withDownloadParam(url: string, fileName: string): string {
   }
 }
 
+function formatBytes(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes <= 0) return '';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 interface Button {
   text: string;
   payload: any;
@@ -71,11 +78,26 @@ function renderAttachment(att: Attachment, key: string | number) {
       <audio key={key} src={att.url} controls preload="metadata" className="w-full mt-2 first:mt-0 block" />
     );
   }
+  // File / document tile — explicit colors so they don't inherit the parent
+  // bubble's primary/secondary text color (which is white inside a user/blue
+  // bubble and would render the filename illegibly on the muted background).
+  const sizeLabel = formatBytes(att.size);
   return (
-    <a key={key} href={withDownloadParam(att.url, att.fileName)} target="_blank" rel="noreferrer" className="flex items-center gap-2 p-2 mt-2 first:mt-0 bg-muted rounded-lg hover:bg-muted/80 transition-colors">
-      <FileText className="w-4 h-4 flex-shrink-0" />
-      <span className="text-xs truncate flex-1 min-w-0">{att.fileName}</span>
-      <Download className="w-3 h-3 flex-shrink-0 opacity-50" />
+    <a
+      key={key}
+      href={withDownloadParam(att.url, att.fileName)}
+      target="_blank"
+      rel="noreferrer"
+      className="flex items-center gap-2.5 p-2 mt-2 first:mt-0 bg-muted hover:bg-muted/80 rounded-lg transition-colors no-underline max-w-[280px]"
+    >
+      <div className="w-9 h-9 rounded-md bg-background border border-border flex items-center justify-center flex-shrink-0">
+        <FileText className="w-4 h-4 text-muted-foreground" />
+      </div>
+      <div className="flex flex-col min-w-0 flex-1">
+        <span className="text-xs font-medium truncate text-foreground">{att.fileName}</span>
+        {sizeLabel && <span className="text-[10px] text-muted-foreground">{sizeLabel}</span>}
+      </div>
+      <Download className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
     </a>
   );
 }
@@ -108,6 +130,19 @@ export function MessageBubble({
     isImage = fileMatch[1] === 'Image' || /\.(jpg|jpeg|png|gif|webp)$/i.test(fileUrl);
     messageContent = messageContent.replace(/\[(Image|File): [^\]]+\]\n[^\s]+/, '').trim();
   }
+
+  // File-only message: collapse the surrounding primary/secondary-color
+  // bubble entirely and let the file tile (which already has its own
+  // bg-muted chip styling) be the visual. The previous nested
+  // "blue bubble around grey chip" looked like a double border.
+  const hasButtons = !!buttons && buttons.length > 0;
+  const onlyFileAttachments =
+    !messageContent &&
+    !hasButtons &&
+    (
+      (!!attachments && attachments.length > 0 && attachments.every((a) => a.kind === 'file')) ||
+      (!!fileUrl && !isImage)
+    );
   
   const getBubbleStyle = () => {
     const style = appearance.messageBubbleStyle || 'rounded';
@@ -174,8 +209,8 @@ export function MessageBubble({
       
       <div className={`flex flex-col gap-1 max-w-[80%] ${isUser ? 'items-end' : 'items-start'}`}>
         <div
-          className={`${getBubbleStyle()} ${messageContent || buttons?.length ? 'px-4 py-2.5' : 'p-1'} shadow-sm`}
-          style={{
+          className={`${onlyFileAttachments ? '' : `${getBubbleStyle()} shadow-sm ${messageContent || (buttons?.length) ? 'px-4 py-2.5' : 'p-1'}`}`}
+          style={onlyFileAttachments ? undefined : {
             backgroundColor: isUser
               ? appearance.primaryColor
               : appearance.messageBgColor || '#f3f4f6',
@@ -193,25 +228,26 @@ export function MessageBubble({
 
           {fileUrl && (
             isImage ? (
-              <img 
-                src={fileUrl} 
-                alt={fileName || 'Image'} 
-                className="max-w-full rounded-lg mt-2 cursor-pointer"
+              <img
+                src={fileUrl}
+                alt={fileName || 'Image'}
+                className="max-w-full rounded-lg mt-2 first:mt-0 cursor-pointer"
                 onClick={() => window.open(fileUrl, '_blank')}
               />
             ) : (
-              <a 
-                href={fileUrl} 
-                target="_blank" 
+              <a
+                href={withDownloadParam(fileUrl, fileName || 'file')}
+                target="_blank"
                 rel="noopener noreferrer"
-                download={fileName}
-                className="flex items-center gap-2 p-3 mt-2 rounded-lg transition-colors"
-                style={{ 
-                  backgroundColor: isUser ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
-                }}
+                className="flex items-center gap-2.5 p-2 mt-2 first:mt-0 bg-muted hover:bg-muted/80 rounded-lg transition-colors no-underline max-w-[280px]"
               >
-                <CheckCircle className="h-4 w-4 flex-shrink-0" />
-                <span className="text-sm font-medium">{fileName}</span>
+                <div className="w-9 h-9 rounded-md bg-background border border-border flex items-center justify-center flex-shrink-0">
+                  <FileText className="w-4 h-4 text-muted-foreground" />
+                </div>
+                <div className="flex flex-col min-w-0 flex-1">
+                  <span className="text-xs font-medium truncate text-foreground">{fileName}</span>
+                </div>
+                <Download className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
               </a>
             )
           )}

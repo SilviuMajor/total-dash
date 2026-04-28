@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ConversationsSkeleton } from "@/components/skeletons";
-import { Phone, Clock, CheckCircle, MessageSquare, ArrowDown, X, Plus, Tag, Users, Building2, Send, UserCheck, PhoneOff, ArrowRightLeft, Lock, Loader2, AlertTriangle, Timer, MessageSquareText, Trash2, FolderOpen, Sparkles, Check, Archive, Paperclip, FileText } from "lucide-react";
+import { Phone, Clock, CheckCircle, MessageSquare, ArrowDown, X, Plus, Tag, Users, Building2, Send, UserCheck, PhoneOff, ArrowRightLeft, Lock, Loader2, AlertTriangle, Timer, MessageSquareText, Trash2, FolderOpen, Sparkles, Check, Archive, Paperclip, FileText, Download } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -113,6 +113,13 @@ function withDownloadParam(url: string, fileName: string): string {
   } catch {
     return url;
   }
+}
+
+function formatBytes(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes <= 0) return '';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 export default function Conversations() {
@@ -1894,6 +1901,15 @@ export default function Conversations() {
                             const name = transcript.metadata?.client_user_name || 'Agent';
                             const atts = transcript.attachments;
                             const hasText = !!transcript.text?.trim();
+                            // File-only message: the bg-muted file tile chip is its own
+                            // visual; nesting it inside a bg-card bordered bubble created
+                            // an unintended "double border" + made the filename inherit
+                            // the bubble's text color. Collapse the bubble and let the
+                            // chip stand alone.
+                            const onlyFileAttachments =
+                              !hasText &&
+                              !!atts && atts.length > 0 &&
+                              atts.every((a: any) => a.kind === 'file');
                             return (
                               <div key={transcript.id || index} className="flex gap-2 mb-4">
                                 <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 text-[11px] font-bold text-primary">
@@ -1901,9 +1917,15 @@ export default function Conversations() {
                                 </div>
                                 <div>
                                   <span className="text-[11px] font-medium text-primary mb-0.5 block">{name}</span>
-                                  <div className={`bg-card border border-border rounded-xl rounded-tl-sm text-sm max-w-[400px] ${hasText ? 'px-3 py-2' : 'p-1'}`}>
+                                  <div
+                                    className={
+                                      onlyFileAttachments
+                                        ? 'text-sm max-w-[400px]'
+                                        : `bg-card border border-border rounded-xl rounded-tl-sm text-sm max-w-[400px] ${hasText ? 'px-3 py-2' : 'p-1'}`
+                                    }
+                                  >
                                     {hasText && <div className="whitespace-pre-wrap">{transcript.text}</div>}
-                                    {atts && atts.length > 0 && atts.map((att, idx) => {
+                                    {atts && atts.length > 0 && atts.map((att: any, idx: number) => {
                                       if (att.kind === 'image') {
                                         return (
                                           <a key={idx} href={att.url} target="_blank" rel="noreferrer" className="block mt-2 first:mt-0">
@@ -1917,13 +1939,28 @@ export default function Conversations() {
                                       if (att.kind === 'audio') {
                                         return <audio key={idx} src={att.url} controls preload="metadata" className="w-full mt-2 first:mt-0 block" />;
                                       }
-                                      // Non-image kinds: append ?download= so Supabase serves with
-                                      // Content-Disposition: attachment (the HTML `download` attr is
-                                      // ignored cross-origin, so we need server cooperation).
+                                      // File / document tile — explicit colors so the
+                                      // filename stays legible whether nested or not.
+                                      // Append ?download= so Supabase serves with
+                                      // Content-Disposition: attachment (HTML `download`
+                                      // attr is ignored cross-origin).
+                                      const sizeLabel = formatBytes(att.size || 0);
                                       return (
-                                        <a key={idx} href={withDownloadParam(att.url, att.fileName)} target="_blank" rel="noreferrer" className="flex items-center gap-2 p-2 mt-2 first:mt-0 bg-muted rounded-lg hover:bg-muted/80 transition-colors">
-                                          <FileText className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
-                                          <span className="text-xs truncate flex-1 min-w-0">{att.fileName}</span>
+                                        <a
+                                          key={idx}
+                                          href={withDownloadParam(att.url, att.fileName)}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className="flex items-center gap-2.5 p-2 mt-2 first:mt-0 bg-muted hover:bg-muted/80 rounded-lg transition-colors no-underline max-w-[280px]"
+                                        >
+                                          <div className="w-9 h-9 rounded-md bg-background border border-border flex items-center justify-center flex-shrink-0">
+                                            <FileText className="w-4 h-4 text-muted-foreground" />
+                                          </div>
+                                          <div className="flex flex-col min-w-0 flex-1">
+                                            <span className="text-xs font-medium truncate text-foreground">{att.fileName}</span>
+                                            {sizeLabel && <span className="text-[10px] text-muted-foreground">{sizeLabel}</span>}
+                                          </div>
+                                          <Download className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
                                         </a>
                                       );
                                     })}
