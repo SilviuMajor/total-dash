@@ -87,6 +87,11 @@ function CompanySettingsPanel({ clientId }: { clientId: string }) {
 
   return (
     <div className="space-y-6">
+      {/* Scope label — destructive accent to signal "this caps things" */}
+      <div className="border-l-2 border-destructive pl-3 py-1">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-destructive">Agency-wide ceiling</h3>
+        <p className="text-xs text-muted-foreground mt-0.5">Caps what this client's roles and users can be granted. Disabling here hides the feature for every user at this client.</p>
+      </div>
       {/* Master toggle */}
       <Card className="p-4 bg-card border-border/50">
         <div className="flex items-center justify-between">
@@ -96,7 +101,7 @@ function CompanySettingsPanel({ clientId }: { clientId: string }) {
             </div>
             <div>
               <p className="text-sm font-medium">Company Settings Page Visibility</p>
-              <p className="text-xs text-muted-foreground">Show or hide the entire Company Settings page for this client</p>
+              <p className="text-xs text-muted-foreground">Show or hide the entire Company Settings page for this client. Disabling hides the page for every user.</p>
             </div>
           </div>
           <Switch checked={masterEnabled} onCheckedChange={(v) => updateCapability('settings_page_enabled', v)} />
@@ -123,7 +128,7 @@ function CompanySettingsPanel({ clientId }: { clientId: string }) {
                 <div className="h-2 w-2 rounded-full" style={{ backgroundColor: isTabEnabled("client_departments_enabled") ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))' }} />
                 <div>
                   <Label className="text-sm font-medium">Visible to Client</Label>
-                  <p className="text-xs text-muted-foreground">Allow clients to view and manage departments</p>
+                  <p className="text-xs text-muted-foreground">Allow clients to view and manage departments. Disabling hides this tab for every user at this client.</p>
                 </div>
               </div>
               <Switch
@@ -142,7 +147,7 @@ function CompanySettingsPanel({ clientId }: { clientId: string }) {
                 <div className="h-2 w-2 rounded-full" style={{ backgroundColor: isTabEnabled("client_team_enabled") ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))' }} />
                 <div>
                   <Label className="text-sm font-medium">Visible to Client</Label>
-                  <p className="text-xs text-muted-foreground">Allow clients to view and manage team members</p>
+                  <p className="text-xs text-muted-foreground">Allow clients to view and manage team members. Disabling hides this tab for every user at this client.</p>
                 </div>
               </div>
               <Switch
@@ -186,7 +191,7 @@ function CompanySettingsPanel({ clientId }: { clientId: string }) {
                 <div className="h-2 w-2 rounded-full" style={{ backgroundColor: isTabEnabled("client_canned_responses_enabled") ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))' }} />
                 <div>
                   <Label className="text-sm font-medium">Visible to Client</Label>
-                  <p className="text-xs text-muted-foreground">Allow clients to view and manage canned responses</p>
+                  <p className="text-xs text-muted-foreground">Allow clients to view and manage canned responses. Disabling hides this tab for every user at this client.</p>
                 </div>
               </div>
               <Switch
@@ -205,7 +210,7 @@ function CompanySettingsPanel({ clientId }: { clientId: string }) {
                 <div className="h-2 w-2 rounded-full" style={{ backgroundColor: isTabEnabled("client_general_enabled") ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))' }} />
                 <div>
                   <Label className="text-sm font-medium">Visible to Client</Label>
-                  <p className="text-xs text-muted-foreground">Allow clients to view company information</p>
+                  <p className="text-xs text-muted-foreground">Allow clients to view company information. Disabling hides this tab for every user at this client.</p>
                 </div>
               </div>
               <Switch
@@ -224,7 +229,7 @@ function CompanySettingsPanel({ clientId }: { clientId: string }) {
                 <div className="h-2 w-2 rounded-full" style={{ backgroundColor: isTabEnabled("client_audit_log_enabled") ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))' }} />
                 <div>
                   <Label className="text-sm font-medium">Visible to Client</Label>
-                  <p className="text-xs text-muted-foreground">Allow clients to view the audit log</p>
+                  <p className="text-xs text-muted-foreground">Allow clients to view the audit log. Disabling hides this tab for every user at this client.</p>
                 </div>
               </div>
               <Switch

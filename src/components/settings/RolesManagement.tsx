@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { ChevronDown, ChevronRight, Plus, Trash2, Shield } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -314,8 +315,11 @@ export function RolesManagement({ clientId }: RolesManagementProps) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold text-foreground">Roles</h3>
-          <p className="text-sm text-muted-foreground">Define what each role can access. New users are assigned a role when created.</p>
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-foreground">Role defaults</h3>
+            <Badge variant="outline" className="text-[10px] font-normal">applies to all users with the role</Badge>
+          </div>
+          <p className="text-sm text-muted-foreground">Define what each role can access. New users get these defaults; per-user overrides on Settings → Users beat them.</p>
         </div>
         <Button variant="outline" size="sm" onClick={() => setShowAddRole(true)}>
           <Plus className="h-4 w-4 mr-1" /> New role
@@ -360,9 +364,14 @@ export function RolesManagement({ clientId }: RolesManagementProps) {
                     {role.is_default && (
                       <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">default</span>
                     )}
+                    {!role.is_admin_tier && (
+                      <Badge variant="secondary" className="text-[10px] font-normal">
+                        {count} {count === 1 ? "user" : "users"}
+                      </Badge>
+                    )}
                   </div>
                   <span className="text-xs text-muted-foreground">
-                    {role.is_admin_tier ? "Full access to all agency-enabled features" : `${count} user${count !== 1 ? "s" : ""}`}
+                    {role.is_admin_tier ? "Full access to all agency-enabled features" : "Click to edit role defaults"}
                   </span>
                 </div>
               </div>

@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Trash2, UserPlus, AlertCircle, Loader2, ChevronDown, ChevronRight, Eye, Settings, Send, X, Plus } from "lucide-react";
+import { Trash2, UserPlus, AlertCircle, Loader2, ChevronDown, ChevronRight, Eye, Settings, Send, X, Plus, RotateCcw } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { useImpersonation } from "@/hooks/useImpersonation";
@@ -1025,7 +1025,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
 
                   {/* User settings overlay */}
                   <Dialog open={isExpanded && overlayUser?.user_id === user.user_id} onOpenChange={(open) => { if (!open) { setOverlayUser(null); setExpandedUserId(null); } }}>
-                    <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
                       <DialogHeader>
                         <DialogTitle>User settings</DialogTitle>
                       </DialogHeader>
@@ -1168,6 +1168,11 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                         </div>
                       </div>
 
+                      {/* Scope label — amber accent to signal "this is the override layer" */}
+                      <div className="border-l-2 border-amber-500 pl-3 py-1 mt-2">
+                        <h3 className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">Per-user permissions</h3>
+                        <p className="text-xs text-muted-foreground mt-0.5">Overrides the role default for this user only. Toggles marked "override" differ from the role.</p>
+                      </div>
                       {/* Page access grid */}
                       <div>
                         <div className="flex items-center justify-between mb-2">
@@ -1265,7 +1270,24 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                                           />
                                           <span>{p.label}</span>
                                           {isOverride && (
-                                            <span className="text-[10px] text-amber-600 dark:text-amber-400 ml-auto">override</span>
+                                            <span className="ml-auto flex items-center gap-1.5 text-[10px] text-amber-600 dark:text-amber-400">
+                                              override
+                                              <span className="text-muted-foreground">· role: {(templatePerms[p.key] ?? false) ? 'on' : 'off'}</span>
+                                              {!readOnly && (
+                                                <button
+                                                  type="button"
+                                                  onClick={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    toggleAgentPermission(agent.id, p.key as keyof AgentPermission, templatePerms[p.key] ?? false, false);
+                                                  }}
+                                                  title="Reset to role default"
+                                                  className="hover:text-amber-700 dark:hover:text-amber-300"
+                                                >
+                                                  <RotateCcw className="h-3 w-3" />
+                                                </button>
+                                              )}
+                                            </span>
                                           )}
                                         </label>
                                       );
@@ -1364,7 +1386,28 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                                             style={{ accentColor: viewIsOverride ? '#B45309' : undefined }}
                                           />
                                           view
-                                          {viewIsOverride && <span className="text-[10px] text-amber-600 dark:text-amber-400">override</span>}
+                                          {viewIsOverride && (
+                                            <span className="flex items-center gap-1 text-[10px] text-amber-600 dark:text-amber-400">
+                                              override
+                                              <span className="text-muted-foreground">· role: {((rolePerms as any)[viewKey] ?? false) ? 'on' : 'off'}</span>
+                                              {!readOnly && (
+                                                <button
+                                                  type="button"
+                                                  onClick={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    const updates = { ...selectedUserClientPerms, [viewKey]: (rolePerms as any)[viewKey] ?? false };
+                                                    if (!updates[viewKey]) updates[manageKey] = false;
+                                                    setSelectedUserClientPerms(updates);
+                                                  }}
+                                                  title="Reset to role default"
+                                                  className="hover:text-amber-700 dark:hover:text-amber-300"
+                                                >
+                                                  <RotateCcw className="h-3 w-3" />
+                                                </button>
+                                              )}
+                                            </span>
+                                          )}
                                         </label>
                                         {tab.viewOnly ? (
                                           <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground/40">
@@ -1388,7 +1431,28 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                                               style={{ accentColor: manageIsOverride ? '#B45309' : undefined }}
                                             />
                                             manage
-                                            {manageIsOverride && <span className="text-[10px] text-amber-600 dark:text-amber-400">override</span>}
+                                            {manageIsOverride && (
+                                              <span className="flex items-center gap-1 text-[10px] text-amber-600 dark:text-amber-400">
+                                                override
+                                                <span className="text-muted-foreground">· role: {((rolePerms as any)[manageKey] ?? false) ? 'on' : 'off'}</span>
+                                                {!readOnly && (
+                                                  <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                      e.preventDefault();
+                                                      e.stopPropagation();
+                                                      const updates = { ...selectedUserClientPerms, [manageKey]: (rolePerms as any)[manageKey] ?? false };
+                                                      if (updates[manageKey]) updates[viewKey] = true;
+                                                      setSelectedUserClientPerms(updates);
+                                                    }}
+                                                    title="Reset to role default"
+                                                    className="hover:text-amber-700 dark:hover:text-amber-300"
+                                                  >
+                                                    <RotateCcw className="h-3 w-3" />
+                                                  </button>
+                                                )}
+                                              </span>
+                                            )}
                                           </label>
                                         )}
                                       </div>
@@ -1402,7 +1466,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
 
                       {/* Action buttons */}
                       {!readOnly && (
-                      <div className="flex items-center justify-between pt-2">
+                      <div className="flex items-center justify-between sticky bottom-0 bg-background border-t pt-3 -mx-6 px-6 pb-1">
                         {user.has_overrides && (
                           <Button
                             size="sm"
@@ -1650,7 +1714,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
 
       {/* Add User Dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add New User</DialogTitle>
           </DialogHeader>
