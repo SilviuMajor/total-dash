@@ -1,6 +1,6 @@
 # TotalDash — Backlog
 
-> Last revised: 26 April 2026
+> Last revised: 28 April 2026
 > Purpose: living document. Single source of truth for everything outstanding.
 > Workflow: pick an item, open a fresh Claude Code session, paste the entry into plan mode, work through clarifications, execute. Mark items done with date + commit hash; don't delete.
 
@@ -54,9 +54,9 @@ Audit found 16 confirmed bugs (1 Critical, 5 High, 7 Medium, 3 Low) and rejected
 
 ---
 
-### N11-F1 — Role change "Keep current permissions" leaks orphan role_id + drops UI edits ✅ DONE (2026-04-27)
+### N11-F1 — Role change "Keep current permissions" leaks orphan role_id + drops UI edits ✅ DONE (2026-04-27, tested 2026-04-28)
 
-**Type:** Bug (Critical) | **Effort:** Small | **Status:** Shipped
+**Type:** Bug (Critical) | **Effort:** Small | **Status:** Shipped — `3bd2171`
 
 Both modal paths now update `client_user_permissions.role_id` (no more orphan), persist in-memory permission edits when the affected user is the expanded one (no more silently dropped toggles), and surface DB errors via destructive toast instead of always claiming success.
 
@@ -64,9 +64,9 @@ Both modal paths now update `client_user_permissions.role_id` (no more orphan), 
 
 ---
 
-### N11-F2 — Silent failures on every Roles toggle ✅ DONE (2026-04-27)
+### N11-F2 — Silent failures on every Roles toggle ✅ DONE (2026-04-27, tested 2026-04-28)
 
-**Type:** Bug (High) | **Effort:** Small | **Status:** Shipped
+**Type:** Bug (High) | **Effort:** Small | **Status:** Shipped — `3bd2171`
 
 `togglePermission` and `toggleClientPermissions` now apply optimistic UI, await the update, roll back on error, and toast destructively. `applyToAllUsers` collects per-agent errors across the loop and surfaces them. No more false "Saved" toasts on RLS or network failures.
 
@@ -86,9 +86,9 @@ After `RolesManagement` toggles persist to DB, no signal reaches `useClientAgent
 
 ---
 
-### N11-F4 — Settings Departments sub-tab not gated by its own permission ✅ DONE (2026-04-27)
+### N11-F4 — Settings Departments sub-tab not gated by its own permission ✅ DONE (2026-04-27, tested 2026-04-28)
 
-**Type:** Bug (High) | **Effort:** Tiny | **Status:** Shipped
+**Type:** Bug (High) | **Effort:** Tiny | **Status:** Shipped — `3bd2171`
 
 Departments sub-tab button and content are now gated by `showDepartments`. A `SubTabGuard` helper auto-redirects the active sub-tab to "team" if the user lands on a hidden one (e.g. their permission gets revoked while the page is open).
 
@@ -96,9 +96,9 @@ Departments sub-tab button and content are now gated by `showDepartments`. A `Su
 
 ---
 
-### N11-F5 — Settings.tsx audit log uses `=== true` while other tabs use `!== false` ✅ DONE (2026-04-27)
+### N11-F5 — Settings.tsx audit log uses `=== true` while other tabs use `!== false` ✅ DONE (2026-04-27, tested 2026-04-28)
 
-**Type:** Bug (High) | **Effort:** Tiny | **Status:** Shipped
+**Type:** Bug (High) | **Effort:** Tiny | **Status:** Shipped — `3bd2171`
 
 Audit Log now uses `!== false` for both Layer-2 ceiling and view permission, matching the other Company Settings tabs. To keep Audit Log default-off, set the capability/permission to `false` explicitly in seeds — no more silent operator drift.
 
@@ -106,9 +106,9 @@ Audit Log now uses `!== false` for both Layer-2 ceiling and view permission, mat
 
 ---
 
-### N11-F6 — RolesManagement rendered without readOnly prop in Settings.tsx (privilege escalation) ✅ DONE (2026-04-27)
+### N11-F6 — RolesManagement rendered without readOnly prop in Settings.tsx (privilege escalation) ✅ DONE (2026-04-27, tested 2026-04-28)
 
-**Type:** Bug (High) | **Effort:** Small | **Status:** Shipped
+**Type:** Bug (High) | **Effort:** Small | **Status:** Shipped — `3bd2171`
 
 Roles sub-tab is now gated by `canManageTeam` (i.e. `settings_team_manage`) — both the button and the content. View-only users can still see Departments and Users tabs but cannot reach the Roles editor at all. The `SubTabGuard` redirects to Users if the user is on the Roles tab when their manage permission is revoked. Read-only mode for RolesManagement itself was deferred — gating the entry point is the simpler, safer cut.
 
@@ -726,7 +726,7 @@ Low priority. Do opportunistically when touching related code.
 
 Date-stamped log of items shipped. Don't delete — provides commit-trail context for future work.
 
-**Completed:** 2026-04-27 — N11 follow-ups F1, F2, F4, F5, F6 landed in one pass. F1: both role-change modal paths now sync `client_user_permissions.role_id`, persist in-memory permission edits when the affected user is expanded, and surface DB errors. F2: optimistic-with-rollback + destructive toasts on RolesManagement saves. F4: Departments sub-tab gated by `showDepartments` with auto-redirect. F5: Audit Log unified to `!== false` parity. F6: Roles sub-tab gated by `settings_team_manage`. F3 (Realtime invalidation), F7-F16 still open.
+**Completed:** 2026-04-27 — `3bd2171` — N11 follow-ups F1, F2, F4, F5, F6 landed in one pass; tested in app on 2026-04-28 by Silv (smoke pass — no regressions surfaced beyond pre-existing N27/N28). F1: both role-change modal paths now sync `client_user_permissions.role_id`, persist in-memory permission edits when the affected user is expanded, and surface DB errors. F2: optimistic-with-rollback + destructive toasts on RolesManagement saves. F4: Departments sub-tab gated by `showDepartments` with auto-redirect. F5: Audit Log unified to `!== false` parity. F6: Roles sub-tab gated by `settings_team_manage`. F3 (Realtime invalidation), F7-F16 still open.
 
 **Completed:** 2026-04-27 — N11 audit: read-only walkthrough of the 4-layer permission system. Wrote `docs/audits/2026-04-N11-permissions-audit.md` with 16 confirmed bugs (1 Critical, 5 High, 7 Medium, 3 Low) + 1 UX wording cluster. Filed each as N11-F1 through N11-F17 above. Rejected 2 false alarms (admin_tier doesn't bypass ceilings; agent-scoped pages ARE gated by `ProtectedRoute`).
 
