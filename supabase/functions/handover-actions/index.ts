@@ -164,34 +164,7 @@ async function handleAcceptHandover(
     );
   }
 
-  // Get current conversation status before updating
-  const { data: convBeforeAccept } = await supabaseClient
-    .from("conversations")
-    .select("status")
-    .eq("id", conversationId)
-    .single();
-
-  // Update conversation status and owner
-  await supabaseClient
-    .from("conversations")
-    .update({
-      status: "in_handover",
-      owner_id: clientUserId,
-      owner_name: clientUserName,
-      last_activity_at: new Date().toISOString(),
-    })
-    .eq("id", conversationId);
-
-  // Log status change
-  await supabaseClient.from("conversation_status_history").insert({
-    conversation_id: conversationId,
-    from_status: convBeforeAccept?.status || "waiting",
-    to_status: "in_handover",
-    changed_by_type: "client_user",
-    changed_by_id: clientUserId,
-  });
-
-  // Get handover messages config
+  // Resolve the joined-message template before the atomic transition.
   const { data: conv } = await supabaseClient
     .from("conversations")
     .select("agent_id")
@@ -212,18 +185,31 @@ async function handleAcceptHandover(
     joinedMessage = template.replace("{CLIENT_USER_NAME}", clientUserName);
   }
 
-  // Store system message
-  await supabaseClient.from("transcripts").insert({
-    conversation_id: conversationId,
-    speaker: "system",
-    text: joinedMessage,
-    metadata: {
-      type: "handover_accepted",
-      client_user_id: clientUserId,
-      client_user_name: clientUserName,
-      timestamp: new Date().toISOString(),
-    },
-  });
+  // Atomic: conversation update + status history + system transcript.
+  const { error: transitionError } = await supabaseClient.rpc(
+    "transition_conversation_status",
+    {
+      p_conversation_id: conversationId,
+      p_to_status: "in_handover",
+      p_changed_by_type: "client_user",
+      p_changed_by_id: clientUserId,
+      p_conversation_patch: {
+        owner_id: clientUserId,
+        owner_name: clientUserName,
+      },
+      p_transcript_text: joinedMessage,
+      p_transcript_metadata: {
+        type: "handover_accepted",
+        client_user_id: clientUserId,
+        client_user_name: clientUserName,
+        timestamp: new Date().toISOString(),
+      },
+    }
+  );
+  if (transitionError) {
+    console.error("Failed to transition conversation on accept:", transitionError);
+    throw new Error("Failed to accept handover");
+  }
 
   // Mark conversation as read for this user
   await supabaseClient
@@ -351,28 +337,7 @@ async function handleTakeOver(
     throw new Error("Failed to take over conversation");
   }
 
-  // Update conversation
-  await supabaseClient
-    .from("conversations")
-    .update({
-      status: "in_handover",
-      owner_id: clientUserId,
-      owner_name: clientUserName,
-      department_id: departmentId,
-      last_activity_at: new Date().toISOString(),
-    })
-    .eq("id", conversationId);
-
-  // Log status change
-  await supabaseClient.from("conversation_status_history").insert({
-    conversation_id: conversationId,
-    from_status: conv.status,
-    to_status: "in_handover",
-    changed_by_type: "client_user",
-    changed_by_id: clientUserId,
-  });
-
-  // Get agent config for message template
+  // Resolve message template before the atomic transition.
   let joinedMessage = `Now speaking with ${clientUserName}`;
   const { data: agent } = await supabaseClient
     .from("agents")
@@ -387,25 +352,40 @@ async function handleTakeOver(
     );
   }
 
-  // Store system message. N6: when the prior session ended (timeout/inactivity/completed),
-  // mark this transcript as a session_refreshed event so the widget can re-enter handover
-  // mode after it received handover_ended on the prior session. Otherwise behave as a
-  // normal handover_accepted notification.
-  await supabaseClient.from("transcripts").insert({
-    conversation_id: conversationId,
-    speaker: "system",
-    text: joinedMessage,
-    metadata: {
-      type: isRefreshAfterEnded ? "session_refreshed" : "handover_accepted",
-      client_user_id: clientUserId,
-      client_user_name: clientUserName,
-      takeover_type: "proactive",
-      previous_session_id: prevSessionId,
-      previous_session_status: prevSessionStatus,
-      new_session_id: session.id,
-      timestamp: new Date().toISOString(),
-    },
-  });
+  // Atomic: conversation update + status history + system transcript.
+  // N6: when the prior session ended (timeout/inactivity/completed),
+  // mark this transcript as a session_refreshed event so the widget can
+  // re-enter handover mode after it received handover_ended on the prior
+  // session. Otherwise behave as a normal handover_accepted notification.
+  const { error: transitionError } = await supabaseClient.rpc(
+    "transition_conversation_status",
+    {
+      p_conversation_id: conversationId,
+      p_to_status: "in_handover",
+      p_changed_by_type: "client_user",
+      p_changed_by_id: clientUserId,
+      p_conversation_patch: {
+        owner_id: clientUserId,
+        owner_name: clientUserName,
+        department_id: departmentId,
+      },
+      p_transcript_text: joinedMessage,
+      p_transcript_metadata: {
+        type: isRefreshAfterEnded ? "session_refreshed" : "handover_accepted",
+        client_user_id: clientUserId,
+        client_user_name: clientUserName,
+        takeover_type: "proactive",
+        previous_session_id: prevSessionId,
+        previous_session_status: prevSessionStatus,
+        new_session_id: session.id,
+        timestamp: new Date().toISOString(),
+      },
+    }
+  );
+  if (transitionError) {
+    console.error("Failed to transition conversation on takeover:", transitionError);
+    throw new Error("Failed to take over conversation");
+  }
 
   return { session };
 }
@@ -454,58 +434,51 @@ async function handleEndHandover(
     })
     .eq("id", session.id);
 
-  // Update conversation status
+  // Build conversation patch. Resolved is a terminal state — stamp the
+  // archive marker so the Transcripts page treats it as ended.
   const nowIso = new Date().toISOString();
-  const convUpdate: Record<string, any> = {
-    status: newStatus,
-    last_activity_at: nowIso,
-  };
+  const conversationPatch: Record<string, any> = {};
   if (resolve) {
-    // Resolved is a terminal state — stamp the archive marker so the
-    // Transcripts page treats this conversation as ended.
     const { data: convForDuration } = await supabaseClient
       .from("conversations")
       .select("started_at")
       .eq("id", conversationId)
       .single();
-    convUpdate.ended_at = nowIso;
+    conversationPatch.ended_at = nowIso;
     if (convForDuration?.started_at) {
-      convUpdate.duration = Math.max(
+      conversationPatch.duration = Math.max(
         0,
         Math.floor((Date.parse(nowIso) - Date.parse(convForDuration.started_at)) / 1000)
       );
     }
     if (resolution_reason) {
-      convUpdate.resolution_reason = resolution_reason;
-      convUpdate.resolution_note = resolution_note || null;
+      conversationPatch.resolution_reason = resolution_reason;
+      conversationPatch.resolution_note = resolution_note || null;
     }
   }
-  await supabaseClient
-    .from("conversations")
-    .update(convUpdate)
-    .eq("id", conversationId);
 
-  // Log status change
-  await supabaseClient.from("conversation_status_history").insert({
-    conversation_id: conversationId,
-    from_status: "in_handover",
-    to_status: newStatus,
-    changed_by_type: "client_user",
-    changed_by_id: clientUserId,
-  });
-
-  // Store handover ended system message
-  await supabaseClient.from("transcripts").insert({
-    conversation_id: conversationId,
-    speaker: "system",
-    text: "Handover ended",
-    metadata: {
-      type: "handover_ended",
-      resolved: resolve,
-      client_user_id: clientUserId,
-      timestamp: new Date().toISOString(),
-    },
-  });
+  // Atomic: conversation update + status history + handover-ended transcript.
+  const { error: transitionError } = await supabaseClient.rpc(
+    "transition_conversation_status",
+    {
+      p_conversation_id: conversationId,
+      p_to_status: newStatus,
+      p_changed_by_type: "client_user",
+      p_changed_by_id: clientUserId,
+      p_conversation_patch: conversationPatch,
+      p_transcript_text: "Handover ended",
+      p_transcript_metadata: {
+        type: "handover_ended",
+        resolved: resolve,
+        client_user_id: clientUserId,
+        timestamp: new Date().toISOString(),
+      },
+    }
+  );
+  if (transitionError) {
+    console.error("Failed to transition conversation on end_handover:", transitionError);
+    throw new Error("Failed to end handover");
+  }
 
   // Get the department name for Voiceflow variables
   let departmentName = "Support";
@@ -728,33 +701,43 @@ async function handleTransfer(
     transferMessage = template.replace("{DEPARTMENT}", targetDept.name);
   }
 
-  // Store transfer system message
-  await supabaseClient.from("transcripts").insert({
-    conversation_id: conversationId,
-    speaker: "system",
-    text: transferMessage,
-    metadata: {
-      type: "transfer_initiated",
-      from_user_id: clientUserId,
-      from_user_name: clientUserName,
-      to_department_id: targetDepartmentId,
-      to_department_name: targetDept.name,
-      transfer_note: transferNote,
-      timestamp: new Date().toISOString(),
-    },
-  });
-
-  // Clear ownership — conversation is now pending for new department
-  await supabaseClient
-    .from("conversations")
-    .update({
-      status: "waiting",
-      owner_id: null,
-      owner_name: null,
-      department_id: targetDepartmentId,
-      last_activity_at: new Date().toISOString(),
-    })
-    .eq("id", conversationId);
+  // Atomic: clear ownership + flip to waiting + log status history + insert
+  // transfer system message. Adds status_history (which the previous
+  // sequential code path did not write) so transfers leave a complete audit
+  // trail.
+  const { error: transitionError } = await supabaseClient.rpc(
+    "transition_conversation_status",
+    {
+      p_conversation_id: conversationId,
+      p_to_status: "waiting",
+      p_changed_by_type: "client_user",
+      p_changed_by_id: clientUserId,
+      p_history_metadata: {
+        reason: "transfer",
+        to_department_id: targetDepartmentId,
+        to_department_name: targetDept.name,
+      },
+      p_conversation_patch: {
+        owner_id: null,
+        owner_name: null,
+        department_id: targetDepartmentId,
+      },
+      p_transcript_text: transferMessage,
+      p_transcript_metadata: {
+        type: "transfer_initiated",
+        from_user_id: clientUserId,
+        from_user_name: clientUserName,
+        to_department_id: targetDepartmentId,
+        to_department_name: targetDept.name,
+        transfer_note: transferNote,
+        timestamp: new Date().toISOString(),
+      },
+    }
+  );
+  if (transitionError) {
+    console.error("Failed to transition conversation on transfer:", transitionError);
+    throw new Error("Failed to complete transfer");
+  }
 
   return { newSession, targetDepartment: targetDept.name };
 }
@@ -908,34 +891,35 @@ async function handleMarkResolved(
     .eq("id", conversationId)
     .single();
 
-  const convUpdate: Record<string, any> = {
-    status: "resolved",
-    last_activity_at: nowIso,
+  const conversationPatch: Record<string, any> = {
     ended_at: nowIso,
   };
   if (convForDuration?.started_at) {
-    convUpdate.duration = Math.max(
+    conversationPatch.duration = Math.max(
       0,
       Math.floor((Date.parse(nowIso) - Date.parse(convForDuration.started_at)) / 1000)
     );
   }
   if (resolution_reason) {
-    convUpdate.resolution_reason = resolution_reason;
-    convUpdate.resolution_note = resolution_note || null;
+    conversationPatch.resolution_reason = resolution_reason;
+    conversationPatch.resolution_note = resolution_note || null;
   }
-  await supabaseClient
-    .from("conversations")
-    .update(convUpdate)
-    .eq("id", conversationId);
 
-  // Log status change
-  await supabaseClient.from("conversation_status_history").insert({
-    conversation_id: conversationId,
-    from_status: conv.status,
-    to_status: "resolved",
-    changed_by_type: "client_user",
-    changed_by_id: clientUserId,
-  });
+  // Atomic: conversation update + status history (no transcript on this path).
+  const { error: transitionError } = await supabaseClient.rpc(
+    "transition_conversation_status",
+    {
+      p_conversation_id: conversationId,
+      p_to_status: "resolved",
+      p_changed_by_type: "client_user",
+      p_changed_by_id: clientUserId,
+      p_conversation_patch: conversationPatch,
+    }
+  );
+  if (transitionError) {
+    console.error("Failed to transition conversation on mark_resolved:", transitionError);
+    throw new Error("Failed to mark as resolved");
+  }
 
   return { status: "resolved" };
 }

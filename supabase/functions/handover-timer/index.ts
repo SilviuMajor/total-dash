@@ -174,17 +174,30 @@ serve(async (req) => {
             continue;
           }
 
-          // Update conversation
-          await supabaseClient
-            .from("conversations")
-            .update({
-              status: "needs_review",
-              needs_review_reason: "timeout",
-              last_activity_at: new Date().toISOString(),
-            })
-            .eq("id", session.conversation_id);
+          // Atomic: conversation update + status history + the user-visible
+          // "no agents available" transcript.
+          const { error: transitionError } = await supabaseClient.rpc(
+            "transition_conversation_status",
+            {
+              p_conversation_id: session.conversation_id,
+              p_to_status: "needs_review",
+              p_changed_by_type: "system",
+              p_history_metadata: { reason: "handover_timeout" },
+              p_conversation_patch: { needs_review_reason: "timeout" },
+              p_transcript_text: "No agents available at the moment",
+              p_transcript_metadata: {
+                type: "handover_timeout",
+                timestamp: new Date().toISOString(),
+              },
+            }
+          );
+          if (transitionError) {
+            console.error("Failed to transition conversation on pending timeout:", transitionError);
+            results.errors.push(`Session ${session.id}: transition failed`);
+            continue;
+          }
 
-          // Tag conversation
+          // Tag conversation (non-status side effect)
           await supabaseClient
             .from("conversation_tags")
             .upsert(
@@ -196,18 +209,9 @@ serve(async (req) => {
               { onConflict: "conversation_id,tag_name", ignoreDuplicates: true }
             );
 
-          // Store system message
-          await supabaseClient.from("transcripts").insert({
-            conversation_id: session.conversation_id,
-            speaker: "system",
-            text: "No agents available at the moment",
-            metadata: {
-              type: "handover_timeout",
-              timestamp: new Date().toISOString(),
-            },
-          });
-
-          // Insert handover_ended so the widget detects the end and fetches resume messages
+          // Widget-mechanics signal: separate from the atomic block. If this
+          // insert fails the conversation status is still correct; the widget
+          // just won't auto-fetch resume messages.
           await supabaseClient.from("transcripts").insert({
             conversation_id: session.conversation_id,
             speaker: "system",
@@ -218,15 +222,6 @@ serve(async (req) => {
               reason: "timeout",
               timestamp: new Date().toISOString(),
             },
-          });
-
-          // Log status change
-          await supabaseClient.from("conversation_status_history").insert({
-            conversation_id: session.conversation_id,
-            from_status: "with_ai",
-            to_status: "needs_review",
-            changed_by_type: "system",
-            metadata: { reason: "handover_timeout" },
           });
 
           // Resume Voiceflow with timeout path
@@ -532,29 +527,33 @@ serve(async (req) => {
               continue;
             }
 
-            // Update conversation
-            await supabaseClient
-              .from("conversations")
-              .update({
-                status: "needs_review",
-                needs_review_reason: "inactivity",
-                last_activity_at: new Date().toISOString(),
-              })
-              .eq("id", session.conversation_id);
+            // Atomic: conversation update + status history + the user-visible
+            // "closed due to inactivity" transcript.
+            const { error: transitionError } = await supabaseClient.rpc(
+              "transition_conversation_status",
+              {
+                p_conversation_id: session.conversation_id,
+                p_to_status: "needs_review",
+                p_changed_by_type: "system",
+                p_history_metadata: { reason: "inactivity_timeout" },
+                p_conversation_patch: { needs_review_reason: "inactivity" },
+                p_transcript_text: "Conversation closed due to inactivity",
+                p_transcript_metadata: {
+                  type: "inactivity_timeout",
+                  minutes_inactive: Math.floor(minutesSinceCustomer),
+                  timestamp: new Date().toISOString(),
+                },
+              }
+            );
+            if (transitionError) {
+              console.error("Failed to transition conversation on inactivity timeout:", transitionError);
+              results.errors.push(`Session ${session.id}: transition failed`);
+              continue;
+            }
 
-            // Store system message
-            await supabaseClient.from("transcripts").insert({
-              conversation_id: session.conversation_id,
-              speaker: "system",
-              text: "Conversation closed due to inactivity",
-              metadata: {
-                type: "inactivity_timeout",
-                minutes_inactive: Math.floor(minutesSinceCustomer),
-                timestamp: new Date().toISOString(),
-              },
-            });
-
-            // Insert handover_ended so the widget detects the end and fetches resume messages
+            // Widget-mechanics signal: separate from the atomic block. If
+            // this insert fails the conversation status is still correct;
+            // the widget just won't auto-fetch resume messages.
             await supabaseClient.from("transcripts").insert({
               conversation_id: session.conversation_id,
               speaker: "system",
@@ -565,15 +564,6 @@ serve(async (req) => {
                 reason: "inactivity",
                 timestamp: new Date().toISOString(),
               },
-            });
-
-            // Log status change
-            await supabaseClient.from("conversation_status_history").insert({
-              conversation_id: session.conversation_id,
-              from_status: "in_handover",
-              to_status: "needs_review",
-              changed_by_type: "system",
-              metadata: { reason: "inactivity_timeout" },
             });
 
             // Resume Voiceflow with inactivity_timeout path
