@@ -2056,8 +2056,8 @@ export default function Conversations() {
                                   <div
                                     className={
                                       onlyFileAttachments
-                                        ? 'text-sm max-w-[400px]'
-                                        : `bg-card border border-border rounded-xl rounded-tl-sm text-sm max-w-[400px] ${hasText ? 'px-3 py-2' : 'p-1'}`
+                                        ? 'text-sm max-w-[400px] w-fit'
+                                        : `bg-card border border-border rounded-xl rounded-tl-sm text-sm max-w-[400px] w-fit ${hasText ? 'px-3 py-2' : 'p-1'}`
                                     }
                                   >
                                     {hasText && <div className="whitespace-pre-wrap">{transcript.text}</div>}
