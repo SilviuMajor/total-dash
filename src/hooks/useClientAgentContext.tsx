@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useMultiTenantAuth } from './useMultiTenantAuth';
@@ -171,6 +171,14 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
   const { user, profile } = useAuth();
   const { isClientPreviewMode, previewClient, previewDepth, userType } = useMultiTenantAuth();
   const { isImpersonating, activeSession, impersonationMode, targetUserId, targetClientId, loading: impersonationLoading } = useImpersonation();
+
+  // F3/F9: refs used by the Realtime invalidation effects. Held in refs (not
+  // closure) so the channel callbacks always read the latest selection and
+  // refresh dispatcher without re-subscribing on every render.
+  const selectedAgentIdRef = useRef<string | null>(null);
+  const refreshFnRef = useRef<() => void>(() => {});
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => { selectedAgentIdRef.current = selectedAgentId; }, [selectedAgentId]);
 
   useEffect(() => {
     const currentPath = window.location.pathname;
@@ -423,10 +431,13 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
 
       setAgents(agentsList.map(({ effectivePermissions, ...agent }: any) => agent));
 
-      const firstAgent = agentsList[0];
-      if (firstAgent) {
-        setSelectedAgentId(firstAgent.id);
-        setSelectedAgentPermissions(firstAgent.effectivePermissions);
+      // F3/F9: preserve current selection across live invalidation reloads.
+      const currentId = selectedAgentIdRef.current;
+      const preserved = currentId ? agentsList.find((a: any) => a.id === currentId) : null;
+      const chosen = preserved || agentsList[0];
+      if (chosen) {
+        if (!preserved) setSelectedAgentId(chosen.id);
+        setSelectedAgentPermissions(chosen.effectivePermissions);
       } else {
         setSelectedAgentId(null);
         setSelectedAgentPermissions(null);
@@ -571,10 +582,13 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
 
       setAgents(agentsList.map(({ effectivePermissions, ...agent }: any) => agent));
 
-      const firstAgent = agentsList[0];
-      if (firstAgent) {
-        setSelectedAgentId(firstAgent.id);
-        setSelectedAgentPermissions(firstAgent.effectivePermissions);
+      // F3/F9: preserve current selection across live invalidation reloads.
+      const currentId = selectedAgentIdRef.current;
+      const preserved = currentId ? agentsList.find((a: any) => a.id === currentId) : null;
+      const chosen = preserved || agentsList[0];
+      if (chosen) {
+        if (!preserved) setSelectedAgentId(chosen.id);
+        setSelectedAgentPermissions(chosen.effectivePermissions);
       }
     } catch (error) {
       console.error('Error loading client agents:', error);
@@ -677,6 +691,74 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
       loadAgentPermissions();
     }
   }, [selectedAgentId, user, clientId, profile, isImpersonating, impersonationMode, targetUserId]);
+
+  // F3/F9: Realtime permission invalidation
+  // ─────────────────────────────────────────
+  // Without this, an admin changing role templates (F3) or Layer-2 ceilings
+  // (F9) doesn't reach active client-user sessions until they hard-refresh.
+  // We subscribe to the underlying tables and refetch on any change, debounced
+  // so a "Apply to N users" burst coalesces into one refresh.
+
+  // Keep the refresh dispatcher fresh so channel callbacks bound at subscribe
+  // time always invoke the current loader closures.
+  useEffect(() => {
+    refreshFnRef.current = () => {
+      if (isImpersonating && activeSession?.client_id && impersonationMode === 'view_as_user' && targetUserId) {
+        loadClientAgentsAsUser(activeSession.client_id, targetUserId);
+      } else if (profile?.role === 'client' && user) {
+        loadClientAgents();
+      }
+      // Preview mode (loadClientAgentsForPreview) short-circuits to all-true,
+      // so we intentionally don't re-run it on Realtime events.
+    };
+  });
+
+  const triggerPermissionRefresh = () => {
+    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+    refreshTimerRef.current = setTimeout(() => refreshFnRef.current(), 250);
+  };
+
+  // Stable subs — re-bind only when the user/client identity changes.
+  useEffect(() => {
+    if (!user?.id || !clientId) return;
+    if (isImpersonating && impersonationMode !== 'view_as_user') return; // skip preview mode
+    if (!isImpersonating && profile?.role !== 'client') return;
+
+    const resolveUserId = (isImpersonating && targetUserId) ? targetUserId : user.id;
+
+    const channel = supabase
+      .channel(`perm-invalidation-${clientId}-${resolveUserId}`)
+      .on('postgres_changes' as any, { event: '*', schema: 'public', table: 'role_permission_templates', filter: `client_id=eq.${clientId}` }, triggerPermissionRefresh)
+      .on('postgres_changes' as any, { event: '*', schema: 'public', table: 'client_roles', filter: `client_id=eq.${clientId}` }, triggerPermissionRefresh)
+      .on('postgres_changes' as any, { event: '*', schema: 'public', table: 'client_settings', filter: `client_id=eq.${clientId}` }, triggerPermissionRefresh)
+      .on('postgres_changes' as any, { event: '*', schema: 'public', table: 'client_user_permissions', filter: `user_id=eq.${resolveUserId}` }, triggerPermissionRefresh)
+      .on('postgres_changes' as any, { event: '*', schema: 'public', table: 'client_user_agent_permissions', filter: `user_id=eq.${resolveUserId}` }, triggerPermissionRefresh)
+      .subscribe();
+
+    return () => {
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current);
+        refreshTimerRef.current = null;
+      }
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, clientId, profile?.role, isImpersonating, impersonationMode, targetUserId]);
+
+  // Per-agent ceiling sub — re-binds when the selected agent changes.
+  useEffect(() => {
+    if (!selectedAgentId || !clientId) return;
+    if (isImpersonating && impersonationMode !== 'view_as_user') return;
+    if (!isImpersonating && profile?.role !== 'client') return;
+
+    const channel = supabase
+      .channel(`perm-agent-${selectedAgentId}`)
+      .on('postgres_changes' as any, { event: '*', schema: 'public', table: 'agents', filter: `id=eq.${selectedAgentId}` }, triggerPermissionRefresh)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedAgentId, clientId, profile?.role, isImpersonating, impersonationMode]);
 
   return (
     <ClientAgentContext.Provider
