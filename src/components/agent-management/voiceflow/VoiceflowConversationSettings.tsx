@@ -37,6 +37,7 @@ export function VoiceflowConversationSettings({ agent, onUpdate }: Props) {
     []
   );
   const [tags, setTags] = useState<Array<{ id: string; label: string }>>(initialTags);
+  const [tagsEnabled, setTagsEnabled] = useState<boolean>(agent.config?.tags_enabled ?? true);
   const [allowAdhocTags, setAllowAdhocTags] = useState(agent.config?.allow_adhoc_tags ?? false);
   const [newTagLabel, setNewTagLabel] = useState('');
   const [editingTagId, setEditingTagId] = useState<string | null>(null);
@@ -120,6 +121,7 @@ export function VoiceflowConversationSettings({ agent, onUpdate }: Props) {
           resolution_reasons: resolutionReasons,
           conversation_tags: tags,
           allow_adhoc_tags: allowAdhocTags,
+          tags_enabled: tagsEnabled,
         },
       });
       if (error) throw error;
@@ -256,19 +258,24 @@ export function VoiceflowConversationSettings({ agent, onUpdate }: Props) {
 
         {/* Tags section */}
         <div className="space-y-4 p-4 border rounded-lg">
-          <div>
-            <Label className="text-sm font-medium">Tags</Label>
-            <p className="text-xs text-muted-foreground">
-              Pre-defined tags agents can apply to conversations. Deleting a tag removes it from future use but preserves it on existing conversations.
-            </p>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <Label className="text-sm font-medium">Tags</Label>
+              <p className="text-xs text-muted-foreground">
+                Pre-defined tags agents can apply to conversations. Deleting a tag removes it from future use but preserves it on existing conversations.
+              </p>
+            </div>
+            <Switch checked={tagsEnabled} onCheckedChange={setTagsEnabled} />
           </div>
+
+          <div className={tagsEnabled ? "space-y-4" : "space-y-4 opacity-50 pointer-events-none"}>
 
           <div className="flex items-center justify-between">
             <div>
               <Label className="text-sm">Allow on-the-fly tag creation</Label>
               <p className="text-xs text-muted-foreground">Let agents create new tags directly from conversations</p>
             </div>
-            <Switch checked={allowAdhocTags} onCheckedChange={setAllowAdhocTags} />
+            <Switch checked={allowAdhocTags} onCheckedChange={setAllowAdhocTags} disabled={!tagsEnabled} />
           </div>
 
           {tags.length > 0 && (
@@ -332,6 +339,8 @@ export function VoiceflowConversationSettings({ agent, onUpdate }: Props) {
               }}
             />
             <Button variant="outline" size="sm" onClick={addTag}>Add</Button>
+          </div>
+
           </div>
         </div>
 

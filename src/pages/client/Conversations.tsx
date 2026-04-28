@@ -1476,6 +1476,7 @@ export default function Conversations() {
     []
   );
   const allowAdhocTags: boolean = (agentConfig as any)?.allow_adhoc_tags ?? false;
+  const tagsEnabled: boolean = (agentConfig as any)?.tags_enabled ?? true;
 
   const resolutionReasons: Array<{ id: string; label: string; note_required: boolean }> = (agentConfig as any)?.resolution_reasons || [];
 
@@ -1496,7 +1497,7 @@ export default function Conversations() {
     if (departmentFilters.length > 0) {
       result = result.filter(c => c.department_id && departmentFilters.includes(c.department_id));
     }
-    if (tagFilters.length > 0) {
+    if (tagsEnabled && tagFilters.length > 0) {
       result = result.filter(c =>
         tagFilters.some(tag => c.metadata?.tags?.includes(tag))
       );
@@ -1515,7 +1516,7 @@ export default function Conversations() {
       return aTier - bTier;
     });
     return result;
-  }, [conversations, tagFilters, departmentFilters, pendingConversationIds, myOnly, currentClientUserId]);
+  }, [conversations, tagFilters, departmentFilters, pendingConversationIds, myOnly, currentClientUserId, tagsEnabled]);
 
   const allSelected = filteredConversations.length > 0 &&
     filteredConversations.every(c => selectedConversationIds.has(c.id));
@@ -1669,8 +1670,8 @@ export default function Conversations() {
             })}
           </div>
         )}
-        {/* Row 3: Tag filter chips — hidden when no tags exist */}
-        {availableTags.length > 0 && (
+        {/* Row 3: Tag filter chips — hidden when no tags exist or tags disabled */}
+        {tagsEnabled && availableTags.length > 0 && (
           <div className="px-4 py-1.5 flex items-center gap-1.5 border-b border-border flex-wrap">
             {tagFilters.length > 0 && (
               <button
@@ -1749,7 +1750,7 @@ export default function Conversations() {
                   </DropdownMenuContent>
                 </DropdownMenu>
 
-                {availableTags.length > 0 && (
+                {tagsEnabled && availableTags.length > 0 && (
                   <>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -1901,7 +1902,7 @@ export default function Conversations() {
                                 `: ${conv.owner_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}`
                               )}
                             </span>
-                            {conv.metadata?.tags?.map((tag: string) => (
+                            {tagsEnabled && conv.metadata?.tags?.map((tag: string) => (
                               <span
                                 key={tag}
                                 className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium bg-muted border border-border/50 text-muted-foreground"
@@ -2898,6 +2899,7 @@ export default function Conversations() {
                       </div>
                     )}
 
+                    {tagsEnabled && (
                     <div>
                       <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Tags</p>
                       {/* Applied tags as grey pills */}
@@ -2987,6 +2989,7 @@ export default function Conversations() {
                         )}
                       </div>
                     </div>
+                    )}
 
                     <div>
                       <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Note</p>
