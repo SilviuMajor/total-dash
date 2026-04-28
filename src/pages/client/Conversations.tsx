@@ -1558,27 +1558,28 @@ export default function Conversations() {
     <div className="flex flex-col h-full">
       {/* ── Unified header ── */}
       <div className="bg-card flex-shrink-0">
-        {/* Row 1: Title + count + Mine toggle */}
+        {/* Row 1: Mine toggle + Title + count */}
         <div className="px-4 pt-3 pb-0 flex items-center gap-2">
+          <Button
+            size="icon"
+            variant={myOnly ? 'default' : 'ghost'}
+            onClick={() => setMyOnly(v => !v)}
+            disabled={!canUseMineFilter || !currentClientUserId}
+            className="h-7 w-7"
+            title={
+              canUseMineFilter
+                ? (myOnly ? 'Showing only conversations assigned to me' : 'Show only conversations assigned to me')
+                : 'Switch to view-as-user mode to use this filter'
+            }
+            aria-label="Show only my conversations"
+            aria-pressed={myOnly}
+          >
+            <UserCheck className="h-3.5 w-3.5" />
+          </Button>
           <h1 className="text-[15px] font-semibold">Conversations</h1>
           <span className="text-xs text-muted-foreground px-2 py-0.5 bg-muted rounded border">
             {filteredConversations.length}
           </span>
-          <Button
-            size="sm"
-            variant={myOnly ? 'default' : 'ghost'}
-            onClick={() => setMyOnly(v => !v)}
-            disabled={!canUseMineFilter || !currentClientUserId}
-            className="h-7 text-xs px-2 ml-auto"
-            title={
-              canUseMineFilter
-                ? 'Show only conversations assigned to me'
-                : 'Switch to view-as-user mode to use this filter'
-            }
-          >
-            <UserCheck className="h-3.5 w-3.5 mr-1" />
-            Mine
-          </Button>
         </div>
 
         {/* Row 2: Status filters (multi-select toggle) */}
