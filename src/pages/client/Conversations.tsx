@@ -185,7 +185,7 @@ export default function Conversations() {
   const [handoverHistory, setHandoverHistory] = useState<any[]>([]);
   
   const [currentClientUserId, setCurrentClientUserId] = useState<string | null>(null);
-  const [pendingConversationIds, setPendingConversationIds] = useState<Map<string, string>>(new Map());
+  const [pendingConversationIds, setPendingConversationIds] = useState<Map<string, { createdAt: string; takeoverType: 'handover' | 'transfer'; timeoutSeconds: number }>>(new Map());
   const [responseTick, setResponseTick] = useState(0);
 
   // Previous conversations
@@ -598,7 +598,7 @@ export default function Conversations() {
     const loadPendingIds = async () => {
       const { data, error } = await supabase
         .from('handover_sessions')
-        .select('conversation_id, created_at')
+        .select('conversation_id, created_at, takeover_type, departments(timeout_seconds)')
         .eq('status', 'pending');
 
       if (error) {
@@ -621,7 +621,11 @@ export default function Conversations() {
         setPendingConversationIds(new Map(
           data
             .filter((d): d is typeof d & { created_at: string } => d.created_at !== null)
-            .map(d => [d.conversation_id, d.created_at])
+            .map(d => [d.conversation_id, {
+              createdAt: d.created_at,
+              takeoverType: (d as any).takeover_type === 'transfer' ? 'transfer' : 'handover',
+              timeoutSeconds: ((d as any).departments?.timeout_seconds as number | undefined) || 300,
+            }])
         ));
       }
     };
@@ -1533,8 +1537,14 @@ export default function Conversations() {
 
   const formatWaitTime = (seconds: number) => {
     if (seconds < 60) return `${seconds}s`;
-    if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
-    return `${Math.floor(seconds / 3600)}h`;
+    if (seconds < 3600) {
+      const m = Math.floor(seconds / 60);
+      const s = seconds % 60;
+      return s ? `${m}m ${s}s` : `${m}m`;
+    }
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    return m ? `${h}h ${m}m` : `${h}h`;
   };
 
   const getWaitSeconds = (conversation: any) => {
@@ -1878,30 +1888,41 @@ export default function Conversations() {
                         {/* Row 3: Status badge with owner initials + tags + clock pill */}
                         <div className="flex items-center justify-between pl-6">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className={cn(
-                              "inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold border",
-                              conv.status === 'with_ai' && "bg-green-50 text-green-600 border-green-200",
-                              conv.status === 'waiting' && "bg-red-50 text-red-600 border-red-200",
-                              conv.status === 'in_handover' && "bg-blue-50 text-blue-600 border-blue-200",
-                              conv.status === 'aftercare' && "bg-yellow-50 text-yellow-600 border-yellow-200",
-                              conv.status === 'needs_review' && "bg-amber-50 text-amber-600 border-amber-200",
-                              conv.status === 'resolved' && "bg-gray-100 text-gray-500 border-gray-200",
-                              (!['with_ai', 'waiting', 'in_handover', 'aftercare', 'needs_review', 'resolved'].includes(conv.status)) && "bg-muted text-muted-foreground border-border"
-                            )}>
-                              {conv.status === 'with_ai' ? 'With AI'
-                                : conv.status === 'waiting' ? 'Waiting'
-                                : conv.status === 'in_handover' ? 'In Handover'
-                                : conv.status === 'aftercare' ? 'Aftercare'
-                                : conv.status === 'needs_review' ? 'Needs Review'
-                                : conv.status === 'resolved' ? 'Resolved'
-                                : conv.status === 'active' ? 'Active (Legacy)'
-                                : conv.status === 'completed' ? 'Completed'
-                                : conv.status === 'owned' ? 'Owned (Legacy)'
-                                : conv.status.charAt(0).toUpperCase() + conv.status.slice(1)}
-                              {conv.owner_name && ['in_handover', 'aftercare', 'needs_review', 'resolved', 'waiting'].includes(conv.status) && (
-                                `: ${conv.owner_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}`
-                              )}
-                            </span>
+                            {(() => {
+                              const pendingMeta = pendingConversationIds.get(conv.id);
+                              const isTransfer = conv.status === 'waiting' && pendingMeta?.takeoverType === 'transfer';
+                              const waitingTimer = conv.status === 'waiting' && pendingMeta
+                                ? Math.floor((Date.now() - new Date(pendingMeta.createdAt).getTime()) / 1000)
+                                : null;
+                              const showOwnerInitials = !!conv.owner_name && ['in_handover', 'aftercare', 'needs_review', 'resolved'].includes(conv.status);
+                              return (
+                                <span className={cn(
+                                  "inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold border",
+                                  conv.status === 'with_ai' && "bg-green-50 text-green-600 border-green-200",
+                                  conv.status === 'waiting' && "bg-red-50 text-red-600 border-red-200",
+                                  conv.status === 'in_handover' && "bg-blue-50 text-blue-600 border-blue-200",
+                                  conv.status === 'aftercare' && "bg-yellow-50 text-yellow-600 border-yellow-200",
+                                  conv.status === 'needs_review' && "bg-amber-50 text-amber-600 border-amber-200",
+                                  conv.status === 'resolved' && "bg-gray-100 text-gray-500 border-gray-200",
+                                  (!['with_ai', 'waiting', 'in_handover', 'aftercare', 'needs_review', 'resolved'].includes(conv.status)) && "bg-muted text-muted-foreground border-border"
+                                )} style={{ fontVariantNumeric: 'tabular-nums' }}>
+                                  {conv.status === 'with_ai' ? 'With AI'
+                                    : conv.status === 'waiting' ? (isTransfer ? 'TRANSFER' : 'Waiting')
+                                    : conv.status === 'in_handover' ? 'In Handover'
+                                    : conv.status === 'aftercare' ? 'Aftercare'
+                                    : conv.status === 'needs_review' ? 'Needs Review'
+                                    : conv.status === 'resolved' ? 'Resolved'
+                                    : conv.status === 'active' ? 'Active (Legacy)'
+                                    : conv.status === 'completed' ? 'Completed'
+                                    : conv.status === 'owned' ? 'Owned (Legacy)'
+                                    : conv.status.charAt(0).toUpperCase() + conv.status.slice(1)}
+                                  {showOwnerInitials && (
+                                    `: ${conv.owner_name!.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}`
+                                  )}
+                                  {waitingTimer != null && ` · ${formatWaitTime(waitingTimer)}`}
+                                </span>
+                              );
+                            })()}
                             {tagsEnabled && conv.metadata?.tags?.map((tag: string) => (
                               <span
                                 key={tag}
@@ -1911,16 +1932,12 @@ export default function Conversations() {
                               </span>
                             ))}
                           </div>
-                          {/* Clock pill — show for in_handover with unanswered msg OR pending handover */}
+                          {/* Clock pill — in_handover only: time since customer's first unanswered message */}
                           {(() => {
-                            const isPending = pendingConversationIds.has(conv.id);
                             const isInHandover = conv.status === 'in_handover' && !!conv.first_unanswered_message_at;
-                            if (!isPending && !isInHandover) return null;
-                            
-                            const waitStart = isPending
-                              ? pendingConversationIds.get(conv.id)!
-                              : conv.first_unanswered_message_at!;
-                            const waitSec = Math.floor((Date.now() - new Date(waitStart).getTime()) / 1000);
+                            if (!isInHandover) return null;
+
+                            const waitSec = Math.floor((Date.now() - new Date(conv.first_unanswered_message_at!).getTime()) / 1000);
                             const { color } = getResponseTimeColor(waitSec);
                             return (
                               <span
@@ -2522,10 +2539,17 @@ export default function Conversations() {
                             <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                               {pendingSession.takeover_type === 'transfer' ? 'Transfer Request' : 'Handover Request'}
                             </p>
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <Timer className="h-3 w-3" />
-                              {pendingSession.departments?.timeout_seconds || 300}s
-                            </div>
+                            {(() => {
+                              const maxSec = pendingSession.departments?.timeout_seconds || 300;
+                              const waitSec = Math.floor((Date.now() - new Date(pendingSession.created_at).getTime()) / 1000);
+                              const { color } = getResponseTimeColor(waitSec);
+                              return (
+                                <div className="flex items-center gap-1 text-xs" style={{ color, fontVariantNumeric: 'tabular-nums' }}>
+                                  <Timer className="h-3 w-3" />
+                                  {formatWaitTime(waitSec)} / {formatWaitTime(maxSec)}
+                                </div>
+                              );
+                            })()}
                           </div>
                           {pendingSession.takeover_type === 'transfer' ? (
                             <>

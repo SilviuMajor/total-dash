@@ -325,6 +325,16 @@ serve(async (req) => {
             p_conversation_id: conversationId,
           });
 
+          // Start the "agent hasn't replied yet" clock if not already running.
+          // Cleared by handover-actions / agent-file-upload on agent reply;
+          // the IS NULL guard preserves the FIRST-unanswered timestamp across
+          // multiple consecutive customer messages.
+          await supabaseClient
+            .from("conversations")
+            .update({ first_unanswered_message_at: new Date().toISOString() })
+            .eq("id", conversationId)
+            .is("first_unanswered_message_at", null);
+
           // Also update the handover session's last_activity_at
           await supabaseClient
             .from("handover_sessions")
