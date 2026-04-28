@@ -79,6 +79,85 @@ interface AgentAssignmentRow {
   } | null;
 }
 
+// ─── F15: Shared resolvers (single source of truth) ─────────────────────────
+// The 4-layer permission stack — Agency ceiling → Client settings ceiling →
+// Role template → User override — used to live in four near-duplicate copies
+// inside this hook (preview, impersonation-as-user, real-user, and the
+// per-agent useEffect). That drift is what produced F7. These helpers are the
+// canonical resolvers; every call site now goes through them.
+
+interface AgentScopedResolverInput {
+  agentConfig: Record<string, any>;
+  role: { is_admin_tier?: boolean } | null;
+  template: Record<string, any>;
+  hasOverrides: boolean;
+  userOverrides: Record<string, any>;
+}
+
+function resolveAgentScopedKey(input: AgentScopedResolverInput, key: string): boolean {
+  const { agentConfig, role, template, hasOverrides, userOverrides } = input;
+  // Layer 1 — agency ceiling (per-agent config flag)
+  const ceilingKey = 'client_' + key + '_enabled';
+  if (agentConfig[ceilingKey] === false) return false;
+  // Admin tier override (intentional — agency-set ceilings still apply above)
+  if (role?.is_admin_tier) return true;
+  // Layer 4 — user override (only honored when has_overrides flag is true)
+  if (hasOverrides && userOverrides[key] !== undefined) return userOverrides[key];
+  // Layer 3 — role template default
+  return template[key] || false;
+}
+
+interface ClientScopedResolverInput {
+  adminCaps: Record<string, any>;
+  role: { is_admin_tier?: boolean; client_permissions?: Record<string, any> } | null;
+  hasClientOverrides: boolean;
+  userClientOverrides: Record<string, any>;
+}
+
+function resolveClientScopedKey(input: ClientScopedResolverInput, key: string, capKey: string): boolean {
+  const { adminCaps, role, hasClientOverrides, userClientOverrides } = input;
+  // Layer 2 — client_settings.admin_capabilities ceiling
+  if (adminCaps[capKey] === false) return false;
+  if (role?.is_admin_tier) return true;
+  // Layer 4 — client-scoped override from client_user_permissions
+  if (hasClientOverrides && userClientOverrides[key] !== undefined) return userClientOverrides[key];
+  // Layer 3 — role.client_permissions default
+  return role?.client_permissions?.[key] || false;
+}
+
+function buildAgentPermissions(
+  agentInput: AgentScopedResolverInput,
+  clientInput: ClientScopedResolverInput,
+): AgentPermissions {
+  return {
+    conversations: resolveAgentScopedKey(agentInput, 'conversations'),
+    transcripts: resolveAgentScopedKey(agentInput, 'transcripts'),
+    analytics: resolveAgentScopedKey(agentInput, 'analytics'),
+    specs: resolveAgentScopedKey(agentInput, 'specs'),
+    knowledge_base: resolveAgentScopedKey(agentInput, 'knowledge_base'),
+    guides: resolveAgentScopedKey(agentInput, 'guides'),
+    agent_settings: resolveAgentScopedKey(agentInput, 'agent_settings'),
+    settings_page: resolveClientScopedKey(clientInput, 'settings_page', 'settings_page_enabled'),
+    audit_log: resolveClientScopedKey(clientInput, 'audit_log', 'client_audit_log_enabled'),
+  };
+}
+
+function buildCompanySettingsPermissions(input: ClientScopedResolverInput): CompanySettingsPermissions {
+  const r = (key: string, capKey: string) => resolveClientScopedKey(input, key, capKey);
+  return {
+    settings_page: r('settings_page', 'settings_page_enabled'),
+    settings_departments_view: r('settings_departments_view', 'client_departments_enabled'),
+    settings_departments_manage: r('settings_departments_manage', 'client_departments_enabled'),
+    settings_team_view: r('settings_team_view', 'client_team_enabled'),
+    settings_team_manage: r('settings_team_manage', 'client_team_enabled'),
+    settings_canned_responses_view: r('settings_canned_responses_view', 'client_canned_responses_enabled'),
+    settings_canned_responses_manage: r('settings_canned_responses_manage', 'client_canned_responses_enabled'),
+    settings_general_view: r('settings_general_view', 'client_general_enabled'),
+    settings_general_manage: r('settings_general_manage', 'client_general_enabled'),
+    settings_audit_log_view: r('settings_audit_log_view', 'client_audit_log_enabled'),
+  };
+}
+
 export function ClientAgentProvider({ children }: { children: ReactNode }) {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
@@ -301,26 +380,11 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
       const userClientOverrides = (userClientPerms?.client_permissions || {}) as Record<string, any>;
       const hasClientOverrides = userClientPerms?.has_overrides || false;
 
-      // Resolve company settings as target user
-      const resolveCompanyPerm = (key: string, capKey: string): boolean => {
-        if (adminCaps[capKey] === false) return false;
-        if (role?.is_admin_tier) return true;
-        if (hasClientOverrides && userClientOverrides[key] !== undefined) return userClientOverrides[key];
-        return role?.client_permissions?.[key] || false;
+      const clientScopedInput: ClientScopedResolverInput = {
+        adminCaps, role, hasClientOverrides, userClientOverrides,
       };
 
-      setCompanySettingsPermissions({
-        settings_page: resolveCompanyPerm('settings_page', 'settings_page_enabled'),
-        settings_departments_view: resolveCompanyPerm('settings_departments_view', 'client_departments_enabled'),
-        settings_departments_manage: resolveCompanyPerm('settings_departments_manage', 'client_departments_enabled'),
-        settings_team_view: resolveCompanyPerm('settings_team_view', 'client_team_enabled'),
-        settings_team_manage: resolveCompanyPerm('settings_team_manage', 'client_team_enabled'),
-        settings_canned_responses_view: resolveCompanyPerm('settings_canned_responses_view', 'client_canned_responses_enabled'),
-        settings_canned_responses_manage: resolveCompanyPerm('settings_canned_responses_manage', 'client_canned_responses_enabled'),
-        settings_general_view: resolveCompanyPerm('settings_general_view', 'client_general_enabled'),
-        settings_general_manage: resolveCompanyPerm('settings_general_manage', 'client_general_enabled'),
-        settings_audit_log_view: resolveCompanyPerm('settings_audit_log_view', 'client_audit_log_enabled'),
-      });
+      setCompanySettingsPermissions(buildCompanySettingsPermissions(clientScopedInput));
       setCompanyCapabilities(adminCaps);
 
       // Build agent list — only agents the TARGET user has permission rows for
@@ -338,20 +402,8 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
           const userOverrides = (userPerm.permissions || {}) as Record<string, any>;
           const hasOverrides = userPerm.has_overrides;
 
-          const resolvePermission = (key: string): boolean => {
-            const ceilingKey = 'client_' + key + '_enabled';
-            if (agentConfig[ceilingKey] === false) return false;
-            if (role?.is_admin_tier) return true;
-            if (hasOverrides && userOverrides[key] !== undefined) return userOverrides[key];
-            return template[key] || false;
-          };
-
-          // F7 fix: see equivalent comment in loadClientAgents.
-          const resolveClientScoped = (key: string, capKey: string): boolean => {
-            if (adminCaps[capKey] === false) return false;
-            if (role?.is_admin_tier) return true;
-            if (hasClientOverrides && userClientOverrides[key] !== undefined) return userClientOverrides[key];
-            return role?.client_permissions?.[key] || false;
+          const agentScopedInput: AgentScopedResolverInput = {
+            agentConfig, role, template, hasOverrides, userOverrides,
           };
 
           const { api_key: _ak1, voiceflow_api_key: _ak2, retell_api_key: _ak3, ...safeConfig } = agentConfig;
@@ -363,17 +415,7 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
             status: agent.status as Agent['status'],
             sort_order: a.sort_order ?? 0,
             config: safeConfig,
-            effectivePermissions: {
-              conversations: resolvePermission('conversations'),
-              transcripts: resolvePermission('transcripts'),
-              analytics: resolvePermission('analytics'),
-              specs: resolvePermission('specs'),
-              knowledge_base: resolvePermission('knowledge_base'),
-              guides: resolvePermission('guides'),
-              agent_settings: resolvePermission('agent_settings'),
-              settings_page: resolveClientScoped('settings_page', 'settings_page_enabled'),
-              audit_log: resolveClientScoped('audit_log', 'client_audit_log_enabled'),
-            } as AgentPermissions,
+            effectivePermissions: buildAgentPermissions(agentScopedInput, clientScopedInput),
           };
         })
         .filter(Boolean)
@@ -406,7 +448,7 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
         .maybeSingle();
 
       if (clientUserError) throw clientUserError;
-      
+
       if (!clientUserData) {
         console.log('No client association found for user');
         setLoading(false);
@@ -462,7 +504,7 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
           .select('agent_id, permissions')
           .eq('role_id', userRoleId)
           .eq('client_id', clientUserData.client_id);
-        
+
         templates?.forEach(t => {
           roleTemplates[t.agent_id] = t.permissions;
         });
@@ -486,26 +528,11 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
       const userClientOverrides = (userClientPerms?.client_permissions || {}) as Record<string, any>;
       const hasClientOverrides = userClientPerms?.has_overrides || false;
 
-      // Resolve company settings permissions
-      const resolveCompanyPerm = (key: string, capKey: string): boolean => {
-        if (adminCaps[capKey] === false) return false;
-        if (role?.is_admin_tier) return true;
-        if (hasClientOverrides && userClientOverrides[key] !== undefined) return userClientOverrides[key];
-        return role?.client_permissions?.[key] || false;
+      const clientScopedInput: ClientScopedResolverInput = {
+        adminCaps, role, hasClientOverrides, userClientOverrides,
       };
 
-      setCompanySettingsPermissions({
-        settings_page: resolveCompanyPerm('settings_page', 'settings_page_enabled'),
-        settings_departments_view: resolveCompanyPerm('settings_departments_view', 'client_departments_enabled'),
-        settings_departments_manage: resolveCompanyPerm('settings_departments_manage', 'client_departments_enabled'),
-        settings_team_view: resolveCompanyPerm('settings_team_view', 'client_team_enabled'),
-        settings_team_manage: resolveCompanyPerm('settings_team_manage', 'client_team_enabled'),
-        settings_canned_responses_view: resolveCompanyPerm('settings_canned_responses_view', 'client_canned_responses_enabled'),
-        settings_canned_responses_manage: resolveCompanyPerm('settings_canned_responses_manage', 'client_canned_responses_enabled'),
-        settings_general_view: resolveCompanyPerm('settings_general_view', 'client_general_enabled'),
-        settings_general_manage: resolveCompanyPerm('settings_general_manage', 'client_general_enabled'),
-        settings_audit_log_view: resolveCompanyPerm('settings_audit_log_view', 'client_audit_log_enabled'),
-      });
+      setCompanySettingsPermissions(buildCompanySettingsPermissions(clientScopedInput));
       setCompanyCapabilities(adminCaps);
 
       // Build agent list — only include agents the user has permission rows for
@@ -523,28 +550,8 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
           const userOverrides = (userPerm.permissions || {}) as Record<string, any>;
           const hasOverrides = userPerm.has_overrides;
 
-          // Resolution: agency ceiling → override (if has_overrides) → role template
-          const resolvePermission = (key: string): boolean => {
-            // Agency ceiling check
-            const ceilingKey = 'client_' + key + '_enabled';
-            if (agentConfig[ceilingKey] === false) return false;
-            // Admin role gets everything agency-enabled
-            if (role?.is_admin_tier) return true;
-            // User override
-            if (hasOverrides && userOverrides[key] !== undefined) return userOverrides[key];
-            // Role template
-            return template[key] || false;
-          };
-
-          // F7 fix: client-scoped resolver must use client_user_permissions
-          // overrides (hasClientOverrides/userClientOverrides), not the
-          // agent-scoped JSON. The latter would only ever contain client-scoped
-          // keys via manual SQL — silently riding the wrong override path.
-          const resolveClientScoped = (key: string, capKey: string): boolean => {
-            if (adminCaps[capKey] === false) return false;
-            if (role?.is_admin_tier) return true;
-            if (hasClientOverrides && userClientOverrides[key] !== undefined) return userClientOverrides[key];
-            return role?.client_permissions?.[key] || false;
+          const agentScopedInput: AgentScopedResolverInput = {
+            agentConfig, role, template, hasOverrides, userOverrides,
           };
 
           const { api_key: _ak1, voiceflow_api_key: _ak2, retell_api_key: _ak3, ...safeConfig } = agentConfig;
@@ -556,17 +563,7 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
             status: agent.status as Agent['status'],
             sort_order: a.sort_order ?? 0,
             config: safeConfig,
-            effectivePermissions: {
-              conversations: resolvePermission('conversations'),
-              transcripts: resolvePermission('transcripts'),
-              analytics: resolvePermission('analytics'),
-              specs: resolvePermission('specs'),
-              knowledge_base: resolvePermission('knowledge_base'),
-              guides: resolvePermission('guides'),
-              agent_settings: resolvePermission('agent_settings'),
-              settings_page: resolveClientScoped('settings_page', 'settings_page_enabled'),
-              audit_log: resolveClientScoped('audit_log', 'client_audit_log_enabled'),
-            } as AgentPermissions,
+            effectivePermissions: buildAgentPermissions(agentScopedInput, clientScopedInput),
           };
         })
         .filter(Boolean)
@@ -588,7 +585,7 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
 
   // Update permissions when selected agent changes
   useEffect(() => {
-    const shouldResolve = 
+    const shouldResolve =
       (profile?.role === 'client') ||
       (isImpersonating && impersonationMode === 'view_as_user' && targetUserId);
 
@@ -651,10 +648,8 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
             .maybeSingle();
           const adminCaps = (clientSettings?.admin_capabilities || {}) as Record<string, any>;
 
-          // F7 fix: client-scoped overrides come from client_user_permissions,
-          // NOT from the agent-scoped permissions JSON. Previously this resolver
-          // gated client-scoped keys (settings_page, audit_log) by hasOverrides
-          // /userOverrides which are agent-scoped — wrong source of truth.
+          // Client-scoped overrides come from client_user_permissions, NOT from
+          // the agent-scoped permissions JSON (F7).
           const { data: userClientPerms } = await supabase
             .from('client_user_permissions')
             .select('client_permissions, has_overrides')
@@ -664,36 +659,17 @@ export function ClientAgentProvider({ children }: { children: ReactNode }) {
           const userClientOverrides = (userClientPerms?.client_permissions || {}) as Record<string, any>;
           const hasClientOverrides = userClientPerms?.has_overrides || false;
 
-          const resolvePermission = (key: string): boolean => {
-            const ceilingKey = 'client_' + key + '_enabled';
-            if (agentConfig[ceilingKey] === false) return false;
-            if (role?.is_admin_tier) return true;
-            if (hasOverrides && userOverrides[key] !== undefined) return userOverrides[key];
-            return template[key] || false;
+          const agentScopedInput: AgentScopedResolverInput = {
+            agentConfig, role, template, hasOverrides, userOverrides,
+          };
+          const clientScopedInput: ClientScopedResolverInput = {
+            adminCaps, role, hasClientOverrides, userClientOverrides,
           };
 
-          const resolveClientScoped = (key: string, capKey: string): boolean => {
-            if (adminCaps[capKey] === false) return false;
-            if (role?.is_admin_tier) return true;
-            if (hasClientOverrides && userClientOverrides[key] !== undefined) return userClientOverrides[key];
-            return role?.client_permissions?.[key] || false;
-          };
-
-          setSelectedAgentPermissions({
-            conversations: resolvePermission('conversations'),
-            transcripts: resolvePermission('transcripts'),
-            analytics: resolvePermission('analytics'),
-            specs: resolvePermission('specs'),
-            knowledge_base: resolvePermission('knowledge_base'),
-            guides: resolvePermission('guides'),
-            agent_settings: resolvePermission('agent_settings'),
-            settings_page: resolveClientScoped('settings_page', 'settings_page_enabled'),
-            audit_log: resolveClientScoped('audit_log', 'client_audit_log_enabled'),
-          });
+          setSelectedAgentPermissions(buildAgentPermissions(agentScopedInput, clientScopedInput));
         } catch (err) {
-          // F10 fix: don't leave stale permissions from a previous agent on
-          // screen if this resolve fails — fail closed (null clears all
-          // gated UI). Surfaces in console so the failure is visible.
+          // F10: don't leave stale permissions from a previous agent on screen
+          // if this resolve fails — fail closed (null clears all gated UI).
           console.error('[useClientAgentContext] loadAgentPermissions failed:', err);
           setSelectedAgentPermissions(null);
         }

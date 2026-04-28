@@ -202,13 +202,13 @@ Switched to `agents_safe`. Page only reads ceiling-toggle keys for display and w
 
 ---
 
-### N11-F15 — Resolution functions duplicated 4× in `useClientAgentContext.tsx`
+### N11-F15 — Resolution functions duplicated 4× in `useClientAgentContext.tsx` ✅ DONE (2026-04-28)
 
-**Type:** Refactor (Low) | **Effort:** Medium | **Status:** Open
+**Type:** Refactor (Low) | **Effort:** Medium | **Status:** Shipped
 
-`resolveCompanyPerm` and `resolveClientScoped`/`resolvePermission` defined separately in `loadClientAgentsForPreview`, `loadClientAgentsAsUser`, `loadClientAgents`, and the per-agent useEffect. Drift already exists (see F7). Extract once at module scope.
+Extracted `resolveAgentScopedKey`, `resolveClientScopedKey`, `buildAgentPermissions`, and `buildCompanySettingsPermissions` to module scope. The three real call sites (`loadClientAgentsAsUser`, `loadClientAgents`, per-agent `useEffect`) now construct typed `AgentScopedResolverInput` / `ClientScopedResolverInput` objects and delegate to the shared builders — single source of truth for the 4-layer stack, no more silent drift between copies. `loadClientAgentsForPreview` continues to short-circuit to all-true (admin preview semantics) and is unaffected. Behaviour-preserving refactor verified via `npm run build`.
 
-**Touches:** `src/hooks/useClientAgentContext.tsx`. Best done together with F7 + F8.
+**Touches:** `src/hooks/useClientAgentContext.tsx`.
 
 ---
 
@@ -731,6 +731,8 @@ Low priority. Do opportunistically when touching related code.
 ## Completed (recent)
 
 Date-stamped log of items shipped. Don't delete — provides commit-trail context for future work.
+
+**Completed:** 2026-04-28 — N11-F15: extracted the four duplicate copies of `resolvePermission`/`resolveClientScoped` from `useClientAgentContext.tsx` into module-scope helpers (`resolveAgentScopedKey`, `resolveClientScopedKey`, `buildAgentPermissions`, `buildCompanySettingsPermissions`). The three real call sites (`loadClientAgentsAsUser`, `loadClientAgents`, per-agent useEffect) now delegate to the same builders — no more silent drift. Behaviour-preserving; build green. Still open: F3, F9 (Realtime invalidation — design call), F17 (UX wording).
 
 **Completed:** 2026-04-28 — N11 follow-ups F7, F8, F10, F12, F13, F14, F16 landed in one pass; F11 marked false-alarm against current code. F7: all three duplicate `resolveClientScoped` callsites now use `client_user_permissions` overrides; useEffect copy gained the missing query. F8: Sidebar + ProtectedRoute now read `settings_page` and `audit_log` from canonical `companySettingsPermissions`. F10: try/catch + fail-closed in the per-agent useEffect resolver. F12: new-user grant diffs vs template instead of hardcoding has_overrides. F13: client-scoped save diffs vs template instead of "any keys". F14: `AgencyAgentDetails` swapped to `agents_safe`. F16: RolesManagement Save button hidden when count=0; relabeled "Apply to N users" otherwise. Still open: F3, F9 (Realtime invalidation — design call), F15 (resolver extract refactor), F17 (UX wording).
 
