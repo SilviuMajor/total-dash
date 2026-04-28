@@ -224,6 +224,14 @@ export default function Conversations() {
   type AttachQueueEntry = { id: string; file: File; previewUrl: string | null; kind: 'image' | 'video' | 'audio' | 'file' };
   const [attachQueue, setAttachQueue] = useState<AttachQueueEntry[]>([]);
 
+  // Drag-and-drop state for the transcript panel. We use the relatedTarget
+  // pattern (not a counter) because counters drift when the user drags fast
+  // across child elements or when dragend fires outside the panel without a
+  // corresponding dragleave. The window-level reset (see useEffect below) is
+  // a belt-and-braces failsafe for the same drift scenarios.
+  const [isDraggingFile, setIsDraggingFile] = useState(false);
+  const [dragInvalid, setDragInvalid] = useState(false);
+
   // Archive (N8) — admin-only via RPC, force-ends + hides the conversation.
   const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false);
   const [archiving, setArchiving] = useState(false);
@@ -1180,6 +1188,105 @@ export default function Conversations() {
     });
   };
 
+  // canAttachInThisConversation gates BOTH the paperclip and the dropzone —
+  // attachments are only valid during the agent's active handover.
+  const canAttachInThisConversation = !!selectedConversation
+    && selectedConversation.status === 'in_handover'
+    && selectedConversation.owner_id === currentClientUserId;
+
+  // Drag is "interesting" only if the dataTransfer contains files. Without
+  // this check, dragging selected text or a link from elsewhere on the page
+  // also flashes the overlay, which feels broken.
+  const dragIsFiles = (e: React.DragEvent<HTMLDivElement>): boolean => {
+    const types = e.dataTransfer?.types;
+    if (!types) return false;
+    // types is a DOMStringList, not a JS array, so iterate manually.
+    for (let i = 0; i < types.length; i++) {
+      if (types[i] === 'Files') return true;
+    }
+    return false;
+  };
+
+  const handleTranscriptDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    if (!canAttachInThisConversation) return;
+    if (attachUploading || sendingMessage) return;
+    if (!dragIsFiles(e)) return;
+    e.preventDefault();
+    // relatedTarget is null when entering from outside the browser, or the
+    // element we left when moving between children. If it's a child of the
+    // panel, we're already inside — no state change needed.
+    const related = e.relatedTarget as Node | null;
+    if (related && e.currentTarget.contains(related)) return;
+    setIsDraggingFile(true);
+    // Probe MIME types if the browser exposes them on enter (Safari often
+    // doesn't — we re-check on drop anyway). This just lets us flash the
+    // red invalid state proactively.
+    let invalid = false;
+    const items = e.dataTransfer.items;
+    if (items && items.length > 0) {
+      for (let i = 0; i < items.length; i++) {
+        const it = items[i];
+        if (it.kind !== 'file') continue;
+        if (it.type && !AGENT_ATTACH_ALLOWED_MIME.has(it.type)) {
+          invalid = true;
+          break;
+        }
+      }
+    }
+    setDragInvalid(invalid);
+  };
+
+  const handleTranscriptDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    if (!canAttachInThisConversation) return;
+    if (attachUploading || sendingMessage) return;
+    if (!dragIsFiles(e)) return;
+    // Required to allow drop. Without preventDefault on dragover, the drop
+    // event won't fire — the OS will handle the file as a navigation instead.
+    e.preventDefault();
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = dragInvalid ? 'none' : 'copy';
+    }
+  };
+
+  const handleTranscriptDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    if (!isDraggingFile) return;
+    const related = e.relatedTarget as Node | null;
+    // Moving between children of the panel — still inside, do nothing.
+    if (related && e.currentTarget.contains(related)) return;
+    setIsDraggingFile(false);
+    setDragInvalid(false);
+  };
+
+  const handleTranscriptDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    if (!canAttachInThisConversation) return;
+    e.preventDefault();
+    const wasInvalid = dragInvalid;
+    setIsDraggingFile(false);
+    setDragInvalid(false);
+    if (wasInvalid) return;
+    const files = e.dataTransfer?.files;
+    if (files && files.length > 0) {
+      handleAgentAttach(files);
+    }
+  };
+
+  // Failsafe — if a drag ends outside the panel (user drops on the page bg,
+  // hits ESC, or alt-tabs away), the dragleave on our panel may never fire,
+  // leaving the overlay stuck on. Window-level dragend/drop always fire.
+  useEffect(() => {
+    if (!isDraggingFile) return;
+    const reset = () => {
+      setIsDraggingFile(false);
+      setDragInvalid(false);
+    };
+    window.addEventListener('dragend', reset);
+    window.addEventListener('drop', reset);
+    return () => {
+      window.removeEventListener('dragend', reset);
+      window.removeEventListener('drop', reset);
+    };
+  }, [isDraggingFile]);
+
   const handleSendChatMessage = async () => {
     const messageText = chatMessage.trim();
     const queued = attachQueue;
@@ -1824,7 +1931,36 @@ export default function Conversations() {
           </div>
 
           {/* MIDDLE PANEL: Transcript */}
-          <div className="flex flex-col border-r border-border h-full overflow-hidden relative bg-muted/30">
+          <div
+            className="flex flex-col border-r border-border h-full overflow-hidden relative bg-muted/30"
+            onDragEnter={handleTranscriptDragEnter}
+            onDragOver={handleTranscriptDragOver}
+            onDragLeave={handleTranscriptDragLeave}
+            onDrop={handleTranscriptDrop}
+          >
+            {/* Drag-and-drop overlay — covers the panel while dragging files
+                in. Pointer-events:none so events still hit the panel below
+                (otherwise the overlay would steal dragleave events). */}
+            {isDraggingFile && canAttachInThisConversation && (
+              <div
+                className={`absolute inset-0 z-20 flex items-center justify-center pointer-events-none rounded-md transition-colors ${
+                  dragInvalid ? 'bg-destructive/30' : 'bg-primary/15 backdrop-blur-[2px]'
+                }`}
+              >
+                <div
+                  className={`flex flex-col items-center gap-2 px-6 py-5 rounded-lg border-2 border-dashed ${
+                    dragInvalid
+                      ? 'border-destructive text-destructive bg-background/95'
+                      : 'border-primary text-primary bg-background/95'
+                  }`}
+                >
+                  {dragInvalid ? <X className="h-7 w-7" /> : <Paperclip className="h-7 w-7" />}
+                  <span className="text-sm font-medium">
+                    {dragInvalid ? 'Unsupported file type' : 'Drop to attach'}
+                  </span>
+                </div>
+              </div>
+            )}
             {selectedConversation ? (
               <>
                 <div className="px-4 py-3 border-b border-border flex items-start justify-between">

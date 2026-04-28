@@ -1168,7 +1168,10 @@ function generateWidgetScript(config: any): string {
   let isCommittingSend = false;  // true while Send is committing staged entries
   let isDragging = false;
   let dragInvalid = false;
-  let dragCounter = 0;           // for nested dragenter/leave bookkeeping
+  // We previously used a dragCounter to track nested enter/leave but it
+  // drifts: dragend can fire outside the panel without a matching dragleave,
+  // and Safari sometimes coalesces events when the cursor crosses children
+  // quickly. Using e.relatedTarget + a window-level reset is more reliable.
   const MAX_BATCH_FILES = 5;
   const MAX_FILE_BYTES = 10 * 1024 * 1024;
   const ALLOWED_MIME_TYPES = new Set([
@@ -2431,18 +2434,46 @@ function generateWidgetScript(config: any): string {
       }
     };
 
+    // Only treat a drag as "interesting" if it carries files. A drag over
+    // selected page text or a link from elsewhere on the host page should
+    // NOT flash the overlay.
+    const dragIsFiles = (e) => {
+      const types = e.dataTransfer ? e.dataTransfer.types : null;
+      if (!types) return false;
+      for (let i = 0; i < types.length; i += 1) {
+        if (types[i] === 'Files') return true;
+      }
+      return false;
+    };
+
+    const resetDrag = () => {
+      if (!isDragging && !dragInvalid) return;
+      isDragging = false;
+      dragInvalid = false;
+      setOverlay();
+    };
+
     panel.addEventListener('dragenter', (e) => {
       if (!isInHandover) return;
+      if (!dragIsFiles(e)) return;
       e.preventDefault();
-      dragCounter += 1;
+      // relatedTarget is null when entering from outside the browser, or
+      // the element we left when moving between children inside the panel.
+      // If it's a child of the panel, we're already mid-drag — no state
+      // change needed.
+      const related = e.relatedTarget;
+      if (related && panel.contains(related)) return;
       isDragging = true;
+      // Best-effort MIME check on enter. Some browsers (Safari) hide types
+      // until drop, so this is just to flash the red invalid state when we
+      // can; the actual validation in handlePickedFiles() is authoritative.
       let invalid = false;
       const items = e.dataTransfer ? e.dataTransfer.items : null;
       if (items && items.length) {
         for (let i = 0; i < items.length; i += 1) {
           const it = items[i];
           if (it.kind !== 'file') continue;
-          if (!isAllowedMime(it.type)) { invalid = true; break; }
+          if (it.type && !isAllowedMime(it.type)) { invalid = true; break; }
         }
       }
       dragInvalid = invalid;
@@ -2451,36 +2482,49 @@ function generateWidgetScript(config: any): string {
 
     panel.addEventListener('dragover', (e) => {
       if (!isInHandover) return;
+      if (!dragIsFiles(e)) return;
+      // preventDefault on dragover is REQUIRED for drop to fire. Without
+      // it, the OS treats the drop as a file-open navigation.
       e.preventDefault();
-      setOverlay();
+      if (e.dataTransfer) {
+        e.dataTransfer.dropEffect = dragInvalid ? 'none' : 'copy';
+      }
     });
 
     panel.addEventListener('dragleave', (e) => {
-      if (!isInHandover) return;
-      e.preventDefault();
-      dragCounter = Math.max(0, dragCounter - 1);
-      if (dragCounter === 0) {
-        isDragging = false;
-        dragInvalid = false;
-        setOverlay();
-      }
+      if (!isDragging) return;
+      const related = e.relatedTarget;
+      // Moving between panel children — still inside, no change.
+      if (related && panel.contains(related)) return;
+      resetDrag();
     });
 
     panel.addEventListener('drop', (e) => {
       if (!isInHandover) {
         e.preventDefault();
+        resetDrag();
         return;
       }
       e.preventDefault();
-      dragCounter = 0;
       const wasInvalid = dragInvalid;
-      isDragging = false;
-      dragInvalid = false;
-      setOverlay();
+      resetDrag();
       if (wasInvalid) return;
       const files = e.dataTransfer ? e.dataTransfer.files : null;
       if (files && files.length) {
         handlePickedFiles(files);
+      }
+    });
+
+    // Window-level reset failsafe. If the user drags out of the browser,
+    // hits ESC, or drops outside the panel, dragleave on the panel may
+    // never fire — leaving the overlay stuck on. dragend / window drop
+    // always fire, so we hook those as a belt-and-braces backstop.
+    window.addEventListener('dragend', resetDrag);
+    window.addEventListener('drop', (e) => {
+      // If the drop happened outside the panel, dragend may not fire —
+      // but a global drop will. Reset to be safe.
+      if (!panel.contains(e.target)) {
+        resetDrag();
       }
     });
   }
