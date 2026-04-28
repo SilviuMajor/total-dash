@@ -2,7 +2,7 @@
 
 > Last revised: 28 April 2026 (eve)
 > Purpose: living document. Single source of truth for everything outstanding.
-> Workflow: pick an item, open a fresh Claude Code session, paste the entry into plan mode, work through clarifications, execute. Mark items done with date + commit hash; don't delete.
+> Workflow: pick an item, open a fresh Claude Code session, paste the entry into plan mode, work through clarifications, execute. Mark items done with date + commit hash; consolidate older done entries into the Completed log so this file stays focused on what's left.
 
 This replaces the old per-feature spec docs as the working unit. The original spec files in project knowledge stay as **reference material** when an item has detailed prior thinking — entries below link to them. Open questions and decisions captured in those specs are summarised here so plan mode has the context without needing to re-derive it.
 
@@ -31,259 +31,30 @@ Tone: same as the rest of CLAUDE.md — plain language, no fluff, no emoji, dire
 
 ---
 
----
-
 ## Tier 1 — must-haves
 
-### N8 — Team-wide conversation archive ✅ DONE (2026-04-27)
+### N20 — Production deployment residuals
 
-**Type:** Feature | **Effort:** Medium | **Status:** Shipped
-**Spec:** `TotalDash-Spec-N8-Team-Conversation-Archive.md`
-
-Shipped: `is_archived` / `archived_at` / `archived_by` columns + `set_conversation_archived` RPC (super_admin / agency / client admin tier; 42501 vs 42704 split). /conversations always filters archived out; Archive button on the middle-panel header with a confirmation dialog (forces ended_at + status=resolved). Transcripts gains an "Include archived" toggle, faded rows + Archived badge, and an Unarchive button on the detail dialog. Non-admins see the buttons but get a toast on click. No partial index in v1.
-
----
-
-### N11 — Permission system audit ✅ DONE (2026-04-27)
-
-**Type:** Audit + Bug Hunt | **Effort:** Medium | **Status:** Shipped (audit complete; 16 follow-up bugs filed as N11-F1 through N11-F16 below)
-**Spec:** `TotalDash-Spec-N11-Permission-System-Audit.md`
-**Report:** `docs/audits/2026-04-N11-permissions-audit.md`
-
-Audit found 16 confirmed bugs (1 Critical, 5 High, 7 Medium, 3 Low) and rejected 2 false alarms (admin_tier does NOT bypass ceilings; agent-scoped pages ARE gated by `ProtectedRoute requiredPage` even though page bodies don't double-check). Each finding is filed as a separate entry below — see the report for full repro and fix sketch on each.
-
----
-
-### N11-F1 — Role change "Keep current permissions" leaks orphan role_id + drops UI edits ✅ DONE (2026-04-27, tested 2026-04-28)
-
-**Type:** Bug (Critical) | **Effort:** Small | **Status:** Shipped — `3bd2171`
-
-Both modal paths now update `client_user_permissions.role_id` (no more orphan), persist in-memory permission edits when the affected user is the expanded one (no more silently dropped toggles), and surface DB errors via destructive toast instead of always claiming success.
-
-**Touches:** `src/components/client-management/ClientUsersManagement.tsx:1746-1903`.
-
----
-
-### N11-F2 — Silent failures on every Roles toggle ✅ DONE (2026-04-27, tested 2026-04-28)
-
-**Type:** Bug (High) | **Effort:** Small | **Status:** Shipped — `3bd2171`
-
-`togglePermission` and `toggleClientPermissions` now apply optimistic UI, await the update, roll back on error, and toast destructively. `applyToAllUsers` collects per-agent errors across the loop and surfaces them. No more false "Saved" toasts on RLS or network failures.
-
-**Touches:** `src/components/settings/RolesManagement.tsx`.
-
----
-
-### N11-F3 — Active sessions don't see role-permission changes until reload ✅ DONE (2026-04-28)
-
-**Type:** Bug (High) | **Effort:** Medium | **Status:** Shipped — `0208d4f`
-
-`useClientAgentContext.tsx` now opens two Supabase Realtime channels: a stable channel filtered by client/user listening to `role_permission_templates`, `client_roles`, `client_settings`, `client_user_permissions`, `client_user_agent_permissions`; and a per-agent channel listening to the selected `agents` row (covers Layer-1 ceiling). Any change triggers a 250 ms-debounced refetch via the existing `loadClientAgents` / `loadClientAgentsAsUser` loaders, which now preserve the user's currently-selected agent across reloads. Preview mode short-circuits and is skipped.
-
-**Touches:** `src/hooks/useClientAgentContext.tsx`.
-
----
-
-### N11-F4 — Settings Departments sub-tab not gated by its own permission ✅ DONE (2026-04-27, tested 2026-04-28)
-
-**Type:** Bug (High) | **Effort:** Tiny | **Status:** Shipped — `3bd2171`
-
-Departments sub-tab button and content are now gated by `showDepartments`. A `SubTabGuard` helper auto-redirects the active sub-tab to "team" if the user lands on a hidden one (e.g. their permission gets revoked while the page is open).
-
-**Touches:** `src/pages/Settings.tsx`.
-
----
-
-### N11-F5 — Settings.tsx audit log uses `=== true` while other tabs use `!== false` ✅ DONE (2026-04-27, tested 2026-04-28)
-
-**Type:** Bug (High) | **Effort:** Tiny | **Status:** Shipped — `3bd2171`
-
-Audit Log now uses `!== false` for both Layer-2 ceiling and view permission, matching the other Company Settings tabs. To keep Audit Log default-off, set the capability/permission to `false` explicitly in seeds — no more silent operator drift.
-
-**Touches:** `src/pages/Settings.tsx`.
-
----
-
-### N11-F6 — RolesManagement rendered without readOnly prop in Settings.tsx (privilege escalation) ✅ DONE (2026-04-27, tested 2026-04-28)
-
-**Type:** Bug (High) | **Effort:** Small | **Status:** Shipped — `3bd2171`
-
-Roles sub-tab is now gated by `canManageTeam` (i.e. `settings_team_manage`) — both the button and the content. View-only users can still see Departments and Users tabs but cannot reach the Roles editor at all. The `SubTabGuard` redirects to Users if the user is on the Roles tab when their manage permission is revoked. Read-only mode for RolesManagement itself was deferred — gating the entry point is the simpler, safer cut.
-
-**Touches:** `src/pages/Settings.tsx`.
-
----
-
-### N11-F7 — Cross-scope mixing in `resolveClientScoped` ✅ DONE (2026-04-28)
-
-**Type:** Bug (Medium, latent) | **Effort:** Small | **Status:** Shipped
-
-All three real-data copies of `resolveClientScoped` (in `loadClientAgents`, `loadClientAgentsAsUser`, and the per-agent useEffect) now use `hasClientOverrides`/`userClientOverrides` from `client_user_permissions` instead of the agent-scoped JSON. The useEffect copy gained the missing `client_user_permissions` query.
-
-**Touches:** `src/hooks/useClientAgentContext.tsx`.
-
----
-
-### N11-F8 — Settings link gated by per-agent value instead of canonical client-scoped one ✅ DONE (2026-04-28)
-
-**Type:** Bug (Medium) | **Effort:** Small | **Status:** Shipped
-
-`Sidebar.tsx` now reads `companySettingsPermissions.settings_page` for the Company Settings link. `ProtectedRoute.tsx` builds a merged `effectivePermissions` map that overrides `settings_page` and `audit_log` with the canonical client-scoped values from `companySettingsPermissions`, then gates `requiredPage` against that. With F7 fixed both paths now produce the same answer for users without overrides — but they diverge for users with `client_user_permissions` overrides, so this matters.
-
-The redundant `settings_page` and `audit_log` keys remain on the `AgentPermissions` interface for now to avoid a sweep across consumers; consider removing them in the F15 refactor.
-
-**Touches:** `src/components/Sidebar.tsx`, `src/components/ProtectedRoute.tsx`.
-
----
-
-### N11-F9 — No cache invalidation when agency flips a Layer-2 ceiling ✅ DONE (2026-04-28)
-
-**Type:** Bug (Medium) | **Effort:** Medium | **Status:** Shipped — `0208d4f` (bundled with F3)
-
-The Realtime subscription added for F3 includes `client_settings` filtered by client_id, so Layer-2 ceiling flips from `AgencyClientDetails` propagate to active client-user sessions within ~250 ms. Same channel also covers per-agent (Layer-1) ceiling flips from `AgencyAgentDetails`.
-
-**Touches:** `src/hooks/useClientAgentContext.tsx`.
-
----
-
-### N11-F10 — `loadAgentPermissions` errors swallowed silently ✅ DONE (2026-04-28)
-
-**Type:** Bug (Medium) | **Effort:** Tiny | **Status:** Shipped
-
-`loadAgentPermissions` is now wrapped in try/catch. Required queries (`agents_safe`, agent-permission row, role row) explicitly throw on error. On any failure the resolver clears `selectedAgentPermissions` to `null` (fail-closed — gated UI hides) and logs to console with a tagged prefix.
-
-**Touches:** `src/hooks/useClientAgentContext.tsx`.
-
----
-
-### N11-F11 — User-level toggles always-clickable when ceiling blocks ✅ FALSE ALARM (2026-04-28)
-
-**Type:** Bug (Medium) | **Effort:** N/A | **Status:** Verified-not-reproducing
-
-Re-reading the live code, `ClientUsersManagement.tsx` already filters all per-user toggles by ceiling:
-- Per-agent grid: `:1164-1167` filters keys by `agentConfig['client_'+key+'_enabled'] !== false`
-- Company-settings outer block: `:1249` gated by `clientCaps['settings_page_enabled'] !== false`
-- Company-settings sub-tabs: `:1297` filters by `clientCaps[tab.capKey] !== false`
-- New-user dialog grid: `:1726-1728` same per-key ceiling filter
-
-Audit was looking at older code that has since been fixed. No new work needed.
-
----
-
-### N11-F12 — New-user agent grant hardcodes `has_overrides: false` even with custom perms ✅ DONE (2026-04-28)
-
-**Type:** Bug (Medium) | **Effort:** Tiny | **Status:** Shipped
-
-The grant-access INSERT path now diffs the new permissions against the role template (matching the UPDATE path's logic) and sets `has_overrides` accordingly. Admin-customised perms now resolve correctly instead of being silently discarded by the resolver.
-
-**Touches:** `src/components/client-management/ClientUsersManagement.tsx`.
-
----
-
-### N11-F13 — Client-scoped override flag set by "any keys present" rather than diff vs template ✅ DONE (2026-04-28)
-
-**Type:** Bug (Medium) | **Effort:** Tiny | **Status:** Shipped
-
-Per-user save now diffs `selectedUserClientPerms` against the role's `client_permissions` template and only flags `has_overrides=true` when at least one key actually differs. Fresh saves with no real changes no longer summon a hollow "Reset to role defaults" button.
-
-**Touches:** `src/components/client-management/ClientUsersManagement.tsx`.
-
----
-
-### N11-F14 — `AgencyAgentDetails` reads `agents` directly instead of `agents_safe` ✅ DONE (2026-04-28)
-
-**Type:** Cleanup (Low) | **Effort:** Tiny | **Status:** Shipped
-
-Switched to `agents_safe`. Page only reads ceiling-toggle keys for display and writes via the `update_agent_config` RPC, so stripping API keys at read is safe and consistent with CLAUDE.md rule #2.
-
-**Touches:** `src/pages/agency/AgencyAgentDetails.tsx`.
-
----
-
-### N11-F15 — Resolution functions duplicated 4× in `useClientAgentContext.tsx` ✅ DONE (2026-04-28)
-
-**Type:** Refactor (Low) | **Effort:** Medium | **Status:** Shipped
-
-Extracted `resolveAgentScopedKey`, `resolveClientScopedKey`, `buildAgentPermissions`, and `buildCompanySettingsPermissions` to module scope. The three real call sites (`loadClientAgentsAsUser`, `loadClientAgents`, per-agent `useEffect`) now construct typed `AgentScopedResolverInput` / `ClientScopedResolverInput` objects and delegate to the shared builders — single source of truth for the 4-layer stack, no more silent drift between copies. `loadClientAgentsForPreview` continues to short-circuit to all-true (admin preview semantics) and is unaffected. Behaviour-preserving refactor verified via `npm run build`.
-
-**Touches:** `src/hooks/useClientAgentContext.tsx`.
-
----
-
-### N11-F16 — RolesManagement "Save" button is a no-op when role has 0 users ✅ DONE (2026-04-28)
-
-**Type:** UX Polish (Low) | **Effort:** Tiny | **Status:** Shipped
-
-Save button is now hidden entirely when the role has 0 users. When ≥1 user, the label is now `Apply to N users` (or `Apply to 1 user`) so the action is unambiguous.
-
-**Touches:** `src/components/settings/RolesManagement.tsx`.
-
----
-
-### N11-F17 — Permission UI wording is ambiguous about scope
-
-**Type:** UX Polish (Low) | **Effort:** Small | **Status:** Open
-
-Tracked as a single follow-up:
-- `RolesManagement.tsx` toggles use raw permission labels — no "Role default" / "All users with this role" indicator
-- `ClientUsersManagement.tsx` per-user toggles — no "Override" / "Override for this user only" indicator
-- `AgencyClientDetails.tsx` ceiling toggles — no "Agency-wide ceiling" language
-- `AgencyAgentDetails.tsx` ceiling toggles — same
-- Settings sub-tabs don't visually distinguish "View only" vs "Can edit" mode
-
-**Touches:** label/copy changes across 4 files.
-
----
-
-### N27 — Create user fails (longstanding) ✅ DONE (2026-04-28)
-
-**Type:** Bug | **Effort:** Small | **Status:** Shipped — `6b56bba`
-
-Confirmed root cause: `create-client-user/index.ts:306-324` already inserts a `client_user_agent_permissions` row for every agent assigned to the client (UNIQUE on `(user_id, agent_id)`). The frontend then re-inserted the same rows at `ClientUsersManagement.tsx:668-685`, hitting the duplicate-key violation, with no `{ error }` destructuring so the failure was opaque.
-
-Fix: replaced the post-EF INSERT loop with a reconcile step. DELETE rows for agents the admin unchecked. UPDATE rows where the admin's custom perms differ from the role template (computing `has_overrides` by diffing — same pattern as N11-F12/F13). Leave EF-seeded template-default rows alone. Aggregates per-row errors and surfaces them via destructive toast (`"User created with permission errors"`) so partial failures aren't silently dropped. EF unchanged — already correct.
-
-**Touches:** `src/components/client-management/ClientUsersManagement.tsx`.
-
----
-
-### N28 — User-settings dialog width + Settings page density
-
-**Type:** UX Polish | **Effort:** Tiny | **Status:** Open
-
-Two small layout issues on Settings → Users:
-
-1. **User-settings overlay/dialog is too narrow.** When expanding a user (or opening the settings overlay for one), the menu doesn't have enough horizontal room — content feels cramped. Widen the dialog max-width.
-2. **Settings page padding is excessive.** `Settings.tsx` wraps everything in `p-6 space-y-6`, plus child cards add their own `p-6`. Reduce wrapper padding (or child padding) where it doesn't compromise breathing room. Especially noticeable on the Users sub-tab where dense permission tables get squeezed sideways while top/bottom whitespace eats vertical real estate.
-
-**Touches:** `src/pages/Settings.tsx` (page-level `p-6`), `src/components/client-management/ClientUsersManagement.tsx` (user dialog/overlay max-width — search `Dialog` / `DialogContent` / `max-w-`).
-
----
-
-### N20 — Production deployment planning
-
-**Type:** Infrastructure | **Effort:** Was Large; mostly DONE | **Status:** Mostly complete (revisit residuals)
+**Type:** Infrastructure | **Effort:** Tiny remaining | **Status:** Mostly complete
 **Spec:** `TotalDash-Spec-N20-Production-Deployment-Planning.md`
 
-Originally written before cutover. As of 26 April, the major work is done: Vercel deployment live at `app.total-dash.com`, GitHub Actions deploy pipeline configured, DNS migrated to Squarespace CNAME → Vercel. Remaining residuals from spec:
+Major cutover work is done (Vercel live at `app.total-dash.com`, GitHub Actions deploy pipeline, DNS migrated). Remaining residuals:
 
-- **`lovable-tagger` devDependency cleanup** — still in `package.json`, not removed yet.
-- **Whitelabel custom domain support** — separate item (see "Future" tier).
-- **Old Lovable project deletion** — pending stability window (~7 days from cutover).
+- `lovable-tagger` devDependency cleanup — still in `package.json`.
+- Old Lovable project deletion — pending stability window (~7 days from cutover).
+- Whitelabel custom domain support — separate item, see Tier 3 "Post-stability roadmap".
 
-**Touches:** `package.json` (small), eventual Lovable account cancellation.
+**Touches:** `package.json`, eventual Lovable account cancellation.
 
 ---
 
-### Audit findings — Critical tier (currently being executed by Claude Code)
+### Audit findings — Tier 2 (in flight)
 
-These came out of the 25 April audit. Claude Code is working through them.
+These are real follow-ups from the 25 April audit. C1, C2, C3 (critical tier) all resolved; I1, I2, I5, I7 verified already addressed (see Completed log). Items still open:
 
-- **C1** — `update_agent_config` RPC has no migration. Codify the live function as a migration so a rebuild doesn't silently revert behaviour.
-- **C2** — `agents_safe` view uses `security_invoker = true`. Switch to `security_invoker = false` (DEFINER) so the view always strips API keys regardless of caller RLS.
-- **C3** — Legacy `is_admin()` in `text_transcripts` policy. Replace with `is_super_admin()` + agency_users membership check.
-
-**Status:** in flight as a single Claude Code execution. Mark this section complete when Claude Code reports back with all three landed.
+- **I3** — Conversation status mutation can orphan if transcript insert fails. Reorder operations or wrap in Postgres function.
+- **I4** — `useMultiTenantAuth.tsx:224` uses `navigate()` for cross-boundary entry. Replace with `window.location.href` (CLAUDE.md rule #7).
+- **I6** — Unhandled promise rejections in `Conversations.tsx` (`loadClientUser`, `loadPendingIds`). Add toast + retry.
 
 ---
 
@@ -613,7 +384,7 @@ After successful sign-in on `Auth.tsx` (client), success toast shows but user re
 - Audit framework in spec (P1 Quick Wins, P2 Form Validation, P3 Consolidation, P4 Error Quality).
 - Specific files most affected: `Conversations.tsx` (4-5 removable), `Transcripts.tsx` (2-3), `KnowledgeBase.tsx` (2-3 replaceable), `Auth/ChangePassword` (2-3 replaceable), admin pages (3-4 per page consolidatable).
 
-**Includes the password-reset toast bug noticed during cutover** ("missing email or password" error firing alongside success toast — likely a P2 form-validation issue).
+**Includes the password-reset toast bug noticed during cutover** (the "missing email or password" error firing alongside success toast — likely a P2 form-validation issue).
 
 **Touches:** broad — 10+ files. Single execution preferred to maintain consistency.
 
@@ -675,22 +446,6 @@ These are from the original phased roadmap, not the N-spec batch. Most still rel
 
 ---
 
-## Tier 2 audit findings — important but not critical
-
-These came out of the 25 April audit. Lower priority than C1-C3 but should land before HeyB scales beyond a single client.
-
-- **I1** — `voiceflow-interact` accepts arbitrary `agentId`/`userId` without rate limiting or active-agent check. Add validation + per-IP rate limit.
-- **I2** — Unwrapped `JSON.parse` in `voiceflow-interact`. Wrap in try/catch, return 400 not 500 on malformed input.
-- **I3** — Conversation status mutation can orphan if transcript insert fails. Reorder operations or wrap in Postgres function.
-- **I4** — `useMultiTenantAuth.tsx:224` uses `navigate()` for cross-boundary entry. Replace with `window.location.href`.
-- **I5** — `AgentSpecs.tsx:64` and `Guides.tsx:55` query `agents` directly instead of `agents_safe`. Standardise.
-- **I6** — Unhandled promise rejections in `Conversations.tsx` (`loadClientUser`, `loadPendingIds`). Add toast + retry.
-- **I7** — Voiceflow `versionID` hardcoded to `"production"` in `voiceflow-interact`. Add to agent config.
-
-**Status:** in flight as part of the same Claude Code execution as C1-C3.
-
----
-
 ## Tier 3 audit findings — minor cleanup
 
 Low priority. Do opportunistically when touching related code.
@@ -722,41 +477,19 @@ Low priority. Do opportunistically when touching related code.
 
 ## Completed (recent)
 
-Date-stamped log of items shipped. Don't delete — provides commit-trail context for future work.
+Date-stamped log of items shipped. Older entries are intentionally terse — open the commit if you need detail. Newer entries keep slightly more context while still relevant.
 
-**Completed:** 2026-04-28 — `6b56bba` — N27 (Add User error): the EF already inserts `client_user_agent_permissions` for every assigned agent, but the frontend was re-inserting the same rows on top — hitting the `(user_id, agent_id)` unique constraint with no error destructuring. Replaced the post-EF INSERT loop in `handleAddUser` with a reconciliation pass: DELETE rows for agents the admin unchecked, UPDATE rows where the admin's custom perms differ from the role template (computing `has_overrides` via diff), leave template-default rows alone. Aggregates per-row errors and surfaces them in a destructive toast so partial failures are visible. EF unchanged.
-
-**Completed:** 2026-04-28 — `0208d4f` — N11-F3 + F9: live permission invalidation. `useClientAgentContext` now opens two Supabase Realtime channels — a stable per-user/client channel covering `role_permission_templates`, `client_roles`, `client_settings`, `client_user_permissions`, `client_user_agent_permissions`, and a per-agent channel on the `agents` row. Any change triggers a 250 ms-debounced refetch through the existing loaders, which now preserve the user's currently-selected agent across reloads. Bundled F9 (Layer-2 ceiling invalidation) into the same channel; also covers Layer-1 (`AgencyAgentDetails` config edits). Preview mode is skipped (already short-circuits to all-true). RLS already permits client-user reads on every subscribed table — no migration needed. Build green. Still open from N11: F17 (UX wording).
-
-**Completed:** 2026-04-28 — N11-F15: extracted the four duplicate copies of `resolvePermission`/`resolveClientScoped` from `useClientAgentContext.tsx` into module-scope helpers (`resolveAgentScopedKey`, `resolveClientScopedKey`, `buildAgentPermissions`, `buildCompanySettingsPermissions`). The three real call sites (`loadClientAgentsAsUser`, `loadClientAgents`, per-agent useEffect) now delegate to the same builders — no more silent drift. Behaviour-preserving; build green. Still open: F3, F9 (Realtime invalidation — design call), F17 (UX wording).
-
-**Completed:** 2026-04-28 — N11 follow-ups F7, F8, F10, F12, F13, F14, F16 landed in one pass; F11 marked false-alarm against current code. F7: all three duplicate `resolveClientScoped` callsites now use `client_user_permissions` overrides; useEffect copy gained the missing query. F8: Sidebar + ProtectedRoute now read `settings_page` and `audit_log` from canonical `companySettingsPermissions`. F10: try/catch + fail-closed in the per-agent useEffect resolver. F12: new-user grant diffs vs template instead of hardcoding has_overrides. F13: client-scoped save diffs vs template instead of "any keys". F14: `AgencyAgentDetails` swapped to `agents_safe`. F16: RolesManagement Save button hidden when count=0; relabeled "Apply to N users" otherwise. Still open: F3, F9 (Realtime invalidation — design call), F15 (resolver extract refactor), F17 (UX wording).
-
-**Completed:** 2026-04-27 — `3bd2171` — N11 follow-ups F1, F2, F4, F5, F6 landed in one pass; tested in app on 2026-04-28 by Silv (smoke pass — no regressions surfaced beyond pre-existing N27/N28). F1: both role-change modal paths now sync `client_user_permissions.role_id`, persist in-memory permission edits when the affected user is expanded, and surface DB errors. F2: optimistic-with-rollback + destructive toasts on RolesManagement saves. F4: Departments sub-tab gated by `showDepartments` with auto-redirect. F5: Audit Log unified to `!== false` parity. F6: Roles sub-tab gated by `settings_team_manage`. F3 (Realtime invalidation), F7-F16 still open.
-
-**Completed:** 2026-04-27 — N11 audit: read-only walkthrough of the 4-layer permission system. Wrote `docs/audits/2026-04-N11-permissions-audit.md` with 16 confirmed bugs (1 Critical, 5 High, 7 Medium, 3 Low) + 1 UX wording cluster. Filed each as N11-F1 through N11-F17 above. Rejected 2 false alarms (admin_tier doesn't bypass ceilings; agent-scoped pages ARE gated by `ProtectedRoute`).
-
-**Completed:** 2026-04-26 — `5c50c41` — N6 fix: added `previous_session_id` column on `handover_sessions` for succession tracking; `take_over` captures the prior session id and tags its system transcript with `metadata.type='session_refreshed'` when the prior session was timeout/inactivity_timeout/completed; widget keeps polling for 30 min after `handover_ended` and re-enters handover on `session_refreshed`; pending-timeout path in `handover-timer` now uses an N5-style conditional UPDATE so a takeover that wins the race doesn't emit duplicate "Handover ended" pills.
-
-**Completed:** 2026-04-26 — `a53474f` — N5 fix: added `inactivity_reset_at` column set on takeover/accept, extended timer baseline to include agent messages (`speaker=client_user`) and the new column, added race guard (re-read + conditional UPDATE) before firing inactivity_timeout, plus structured `[inactivity_check]`/`[inactivity_skip]` logs.
-
-### N5 — Inactivity timer takeover bug
-
-**Type:** Bug | **Effort:** Small | **Status:** Done
-**Spec:** `TotalDash-Spec-N5-Inactivity-Timer-Takeover-Bug.md`
-
-When an agent manually clicks "Take Over" after the inactivity timer has already fired (or is about to), the system creates a new active handover session but the inactivity timer doesn't reset its baseline correctly. Result: duplicate "chat has ended" notifications or a conversation timing out a second time despite the manual takeover succeeding.
-
-**Decisions already made:**
-- Code review shows the logic *should* work — `handover-timer` already computes baseline as `Math.max(lastCustomerTime, sessionAcceptedTime)`. Hypothesis is a race condition, not a logic bug.
-- Recommended approach: Option A from spec (aggressive) — add explicit `inactivity_reset_at` field on `handover_sessions` and check it in `handover-timer`. Bulletproof against races.
-
-**Touches:** `supabase/functions/handover-actions/index.ts`, `supabase/functions/handover-timer/index.ts`, `handover_sessions` table.
-
-**Open question:** confirm with prod logs whether the issue is genuinely a race or a different bug. Add logging first, observe for a few days, then commit to a fix.
-
----
-
-- 2026-04-26 — Backend cutover complete: Lovable Cloud → standalone Supabase + Vercel. Domain live at `app.total-dash.com`. Edge Functions deploy via GitHub Actions. `ai-enhance` swapped to direct Anthropic API. `create-text-transcripts` cron re-created. Password reset email flow fixed (route collision + hardcoded URL). RLS gaps for client users patched (`get_user_client_id` helper + new SELECT policies on `clients`/`agencies`). Missing FK constraints added (`client_user_agent_permissions.user_id` → `client_users.user_id`, `role_id` → `client_roles.id`, etc.). Bare `/:agencySlug` route removed in favour of `/login/:agencySlug` to fix path collisions with app routes. `check-domain-context` parser updated for new URL shape.
-- 2026-04-25 — Audit produced (C1-C3 critical, I1-I7 important, M1-M8 minor).
-- 2026-04 (pre-cutover) — Tickets #3/#4 (login UI + branding), #39 (custom tags), widget consolidation + UI overhaul, Attachments Phase 1 (backend), Phase 5 widget polish.
+- **2026-04-28** — `34ebf78` / `e4b8f28` / `3717f08` — N11-F17 + N28 + UI clarity bundle. Added scope subheadings (Role defaults / Per-user / cap-coloured ceiling banners), inline role-default + reset on per-user override rows, View-only badges on Settings sub-tabs, user-count chips on Roles, dialog widths bumped to `max-w-3xl`, sticky dialog footer, Settings page padding tightened. Bonus: switched `ClientAgentAssignments.tsx` to `agents_safe` to close a CLAUDE.md rule #2 gap.
+- **2026-04-28** — Audit verification pass: **C2** is a false alarm (column projection strips api_key/voiceflow_api_key/retell_api_key from `agents_safe` regardless of `security_invoker` mode — flipping to DEFINER would be a no-op). **I1** has rate limit (60/min per IP+agent), agent existence/status check, and userId regex validation already in place. **I2** all `JSON.parse` calls (3 inline + early `req.json()`) wrapped, returns 400 not 500. **I5** both `AgentSpecs.tsx` and `Guides.tsx` already query `agents_safe` (audit entry was stale). **I7** `voiceflow_version_id` is configurable via `agent.config`, with `"production"` only as fallback. No code changes needed.
+- **2026-04-28** — `6b56bba` — N27 (Add User dup-key error): replaced post-EF INSERT loop with reconciliation pass; per-row error aggregation toasted on partial failure.
+- **2026-04-28** — `0208d4f` — N11-F3 + F9: live permission invalidation via Supabase Realtime. Two channels (per-user/client + per-agent) cover all 4 permission layers; 250ms-debounced refetch through existing loaders; selected agent preserved across reloads. Preview mode short-circuits.
+- **2026-04-28** — N11-F15: extracted resolver helpers (`resolveAgentScopedKey`, `resolveClientScopedKey`, `buildAgentPermissions`, `buildCompanySettingsPermissions`) to module scope in `useClientAgentContext.tsx`. Single source of truth for the 4-layer stack.
+- **2026-04-28** — N11 follow-ups F7, F8, F10, F12, F13, F14, F16: cross-scope mixing in `resolveClientScoped` fixed; Sidebar/ProtectedRoute use canonical `companySettingsPermissions`; `loadAgentPermissions` fail-closes on error; new-user grant + client-scoped save diff vs template before flagging `has_overrides`; `AgencyAgentDetails` switched to `agents_safe`; RolesManagement Save button hidden when 0 users / labelled "Apply to N users" otherwise. F11 confirmed false alarm.
+- **2026-04-27** — `3bd2171` — N11 follow-ups F1, F2, F4, F5, F6: sync `client_user_permissions.role_id` on role change + persist in-memory edits; optimistic-with-rollback on Roles toggles; gate Departments / Audit Log / Roles sub-tabs by their respective permissions; `SubTabGuard` auto-redirects when active sub-tab gets hidden.
+- **2026-04-27** — N11 audit + report (`docs/audits/2026-04-N11-permissions-audit.md`). 16 confirmed bugs filed as F1-F16 + F17 UX cluster; F1-F16 all complete by 28 April; F17 shipped 28 April.
+- **2026-04-27** — N8 — Team-wide conversation archive shipped: `is_archived` / `archived_at` / `archived_by` columns + `set_conversation_archived` RPC; archive button on conversations; "Include archived" toggle on Transcripts.
+- **2026-04-26** — `5c50c41` — N6 (handover succession): `previous_session_id` column, `session_refreshed` metadata tag, 30-min widget polling for refresh, race-guarded pending-timeout path.
+- **2026-04-26** — `a53474f` — N5 (inactivity-timer takeover): `inactivity_reset_at` column + race-guarded conditional UPDATE before firing inactivity_timeout.
+- **2026-04-26** — Backend cutover complete: Lovable Cloud → standalone Supabase + Vercel. `app.total-dash.com` live. Edge Functions deploy via GitHub Actions. `ai-enhance` swapped to direct Anthropic API. Password-reset email flow fixed. RLS gaps for client users patched. FK constraint repair. Bare `/:agencySlug` route removed in favour of `/login/:agencySlug`.
+- **2026-04-25** — Audit produced: C1-C3 critical (all resolved), I1-I7 important (I1/I2/I5/I7 already done; I3/I4/I6 still open), M1-M8 minor.
+- **2026-04 (pre-cutover)** — Login UI + branding (#3/#4), custom tags (#39), widget consolidation, Attachments Phase 1 (backend), Phase 5 widget polish.

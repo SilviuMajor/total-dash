@@ -31,7 +31,6 @@ interface Agent {
   id: string;
   name: string;
   provider: string;
-  config: any;
 }
 
 interface AssignedAgent extends Agent {
@@ -142,8 +141,7 @@ export function ClientAgentAssignments({ clientId }: { clientId: string }) {
           agents (
             id,
             name,
-            provider,
-            config
+            provider
           )
         `)
         .eq('client_id', clientId)
@@ -159,10 +157,11 @@ export function ClientAgentAssignments({ clientId }: { clientId: string }) {
 
       setAssignedAgents(assigned);
 
-      // Load all agents to find available ones
+      // Load all agents to find available ones (CLAUDE.md rule #2: never query
+      // `agents` directly from src/components/client-management/ — keys leak).
       const { data: allAgents, error: agentsError } = await supabase
-        .from('agents')
-        .select('*')
+        .from('agents_safe')
+        .select('id, name, provider')
         .order('name');
 
       if (agentsError) throw agentsError;
