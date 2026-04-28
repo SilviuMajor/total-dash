@@ -2004,7 +2004,7 @@ function generateWidgetScript(config: any): string {
     \`;
     return {
       className: '',
-      cssText: 'display:flex;flex-direction:column;gap:5px;align-self:flex-start;max-width:100%;',
+      cssText: 'display:flex;flex-direction:column;gap:5px;',
       html,
       useTextContent: false,
     };
