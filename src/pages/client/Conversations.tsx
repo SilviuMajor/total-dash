@@ -140,6 +140,7 @@ export default function Conversations() {
   const [statusFilters, setStatusFilters] = useState<string[]>([]);
   const [tagFilters, setTagFilters] = useState<string[]>([]);
   const [departmentFilters, setDepartmentFilters] = useState<string[]>([]);
+  const [myOnly, setMyOnly] = useState(false);
   
 
   // Bulk select
@@ -269,7 +270,7 @@ export default function Conversations() {
   // Reset selection on filter/agent change
   useEffect(() => {
     setSelectedConversationIds(new Set());
-  }, [selectedAgentId, statusFilters, tagFilters, departmentFilters]);
+  }, [selectedAgentId, statusFilters, tagFilters, departmentFilters, myOnly]);
 
   // Response time tick (every second for live updates)
   useEffect(() => {
@@ -1500,6 +1501,9 @@ export default function Conversations() {
         tagFilters.some(tag => c.metadata?.tags?.includes(tag))
       );
     }
+    if (myOnly && currentClientUserId) {
+      result = result.filter(c => c.owner_id === currentClientUserId);
+    }
     // Pin priority: Tier 1 = pending/waiting, Tier 2 = in_handover with unanswered message
     result = [...result].sort((a, b) => {
       const aTier = pendingConversationIds.has(a.id) ? 1
@@ -1511,7 +1515,7 @@ export default function Conversations() {
       return aTier - bTier;
     });
     return result;
-  }, [conversations, tagFilters, departmentFilters, pendingConversationIds]);
+  }, [conversations, tagFilters, departmentFilters, pendingConversationIds, myOnly, currentClientUserId]);
 
   const allSelected = filteredConversations.length > 0 &&
     filteredConversations.every(c => selectedConversationIds.has(c.id));
@@ -1592,6 +1596,24 @@ export default function Conversations() {
               </Button>
             );
           })}
+        </div>
+
+        {/* Row 2c: Scope filter — show only conversations I own */}
+        <div className="px-4 py-1.5 flex items-center gap-1">
+          <Button
+            size="sm"
+            variant={myOnly ? 'default' : 'ghost'}
+            onClick={() => setMyOnly(v => !v)}
+            disabled={!currentClientUserId}
+            className="h-7 text-xs px-3"
+            title="Show only conversations assigned to me"
+          >
+            <span className={cn(
+              "w-1.5 h-1.5 rounded-full mr-1.5",
+              myOnly ? 'bg-primary-foreground' : 'bg-muted-foreground'
+            )} />
+            Mine
+          </Button>
         </div>
 
         {/* Row 2b: Department filters (multi-select toggle, hidden for single department) */}
