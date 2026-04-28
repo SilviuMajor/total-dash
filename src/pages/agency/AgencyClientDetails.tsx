@@ -92,7 +92,7 @@ function CompanySettingsPanel({ clientId }: { clientId: string }) {
         <div className="flex items-center justify-between gap-4">
           <div>
             <p className="text-sm font-medium">Show Company Settings page to this client</p>
-            <p className="text-xs text-muted-foreground mt-0.5">Agency-wide cap — turning this off hides the entire Company Settings page for every user at this client. Individual tabs below also have their own toggles.</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Agency-wide cap. Turning this off hides the entire Company Settings page for every user at this client. Individual tabs below also have their own toggles.</p>
           </div>
           <Switch checked={masterEnabled} onCheckedChange={(v) => updateCapability('settings_page_enabled', v)} />
         </div>

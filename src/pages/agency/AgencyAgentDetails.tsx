@@ -196,7 +196,7 @@ export default function AgencyAgentDetails() {
           <div className="flex items-start gap-3 p-3 border-l-4 border-l-destructive border-y border-r border-y-border/50 border-r-border/50 rounded-lg bg-destructive/5">
             <Lock className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
             <p className="text-sm text-muted-foreground">
-              <span className="font-medium text-foreground">Agency only — per-agent cap.</span> These toggles control what client users can see for this specific agent. Disabling a toggle hides that feature for every client user assigned to this agent. Clients never see this page.
+              <span className="font-medium text-foreground">Agency only. Per-agent cap.</span> These toggles control what client users can see for this specific agent. Disabling a toggle hides that feature for every client user assigned to this agent. Clients never see this page.
             </p>
           </div>
 
