@@ -659,47 +659,80 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
       });
 
       if (error) throw error;
-
-      if (data.success && data.userId) {
-        const activePermissions = Object.values(newUserAgentPermissions).filter(
-          p => newUserAgentAccess[p.agent_id] !== false
-        );
-        for (const permission of activePermissions) {
-          await supabase
-            .from('client_user_agent_permissions')
-            .insert({
-              user_id: data.userId,
-              agent_id: permission.agent_id,
-              client_id: clientId,
-              role_id: newUserRoleId || null,
-              has_overrides: false,
-              permissions: {
-                conversations: permission.conversations,
-                transcripts: permission.transcripts,
-                analytics: permission.analytics,
-                specs: permission.specs,
-                knowledge_base: permission.knowledge_base,
-                guides: permission.guides,
-                agent_settings: permission.agent_settings,
-              },
-            });
-        }
+      if (!data?.success || !data?.userId) {
+        throw new Error(data?.error || 'create-client-user did not return a userId');
       }
 
-      if (data.success) {
-        toast({ title: "Success", description: "User created. A password setup email has been sent to their email address." });
-        loadUsers();
-        setOpen(false);
-        setNewUserEmail("");
-        setNewUserFullName("");
-        setNewUserDepartment("none");
-        setNewUserAvatar("");
-        
-        const defaultRole = roles.find(r => r.is_default) || roles.find(r => !r.is_admin_tier);
-        setNewUserRoleId(defaultRole?.id || "");
-        if (defaultRole) {
-          populatePermissionsFromRole(defaultRole.id);
+      // N27: the EF already inserted a `client_user_agent_permissions` row for
+      // every agent assigned to the client (seeded from the role template) and
+      // a `client_user_permissions` row. We reconcile here:
+      //  - DELETE rows for agents the admin unchecked.
+      //  - UPDATE rows where the admin customised perms; mark has_overrides
+      //    only when the custom values actually differ from the template.
+      //  - Leave untouched rows where admin kept template defaults (EF row is
+      //    already correct).
+      const permKeys: (keyof AgentPermission)[] = [
+        'conversations', 'transcripts', 'analytics', 'specs',
+        'knowledge_base', 'guides', 'agent_settings',
+      ];
+      const templates = newUserRoleId ? await loadRoleTemplates(newUserRoleId) : {};
+      const reconcileErrors: string[] = [];
+
+      for (const agent of agents) {
+        const hasAccess = newUserAgentAccess[agent.id] !== false;
+        if (!hasAccess) {
+          const { error: delErr } = await supabase
+            .from('client_user_agent_permissions')
+            .delete()
+            .eq('user_id', data.userId)
+            .eq('agent_id', agent.id)
+            .eq('client_id', clientId);
+          if (delErr) reconcileErrors.push(`${agent.name}: ${delErr.message}`);
+          continue;
         }
+
+        const custom = newUserAgentPermissions[agent.id];
+        if (!custom) continue;
+        const template = (templates[agent.id] || {}) as Record<string, any>;
+        const hasOverrides = permKeys.some(k => (custom as any)[k] !== (template[k] || false));
+        if (!hasOverrides) continue; // EF row already matches template
+
+        const { error: updErr } = await supabase
+          .from('client_user_agent_permissions')
+          .update({
+            has_overrides: true,
+            permissions: permKeys.reduce((acc, k) => {
+              acc[k] = (custom as any)[k] || false;
+              return acc;
+            }, {} as Record<string, boolean>),
+          })
+          .eq('user_id', data.userId)
+          .eq('agent_id', agent.id)
+          .eq('client_id', clientId);
+        if (updErr) reconcileErrors.push(`${agent.name}: ${updErr.message}`);
+      }
+
+      if (reconcileErrors.length > 0) {
+        toast({
+          title: "User created with permission errors",
+          description: `User created but some permissions could not be applied: ${reconcileErrors.join('; ')}`,
+          variant: "destructive",
+        });
+      } else {
+        toast({ title: "Success", description: "User created. A password setup email has been sent to their email address." });
+      }
+
+      loadUsers();
+      setOpen(false);
+      setNewUserEmail("");
+      setNewUserFullName("");
+      setNewUserDepartment("none");
+      setNewUserAvatar("");
+
+      const defaultRole = roles.find(r => r.is_default) || roles.find(r => !r.is_admin_tier);
+      setNewUserRoleId(defaultRole?.id || "");
+      if (defaultRole) {
+        populatePermissionsFromRole(defaultRole.id);
       }
     } catch (error: any) {
       console.error('[ClientUsersManagement] User creation failed:', error);
