@@ -417,12 +417,19 @@ serve(async (req) => {
 
           // --- NUDGE CHECK ---
           if (nudgeEnabled && minutesSinceCustomer >= nudgeDelayMinutes) {
-            // Check if nudge was already sent
+            // Check if nudge was already sent. Match by metadata.type alone —
+            // historically these inserts used speaker='assistant', which (a)
+            // broke the "once" toggle because this query was filtered to
+            // speaker='system', and (b) made the widget skip them during the
+            // handover poll (which intentionally only displays client_user
+            // and system speakers, since 'assistant' is the AI bot path that
+            // shouldn't be active during a handover). Nudges are now inserted
+            // with speaker='system' below; dropping the filter here lets the
+            // "once" gate honour any pre-fix assistant-speaker nudge too.
             const { data: existingNudges } = await supabaseClient
               .from("transcripts")
               .select("id, timestamp")
               .eq("conversation_id", session.conversation_id)
-              .eq("speaker", "system")
               .contains("metadata", { type: "inactivity_nudge" })
               .order("timestamp", { ascending: false })
               .limit(1);
@@ -448,9 +455,16 @@ serve(async (req) => {
             if (shouldNudge) {
               console.log("Sending inactivity nudge for session:", session.id);
 
+              // speaker: 'system' so:
+              //   (a) the existence-check above finds it on the next tick
+               //  (b) the widget handover poll displays it (it skips 'assistant'
+              //      messages during handover), and
+              //   (c) it renders consistently as a centered pill in both the
+              //      dashboard transcript and the widget — visual language
+              //      that already exists for automated/system messages.
               await supabaseClient.from("transcripts").insert({
                 conversation_id: session.conversation_id,
-                speaker: "assistant",
+                speaker: "system",
                 text: nudgeMessage,
                 metadata: {
                   type: "inactivity_nudge",
