@@ -235,21 +235,15 @@ Tracked as a single follow-up:
 
 ---
 
-### N27 — Create user fails (longstanding)
+### N27 — Create user fails (longstanding) ✅ DONE (2026-04-28)
 
-**Type:** Bug | **Effort:** Small (suspected) | **Status:** Open
+**Type:** Bug | **Effort:** Small | **Status:** Shipped — `6b56bba`
 
-Adding a new client user from Settings → Users → "Add User" produces an error toast. Pre-existing — unrelated to N11 follow-up work. Real exposure once HeyB onboarding starts.
+Confirmed root cause: `create-client-user/index.ts:306-324` already inserts a `client_user_agent_permissions` row for every agent assigned to the client (UNIQUE on `(user_id, agent_id)`). The frontend then re-inserted the same rows at `ClientUsersManagement.tsx:668-685`, hitting the duplicate-key violation, with no `{ error }` destructuring so the failure was opaque.
 
-**Suspected cause (needs confirmation with the actual error message):** `handleAddUser` in `ClientUsersManagement.tsx:663-686` inserts permission rows from the frontend AFTER `create-client-user/index.ts:306-324` already inserted rows for every assigned agent. If a unique constraint exists on `(user_id, agent_id, client_id)`, the frontend insert hits a duplicate-key error. Two fixes possible:
-- Drop the redundant frontend insert and let the EF own all permission writes (simpler).
-- Switch frontend to upsert with `onConflict: 'user_id,agent_id,client_id'` and let the EF skip if frontend is sending custom perms.
+Fix: replaced the post-EF INSERT loop with a reconcile step. DELETE rows for agents the admin unchecked. UPDATE rows where the admin's custom perms differ from the role template (computing `has_overrides` by diffing — same pattern as N11-F12/F13). Leave EF-seeded template-default rows alone. Aggregates per-row errors and surfaces them via destructive toast (`"User created with permission errors"`) so partial failures aren't silently dropped. EF unchanged — already correct.
 
-Frontend insert was added when the EF didn't yet seed permissions; EF behaviour caught up but frontend wasn't deduplicated.
-
-**Repro:** Open Settings → Users → Add User. Fill out the form. Click "Add User". Capture (a) toast text, (b) browser-console error line starting `[ClientUsersManagement] User creation failed:`, (c) Network tab response body for the `create-client-user` POST.
-
-**Touches:** `src/components/client-management/ClientUsersManagement.tsx:641-712`, `supabase/functions/create-client-user/index.ts` (only if the EF path also has a bug).
+**Touches:** `src/components/client-management/ClientUsersManagement.tsx`.
 
 ---
 
@@ -729,6 +723,8 @@ Low priority. Do opportunistically when touching related code.
 ## Completed (recent)
 
 Date-stamped log of items shipped. Don't delete — provides commit-trail context for future work.
+
+**Completed:** 2026-04-28 — `6b56bba` — N27 (Add User error): the EF already inserts `client_user_agent_permissions` for every assigned agent, but the frontend was re-inserting the same rows on top — hitting the `(user_id, agent_id)` unique constraint with no error destructuring. Replaced the post-EF INSERT loop in `handleAddUser` with a reconciliation pass: DELETE rows for agents the admin unchecked, UPDATE rows where the admin's custom perms differ from the role template (computing `has_overrides` via diff), leave template-default rows alone. Aggregates per-row errors and surfaces them in a destructive toast so partial failures are visible. EF unchanged.
 
 **Completed:** 2026-04-28 — `0208d4f` — N11-F3 + F9: live permission invalidation. `useClientAgentContext` now opens two Supabase Realtime channels — a stable per-user/client channel covering `role_permission_templates`, `client_roles`, `client_settings`, `client_user_permissions`, `client_user_agent_permissions`, and a per-agent channel on the `agents` row. Any change triggers a 250 ms-debounced refetch through the existing loaders, which now preserve the user's currently-selected agent across reloads. Bundled F9 (Layer-2 ceiling invalidation) into the same channel; also covers Layer-1 (`AgencyAgentDetails` config edits). Preview mode is skipped (already short-circuits to all-true). RLS already permits client-user reads on every subscribed table — no migration needed. Build green. Still open from N11: F17 (UX wording).
 
