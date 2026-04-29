@@ -1,5 +1,6 @@
 import { Avatar } from "@/components/ui/avatar";
 import { Bot, FileText, Download } from "lucide-react";
+import { format } from "date-fns";
 
 // Append `?download=<filename>` so Supabase storage serves the file with
 // Content-Disposition: attachment instead of inline. Without this, browsers
@@ -280,11 +281,8 @@ export function MessageBubble({
           )}
         </div>
         
-        <span className="text-xs text-muted-foreground px-1">
-          {new Date(timestamp).toLocaleTimeString([], { 
-            hour: '2-digit', 
-            minute: '2-digit' 
-          })}
+        <span className="text-[10px] text-muted-foreground mt-0.5 px-1">
+          {format(new Date(timestamp), 'h:mm a · d/M')}
         </span>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useState, useRef, useMemo, Fragment } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ConversationsSkeleton } from "@/components/skeletons";
 import { Phone, Clock, CheckCircle, MessageSquare, ArrowDown, X, Plus, Tag, Users, Building2, Send, UserCheck, PhoneOff, ArrowRightLeft, Lock, Loader2, AlertTriangle, Timer, MessageSquareText, Trash2, FolderOpen, Sparkles, Check, Archive, Paperclip, FileText, Download, Filter, Pin, PinOff } from "lucide-react";
@@ -27,7 +27,7 @@ import { NoAgentsAssigned } from "@/components/NoAgentsAssigned";
 import { ClientAgentSelector } from "@/components/ClientAgentSelector";
 import { MetricCard } from "@/components/MetricCard";
 import { MessageBubble } from "@/components/MessageBubble";
-import { formatDistanceToNow, format } from "date-fns";
+import { formatDistanceToNow, format, isSameDay } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -1966,7 +1966,7 @@ export default function Conversations() {
                         </div>
                         {/* Row 2: Last activity date/time */}
                         <p className="text-xs text-muted-foreground truncate pl-6 mb-1.5">
-                          {format(new Date(conv.last_activity_at || conv.started_at), 'MMM d, h:mm a')}
+                          {format(new Date(conv.last_activity_at || conv.started_at), 'h:mm a · d/M')}
                         </p>
                         {/* Row 3: Status badge with owner initials + tags + clock pill */}
                         <div className="flex items-center justify-between pl-6">
@@ -2164,15 +2164,30 @@ export default function Conversations() {
                             return null;
                           }
 
+                          const prevTranscript = index > 0 ? transcripts[index - 1] : null;
+                          const showSeparator =
+                            index === 0 ||
+                            (prevTranscript &&
+                              !isSameDay(new Date(prevTranscript.timestamp), new Date(transcript.timestamp)));
+                          const separatorEl = showSeparator ? (
+                            <div className="text-center text-xs text-muted-foreground my-3">
+                              {format(new Date(transcript.timestamp), 'do MMMM yyyy')}
+                            </div>
+                          ) : null;
+                          const fragKey = transcript.id || `idx-${index}`;
+
                           // System messages render as centered indicators
                           if (transcript.speaker === 'system') {
                             if (!transcript.text?.trim()) return null; // Don't render empty system messages
                             return (
-                              <div key={transcript.id || index} className="flex justify-center my-3">
-                                <div className="bg-muted text-muted-foreground text-xs px-3 py-1 rounded-full border border-border">
-                                  {transcript.text}
+                              <Fragment key={fragKey}>
+                                {separatorEl}
+                                <div className="flex justify-center my-3">
+                                  <div className="bg-muted text-muted-foreground text-xs px-3 py-1 rounded-full border border-border">
+                                    {transcript.text}
+                                  </div>
                                 </div>
-                              </div>
+                              </Fragment>
                             );
                           }
 
@@ -2191,7 +2206,9 @@ export default function Conversations() {
                               !!atts && atts.length > 0 &&
                               atts.every((a: any) => a.kind === 'file');
                             return (
-                              <div key={transcript.id || index} className="flex gap-2 mb-4">
+                              <Fragment key={fragKey}>
+                                {separatorEl}
+                                <div className="flex gap-2 mb-4">
                                 <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 text-[11px] font-bold text-primary">
                                   {name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
                                 </div>
@@ -2245,9 +2262,10 @@ export default function Conversations() {
                                       );
                                     })}
                                   </div>
-                                  <span className="text-[10px] text-muted-foreground mt-0.5 ml-1">{format(new Date(transcript.timestamp), 'h:mm a')}</span>
+                                  <span className="text-[10px] text-muted-foreground mt-0.5 px-1">{format(new Date(transcript.timestamp), 'h:mm a · d/M')}</span>
                                 </div>
                               </div>
+                              </Fragment>
                             );
                           }
 
@@ -2263,24 +2281,26 @@ export default function Conversations() {
                               ? nextTranscript.text
                               : undefined;
                           return (
-                            <MessageBubble
-                              key={transcript.id || index}
-                              text={transcript.text}
-                              speaker={speaker}
-                              timestamp={transcript.timestamp}
-                              buttons={transcript.buttons}
-                              selectedButton={selectedButton}
-                              attachments={transcript.attachments}
-                              appearance={{
-                                primaryColor: '#3b82f6',
-                                secondaryColor: '#ffffff',
-                                textColor: '#1f2937',
-                                messageTextColor: '#1f2937',
-                                messageBgColor: '#f3f4f6',
-                                fontSize: 14,
-                                messageBubbleStyle: 'rounded',
-                              }}
-                            />
+                            <Fragment key={fragKey}>
+                              {separatorEl}
+                              <MessageBubble
+                                text={transcript.text}
+                                speaker={speaker}
+                                timestamp={transcript.timestamp}
+                                buttons={transcript.buttons}
+                                selectedButton={selectedButton}
+                                attachments={transcript.attachments}
+                                appearance={{
+                                  primaryColor: '#3b82f6',
+                                  secondaryColor: '#ffffff',
+                                  textColor: '#1f2937',
+                                  messageTextColor: '#1f2937',
+                                  messageBgColor: '#f3f4f6',
+                                  fontSize: 14,
+                                  messageBubbleStyle: 'rounded',
+                                }}
+                              />
+                            </Fragment>
                           );
                         })}
                       </div>

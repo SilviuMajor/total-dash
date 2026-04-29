@@ -521,8 +521,6 @@ function generateWidgetScript(config: any): string {
       scroll-behavior: smooth;
     }
     .vf-msg-bot {
-      align-self: flex-start;
-      max-width: 78%;
       padding: 9px 13px;
       background: \${theme.botBubble};
       border-radius: 16px; border-top-left-radius: 6px;
@@ -533,9 +531,9 @@ function generateWidgetScript(config: any): string {
     }
     .vf-msg-bot img { max-width: 100%; height: auto; border-radius: 8px; margin-top: 6px; }
     .vf-msg-bot a { color: \${accent}; text-decoration: underline; }
+    .vf-msg-bot-wrap { display: flex; flex-direction: column; gap: 5px; }
     .vf-msg-user-wrap { display: flex; justify-content: flex-end; }
     .vf-msg-user {
-      max-width: 78%;
       padding: 9px 13px;
       background: \${accent};
       color: #ffffff;
@@ -543,6 +541,13 @@ function generateWidgetScript(config: any): string {
       font-size: 13px; line-height: 1.45; margin: 0;
       word-wrap: break-word;
     }
+    .vf-msg-body {
+      position: relative;
+      max-width: 78%;
+      display: flex; flex-direction: column; gap: 5px;
+    }
+    .vf-msg-bot-wrap .vf-msg-body { align-self: flex-start; align-items: flex-start; }
+    .vf-msg-user-wrap .vf-msg-body { align-items: flex-end; }
     .vf-msg-agent-wrap {
       align-self: flex-start;
       max-width: 85%;
@@ -569,7 +574,20 @@ function generateWidgetScript(config: any): string {
       color: \${theme.textMuted};
       padding: 6px 0; text-align: center;
     }
-    .vf-msg-time { display: none; }
+    .vf-msg-time {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      white-space: nowrap;
+      font-size: 11px;
+      color: \${theme.textMuted};
+      opacity: 0;
+      transition: opacity 0.15s ease;
+      pointer-events: none;
+    }
+    .vf-msg-user-wrap .vf-msg-time { right: 100%; margin-right: 8px; }
+    .vf-msg-bot-wrap .vf-msg-time { left: 100%; margin-left: 8px; }
+    [data-msg-id]:hover .vf-msg-time { opacity: 1; }
     .vf-buttons {
       display: flex; flex-wrap: wrap; gap: 5px;
       align-self: flex-start; margin-top: 2px;
@@ -1964,28 +1982,31 @@ function generateWidgetScript(config: any): string {
 
     if (isUser) {
       const textOnly = messageContent && messageContent.trim();
-      let html;
+      let bodyInner;
       if (textOnly && attachmentsHtml) {
-        html = '<div class="vf-msg-user">' + escapeHtml(messageContent) + '</div>' + attachmentsHtml;
+        bodyInner = '<div class="vf-msg-user">' + escapeHtml(messageContent) + '</div>' + attachmentsHtml;
       } else if (attachmentsHtml) {
-        html = attachmentsHtml;
+        bodyInner = attachmentsHtml;
       } else {
-        html = '<div class="vf-msg-user">' + escapeHtml(messageContent) + '</div>';
+        bodyInner = '<div class="vf-msg-user">' + escapeHtml(messageContent) + '</div>';
       }
+      const html =
+        '<div class="vf-msg-body">' + bodyInner +
+        '<div class="vf-msg-time">' + formatTime(msg.timestamp) + '</div>' +
+        '</div>';
       return { className: 'vf-msg-user-wrap', cssText: '', html, useTextContent: false };
     }
 
     // Bot / client_user message
     const isClicked = clickedButtonIds.has(msg.id);
     const hasBotBody = (messageContent && messageContent.trim()) || attachmentsHtml;
+    const bodyContent = isAgent
+      ? \`\${messageContent && messageContent.trim() ? \`<div class="vf-msg-agent">\${escapeHtml(messageContent)}</div>\` : ''}\${attachmentsHtml || ''}\`
+      : (hasBotBody
+          ? \`\${messageContent && messageContent.trim() ? \`<p class="vf-msg-bot">\${messageContent}</p>\` : ''}\${attachmentsHtml || ''}\`
+          : '');
     const html = \`
-      \${isAgent ? \`
-        \${messageContent && messageContent.trim() ? \`<div class="vf-msg-agent">\${escapeHtml(messageContent)}</div>\` : ''}
-        \${attachmentsHtml || ''}
-      \` : (hasBotBody ? \`
-        \${messageContent && messageContent.trim() ? \`<p class="vf-msg-bot">\${messageContent}</p>\` : ''}
-        \${attachmentsHtml || ''}
-      \` : '')}
+      \${bodyContent ? \`<div class="vf-msg-body">\${bodyContent}<div class="vf-msg-time">\${formatTime(msg.timestamp)}</div></div>\` : ''}
       \${msg.buttons && msg.buttons.length > 0 ? \`
         <div class="vf-buttons">
           \${msg.buttons.map((btn, idx) => {
@@ -2000,11 +2021,10 @@ function generateWidgetScript(config: any): string {
           }).join('')}
         </div>
       \` : ''}
-      <div class="vf-msg-time">\${formatTime(msg.timestamp)}</div>
     \`;
     return {
-      className: '',
-      cssText: 'display:flex;flex-direction:column;gap:5px;',
+      className: 'vf-msg-bot-wrap',
+      cssText: '',
       html,
       useTextContent: false,
     };

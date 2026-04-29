@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, Fragment } from "react";
 import { Phone, Clock, CheckCircle, MessageSquare } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,7 @@ import { NoAgentsAssigned } from "@/components/NoAgentsAssigned";
 import { ClientAgentSelector } from "@/components/ClientAgentSelector";
 import { MetricCard } from "@/components/MetricCard";
 import { MessageBubble } from "@/components/MessageBubble";
-import { formatDistanceToNow, format } from "date-fns";
+import { formatDistanceToNow, format, isSameDay } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
@@ -452,18 +452,28 @@ export default function Transcripts() {
                 ) : (
                   <div className="space-y-4">
                     {transcripts.map((t, index) => {
-                      const selectedButton = t.metadata?.button_click 
-                        ? t.text 
+                      const selectedButton = t.metadata?.button_click
+                        ? t.text
                         : undefined;
-                      
+
                       const prevMessage = index > 0 ? transcripts[index - 1] : null;
                       const buttonsToDisplay = t.speaker === 'user' && selectedButton && prevMessage?.buttons
                         ? prevMessage.buttons
                         : t.buttons;
-                      
+
+                      const showSeparator =
+                        index === 0 ||
+                        (prevMessage && !isSameDay(new Date(prevMessage.timestamp), new Date(t.timestamp)));
+                      const separatorEl = showSeparator ? (
+                        <div className="text-center text-xs text-muted-foreground my-3">
+                          {format(new Date(t.timestamp), 'do MMMM yyyy')}
+                        </div>
+                      ) : null;
+
                       return (
+                        <Fragment key={t.id}>
+                        {separatorEl}
                         <MessageBubble
-                          key={t.id}
                           speaker={t.speaker}
                           text={t.text}
                           buttons={buttonsToDisplay}
@@ -482,6 +492,7 @@ export default function Transcripts() {
                           selectedButton={selectedButton}
                           isWidget={false}
                         />
+                        </Fragment>
                       );
                     })}
                   </div>
