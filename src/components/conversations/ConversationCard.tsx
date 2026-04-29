@@ -151,6 +151,7 @@ export function ConversationCard({
   return (
     <div
       onClick={onClick}
+      data-conversation-id={conv.id}
       className={cn(
         'group border-l-[3px] px-4 py-3 border-b border-border cursor-pointer transition-colors',
         conv.status === 'with_ai' && 'border-l-green-500',

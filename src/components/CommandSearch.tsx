@@ -6,8 +6,8 @@ import {
   Users,
   Bot,
   Building2,
-  Clock,
   CalendarDays,
+  Filter,
   X,
   RotateCcw,
 } from "lucide-react";
@@ -22,6 +22,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
 import { useClientAgentContext } from "@/hooks/useClientAgentContext";
@@ -51,7 +52,6 @@ interface SearchResult {
   matchSuffix?: string | null;
 }
 
-const RECENT_KEY = "search_recent";
 const ACTIVE_FILTERS_KEY = "totaldash_conversations_active_filters";
 
 interface ActiveFilters {
@@ -75,32 +75,6 @@ function readActiveFilters(): ActiveFilters {
   } catch {
     return { statusFilters: [], tagFilters: [], departmentFilters: [], myOnly: false };
   }
-}
-
-function getRecent(): SearchResult[] {
-  try {
-    const raw = sessionStorage.getItem(RECENT_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-function pushRecent(item: SearchResult) {
-  try {
-    // Strip the heavy `conversation` blob before saving — recents only need the lightweight fields.
-    const slim: SearchResult = {
-      id: item.id,
-      category: item.category,
-      label: item.label,
-      sublabel: item.sublabel,
-      href: item.href,
-      Icon: item.Icon,
-    };
-    const existing = getRecent().filter((r) => r.id !== slim.id);
-    const next = [slim, ...existing].slice(0, 5);
-    sessionStorage.setItem(RECENT_KEY, JSON.stringify(next));
-  } catch {}
 }
 
 function getPlaceholder(mode: string): string {
@@ -169,7 +143,6 @@ export function CommandSearch() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
-  const [recentItems, setRecentItems] = useState<SearchResult[]>([]);
 
   // Dialog-side filter state (mirror of dashboard, scratch space — does NOT push back).
   const [dialogStatuses, setDialogStatuses] = useState<string[]>([]);
@@ -235,10 +208,9 @@ export function CommandSearch() {
     setDialogMyOnly(f.myOnly);
   }, []);
 
-  // Load recent + seed dialog filters on open
+  // Seed dialog filters on open
   useEffect(() => {
     if (open) {
-      setRecentItems(getRecent());
       setQuery("");
       setResults([]);
       seedFromDashboard();
@@ -504,7 +476,6 @@ export function CommandSearch() {
   }, [query, runSearch, open, hasAnyFilter]);
 
   const handleSelect = (item: SearchResult) => {
-    pushRecent(item);
     setOpen(false);
     navigate(item.href);
   };
@@ -531,8 +502,8 @@ export function CommandSearch() {
   };
 
   const isClientMode = searchMode === "client";
-  const showRecents = !query.trim() && !hasAnyFilter && recentItems.length > 0;
-  const showEmptyPlaceholder = !query.trim() && !hasAnyFilter && recentItems.length === 0;
+  const showEmptyPlaceholder = !query.trim() && !hasAnyFilter;
+  const chipCount = dialogStatuses.length + dialogDepartments.length + dialogTags.length;
 
   return (
     <CommandDialog open={open} onOpenChange={setOpen}>
@@ -542,10 +513,9 @@ export function CommandSearch() {
         onValueChange={setQuery}
       />
 
-      {/* Filter chip rows — client mode only */}
+      {/* Top control row — client mode only. Date + Filters popover + Mine only + Reset. */}
       {isClientMode && (
-        <div className="border-b px-3 py-2 space-y-1.5">
-          {/* Date + Reset row */}
+        <div className="border-b px-3 py-2">
           <div className="flex items-center gap-2 flex-wrap">
             <Popover open={datePopoverOpen} onOpenChange={setDatePopoverOpen}>
               <PopoverTrigger asChild>
@@ -629,19 +599,128 @@ export function CommandSearch() {
               </PopoverContent>
             </Popover>
 
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 text-xs gap-1.5"
-              onClick={() => {
-                seedFromDashboard();
-                setDatePreset("all");
-                setCustomDateRange(undefined);
-              }}
-            >
-              <RotateCcw className="h-3 w-3" />
-              Reset to dashboard
-            </Button>
+            {/* Filters popover — Status / Department / Tag chips collapsed behind one button */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5">
+                  <Filter className="h-3 w-3" />
+                  Filters
+                  {chipCount > 0 && (
+                    <Badge variant="secondary" className="ml-1 h-4 px-1.5 text-[10px]">
+                      {chipCount}
+                    </Badge>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[360px] p-3 space-y-3" align="start">
+                <div>
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
+                    Status
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {STATUS_OPTIONS.map((s) => {
+                      const active = dialogStatuses.includes(s.value);
+                      return (
+                        <button
+                          key={s.value}
+                          type="button"
+                          onClick={() => toggleArrayValue(setDialogStatuses, s.value)}
+                          className={cn(
+                            "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] transition-colors",
+                            active
+                              ? "bg-foreground text-background border-foreground"
+                              : "bg-background text-muted-foreground hover:bg-muted/70 border-border",
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              "w-1.5 h-1.5 rounded-full mr-1.5",
+                              s.value === "with_ai" && "bg-green-500",
+                              s.value === "waiting" && "bg-red-500",
+                              s.value === "in_handover" && "bg-blue-500",
+                              s.value === "aftercare" && "bg-yellow-500",
+                              s.value === "needs_review" && "bg-amber-500",
+                              s.value === "resolved" && "bg-gray-400",
+                            )}
+                          />
+                          {s.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {departments.length > 1 && (
+                  <div>
+                    <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
+                      Department
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {departments.map((d) => {
+                        const active = dialogDepartments.includes(d.id);
+                        const color = d.color || "#6B7280";
+                        return (
+                          <button
+                            key={d.id}
+                            type="button"
+                            onClick={() => toggleArrayValue(setDialogDepartments, d.id)}
+                            className="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] transition-colors font-medium"
+                            style={
+                              active
+                                ? {
+                                    backgroundColor: `${color}25`,
+                                    borderColor: color,
+                                    color: color,
+                                  }
+                                : {
+                                    backgroundColor: `${color}15`,
+                                    borderColor: `${color}40`,
+                                    color: color,
+                                  }
+                            }
+                          >
+                            {d.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {tagsEnabled && availableTags.length > 0 && (
+                  <div>
+                    <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
+                      Tag
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {availableTags.map((t) => {
+                        const active = dialogTags.includes(t.label);
+                        const color = (t as any).color || "#6B7280";
+                        return (
+                          <button
+                            key={t.id}
+                            type="button"
+                            onClick={() => toggleArrayValue(setDialogTags, t.label)}
+                            className={cn(
+                              "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] transition-colors",
+                              active
+                                ? "bg-foreground text-background border-foreground"
+                                : "bg-background text-muted-foreground hover:bg-muted/70 border-border",
+                            )}
+                          >
+                            <span
+                              className="w-1.5 h-1.5 rounded-full mr-1.5"
+                              style={{ backgroundColor: color }}
+                            />
+                            {t.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </PopoverContent>
+            </Popover>
 
             {canUseMineFilter && currentClientUserId && (
               <Button
@@ -653,111 +732,21 @@ export function CommandSearch() {
                 Mine only
               </Button>
             )}
+
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs gap-1.5 ml-auto"
+              onClick={() => {
+                seedFromDashboard();
+                setDatePreset("all");
+                setCustomDateRange(undefined);
+              }}
+            >
+              <RotateCcw className="h-3 w-3" />
+              Reset
+            </Button>
           </div>
-
-          {/* Status row — colored dot prefix matches the dashboard's status filter */}
-          <div className="flex items-center gap-1 flex-wrap">
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground w-[68px] shrink-0">
-              Status
-            </span>
-            {STATUS_OPTIONS.map((s) => {
-              const active = dialogStatuses.includes(s.value);
-              return (
-                <button
-                  key={s.value}
-                  type="button"
-                  onClick={() => toggleArrayValue(setDialogStatuses, s.value)}
-                  className={cn(
-                    "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] transition-colors",
-                    active
-                      ? "bg-foreground text-background border-foreground"
-                      : "bg-background text-muted-foreground hover:bg-muted/70 border-border",
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "w-1.5 h-1.5 rounded-full mr-1.5",
-                      s.value === "with_ai" && "bg-green-500",
-                      s.value === "waiting" && "bg-red-500",
-                      s.value === "in_handover" && "bg-blue-500",
-                      s.value === "aftercare" && "bg-yellow-500",
-                      s.value === "needs_review" && "bg-amber-500",
-                      s.value === "resolved" && "bg-gray-400",
-                    )}
-                  />
-                  {s.label}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Department row — only when more than one department; dept colors mirror dashboard */}
-          {departments.length > 1 && (
-            <div className="flex items-center gap-1 flex-wrap">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground w-[68px] shrink-0">
-                Department
-              </span>
-              {departments.map((d) => {
-                const active = dialogDepartments.includes(d.id);
-                const color = d.color || "#6B7280";
-                return (
-                  <button
-                    key={d.id}
-                    type="button"
-                    onClick={() => toggleArrayValue(setDialogDepartments, d.id)}
-                    className="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] transition-colors font-medium"
-                    style={
-                      active
-                        ? {
-                            backgroundColor: `${color}25`,
-                            borderColor: color,
-                            color: color,
-                          }
-                        : {
-                            backgroundColor: `${color}15`,
-                            borderColor: `${color}40`,
-                            color: color,
-                          }
-                    }
-                  >
-                    {d.name}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Tag row — only when tags enabled and any defined; show tag's own color as dot */}
-          {tagsEnabled && availableTags.length > 0 && (
-            <div className="flex items-center gap-1 flex-wrap">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground w-[68px] shrink-0">
-                Tag
-              </span>
-              {availableTags.map((t) => {
-                const active = dialogTags.includes(t.label);
-                const color = (t as any).color || "#6B7280";
-                return (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => toggleArrayValue(setDialogTags, t.label)}
-                    className={cn(
-                      "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] transition-colors",
-                      active
-                        ? "bg-foreground text-background border-foreground"
-                        : "bg-background text-muted-foreground hover:bg-muted/70 border-border",
-                    )}
-                  >
-                    <span
-                      className="w-1.5 h-1.5 rounded-full mr-1.5"
-                      style={{ backgroundColor: color }}
-                    />
-                    {t.label}
-                  </button>
-                );
-              })}
-            </div>
-          )}
         </div>
       )}
 
@@ -774,26 +763,6 @@ export function CommandSearch() {
               ? "Type at least 3 characters"
               : `No results${query.trim() ? ` for "${query.trim()}"` : ""}`}
           </CommandEmpty>
-        )}
-
-        {/* Recent items when query is empty */}
-        {showRecents && (
-          <CommandGroup heading="Recent">
-            {recentItems.map((item) => (
-              <CommandItem
-                key={`recent-${item.id}`}
-                value={`recent-${item.id}-${item.label}`}
-                onSelect={() => handleSelect(item)}
-                className="gap-2"
-              >
-                <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
-                <span className="flex-1 truncate">{item.label}</span>
-                {item.sublabel && (
-                  <span className="text-xs text-muted-foreground">{item.sublabel}</span>
-                )}
-              </CommandItem>
-            ))}
-          </CommandGroup>
         )}
 
         {showEmptyPlaceholder && (

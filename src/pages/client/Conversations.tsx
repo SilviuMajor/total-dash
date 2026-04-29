@@ -127,6 +127,13 @@ function formatBytes(bytes: number): string {
 
 export default function Conversations() {
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
+  // Anchor row injected into the left panel when a search hit lives outside
+  // the dashboard's current paginated/filtered list. Cleared when filters
+  // change or the user picks a different conversation.
+  const [searchAnchor, setSearchAnchor] = useState<Conversation | null>(null);
+  // One-shot flag set by the searchParams effect (search-arrival ONLY) so the
+  // scroll-into-view effect doesn't fire on plain dashboard card clicks.
+  const pendingScrollIdRef = useRef<string | null>(null);
   const [transcripts, setTranscripts] = useState<Transcript[]>([]);
   const [note, setNote] = useState("");
   const [assignedTags, setAssignedTags] = useState<string[]>([]);
@@ -390,17 +397,19 @@ export default function Conversations() {
     if (!convId) return;
 
     // Fast path: already in the paginated list (matches the dashboard's current
-    // filter + status). Pick it.
+    // filter + status). Pick it and flag for scroll-into-view.
     const match = conversations.find(c => c.id === convId);
     if (match) {
       setSelectedConversation(match);
+      pendingScrollIdRef.current = convId;
       setSearchParams({}, { replace: true });
       return;
     }
 
     // Slow path: the conversation was reached via search and lives outside the
     // dashboard's current filter / pagination window. Fetch it directly so the
-    // search-click still opens it; otherwise nothing happens visually.
+    // search-click still opens it, AND pin it as a `searchAnchor` row at the
+    // top of the left panel so the user can see it visually highlighted.
     let cancelled = false;
     (async () => {
       const { data, error } = await supabase
@@ -415,10 +424,40 @@ export default function Conversations() {
         return;
       }
       setSelectedConversation(data as Conversation);
+      setSearchAnchor(data as Conversation);
+      pendingScrollIdRef.current = convId;
       setSearchParams({}, { replace: true });
     })();
     return () => { cancelled = true; };
   }, [conversations, searchParams]);
+
+  // Search-arrival scroll-into-view (no-op on plain dashboard clicks).
+  // The ref is cleared once the scroll runs, so subsequent paginated re-renders
+  // don't re-trigger it.
+  useEffect(() => {
+    const id = pendingScrollIdRef.current;
+    if (!id) return;
+    if (selectedConversation?.id !== id) return;
+    const raf = requestAnimationFrame(() => {
+      const el = document.querySelector(`[data-conversation-id="${id}"]`);
+      (el as HTMLElement | null)?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+      pendingScrollIdRef.current = null;
+    });
+    return () => cancelAnimationFrame(raf);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedConversation?.id, searchAnchor?.id]);
+
+  // Clear the search anchor when it becomes stale.
+  useEffect(() => {
+    setSearchAnchor(null);
+  }, [statusFilters, departmentFilters, tagFilters, myOnly, selectedAgentId]);
+
+  // Clear anchor if the user picks a different conversation.
+  useEffect(() => {
+    if (searchAnchor && selectedConversation && selectedConversation.id !== searchAnchor.id) {
+      setSearchAnchor(null);
+    }
+  }, [selectedConversation?.id, searchAnchor]);
 
   // IntersectionObserver for infinite scroll
   useEffect(() => {
@@ -1598,8 +1637,14 @@ export default function Conversations() {
       if (aTier === 1) return waitStart(a) - waitStart(b);
       return 0;
     });
+    // Inject search anchor at the top when the searched conversation lives
+    // outside the natural list. Hidden automatically once the real row arrives
+    // via fetchNextPage (the some() guard de-duplicates).
+    if (searchAnchor && !result.some(c => c.id === searchAnchor.id)) {
+      return [searchAnchor, ...result];
+    }
     return result;
-  }, [conversations, tagFilters, departmentFilters, pendingConversationIds, myOnly, currentClientUserId, tagsEnabled]);
+  }, [conversations, tagFilters, departmentFilters, pendingConversationIds, myOnly, currentClientUserId, tagsEnabled, searchAnchor]);
 
   const allSelected = filteredConversations.length > 0 &&
     filteredConversations.every(c => selectedConversationIds.has(c.id));
