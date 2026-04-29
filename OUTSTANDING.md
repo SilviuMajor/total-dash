@@ -1,6 +1,6 @@
 # TotalDash — Backlog
 
-> Last revised: 28 April 2026 (late eve)
+> Last revised: 29 April 2026
 > Purpose: living document. Single source of truth for everything outstanding.
 > Workflow: pick an item, open a fresh Claude Code session, paste the entry into plan mode, work through clarifications, execute. Mark items done with date + commit hash; consolidate older done entries into the Completed log so this file stays focused on what's left.
 
@@ -55,17 +55,6 @@ These are real follow-ups from the 25 April audit. C1, C2, C3 (critical tier) al
 ---
 
 ## Tier 2 — strong wants
-
-### N3 — Waiting timer on `waiting` status
-
-**Type:** Enhancement | **Effort:** Small (~2h) | **Status:** Open
-**Spec:** `TotalDash-Spec-N3-Waiting-Timer.md`
-
-Show clock pill (same colour-coded design as `in_handover`) on conversations with `waiting` status. Data already exists — `pendingConversationIds` Map already stores `handover_sessions.created_at` per conversation_id. Two-line change to the existing clock-pill conditional.
-
-**Touches:** `Conversations.tsx` lines 1299-1327. No DB changes, no new hooks.
-
----
 
 ### N4 — Date separators in transcript
 
@@ -454,6 +443,7 @@ Low priority. Do opportunistically when touching related code.
 
 Date-stamped log of items shipped. Older entries are intentionally terse — open the commit if you need detail. Newer entries keep slightly more context while still relevant.
 
+- **2026-04-29** — `7573c41` / `7d1e177` — N3 (Waiting/Transfer status timers, expanded scope vs original spec). Shipped: live timer inside the status badge (`Waiting · 1m 30s` red, or `TRANSFER · 1m 30s` for transfer-takeover-type pending sessions, no owner initials); right-column pending-card timer reformatted to current/max with green→amber→red colour ramp via existing `getResponseTimeColor`; bottom-right standalone Clock pill scoped to `in_handover` rows with an unanswered customer message (was over-firing on pending). `formatWaitTime` updated to seconds-within-minutes (`1m 30s`, `2h 5m`) — affects badge timer, pending-card, in_handover pill, and the textbox-footer "Customer waiting" indicator. Reinstated `first_unanswered_message_at` SET in `voiceflow-interact`'s in_handover branch (column was only ever cleared in repo, never set, so the in_handover pill never fired). Fix-up follow-up after deploy: switched the pendingMeta loader's `handover_sessions → departments` join to the explicit `departments:department_id(...)` form (the implicit form was returning empty so the badge timer never showed); added `first_unanswered_message_at: null` clear to every handover-actions handler that transitions away from in_handover (accept_handover, take_over, end_handover, mark_resolved, transfer) so a stale "customer waiting" timestamp can't leak across status transitions; and the bottom-right pill for the *selected* row now reads `first_unanswered_message_at` from `selectedConversation` instead of the list cache, so it tracks the textbox indicator exactly.
 - **2026-04-28** — `8e1487f` / `22fe8d3` / `5ceeb85` — N1 (My Conversations filter). Icon-only `UserCheck` toggle on Row 1 of the Conversations toolbar, left of the title, filters the list to `owner_id === currentClientUserId`. AND-logic with status/department/tag/search. Gated on `canUseMineFilter = userType === 'client' || (isImpersonating && impersonationMode === 'view_as_user')`: real client login or view-as-user impersonation enables it; full-access impersonation / preview-as-client shows it disabled with a tooltip nudging toward view-as-user. Pure client-side filter; bulk-select reset includes `myOnly` in deps.
 - **2026-04-28** — `bfe8cae` — I3 (atomic conversation status transitions). New `transition_conversation_status` Postgres function wraps the conversation update + status_history insert + system transcript insert in a single transaction. Refactors 7 sites (handover-actions: accept / takeover / end / transfer / mark_resolved; handover-timer: pending / inactivity timeout). Eliminates the half-state where the status flip lands but the paired transcript or history row doesn't. Side-improvement: transfers now write a status_history row they previously skipped. The trailing "Handover ended" widget-mechanics transcript in the timer paths stays outside the atomic block (widget signal, not user-visible status). I4 + I6 verified already done — `useMultiTenantAuth.tsx:224` already uses `window.location.replace`; `loadClientUser` + `loadPendingIds` in Conversations.tsx already toast on error. Audit batch closed.
 - **2026-04-28** — `846eea8` / `d8c3643` — Inactivity nudge fix. The "Are you still there?" nudge had two bugs sharing one root cause: it was inserted with `speaker='assistant'` but the existence-check was filtered to `speaker='system'`, so (a) the "once" toggle was silently broken — every cron tick re-emitted the nudge — and (b) the widget's handover poll skips assistant-speaker transcripts (those belong to the pre-handover AI flow), so customers never saw the nudge. Switched the insert to `speaker='client_user'` with `metadata.client_user_name` from `handover_sessions.agent_name` so it renders as a proper agent message in both surfaces (named bubble in dashboard, normal agent bubble in widget). Critical secondary fix in the same commit: the `lastAgentMsg` baseline query now filters `metadata->>type=inactivity_nudge` out, otherwise the nudge would mark itself as the latest agent activity and reset the inactivity clock — breaking subsequent nudges AND the hard timeout.
