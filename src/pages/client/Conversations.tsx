@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useMemo, Fragment } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ConversationsSkeleton } from "@/components/skeletons";
-import { Phone, Clock, CheckCircle, MessageSquare, ArrowDown, X, Plus, Tag, Users, Building2, Send, UserCheck, PhoneOff, ArrowRightLeft, Lock, Loader2, AlertTriangle, Timer, MessageSquareText, Trash2, FolderOpen, Sparkles, Check, Archive, Paperclip, FileText, Download, Filter, Pin, PinOff } from "lucide-react";
+import { Phone, Clock, CheckCircle, MessageSquare, ArrowDown, ArrowUp, X, Plus, Tag, Users, Building2, Send, UserCheck, PhoneOff, ArrowRightLeft, Lock, Loader2, AlertTriangle, Timer, MessageSquareText, Trash2, FolderOpen, Sparkles, Check, Archive, Paperclip, FileText, Download, Filter, Pin, PinOff } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -143,6 +143,8 @@ export default function Conversations() {
   const [tagDropdownOpen, setTagDropdownOpen] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [showJumpToLatest, setShowJumpToLatest] = useState(false);
+  const [showLeftJumpToLatest, setShowLeftJumpToLatest] = useState(false);
+  const leftPanelScrollRef = useRef<HTMLDivElement>(null);
 
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -1046,6 +1048,15 @@ export default function Conversations() {
     setShowJumpToLatest(false);
   };
 
+  const handleLeftPanelScroll = (event: React.UIEvent<HTMLDivElement>) => {
+    setShowLeftJumpToLatest(event.currentTarget.scrollTop > 200);
+  };
+
+  const jumpLeftPanelToLatest = () => {
+    leftPanelScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+    setShowLeftJumpToLatest(false);
+  };
+
   const updateStatus = async (newStatus: string) => {
     if (!selectedConversation || updatingStatus) return;
     setUpdatingStatus(true);
@@ -1884,7 +1895,7 @@ export default function Conversations() {
         <div className="grid grid-cols-[320px_minmax(300px,1fr)_340px] h-full">
 
           {/* LEFT PANEL: Conversation list */}
-          <div className="flex flex-col border-r border-border h-full overflow-hidden">
+          <div className="flex flex-col border-r border-border h-full overflow-hidden relative">
 
             {/* Bulk Actions Toolbar */}
             {selectedConversationIds.size > 0 && (
@@ -1960,7 +1971,11 @@ export default function Conversations() {
             )}
 
             {/* Conversation list */}
-            <ScrollArea className="flex-1">
+            <ScrollArea
+              className="flex-1"
+              viewportRef={leftPanelScrollRef}
+              onViewportScroll={handleLeftPanelScroll}
+            >
               <div>
                 {isLoading ? (
                   <ConversationsSkeleton />
@@ -2012,6 +2027,17 @@ export default function Conversations() {
                 <div ref={sentinelRef} className="h-1" />
               </div>
             </ScrollArea>
+
+            {showLeftJumpToLatest && (
+              <Button
+                className="absolute top-2 left-1/2 -translate-x-1/2 shadow-lg z-10 h-7 px-3 text-xs"
+                size="sm"
+                onClick={jumpLeftPanelToLatest}
+              >
+                <ArrowUp className="h-3 w-3 mr-1" />
+                Jump to latest
+              </Button>
+            )}
           </div>
 
           {/* MIDDLE PANEL: Transcript */}

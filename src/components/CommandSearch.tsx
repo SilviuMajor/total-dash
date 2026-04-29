@@ -52,31 +52,6 @@ interface SearchResult {
   matchSuffix?: string | null;
 }
 
-const ACTIVE_FILTERS_KEY = "totaldash_conversations_active_filters";
-
-interface ActiveFilters {
-  statusFilters: string[];
-  tagFilters: string[];
-  departmentFilters: string[];
-  myOnly: boolean;
-}
-
-function readActiveFilters(): ActiveFilters {
-  try {
-    const raw = sessionStorage.getItem(ACTIVE_FILTERS_KEY);
-    if (!raw) return { statusFilters: [], tagFilters: [], departmentFilters: [], myOnly: false };
-    const parsed = JSON.parse(raw);
-    return {
-      statusFilters: Array.isArray(parsed.statusFilters) ? parsed.statusFilters : [],
-      tagFilters: Array.isArray(parsed.tagFilters) ? parsed.tagFilters : [],
-      departmentFilters: Array.isArray(parsed.departmentFilters) ? parsed.departmentFilters : [],
-      myOnly: !!parsed.myOnly,
-    };
-  } catch {
-    return { statusFilters: [], tagFilters: [], departmentFilters: [], myOnly: false };
-  }
-}
-
 function getPlaceholder(mode: string): string {
   if (mode === "client") return "Search conversations and transcripts...";
   if (mode === "agency") return "Search clients and agents...";
@@ -199,25 +174,22 @@ export function CommandSearch() {
     return () => { cancelled = true; };
   }, [canUseMineFilter]);
 
-  // Snap dialog filters from dashboard sessionStorage on open.
-  const seedFromDashboard = useCallback(() => {
-    const f = readActiveFilters();
-    setDialogStatuses(f.statusFilters);
-    setDialogDepartments(f.departmentFilters);
-    setDialogTags(f.tagFilters);
-    setDialogMyOnly(f.myOnly);
+  const clearDialogFilters = useCallback(() => {
+    setDialogStatuses([]);
+    setDialogDepartments([]);
+    setDialogTags([]);
+    setDialogMyOnly(false);
   }, []);
 
-  // Seed dialog filters on open
   useEffect(() => {
     if (open) {
       setQuery("");
       setResults([]);
-      seedFromDashboard();
+      clearDialogFilters();
       setDatePreset("all");
       setCustomDateRange(undefined);
     }
-  }, [open, seedFromDashboard]);
+  }, [open, clearDialogFilters]);
 
   // Keyboard + custom event listener
   useEffect(() => {
@@ -738,7 +710,7 @@ export function CommandSearch() {
               size="sm"
               className="h-7 text-xs gap-1.5 ml-auto"
               onClick={() => {
-                seedFromDashboard();
+                clearDialogFilters();
                 setDatePreset("all");
                 setCustomDateRange(undefined);
               }}
