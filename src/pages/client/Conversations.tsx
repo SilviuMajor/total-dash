@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useMemo, Fragment } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ConversationsSkeleton } from "@/components/skeletons";
-import { Phone, Clock, CheckCircle, MessageSquare, ArrowDown, ArrowUp, X, Plus, Tag, Users, Building2, Send, UserCheck, PhoneOff, ArrowRightLeft, Lock, Loader2, AlertTriangle, Timer, MessageSquareText, Trash2, FolderOpen, Sparkles, Check, Archive, Paperclip, FileText, Download, Filter, Pin, PinOff } from "lucide-react";
+import { Phone, Clock, CheckCircle, MessageSquare, ArrowDown, ArrowUp, X, Plus, Tag, Users, Building2, Send, UserCheck, PhoneOff, ArrowRightLeft, Lock, Loader2, AlertTriangle, Timer, MessageSquareText, Trash2, FolderOpen, Sparkles, Check, Archive, Paperclip, FileText, Download, Filter, Pin, PinOff, Bot, Bell, Headphones } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -2595,6 +2595,8 @@ export default function Conversations() {
                     <Card className={cn(
                       "p-3",
                       pendingSession && "border-red-300 bg-red-50 dark:bg-red-950/20 dark:border-red-800",
+                      !pendingSession && selectedConversation.status === 'with_ai' && "border-green-300 bg-green-50 dark:bg-green-950/20 dark:border-green-800",
+                      !pendingSession && selectedConversation.status === 'waiting' && "border-red-300 bg-red-50 dark:bg-red-950/20 dark:border-red-800",
                       !pendingSession && selectedConversation.status === 'in_handover' && "border-blue-300 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-800",
                       !pendingSession && selectedConversation.status === 'aftercare' && "border-yellow-300 bg-yellow-50 dark:bg-yellow-950/20 dark:border-yellow-800",
                       !pendingSession && selectedConversation.status === 'needs_review' && "border-amber-300 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800",
@@ -2603,10 +2605,15 @@ export default function Conversations() {
                       {/* WITH AI or WAITING with no pending session (edge case fallback) */}
                       {(selectedConversation.status === 'with_ai' || (selectedConversation.status === 'waiting' && !pendingSession)) && !pendingSession && (
                         <div className="space-y-2">
-                          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Handover</p>
+                          <div className="flex items-center gap-1.5">
+                            <Bot className="h-4 w-4 text-green-600 dark:text-green-400" />
+                            <p className="text-xs font-semibold text-green-700 dark:text-green-400">With AI</p>
+                          </div>
+                          <p className="text-xs text-muted-foreground">AI is responding to the customer</p>
                           <Button
                             size="sm"
-                            className="w-full bg-foreground text-background hover:bg-foreground/90"
+                            variant="outline"
+                            className="w-full border-green-300 text-green-700 hover:bg-green-100 hover:text-green-800 dark:border-green-800 dark:text-green-400 dark:hover:bg-green-950/40 dark:hover:text-green-300"
                             onClick={() => setTakeoverConfirmOpen(true)}
                             disabled={handoverLoading === 'take_over'}
                           >
@@ -2620,9 +2627,16 @@ export default function Conversations() {
                       {pendingSession && (
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
-                            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                              {pendingSession.takeover_type === 'transfer' ? 'Transfer Request' : 'Handover Request'}
-                            </p>
+                            <div className="flex items-center gap-1.5">
+                              {pendingSession.takeover_type === 'transfer' ? (
+                                <ArrowRightLeft className="h-4 w-4 text-red-600 dark:text-red-400" />
+                              ) : (
+                                <Bell className="h-4 w-4 text-red-600 dark:text-red-400" />
+                              )}
+                              <p className="text-xs font-semibold text-red-700 dark:text-red-400">
+                                {pendingSession.takeover_type === 'transfer' ? 'Transfer Request' : 'Handover Request'}
+                              </p>
+                            </div>
                             {(() => {
                               const maxSec = pendingSession.departments?.timeout_seconds || 300;
                               const waitSec = Math.floor((Date.now() - new Date(pendingSession.created_at).getTime()) / 1000);
@@ -2667,11 +2681,11 @@ export default function Conversations() {
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-1.5">
-                              <span className="w-2 h-2 rounded-full bg-blue-500" />
-                              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Active Handover</p>
+                              <Headphones className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                              <p className="text-xs font-semibold text-blue-700 dark:text-blue-400">In Handover</p>
                             </div>
                             {activeSession?.accepted_at && (
-                              <span className="text-[10px] font-medium text-muted-foreground font-mono tabular-nums">
+                              <span className="text-[10px] font-medium text-blue-700/70 dark:text-blue-400/70 font-mono tabular-nums">
                                 {(() => {
                                   const secs = Math.floor((Date.now() - new Date(activeSession.accepted_at).getTime()) / 1000);
                                   const h = Math.floor(secs / 3600);
@@ -2697,7 +2711,7 @@ export default function Conversations() {
                             <Button
                               size="sm"
                               variant="outline"
-                              className="flex-1"
+                              className="flex-1 border-blue-300 text-blue-700 hover:bg-blue-100 hover:text-blue-800 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-950/40 dark:hover:text-blue-300"
                               onClick={() => setTransferOpen(true)}
                               disabled={!!handoverLoading}
                             >
@@ -2713,11 +2727,16 @@ export default function Conversations() {
                         <div className="space-y-1.5">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-1.5">
-                              <span className="w-2 h-2 rounded-full bg-blue-500" />
-                              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Active Handover</p>
+                              <Headphones className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                              <p className="text-xs font-semibold text-blue-700 dark:text-blue-400">In Handover</p>
+                              {selectedConversation.owner_name && (
+                                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-[9px] font-semibold text-blue-700 dark:text-blue-300">
+                                  {selectedConversation.owner_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                                </span>
+                              )}
                             </div>
                             {activeSession?.accepted_at && (
-                              <span className="text-[10px] font-medium text-muted-foreground font-mono tabular-nums">
+                              <span className="text-[10px] font-medium text-blue-700/70 dark:text-blue-400/70 font-mono tabular-nums">
                                 {(() => {
                                   const secs = Math.floor((Date.now() - new Date(activeSession.accepted_at).getTime()) / 1000);
                                   const h = Math.floor(secs / 3600);
@@ -2729,7 +2748,7 @@ export default function Conversations() {
                             )}
                           </div>
                           <p className="text-xs text-muted-foreground">
-                            Being handled by {selectedConversation.owner_name || 'another agent'}
+                            Handled by <span className="font-medium text-foreground">{selectedConversation.owner_name || 'another agent'}</span>
                           </p>
                         </div>
                       )}
@@ -2738,13 +2757,13 @@ export default function Conversations() {
                       {selectedConversation.status === 'aftercare' && (
                         <div className="space-y-2">
                           <div className="flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-yellow-500" />
-                            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Follow-up Required</p>
+                            <Clock className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                            <p className="text-xs font-semibold text-yellow-700 dark:text-yellow-400">Aftercare</p>
                           </div>
-                          <p className="text-xs text-muted-foreground">Handover ended — not yet resolved</p>
+                          <p className="text-xs text-muted-foreground">Handover ended — needs follow-up</p>
                           <Button
                             size="sm"
-                            className="w-full"
+                            className="w-full bg-yellow-600 hover:bg-yellow-700 text-white"
                             onClick={() => handleResolveWithReason('mark_resolved')}
                             disabled={!!handoverLoading}
                           >
@@ -2755,50 +2774,61 @@ export default function Conversations() {
                       )}
 
                       {/* NEEDS REVIEW */}
-                      {selectedConversation.status === 'needs_review' && (
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-amber-500" />
-                            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Needs Review</p>
+                      {selectedConversation.status === 'needs_review' && (() => {
+                        const reasonRaw = (selectedConversation as any).needs_review_reason as string | undefined;
+                        const reasonShort =
+                          reasonRaw === 'timeout' ? 'Timeout'
+                          : reasonRaw === 'department_closed' ? 'Department Closed'
+                          : reasonRaw === 'inactivity' ? 'Inactivity'
+                          : null;
+                        const reasonLong =
+                          reasonRaw === 'timeout' ? 'No agents were available to accept this handover'
+                          : reasonRaw === 'department_closed' ? 'Handover was requested outside of opening hours'
+                          : reasonRaw === 'inactivity' ? 'Closed due to customer inactivity during handover'
+                          : 'This conversation needs attention';
+                        return (
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-1.5">
+                              <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                              <p className="text-xs font-semibold text-amber-700 dark:text-amber-400">
+                                Needs Review{reasonShort ? <span className="text-amber-600/80 dark:text-amber-400/80 font-medium"> · {reasonShort}</span> : null}
+                              </p>
+                            </div>
+                            <p className="text-xs text-muted-foreground">{reasonLong}</p>
+                            <Button
+                              size="sm"
+                              className="w-full bg-amber-600 hover:bg-amber-700 text-white"
+                              onClick={() => setTakeoverConfirmOpen(true)}
+                              disabled={!!handoverLoading}
+                            >
+                              <UserCheck className="h-4 w-4 mr-2" />
+                              Take Over Conversation
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="w-full border-amber-300 text-amber-700 hover:bg-amber-100 hover:text-amber-800 dark:border-amber-800 dark:text-amber-400 dark:hover:bg-amber-950/40 dark:hover:text-amber-300"
+                              onClick={() => handleResolveWithReason('mark_resolved')}
+                              disabled={!!handoverLoading}
+                            >
+                              {handoverLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle className="h-4 w-4 mr-2" />}
+                              Mark as Resolved
+                            </Button>
                           </div>
-                          <p className="text-xs text-muted-foreground">
-                            {(selectedConversation as any).needs_review_reason === 'timeout'
-                              ? 'No agents were available to accept this handover'
-                              : (selectedConversation as any).needs_review_reason === 'department_closed'
-                              ? 'Handover was requested outside of opening hours'
-                              : (selectedConversation as any).needs_review_reason === 'inactivity'
-                              ? 'Closed due to customer inactivity during handover'
-                              : 'This conversation needs attention'}
-                          </p>
-                          <Button
-                            size="sm"
-                            className="w-full bg-foreground text-background hover:bg-foreground/90"
-                            onClick={() => setTakeoverConfirmOpen(true)}
-                            disabled={!!handoverLoading}
-                          >
-                            <UserCheck className="h-4 w-4 mr-2" />
-                            Take Over Conversation
-                          </Button>
-                          <Button
-                            size="sm"
-                            className="w-full"
-                            onClick={() => handleResolveWithReason('mark_resolved')}
-                            disabled={!!handoverLoading}
-                          >
-                            {handoverLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                            Mark as Resolved
-                          </Button>
-                        </div>
-                      )}
+                        );
+                      })()}
 
                       {/* RESOLVED */}
                       {selectedConversation.status === 'resolved' && (
                         <div className="space-y-1.5">
-                          <div className="flex items-center gap-1.5">
-                            <CheckCircle className="h-4 w-4 text-green-500" />
-                            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                              Resolved{selectedConversation.resolution_reason ? ` — ${selectedConversation.resolution_reason}` : ''}
-                            </p>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <CheckCircle className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                            <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">Resolved</p>
+                            {selectedConversation.resolution_reason && (
+                              <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium bg-gray-100 dark:bg-gray-800/60 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700">
+                                {selectedConversation.resolution_reason}
+                              </span>
+                            )}
                           </div>
                           {selectedConversation.resolution_note ? (
                             <p className="text-xs text-muted-foreground italic">"{selectedConversation.resolution_note}"</p>
