@@ -196,6 +196,7 @@ async function handleAcceptHandover(
       p_conversation_patch: {
         owner_id: clientUserId,
         owner_name: clientUserName,
+        first_unanswered_message_at: null,
       },
       p_transcript_text: joinedMessage,
       p_transcript_metadata: {
@@ -368,6 +369,7 @@ async function handleTakeOver(
         owner_id: clientUserId,
         owner_name: clientUserName,
         department_id: departmentId,
+        first_unanswered_message_at: null,
       },
       p_transcript_text: joinedMessage,
       p_transcript_metadata: {
@@ -435,9 +437,13 @@ async function handleEndHandover(
     .eq("id", session.id);
 
   // Build conversation patch. Resolved is a terminal state — stamp the
-  // archive marker so the Transcripts page treats it as ended.
+  // archive marker so the Transcripts page treats it as ended. Always clear
+  // first_unanswered_message_at so a stale "customer waiting" timestamp
+  // can't leak into a later status (Aftercare → re-handover, etc.).
   const nowIso = new Date().toISOString();
-  const conversationPatch: Record<string, any> = {};
+  const conversationPatch: Record<string, any> = {
+    first_unanswered_message_at: null,
+  };
   if (resolve) {
     const { data: convForDuration } = await supabaseClient
       .from("conversations")
@@ -721,6 +727,7 @@ async function handleTransfer(
         owner_id: null,
         owner_name: null,
         department_id: targetDepartmentId,
+        first_unanswered_message_at: null,
       },
       p_transcript_text: transferMessage,
       p_transcript_metadata: {
@@ -893,6 +900,7 @@ async function handleMarkResolved(
 
   const conversationPatch: Record<string, any> = {
     ended_at: nowIso,
+    first_unanswered_message_at: null,
   };
   if (convForDuration?.started_at) {
     conversationPatch.duration = Math.max(

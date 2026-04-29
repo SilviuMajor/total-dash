@@ -598,7 +598,7 @@ export default function Conversations() {
     const loadPendingIds = async () => {
       const { data, error } = await supabase
         .from('handover_sessions')
-        .select('conversation_id, created_at, takeover_type, departments(timeout_seconds)')
+        .select('conversation_id, created_at, takeover_type, departments:department_id(timeout_seconds)')
         .eq('status', 'pending');
 
       if (error) {
@@ -618,6 +618,7 @@ export default function Conversations() {
         // Reset the warn flag on a successful refresh so transient blips can
         // re-toast next time they happen.
         warned = false;
+        console.log('[pendingMeta] loaded', data.length, 'pending sessions');
         setPendingConversationIds(new Map(
           data
             .filter((d): d is typeof d & { created_at: string } => d.created_at !== null)
@@ -1930,12 +1931,19 @@ export default function Conversations() {
                               </span>
                             ))}
                           </div>
-                          {/* Clock pill — in_handover only: time since customer's first unanswered message */}
+                          {/* Clock pill — in_handover only: time since customer's first unanswered message.
+                              For the selected row, read from selectedConversation (live single-row state)
+                              so the pill mirrors the textbox indicator exactly. List-cache row used otherwise. */}
                           {(() => {
-                            const isInHandover = conv.status === 'in_handover' && !!conv.first_unanswered_message_at;
+                            const isSelected = selectedConversation?.id === conv.id;
+                            const status = isSelected ? selectedConversation!.status : conv.status;
+                            const firstUnanswered = isSelected
+                              ? selectedConversation!.first_unanswered_message_at
+                              : conv.first_unanswered_message_at;
+                            const isInHandover = status === 'in_handover' && !!firstUnanswered;
                             if (!isInHandover) return null;
 
-                            const waitSec = Math.floor((Date.now() - new Date(conv.first_unanswered_message_at!).getTime()) / 1000);
+                            const waitSec = Math.floor((Date.now() - new Date(firstUnanswered!).getTime()) / 1000);
                             const { color } = getResponseTimeColor(waitSec);
                             return (
                               <span
