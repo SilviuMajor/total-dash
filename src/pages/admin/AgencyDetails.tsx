@@ -12,6 +12,7 @@ import { Eye, Save, Link2, Plus, Minus } from "lucide-react";
 import { useImpersonation } from "@/hooks/useImpersonation";
 import { PageSkeleton } from "@/components/skeletons/PageSkeleton";
 import { BackButton } from "@/components/BackButton";
+import { numberInputProps, clampForSave } from "@/lib/numberInput";
 
 export default function AgencyDetails() {
   const { id } = useParams();
@@ -123,22 +124,26 @@ export default function AgencyDetails() {
     setSavingSubscription(true);
     try {
       const basePlan = subscription?.subscription_plans;
-      const priceInCents = Math.round(customPrice * 100);
-      
+      const safePrice = clampForSave(customPrice, 0, 0);
+      const safeMaxClients = clampForSave(customMaxClients, 1, 1);
+      const safeMaxAgents = clampForSave(customMaxAgents, 1, 1);
+      const safeMaxTeam = clampForSave(customMaxTeam, 1, 1);
+      const priceInCents = Math.round(safePrice * 100);
+
       const isCustomPricing = priceInCents !== basePlan?.price_monthly_cents;
       const isCustomLimits = (
-        customMaxClients !== basePlan?.max_clients ||
-        customMaxAgents !== basePlan?.max_agents ||
-        customMaxTeam !== basePlan?.max_team_members
+        safeMaxClients !== basePlan?.max_clients ||
+        safeMaxAgents !== basePlan?.max_agents ||
+        safeMaxTeam !== basePlan?.max_team_members
       );
 
       const { error } = await supabase
         .from('agency_subscriptions')
         .update({
           custom_price_monthly_cents: priceInCents,
-          custom_max_clients: customMaxClients,
-          custom_max_agents: customMaxAgents,
-          custom_max_team_members: customMaxTeam,
+          custom_max_clients: safeMaxClients,
+          custom_max_agents: safeMaxAgents,
+          custom_max_team_members: safeMaxTeam,
           is_custom_pricing: isCustomPricing,
           is_custom_limits: isCustomLimits,
         })
@@ -397,9 +402,8 @@ export default function AgencyDetails() {
                     type="number"
                     min="0"
                     step="0.01"
-                    value={customPrice}
-                    onChange={(e) => setCustomPrice(parseFloat(e.target.value) || 0)}
                     className="max-w-[150px] text-lg"
+                    {...numberInputProps({ value: customPrice, setValue: setCustomPrice, min: 0, step: "float" })}
                   />
                   <span className="text-muted-foreground">/month</span>
                 </div>
@@ -423,9 +427,8 @@ export default function AgencyDetails() {
                     <Input
                       type="number"
                       min="1"
-                      value={customMaxClients}
-                      onChange={(e) => setCustomMaxClients(Math.max(1, parseInt(e.target.value) || 1))}
                       className="w-20 text-center"
+                      {...numberInputProps({ value: customMaxClients, setValue: setCustomMaxClients, min: 1 })}
                     />
                     <Button
                       type="button"
@@ -454,9 +457,8 @@ export default function AgencyDetails() {
                     <Input
                       type="number"
                       min="1"
-                      value={customMaxAgents}
-                      onChange={(e) => setCustomMaxAgents(Math.max(1, parseInt(e.target.value) || 1))}
                       className="w-20 text-center"
+                      {...numberInputProps({ value: customMaxAgents, setValue: setCustomMaxAgents, min: 1 })}
                     />
                     <Button
                       type="button"
@@ -485,9 +487,8 @@ export default function AgencyDetails() {
                     <Input
                       type="number"
                       min="1"
-                      value={customMaxTeam}
-                      onChange={(e) => setCustomMaxTeam(Math.max(1, parseInt(e.target.value) || 1))}
                       className="w-20 text-center"
+                      {...numberInputProps({ value: customMaxTeam, setValue: setCustomMaxTeam, min: 1 })}
                     />
                     <Button
                       type="button"

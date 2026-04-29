@@ -17,6 +17,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Settings, Trash2, Plus, Lock, ChevronDown, ChevronRight, X, GripVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { numberInputProps, clampForSave } from "@/lib/numberInput";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent, DragOverlay, DragStartEvent } from "@dnd-kit/core";
@@ -394,7 +395,7 @@ export function DepartmentManagement({ clientId, readOnly }: { clientId: string;
         name: name.trim(),
         color,
         description: description.trim() || null,
-        timeout_seconds: Math.max(30, Number.isFinite(timeoutSecs) ? timeoutSecs : 30),
+        timeout_seconds: clampForSave(timeoutSecs, 30),
         timezone,
         opening_hours_type: openingHoursType,
         opening_hours: buildOpeningHours(),
@@ -739,17 +740,8 @@ export function DepartmentManagement({ clientId, readOnly }: { clientId: string;
                   <Input
                     type="number"
                     min={30}
-                    value={Number.isFinite(timeoutSecs) ? timeoutSecs : ''}
-                    onChange={e => {
-                      const v = e.target.value;
-                      if (v === '') { setTimeoutSecs(NaN as any); return; }
-                      const n = parseInt(v);
-                      if (!Number.isNaN(n)) setTimeoutSecs(n);
-                    }}
-                    onBlur={() => {
-                      if (!Number.isFinite(timeoutSecs) || timeoutSecs < 30) setTimeoutSecs(30);
-                    }}
                     className="w-32"
+                    {...numberInputProps({ value: timeoutSecs, setValue: setTimeoutSecs, min: 30 })}
                   />
                   <span className="text-sm text-muted-foreground">seconds (minimum 30)</span>
                 </div>

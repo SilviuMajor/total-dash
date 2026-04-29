@@ -8,6 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { numberInputProps, clampForSave } from "@/lib/numberInput";
 
 interface Props {
   agent: { id: string; name: string; config: Record<string, any> };
@@ -35,12 +36,12 @@ export function VoiceflowHandoverSettings({ agent, onUpdate }: Props) {
         p_config_updates: {
           handover_inactivity: {
             nudge_enabled: nudgeEnabled,
-            nudge_delay_minutes: nudgeDelay,
+            nudge_delay_minutes: clampForSave(nudgeDelay, 1, 5),
             nudge_message: nudgeMessage,
             nudge_repeat: nudgeRepeat,
-            nudge_repeat_interval_minutes: nudgeInterval,
+            nudge_repeat_interval_minutes: clampForSave(nudgeInterval, 1, 5),
             hard_timeout_enabled: hardEnabled,
-            hard_timeout_minutes: hardMinutes,
+            hard_timeout_minutes: clampForSave(hardMinutes, 5, 20),
           },
         },
       });
@@ -72,7 +73,7 @@ export function VoiceflowHandoverSettings({ agent, onUpdate }: Props) {
             <div className="space-y-3 pl-1 border-l-2 border-primary/20 ml-1 pl-4">
               <div className="space-y-1.5">
                 <Label className="text-sm">Send after (minutes)</Label>
-                <Input type="number" min={1} max={60} value={nudgeDelay} onChange={(e) => setNudgeDelay(Math.max(1, parseInt(e.target.value) || 1))} className="w-32" />
+                <Input type="number" min={1} max={60} className="w-32" {...numberInputProps({ value: nudgeDelay, setValue: setNudgeDelay, min: 1 })} />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-sm">Nudge message</Label>
@@ -94,7 +95,7 @@ export function VoiceflowHandoverSettings({ agent, onUpdate }: Props) {
               {nudgeRepeat === 'repeat' && (
                 <div className="space-y-1.5">
                   <Label className="text-sm">Repeat interval (minutes)</Label>
-                  <Input type="number" min={1} max={60} value={nudgeInterval} onChange={(e) => setNudgeInterval(Math.max(1, parseInt(e.target.value) || 1))} className="w-32" />
+                  <Input type="number" min={1} max={60} className="w-32" {...numberInputProps({ value: nudgeInterval, setValue: setNudgeInterval, min: 1 })} />
                 </div>
               )}
             </div>
@@ -112,7 +113,7 @@ export function VoiceflowHandoverSettings({ agent, onUpdate }: Props) {
           {hardEnabled && (
             <div className="space-y-1.5">
               <Label className="text-sm">End handover after (minutes)</Label>
-              <Input type="number" min={5} max={120} value={hardMinutes} onChange={(e) => setHardMinutes(Math.max(5, parseInt(e.target.value) || 5))} className="w-32" />
+              <Input type="number" min={5} max={120} className="w-32" {...numberInputProps({ value: hardMinutes, setValue: setHardMinutes, min: 5 })} />
               <p className="text-xs text-muted-foreground">Handover ends after {hardMinutes} minutes of customer inactivity.</p>
             </div>
           )}

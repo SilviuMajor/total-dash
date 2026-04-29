@@ -10,6 +10,7 @@ import { X, Pencil, Trash2, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { numberInputProps, clampForSave } from "@/lib/numberInput";
 
 interface Props {
   agent: { id: string; name: string; config: Record<string, any> };
@@ -119,7 +120,7 @@ export function VoiceflowConversationSettings({ agent, onUpdate }: Props) {
         p_config_updates: {
           auto_end_hours: autoEndHours,
           auto_end_mode: autoEndMode,
-          response_thresholds: { green_seconds: greenSeconds, amber_seconds: amberSeconds },
+          response_thresholds: { green_seconds: clampForSave(greenSeconds, 10, 60), amber_seconds: clampForSave(amberSeconds, 30, 300) },
           resolution_reasons: resolutionReasons,
           conversation_tags: tags,
           allow_adhoc_tags: allowAdhocTags,
@@ -185,11 +186,11 @@ export function VoiceflowConversationSettings({ agent, onUpdate }: Props) {
           <div className="flex items-center gap-4 flex-wrap">
             <div className="space-y-1">
               <Label className="text-xs">🟢 Green until (seconds)</Label>
-              <Input type="number" min={10} value={greenSeconds} onChange={(e) => setGreenSeconds(Math.max(10, parseInt(e.target.value) || 10))} className="w-28" />
+              <Input type="number" min={10} className="w-28" {...numberInputProps({ value: greenSeconds, setValue: setGreenSeconds, min: 10 })} />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">🟠 Amber until (seconds)</Label>
-              <Input type="number" min={30} value={amberSeconds} onChange={(e) => setAmberSeconds(Math.max(30, parseInt(e.target.value) || 30))} className="w-28" />
+              <Input type="number" min={30} className="w-28" {...numberInputProps({ value: amberSeconds, setValue: setAmberSeconds, min: 30 })} />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">🔴 Red after</Label>

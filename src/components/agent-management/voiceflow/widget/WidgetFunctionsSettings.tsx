@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Save, Check, Loader2, Plus, Trash2, Phone, MessageSquare, Link } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { numberInputProps, clampForSave } from "@/lib/numberInput";
 
 interface WidgetFunctionsSettingsProps {
   agent: {
@@ -77,13 +78,17 @@ export function WidgetFunctionsSettings({ agent, onUpdate }: WidgetFunctionsSett
         p_config_updates: {
           widget_settings: {
             ...widgetSettings,
-            welcome_message: formData.welcome_message,
+            welcome_message: {
+              ...formData.welcome_message,
+              delay_ms: clampForSave(formData.welcome_message.delay_ms, 0, 1500),
+              auto_dismiss_seconds: clampForSave(formData.welcome_message.auto_dismiss_seconds, 0, 0),
+            },
             tabs: formData.tabs,
             functions: {
               ...widgetSettings.functions,
               notification_sound_enabled: formData.functions.notification_sound_enabled,
               file_upload_enabled: formData.functions.file_upload_enabled,
-              typing_delay_ms: formData.functions.typing_delay_ms,
+              typing_delay_ms: clampForSave(formData.functions.typing_delay_ms, 100, 500),
             },
           },
         },
@@ -375,14 +380,12 @@ export function WidgetFunctionsSettings({ agent, onUpdate }: WidgetFunctionsSett
                       min={0}
                       max={10000}
                       step={100}
-                      value={formData.welcome_message.delay_ms}
-                      onChange={(e) =>
-                        setFormData(prev => ({
-                          ...prev,
-                          welcome_message: { ...prev.welcome_message, delay_ms: parseInt(e.target.value) || 1500 },
-                        }))
-                      }
                       className="w-24"
+                      {...numberInputProps({
+                        value: formData.welcome_message.delay_ms,
+                        setValue: (n) => setFormData(prev => ({ ...prev, welcome_message: { ...prev.welcome_message, delay_ms: n } })),
+                        min: 0,
+                      })}
                     />
                     <span className="text-sm text-muted-foreground">ms</span>
                   </div>
@@ -579,17 +582,15 @@ export function WidgetFunctionsSettings({ agent, onUpdate }: WidgetFunctionsSett
                 <div className="flex items-center gap-1">
                   <Input
                     type="number"
-                    value={formData.functions.typing_delay_ms}
-                    onChange={(e) =>
-                      setFormData(prev => ({
-                        ...prev,
-                        functions: { ...prev.functions, typing_delay_ms: parseInt(e.target.value) || 500 },
-                      }))
-                    }
                     className="w-20"
                     min={100}
                     max={3000}
                     step={100}
+                    {...numberInputProps({
+                      value: formData.functions.typing_delay_ms,
+                      setValue: (n) => setFormData(prev => ({ ...prev, functions: { ...prev.functions, typing_delay_ms: n } })),
+                      min: 100,
+                    })}
                   />
                   <span className="text-xs text-muted-foreground">ms</span>
                 </div>
