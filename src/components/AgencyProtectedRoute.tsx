@@ -95,6 +95,10 @@ export function AgencyProtectedRoute({ children }: AgencyProtectedRouteProps) {
     );
   }
 
-  // Not authorized
+  // Not authorized — if signed in with the wrong role, send to *their*
+  // dashboard rather than the agency login page. Otherwise fall through
+  // to the agency login.
+  if (userType === 'super_admin') return <Navigate to="/admin/agencies" replace />;
+  if (userType === 'client') return <Navigate to="/" replace />;
   return <Navigate to="/agency/login" replace />;
 }

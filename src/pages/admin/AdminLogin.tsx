@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,12 @@ import { Loader2 } from "lucide-react";
 import { useBranding } from "@/hooks/useBranding";
 import { useTheme } from "@/hooks/useTheme";
 import { ForgotPasswordDialog } from "@/components/ForgotPasswordDialog";
+import {
+  detectUserTypeAfterAuth,
+  loginPathForUserType,
+  dashboardPathForUserType,
+  userTypeLabel,
+} from "@/lib/auth";
 
 export default function SuperAdminLogin() {
   const [email, setEmail] = useState("");
@@ -33,6 +39,25 @@ export default function SuperAdminLogin() {
     }
   };
 
+  // Already-authenticated visitor: bounce them to the right place. Skip during
+  // impersonation so super_admin can revisit login pages without disruption.
+  useEffect(() => {
+    if (sessionStorage.getItem('preview_mode') === '1') return;
+    let cancelled = false;
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (cancelled || !session?.user) return;
+      const detected = await detectUserTypeAfterAuth(session.user.id);
+      if (cancelled) return;
+      if (detected.type === 'super_admin') {
+        window.location.href = dashboardPathForUserType(detected);
+      } else if (detected.type !== 'unknown') {
+        window.location.href = loginPathForUserType(detected);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -44,24 +69,26 @@ export default function SuperAdminLogin() {
       });
 
       if (error) throw error;
+      if (!data.user) throw new Error("Login failed");
 
-      if (data.user) {
-        const { data: superAdminData, error: superAdminError } = await supabase
-          .from('super_admin_users')
-          .select('*')
-          .eq('user_id', data.user.id)
-          .single();
+      const detected = await detectUserTypeAfterAuth(data.user.id);
 
-        if (superAdminError || !superAdminData) {
-          await supabase.auth.signOut();
-          toast.error("Access denied. Super admin privileges required.");
-          setLoading(false);
-          return;
-        }
-
+      if (detected.type === 'super_admin') {
         toast.success("Welcome back!");
         navigate("/admin/agencies");
+        return;
       }
+
+      // Wrong portal — sign out, redirect to the correct login page.
+      await supabase.auth.signOut();
+      if (detected.type === 'unknown') {
+        toast.error("Access denied. Super admin privileges required.");
+        return;
+      }
+      toast.message("Wrong portal", {
+        description: `This is a ${userTypeLabel(detected)} account. Redirecting…`,
+      });
+      window.location.href = loginPathForUserType(detected);
     } catch (error: any) {
       toast.error(error.message || "Invalid email or password");
     } finally {

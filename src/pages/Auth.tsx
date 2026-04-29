@@ -5,7 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { signIn } from "@/lib/auth";
+import {
+  detectUserTypeAfterAuth,
+  loginPathForUserType,
+  dashboardPathForUserType,
+  userTypeLabel,
+} from "@/lib/auth";
 import { useAuth } from "@/hooks/useAuth";
 import { useBranding } from "@/hooks/useBranding";
 import { useFavicon } from "@/hooks/useFavicon";
@@ -19,7 +24,7 @@ export default function Auth() {
   const [emailError, setEmailError] = useState("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   
@@ -48,34 +53,39 @@ export default function Auth() {
   
   useFavicon(branding.faviconUrl || '');
 
+  // Already-authenticated visitor: detect actual role and bounce.
+  // Skip during preview/impersonation and during the explicit ?preview=true UX.
   useEffect(() => {
     if (isPreviewMode) return;
-    
-    const checkAndRedirect = async () => {
-      if (user && profile) {
-        try {
-          const { data } = await supabase.functions.invoke('check-must-change-password', {
-            body: {}
-          });
-          
-          if (data?.mustChangePassword) {
-            navigate('/change-password');
-            return;
-          }
-        } catch (error) {
-          console.error('Error checking password change requirement:', error);
+    if (sessionStorage.getItem('preview_mode') === '1') return;
+    if (!user) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await supabase.functions.invoke('check-must-change-password', {
+          body: {},
+        });
+        if (cancelled) return;
+        if (data?.mustChangePassword) {
+          navigate('/change-password');
+          return;
         }
-        
-        if (profile.role === 'admin') {
-          navigate('/admin/agencies');
-        } else {
-          navigate('/');
-        }
+      } catch (error) {
+        console.error('Error checking password change requirement:', error);
       }
-    };
-    
-    checkAndRedirect();
-  }, [user, profile, navigate, isPreviewMode]);
+
+      const detected = await detectUserTypeAfterAuth(user.id);
+      if (cancelled) return;
+      if (detected.type === 'client') {
+        navigate(dashboardPathForUserType(detected));
+      } else if (detected.type !== 'unknown') {
+        window.location.href = loginPathForUserType(detected);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [user, navigate, isPreviewMode]);
 
   const validateEmail = (value: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -101,18 +111,11 @@ export default function Auth() {
         password,
       });
       if (error) throw error;
-
       if (!data?.user) throw new Error("Login failed");
 
-      // Check if user is a client user
-      const { data: clientUser } = await supabase
-        .from('client_users')
-        .select('id')
-        .eq('user_id', data.user.id)
-        .maybeSingle();
+      const detected = await detectUserTypeAfterAuth(data.user.id);
 
-      if (clientUser) {
-        // They ARE a client user — let the existing useEffect redirect handle it
+      if (detected.type === 'client') {
         toast({
           title: "Success",
           description: "Signed in successfully",
@@ -120,47 +123,23 @@ export default function Auth() {
         return;
       }
 
-      // Not a client user — check what they actually are and redirect
+      // Wrong portal — sign out, redirect to the correct login page.
       await supabase.auth.signOut();
 
-      // Check super admin
-      const { data: superAdmin } = await supabase
-        .from('super_admin_users')
-        .select('id')
-        .eq('user_id', data.user.id)
-        .maybeSingle();
-
-      if (superAdmin) {
+      if (detected.type === 'unknown') {
         toast({
-          title: "Wrong portal",
-          description: "This is a client login page. Redirecting you to admin login.",
+          title: "Error",
+          description: "No client account found for this email. Please contact your administrator.",
+          variant: "destructive",
         });
-        setTimeout(() => { window.location.href = '/admin/login'; }, 1500);
         return;
       }
 
-      // Check agency user
-      const { data: agencyUser } = await supabase
-        .from('agency_users')
-        .select('id')
-        .eq('user_id', data.user.id)
-        .maybeSingle();
-
-      if (agencyUser) {
-        toast({
-          title: "Wrong portal",
-          description: "This is a client login page. Redirecting you to agency login.",
-        });
-        setTimeout(() => { window.location.href = '/agency/login'; }, 1500);
-        return;
-      }
-
-      // Not a client, admin, or agency user at all
       toast({
-        title: "Error",
-        description: "No client account found for this email. Please contact your administrator.",
-        variant: "destructive",
+        title: "Wrong portal",
+        description: `This is a ${userTypeLabel(detected)} account. Redirecting…`,
       });
+      window.location.href = loginPathForUserType(detected);
     } catch (error: any) {
       toast({
         title: "Error",

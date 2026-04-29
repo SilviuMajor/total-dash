@@ -56,21 +56,30 @@ These are real follow-ups from the 25 April audit. C1, C2, C3 (critical tier) al
 
 ## Tier 2 — strong wants
 
-### N12 — Smart login redirect
+### N29 — AdminProtectedRoute lacks impersonation awareness
 
-**Type:** Auth Enhancement | **Effort:** Small | **Status:** Open
-**Spec:** `TotalDash-Spec-N12-Smart-Login-Redirect.md`
+**Type:** Auth defence-in-depth | **Effort:** Small | **Status:** Open
 
-If a user logs in on the wrong portal (e.g. super admin signs in at `/agency/login`, or client at `/super-admin/login`), detect mismatch after auth and redirect to correct page with toast "Redirecting to your dashboard."
+`AdminProtectedRoute` checks only `userType !== 'super_admin'`. During impersonation, `useMultiTenantAuth.userType` flips to the impersonated role (`agency` / `client`), so a super_admin who navigates back to an `/admin/*` route mid-impersonation gets bounced. `AgencyProtectedRoute` and `ProtectedRoute` already honour `sessionStorage.preview_mode` / `impersonation_session_id` bridge values.
 
-**Decisions already made:**
-- Hybrid approach: extract `detectUserTypeAfterAuth` utility into `src/lib/auth.ts`, call from each login page after sign-in success. Toast/redirect logic stays in each page so styling matches.
-- Priority order if user has multiple roles: super_admin > agency > client.
-- Skip if in preview mode or impersonating.
+N12 added a partial mitigation (skip the bounce when `sessionStorage.preview_mode` is set), but full impersonation-aware logic mirrors the `hasBridgeAccess` / `isImpersonating` pattern from `AgencyProtectedRoute` and is broader than the N12 patch. Consolidate so all three guards read the same impersonation context helper.
 
-**Open question:** does post-cutover slug routing change anything here? Worth re-checking before implementation — today's `/login/:agencySlug` work might have already addressed parts of this.
+**Touches:** `src/components/AdminProtectedRoute.tsx`, possibly `useMultiTenantAuth` for a shared `hasImpersonationBridge` helper.
 
-**Touches:** `Auth.tsx`, `AdminLogin.tsx`, `AgencyLogin.tsx`, new utility in `src/lib/auth.ts`.
+---
+
+### N30 — Cross-tab impersonation race condition
+
+**Type:** Auth correctness | **Effort:** Medium | **Status:** Open
+
+sessionStorage bridge values (`preview_mode`, `preview_agency`, `preview_client`, `preview_token`, `impersonation_session_id`) are tab-scoped, but `loadProfile()` in `useMultiTenantAuth` reads them eagerly during boot. If a super_admin opens a new tab to an admin route while another tab has impersonation active, the new tab's sessionStorage is empty so `userType` resolves to `super_admin` while the original tab is `agency` / `client`. Cross-tab divergence can leak into Realtime subscriptions, list filters, and any guard that relies on `useMultiTenantAuth.userType` for current intent.
+
+Diagnose actual race surface (Conversations realtime channels, Sidebar render, ProtectedRoute guards). Pick fix:
+- BroadcastChannel sync between tabs.
+- localStorage mirror of bridge values with a `storage` event listener (sessionStorage → localStorage when impersonation starts, removal on stop).
+- Authoritative `impersonation_sessions` row lookup keyed off the active session id, with a Realtime channel for state changes.
+
+**Touches:** `useImpersonation.tsx`, `useMultiTenantAuth.tsx`, possibly a new `useImpersonationBridge` helper.
 
 ---
 
@@ -385,6 +394,7 @@ Low priority. Do opportunistically when touching related code.
 
 Date-stamped log of items shipped. Older entries are intentionally terse — open the commit if you need detail. Newer entries keep slightly more context while still relevant.
 
+- **2026-04-29** — N12 (smart login redirect) shipped. New `detectUserTypeAfterAuth` utility in `src/lib/auth.ts` runs three parallel role-table queries (`super_admin_users`, `agency_users`, `client_users`) and returns the first match in `loadProfile()` priority order (super_admin > agency > client), plus `loginPathForUserType` / `dashboardPathForUserType` helpers. Wired into all three login pages: post-sign-in detect → if matches the page's expected role, happy-path navigate to dashboard; if mismatch, sign out, toast "Wrong portal — redirecting…", `window.location.href = loginPathForUserType(detected)`. Each login page also gets an already-authenticated `useEffect` that auto-redirects returning visitors with stale sessions to their actual dashboard (skips `sessionStorage.preview_mode === '1'` so impersonation isn't disrupted). `AgencyLogin` preserves its existing whitelabel-aware client-diversion UI (interactive "Go to your login page" card) — the redirect URL still honours `whitelabel_verified` + `whitelabel_domain` for clients of agencies on a custom domain. Route guards hardened: `AdminProtectedRoute` now redirects mismatched signed-in users to *their* dashboard (`/agency` or `/`) instead of `/admin/login`, and skips the bounce when `preview_mode` bridge is set. `AgencyProtectedRoute` and `ProtectedRoute` similarly redirect agency / super_admin / client mismatches to their dashboards rather than to a login page. Two related issues spun out as new backlog entries N29 (full impersonation-aware AdminProtectedRoute) and N30 (cross-tab impersonation race).
 - **2026-04-29** — N9 (search overhaul) + N10 (filter overlay + toolbar toggle) parked off the backlog. N9 is being executed in a parallel Claude Code session (CommandSearch / Cmd+K upgrade with date range + mirrored dashboard chips + `search_conversations` RPC); review feedback on that plan was sent over before this entry was logged. N10 was paired with N9 at the toolbar/prefs level — its filter-overlay modal idea is largely subsumed by N9's chip-mirroring, and re-evaluation can happen post-N9 ship if any gaps remain. Both removed from Tier 2 to keep the active list focused.
 - **2026-04-29** — `252536b` — N7 (End Handover button styling). Option B picked: End Handover button keeps its `variant="outline"` shape but gains a red destructive tint (`text-destructive border-destructive/50 hover:bg-destructive/10`) so it's visually distinct from the neutral Transfer button next to it. Bonus tweak: inside the End Handover dialog, the "End — Keep in Aftercare" button now uses a yellow-tinted outline (`text-yellow-700 border-yellow-300 hover:bg-yellow-50` + dark variants) matching the Aftercare status badge palette, so the two end-paths telegraph which status they land in (yellow → Aftercare, default primary → Resolved). No behaviour change.
 - **2026-04-29** — `49ad83c` — N4 (date separators in transcript) plus two bundled tweaks. Plain-text centred date separator (`2nd September 2026`, UK ordinal day-month-year via `date-fns` `do MMMM yyyy`) injected at the top of each calendar-day group in both the dashboard Conversations transcript map and the Transcripts page. `MessageBubble` timestamp + the inline `client_user` timestamp + the conversation card Row 2 (last-message line) now share one `h:mm a · d/M` format (e.g. `10:38 AM · 8/3`) for cross-speaker consistency. Widget gets a hover-reveal time per bubble: time-only (no date), absolutely positioned to the *outer* side of the bubble (left for user, right for AI/agent) via a new `vf-msg-body` wrapper inside `vf-msg-user-wrap` / new `vf-msg-bot-wrap`; `[data-msg-id]:hover` toggles `opacity` so layout doesn't shift. `max-width: 78%` moved from `.vf-msg-bot` / `.vf-msg-user` onto `.vf-msg-body` so the bubble width still constrains relative to wrapper, not body.

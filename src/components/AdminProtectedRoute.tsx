@@ -18,9 +18,21 @@ export function AdminProtectedRoute({ children }: AdminProtectedRouteProps) {
     );
   }
 
-  if (userType !== 'super_admin') {
-    return <Navigate to="/admin/login" replace />;
+  if (userType === 'super_admin') {
+    return <>{children}</>;
   }
 
-  return <>{children}</>;
+  // Signed-in non-super-admin → redirect to *their* dashboard, not to the
+  // admin login page. Skip during impersonation (preview_mode bridge) so the
+  // super_admin's own impersonation flow isn't bounced.
+  const previewBridge = sessionStorage.getItem('preview_mode');
+  if (previewBridge && previewBridge !== '') {
+    return <>{children}</>;
+  }
+
+  if (userType === 'agency') return <Navigate to="/agency" replace />;
+  if (userType === 'client') return <Navigate to="/" replace />;
+
+  // No session at all
+  return <Navigate to="/admin/login" replace />;
 }

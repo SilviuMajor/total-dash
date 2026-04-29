@@ -65,6 +65,10 @@ export function ProtectedRoute({
       } else if (userType === 'super_admin' && !hasPreviewAccess) {
         // Super admin with no active preview/impersonation — go to admin
         navigate('/admin/agencies', { replace: true });
+      } else if (userType === 'agency' && !hasPreviewAccess) {
+        // Agency user wandered onto a client route — send to their dashboard,
+        // not to /client/login (they're authenticated, just wrong portal).
+        navigate('/agency', { replace: true });
       } else if (requireAdmin && profile?.role !== 'admin') {
         navigate('/');
       } else if (requireClient && profile?.role === 'admin' && !hasPreviewAccess && !isImpersonationFullAccess) {

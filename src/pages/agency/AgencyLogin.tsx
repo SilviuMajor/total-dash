@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,12 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { useBranding } from "@/hooks/useBranding";
 import { ForgotPasswordDialog } from "@/components/ForgotPasswordDialog";
+import {
+  detectUserTypeAfterAuth,
+  loginPathForUserType,
+  dashboardPathForUserType,
+  userTypeLabel,
+} from "@/lib/auth";
 
 export default function AgencyLogin() {
   const [email, setEmail] = useState("");
@@ -34,6 +40,25 @@ export default function AgencyLogin() {
     }
   };
 
+  // Already-authenticated visitor: bounce to right place. Skip during
+  // impersonation so super_admin can revisit login pages without disruption.
+  useEffect(() => {
+    if (sessionStorage.getItem('preview_mode') === '1') return;
+    let cancelled = false;
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (cancelled || !session?.user) return;
+      const detected = await detectUserTypeAfterAuth(session.user.id);
+      if (cancelled) return;
+      if (detected.type === 'agency') {
+        window.location.href = dashboardPathForUserType(detected);
+      } else if (detected.type !== 'unknown') {
+        window.location.href = loginPathForUserType(detected);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -50,17 +75,9 @@ export default function AgencyLogin() {
         throw new Error("Invalid email or password");
       }
 
-      const { data: agencyUsers, error: agencyUserError } = await supabase
-        .from('agency_users')
-        .select('agency_id, role')
-        .eq('user_id', data.user.id);
+      const detected = await detectUserTypeAfterAuth(data.user.id);
 
-      if (agencyUserError) {
-        console.error("Agency lookup error:", agencyUserError);
-        throw new Error("Failed to verify agency access. Please try again.");
-      }
-
-      if (agencyUsers && agencyUsers.length > 0) {
+      if (detected.type === 'agency') {
         const { data: passwordData } = await supabase.functions.invoke('check-must-change-password', {
           body: {}
         });
@@ -76,22 +93,35 @@ export default function AgencyLogin() {
         return;
       }
 
-      // Not an agency user — check if they're a client user
-      const { data: clientUser } = await supabase
-        .from('client_users')
-        .select('client_id, clients!inner(agency_id, agencies!inner(slug, whitelabel_domain, whitelabel_subdomain, whitelabel_verified))')
-        .eq('user_id', data.user.id)
-        .maybeSingle();
+      // Wrong portal — sign out then redirect.
+      // For client users we additionally honour whitelabel domains: the
+      // agency's whitelabel subdomain is the "right" client login URL
+      // when verified, not the path-based slug.
+      if (detected.type === 'client') {
+        const { data: agencyRow } = await supabase
+          .from('agencies')
+          .select('whitelabel_domain, whitelabel_subdomain, whitelabel_verified, slug')
+          .eq('slug', detected.agencySlug ?? '')
+          .maybeSingle();
+
+        await supabase.auth.signOut();
+
+        const a: any = agencyRow ?? {};
+        const redirectUrl = (a.whitelabel_verified && a.whitelabel_domain)
+          ? `https://${a.whitelabel_subdomain || 'dashboard'}.${a.whitelabel_domain}`
+          : loginPathForUserType(detected);
+        setDiverting(true);
+        setDiversionUrl(redirectUrl);
+        return;
+      }
 
       await supabase.auth.signOut();
 
-      if (clientUser && (clientUser as any).clients?.agencies) {
-        const agency = (clientUser as any).clients.agencies;
-        const redirectUrl = (agency.whitelabel_verified && agency.whitelabel_domain)
-          ? `https://${agency.whitelabel_subdomain || 'dashboard'}.${agency.whitelabel_domain}`
-          : `/login/${agency.slug}`;
-        setDiverting(true);
-        setDiversionUrl(redirectUrl);
+      if (detected.type === 'super_admin') {
+        toast.message("Wrong portal", {
+          description: "This is a super admin account. Redirecting…",
+        });
+        window.location.href = loginPathForUserType(detected);
         return;
       }
 
