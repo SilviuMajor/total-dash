@@ -58,7 +58,7 @@ These are real follow-ups from the 25 April audit. C1, C2, C3 (critical tier) al
 
 ### N9 — Search overhaul
 
-**Type:** Enhancement | **Effort:** Large (5-7 days) | **Status:** Open
+**Type:** Enhancement | **Effort:** Large (5-7 days) | **Status:** In flight (parallel session, 2026-04-29)
 **Spec:** `TotalDash-Spec-N9-Search-Overhaul.md`
 
 Full-text search across transcript content, customer metadata, conversation properties. No real text search exists today (only status/tag filter). Two-phase architecture in spec:
