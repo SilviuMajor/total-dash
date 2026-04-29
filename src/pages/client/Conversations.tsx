@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ConversationsSkeleton } from "@/components/skeletons";
-import { Phone, Clock, CheckCircle, MessageSquare, ArrowDown, X, Plus, Tag, Users, Building2, Send, UserCheck, PhoneOff, ArrowRightLeft, Lock, Loader2, AlertTriangle, Timer, MessageSquareText, Trash2, FolderOpen, Sparkles, Check, Archive, Paperclip, FileText, Download } from "lucide-react";
+import { Phone, Clock, CheckCircle, MessageSquare, ArrowDown, X, Plus, Tag, Users, Building2, Send, UserCheck, PhoneOff, ArrowRightLeft, Lock, Loader2, AlertTriangle, Timer, MessageSquareText, Trash2, FolderOpen, Sparkles, Check, Archive, Paperclip, FileText, Download, Filter, Pin, PinOff } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -141,7 +141,40 @@ export default function Conversations() {
   const [tagFilters, setTagFilters] = useState<string[]>([]);
   const [departmentFilters, setDepartmentFilters] = useState<string[]>([]);
   const [myOnly, setMyOnly] = useState(false);
-  
+
+  // Filter row visibility prefs (persisted to localStorage; expand state is in-memory only)
+  const [pinnedRows, setPinnedRows] = useState<{ status: boolean; department: boolean; tags: boolean }>({
+    status: true,
+    department: true,
+    tags: true,
+  });
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
+
+  // Hydrate pinned-rows pref from localStorage on mount
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('totaldash_conversations_ui_prefs');
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.v === 1 && parsed.pinned) {
+        setPinnedRows(p => ({
+          status: typeof parsed.pinned.status === 'boolean' ? parsed.pinned.status : p.status,
+          department: typeof parsed.pinned.department === 'boolean' ? parsed.pinned.department : p.department,
+          tags: typeof parsed.pinned.tags === 'boolean' ? parsed.pinned.tags : p.tags,
+        }));
+      }
+    } catch { /* ignore — fall back to defaults */ }
+  }, []);
+
+  // Persist pinned rows whenever they change
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        'totaldash_conversations_ui_prefs',
+        JSON.stringify({ v: 1, pinned: pinnedRows }),
+      );
+    } catch { /* ignore — private mode / quota */ }
+  }, [pinnedRows]);
 
   // Bulk select
   const [selectedConversationIds, setSelectedConversationIds] = useState<Set<string>>(new Set());
@@ -1564,10 +1597,36 @@ export default function Conversations() {
     userType === 'client' ||
     (isImpersonating && impersonationMode === 'view_as_user');
 
+  type PinnableRow = 'status' | 'department' | 'tags';
+  const isRowVisible = (row: PinnableRow): boolean => {
+    if (row === 'department' && departments.length <= 1) return false;
+    if (row === 'tags' && (!tagsEnabled || availableTags.length === 0)) return false;
+    return pinnedRows[row] || filtersExpanded;
+  };
+  const togglePin = (row: PinnableRow) =>
+    setPinnedRows(p => ({ ...p, [row]: !p[row] }));
+
+  const PinToggle = ({ row }: { row: PinnableRow }) => (
+    <Button
+      size="icon"
+      variant="ghost"
+      onClick={() => togglePin(row)}
+      className="h-6 w-6 shrink-0"
+      title={pinnedRows[row] ? 'Unpin row (hide when filters collapsed)' : 'Pin row (always show)'}
+      aria-label={pinnedRows[row] ? `Unpin ${row} filters` : `Pin ${row} filters`}
+      aria-pressed={pinnedRows[row]}
+    >
+      {pinnedRows[row]
+        ? <Pin className="h-3 w-3 fill-current" />
+        : <PinOff className="h-3 w-3 opacity-60" />
+      }
+    </Button>
+  );
+
   return (
     <div className="flex flex-col h-full">
       {/* ── Unified header ── */}
-      <div className="bg-card flex-shrink-0">
+      <div className="bg-card flex-shrink-0 border-b border-border">
         {/* Row 1: Mine toggle + Title + count */}
         <div className="px-4 pt-3 pb-0 flex items-center gap-2">
           <Button
@@ -1586,6 +1645,18 @@ export default function Conversations() {
           >
             <UserCheck className="h-3.5 w-3.5" />
           </Button>
+          <Button
+            size="icon"
+            variant={filtersExpanded ? 'default' : 'ghost'}
+            onClick={() => setFiltersExpanded(v => !v)}
+            className="h-7 w-7"
+            title={filtersExpanded ? 'Hide unpinned filter rows' : 'Show all filter rows'}
+            aria-label="Toggle filter rows"
+            aria-pressed={filtersExpanded}
+            aria-expanded={filtersExpanded}
+          >
+            <Filter className="h-3.5 w-3.5" />
+          </Button>
           <h1 className="text-[15px] font-semibold">Conversations</h1>
           <span className="text-xs text-muted-foreground px-2 py-0.5 bg-muted rounded border">
             {filteredConversations.length}
@@ -1593,7 +1664,9 @@ export default function Conversations() {
         </div>
 
         {/* Row 2: Status filters (multi-select toggle) */}
+        {isRowVisible('status') && (
         <div className="px-4 py-1.5 flex items-center gap-1">
+          {filtersExpanded && <PinToggle row="status" />}
           <Button
             size="sm"
             variant={statusFilters.length === 0 ? 'default' : 'ghost'}
@@ -1631,10 +1704,12 @@ export default function Conversations() {
             );
           })}
         </div>
+        )}
 
         {/* Row 2b: Department filters (multi-select toggle, hidden for single department) */}
-        {departments.length > 1 && (
+        {isRowVisible('department') && (
           <div className="px-4 py-1.5 flex items-center gap-1.5 flex-wrap">
+            {filtersExpanded && <PinToggle row="department" />}
             <button
               onClick={() => setDepartmentFilters([])}
               className={cn(
@@ -1680,8 +1755,9 @@ export default function Conversations() {
           </div>
         )}
         {/* Row 3: Tag filter chips — hidden when no tags exist or tags disabled */}
-        {tagsEnabled && availableTags.length > 0 && (
-          <div className="px-4 py-1.5 flex items-center gap-1.5 border-b border-border flex-wrap">
+        {isRowVisible('tags') && (
+          <div className="px-4 py-1.5 flex items-center gap-1.5 flex-wrap">
+            {filtersExpanded && <PinToggle row="tags" />}
             {tagFilters.length > 0 && (
               <button
                 onClick={() => setTagFilters([])}
