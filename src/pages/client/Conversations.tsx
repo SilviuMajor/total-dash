@@ -44,6 +44,9 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
 import { useImpersonation } from "@/hooks/useImpersonation";
+import { useClientDepartments } from "@/hooks/useClientDepartments";
+import { ConversationCard } from "@/components/conversations/ConversationCard";
+import { formatWaitTime, getResponseTimeColor } from "@/components/conversations/cardUtils";
 import { getSoundPreferences, playHandoverRequestSound, playNewMessageSound, sendBrowserNotification } from "@/lib/notificationSounds";
 
 interface Conversation {
@@ -136,11 +139,39 @@ export default function Conversations() {
 
   const sentinelRef = useRef<HTMLDivElement>(null);
 
-  // Filters
-  const [statusFilters, setStatusFilters] = useState<string[]>([]);
-  const [tagFilters, setTagFilters] = useState<string[]>([]);
-  const [departmentFilters, setDepartmentFilters] = useState<string[]>([]);
-  const [myOnly, setMyOnly] = useState(false);
+  // Filters — persisted to sessionStorage so the CommandSearch dialog can mirror them.
+  // sessionStorage (not localStorage) keeps "fresh tab = clean slate" behaviour.
+  const ACTIVE_FILTERS_KEY = 'totaldash_conversations_active_filters';
+  const initialActiveFilters = (() => {
+    try {
+      const raw = sessionStorage.getItem(ACTIVE_FILTERS_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return {
+        statusFilters: Array.isArray(parsed.statusFilters) ? parsed.statusFilters : [],
+        tagFilters: Array.isArray(parsed.tagFilters) ? parsed.tagFilters : [],
+        departmentFilters: Array.isArray(parsed.departmentFilters) ? parsed.departmentFilters : [],
+        myOnly: !!parsed.myOnly,
+      };
+    } catch {
+      return null;
+    }
+  })();
+  const [statusFilters, setStatusFilters] = useState<string[]>(initialActiveFilters?.statusFilters ?? []);
+  const [tagFilters, setTagFilters] = useState<string[]>(initialActiveFilters?.tagFilters ?? []);
+  const [departmentFilters, setDepartmentFilters] = useState<string[]>(initialActiveFilters?.departmentFilters ?? []);
+  const [myOnly, setMyOnly] = useState<boolean>(initialActiveFilters?.myOnly ?? false);
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(
+        ACTIVE_FILTERS_KEY,
+        JSON.stringify({ statusFilters, tagFilters, departmentFilters, myOnly }),
+      );
+    } catch {
+      /* sessionStorage may be disabled — fail silently */
+    }
+  }, [statusFilters, tagFilters, departmentFilters, myOnly]);
 
   // Filter row visibility prefs (persisted to localStorage; expand state is in-memory only)
   const [pinnedRows, setPinnedRows] = useState<{ status: boolean; department: boolean; tags: boolean }>({
@@ -220,7 +251,7 @@ export default function Conversations() {
   const [transferNote, setTransferNote] = useState("");
   const [transferDeptId, setTransferDeptId] = useState("");
   const [takeoverConfirmOpen, setTakeoverConfirmOpen] = useState(false);
-  const [departments, setDepartments] = useState<Array<{ id: string; name: string; code: string | null; color: string | null }>>([]);
+  const { departments } = useClientDepartments();
   const [pendingSession, setPendingSession] = useState<any>(null);
   const [activeSession, setActiveSession] = useState<any>(null);
   const [handoverHistory, setHandoverHistory] = useState<any[]>([]);
@@ -737,23 +768,6 @@ export default function Conversations() {
 
     return () => { messageChannel.unsubscribe(); };
   }, [currentClientUserId]);
-
-  useEffect(() => {
-    const loadDepts = async () => {
-      const effectiveClientId = clientId || (isClientPreviewMode && previewClient?.id ? previewClient.id : null);
-      if (!effectiveClientId) return;
-      const { data } = await supabase
-        .from('departments')
-        .select('id, name, code, color, is_global, sort_order')
-        .eq('client_id', effectiveClientId)
-        .is('deleted_at', null)
-        .order('is_global', { ascending: false })
-        .order('sort_order')
-        .order('name');
-      if (data) setDepartments(data);
-    };
-    loadDepts();
-  }, [clientId, isClientPreviewMode, previewClient]);
 
   // Load handover sessions when conversation selected or status changes
   useEffect(() => {
@@ -1567,25 +1581,7 @@ export default function Conversations() {
 
   
 
-  const getResponseTimeColor = (seconds: number) => {
-    const greenMax = (agentConfig as any)?.response_thresholds?.green_seconds || 60;
-    const amberMax = (agentConfig as any)?.response_thresholds?.amber_seconds || 300;
-    if (seconds <= greenMax) return { color: '#22c55e', label: 'green' };
-    if (seconds <= amberMax) return { color: '#f59e0b', label: 'amber' };
-    return { color: '#ef4444', label: 'red' };
-  };
-
-  const formatWaitTime = (seconds: number) => {
-    if (seconds < 60) return `${seconds}s`;
-    if (seconds < 3600) {
-      const m = Math.floor(seconds / 60);
-      const s = seconds % 60;
-      return s ? `${m}m ${s}s` : `${m}m`;
-    }
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    return m ? `${h}h ${m}m` : `${h}h`;
-  };
+  const responseThresholds = (agentConfig as any)?.response_thresholds;
 
   const getWaitSeconds = (conversation: any) => {
     if (!conversation.first_unanswered_message_at) return 0;
@@ -1893,162 +1889,28 @@ export default function Conversations() {
                   filteredConversations.map((conv) => {
                     const isChecked = selectedConversationIds.has(conv.id);
                     const isSelected = selectedConversation?.id === conv.id;
-                    const rawName = conv.metadata?.variables?.user_name || conv.caller_phone || 'Unknown';
-                    const hasRealName = !!conv.metadata?.variables?.user_name;
-                    const displayName = (!hasRealName && rawName.length > 8) ? 'User…' + rawName.slice(-4) : rawName;
-                    const isMine = !!currentClientUserId && conv.owner_id === currentClientUserId;
-
+                    const pendingMeta = pendingConversationIds.get(conv.id) || null;
                     return (
-                      <div
+                      <ConversationCard
                         key={conv.id}
+                        conversation={conv}
+                        departments={departments}
+                        tagsEnabled={tagsEnabled}
+                        currentClientUserId={currentClientUserId}
+                        isSelected={isSelected}
+                        isChecked={isChecked}
+                        pendingMeta={pendingMeta}
+                        selectedConversationLive={selectedConversation as any}
+                        responseThresholds={responseThresholds}
                         onClick={() => setSelectedConversation(conv)}
-                        className={cn(
-                          "group border-l-[3px] px-4 py-3 border-b border-border cursor-pointer transition-colors",
-                          conv.status === 'with_ai' && "border-l-green-500",
-                          conv.status === 'waiting' && "border-l-red-500",
-                          conv.status === 'in_handover' && "border-l-blue-500",
-                          conv.status === 'aftercare' && "border-l-yellow-500",
-                          conv.status === 'needs_review' && "border-l-amber-500",
-                          conv.status === 'resolved' && "border-l-gray-400",
-                          (!['with_ai', 'waiting', 'in_handover', 'aftercare', 'needs_review', 'resolved'].includes(conv.status)) && "border-l-border",
-                          (pendingConversationIds.has(conv.id) || conv.status === 'waiting') && "bg-red-50/80 dark:bg-red-950/20 border-l-red-500",
-                          !pendingConversationIds.has(conv.id) && conv.status !== 'waiting' && isMine && conv.status === 'in_handover' && "bg-blue-50/70 dark:bg-blue-950/20",
-                          !pendingConversationIds.has(conv.id) && conv.status !== 'waiting' && isMine && conv.status === 'aftercare' && "bg-yellow-50/70 dark:bg-yellow-950/20",
-                          !pendingConversationIds.has(conv.id) && conv.status !== 'waiting' && isMine && conv.status === 'needs_review' && "bg-amber-50/70 dark:bg-amber-950/20",
-                          !pendingConversationIds.has(conv.id) && conv.status !== 'waiting' && isMine && conv.status === 'resolved' && "bg-gray-50/70 dark:bg-gray-950/20",
-                          isSelected ? "bg-primary/5" : pendingConversationIds.has(conv.id) ? "" : isMine ? "" : "hover:bg-muted/40"
-                        )}
-                      >
-                        {/* Row 1: Name + You badge + department pill */}
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            <Checkbox
-                              checked={isChecked}
-                              onCheckedChange={(checked) => {
-                                setSelectedConversationIds(prev => {
-                                  const next = new Set(prev);
-                                  if (checked) next.add(conv.id); else next.delete(conv.id);
-                                  return next;
-                                });
-                              }}
-                              onClick={(e) => e.stopPropagation()}
-                              className={cn(
-                                "shrink-0 transition-opacity",
-                                isChecked ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-                              )}
-                            />
-                            <span className="text-[13px] font-medium truncate" title={rawName}>{displayName}</span>
-                            {isMine && (
-                              <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 shrink-0">You</span>
-                            )}
-                            {conv.is_widget_test && (
-                              <Badge variant="outline" className="text-[10px] shrink-0 px-1 py-0">🧪</Badge>
-                            )}
-                            {conv.status === 'needs_review' && (
-                              <AlertTriangle className="w-3 h-3 text-amber-500 shrink-0" />
-                            )}
-                          </div>
-                          {departments.length > 1 && conv.department_id && (() => {
-                            const dept = departments.find(d => d.id === conv.department_id);
-                            return dept ? (
-                              <span
-                                className="inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-medium border shrink-0 ml-2"
-                                style={{
-                                  backgroundColor: `${dept.color || '#6B7280'}15`,
-                                  borderColor: `${dept.color || '#6B7280'}40`,
-                                  color: dept.color || '#6B7280',
-                                }}
-                              >
-                                {dept.name}
-                              </span>
-                            ) : null;
-                          })()}
-                        </div>
-                        {/* Row 2: Last activity date/time */}
-                        <p className="text-xs text-muted-foreground truncate pl-6 mb-1.5">
-                          {format(new Date(conv.last_activity_at || conv.started_at), 'MMM d, h:mm a')}
-                        </p>
-                        {/* Row 3: Status badge with owner initials + tags + clock pill */}
-                        <div className="flex items-center justify-between pl-6">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            {(() => {
-                              const pendingMeta = pendingConversationIds.get(conv.id);
-                              const isTransfer = conv.status === 'waiting' && pendingMeta?.takeoverType === 'transfer';
-                              const waitingTimer = conv.status === 'waiting' && pendingMeta
-                                ? Math.floor((Date.now() - new Date(pendingMeta.createdAt).getTime()) / 1000)
-                                : null;
-                              const showOwnerInitials = !!conv.owner_name && ['in_handover', 'aftercare', 'needs_review', 'resolved'].includes(conv.status);
-                              return (
-                                <span className={cn(
-                                  "inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold border",
-                                  conv.status === 'with_ai' && "bg-green-50 text-green-600 border-green-200",
-                                  conv.status === 'waiting' && "bg-red-50 text-red-600 border-red-200",
-                                  conv.status === 'in_handover' && "bg-blue-50 text-blue-600 border-blue-200",
-                                  conv.status === 'aftercare' && "bg-yellow-50 text-yellow-600 border-yellow-200",
-                                  conv.status === 'needs_review' && "bg-amber-50 text-amber-600 border-amber-200",
-                                  conv.status === 'resolved' && "bg-gray-100 text-gray-500 border-gray-200",
-                                  (!['with_ai', 'waiting', 'in_handover', 'aftercare', 'needs_review', 'resolved'].includes(conv.status)) && "bg-muted text-muted-foreground border-border"
-                                )} style={{ fontVariantNumeric: 'tabular-nums' }}>
-                                  {conv.status === 'with_ai' ? 'With AI'
-                                    : conv.status === 'waiting' ? (isTransfer ? 'TRANSFER' : 'Waiting')
-                                    : conv.status === 'in_handover' ? 'In Handover'
-                                    : conv.status === 'aftercare' ? 'Aftercare'
-                                    : conv.status === 'needs_review' ? 'Needs Review'
-                                    : conv.status === 'resolved' ? 'Resolved'
-                                    : conv.status === 'active' ? 'Active (Legacy)'
-                                    : conv.status === 'completed' ? 'Completed'
-                                    : conv.status === 'owned' ? 'Owned (Legacy)'
-                                    : conv.status.charAt(0).toUpperCase() + conv.status.slice(1)}
-                                  {showOwnerInitials && (
-                                    `: ${conv.owner_name!.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}`
-                                  )}
-                                  {waitingTimer != null && ` · ${formatWaitTime(waitingTimer)}`}
-                                </span>
-                              );
-                            })()}
-                            {tagsEnabled && conv.metadata?.tags?.map((tag: string) => (
-                              <span
-                                key={tag}
-                                className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium bg-muted border border-border/50 text-muted-foreground"
-                              >
-                                {tag}
-                              </span>
-                            ))}
-                          </div>
-                          {/* Clock pill — in_handover only: time since customer's first unanswered message.
-                              For the selected row, read from selectedConversation (live single-row state)
-                              so the pill mirrors the textbox indicator exactly. List-cache row used otherwise. */}
-                          {(() => {
-                            const isSelected = selectedConversation?.id === conv.id;
-                            const status = isSelected ? selectedConversation!.status : conv.status;
-                            const firstUnanswered = isSelected
-                              ? selectedConversation!.first_unanswered_message_at
-                              : conv.first_unanswered_message_at;
-                            const isInHandover = status === 'in_handover' && !!firstUnanswered;
-                            if (!isInHandover) return null;
-
-                            const waitSec = Math.floor((Date.now() - new Date(firstUnanswered!).getTime()) / 1000);
-                            const { color } = getResponseTimeColor(waitSec);
-                            return (
-                              <span
-                                className="shrink-0 ml-2"
-                                style={{
-                                  fontSize: 10,
-                                  fontWeight: 600,
-                                  padding: '2px 7px',
-                                  borderRadius: 10,
-                                  background: `${color}14`,
-                                  color: color,
-                                  border: `1px solid ${color}35`,
-                                  fontVariantNumeric: 'tabular-nums',
-                                }}
-                              >
-                                <Clock className="inline h-2.5 w-2.5 mr-0.5" style={{ verticalAlign: 'middle' }} />{formatWaitTime(waitSec)}
-                              </span>
-                            );
-                          })()}
-                        </div>
-                      </div>
+                        onCheckChange={(checked) => {
+                          setSelectedConversationIds(prev => {
+                            const next = new Set(prev);
+                            if (checked) next.add(conv.id); else next.delete(conv.id);
+                            return next;
+                          });
+                        }}
+                      />
                     );
                   })
                 )}
@@ -2304,7 +2166,7 @@ export default function Conversations() {
                  selectedConversation.owner_id === currentClientUserId && 
                  selectedConversation.first_unanswered_message_at && (() => {
                   const waitSec = getWaitSeconds(selectedConversation);
-                  const { color } = getResponseTimeColor(waitSec);
+                  const { color } = getResponseTimeColor(waitSec, responseThresholds);
                   return (
                     <div className="flex-shrink-0 px-3 py-1.5 flex items-center gap-2 border-t border-border" style={{
                       background: `${color}08`,
@@ -2632,7 +2494,7 @@ export default function Conversations() {
                             {(() => {
                               const maxSec = pendingSession.departments?.timeout_seconds || 300;
                               const waitSec = Math.floor((Date.now() - new Date(pendingSession.created_at).getTime()) / 1000);
-                              const { color } = getResponseTimeColor(waitSec);
+                              const { color } = getResponseTimeColor(waitSec, responseThresholds);
                               return (
                                 <div className="flex items-center gap-1 text-xs" style={{ color, fontVariantNumeric: 'tabular-nums' }}>
                                   <Timer className="h-3 w-3" />
