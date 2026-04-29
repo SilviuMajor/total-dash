@@ -387,12 +387,37 @@ export default function Conversations() {
 
   useEffect(() => {
     const convId = searchParams.get('conversationId');
-    if (!convId || conversations.length === 0) return;
+    if (!convId) return;
+
+    // Fast path: already in the paginated list (matches the dashboard's current
+    // filter + status). Pick it.
     const match = conversations.find(c => c.id === convId);
     if (match) {
       setSelectedConversation(match);
       setSearchParams({}, { replace: true });
+      return;
     }
+
+    // Slow path: the conversation was reached via search and lives outside the
+    // dashboard's current filter / pagination window. Fetch it directly so the
+    // search-click still opens it; otherwise nothing happens visually.
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from('conversations')
+        .select('*')
+        .eq('id', convId)
+        .maybeSingle();
+      if (cancelled) return;
+      if (error || !data) {
+        console.warn('[Conversations] could not load conversation by id:', convId, error);
+        setSearchParams({}, { replace: true });
+        return;
+      }
+      setSelectedConversation(data as Conversation);
+      setSearchParams({}, { replace: true });
+    })();
+    return () => { cancelled = true; };
   }, [conversations, searchParams]);
 
   // IntersectionObserver for infinite scroll

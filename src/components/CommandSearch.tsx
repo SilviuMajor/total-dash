@@ -655,8 +655,11 @@ export function CommandSearch() {
             )}
           </div>
 
-          {/* Status row */}
+          {/* Status row — colored dot prefix matches the dashboard's status filter */}
           <div className="flex items-center gap-1 flex-wrap">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground w-[68px] shrink-0">
+              Status
+            </span>
             {STATUS_OPTIONS.map((s) => {
               const active = dialogStatuses.includes(s.value);
               return (
@@ -667,32 +670,55 @@ export function CommandSearch() {
                   className={cn(
                     "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] transition-colors",
                     active
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-muted text-muted-foreground hover:bg-muted/70 border-border",
+                      ? "bg-foreground text-background border-foreground"
+                      : "bg-background text-muted-foreground hover:bg-muted/70 border-border",
                   )}
                 >
+                  <span
+                    className={cn(
+                      "w-1.5 h-1.5 rounded-full mr-1.5",
+                      s.value === "with_ai" && "bg-green-500",
+                      s.value === "waiting" && "bg-red-500",
+                      s.value === "in_handover" && "bg-blue-500",
+                      s.value === "aftercare" && "bg-yellow-500",
+                      s.value === "needs_review" && "bg-amber-500",
+                      s.value === "resolved" && "bg-gray-400",
+                    )}
+                  />
                   {s.label}
                 </button>
               );
             })}
           </div>
 
-          {/* Department row — only when more than one department */}
+          {/* Department row — only when more than one department; dept colors mirror dashboard */}
           {departments.length > 1 && (
             <div className="flex items-center gap-1 flex-wrap">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground w-[68px] shrink-0">
+                Department
+              </span>
               {departments.map((d) => {
                 const active = dialogDepartments.includes(d.id);
+                const color = d.color || "#6B7280";
                 return (
                   <button
                     key={d.id}
                     type="button"
                     onClick={() => toggleArrayValue(setDialogDepartments, d.id)}
-                    className={cn(
-                      "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] transition-colors",
+                    className="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] transition-colors font-medium"
+                    style={
                       active
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "bg-muted text-muted-foreground hover:bg-muted/70 border-border",
-                    )}
+                        ? {
+                            backgroundColor: `${color}25`,
+                            borderColor: color,
+                            color: color,
+                          }
+                        : {
+                            backgroundColor: `${color}15`,
+                            borderColor: `${color}40`,
+                            color: color,
+                          }
+                    }
                   >
                     {d.name}
                   </button>
@@ -701,11 +727,15 @@ export function CommandSearch() {
             </div>
           )}
 
-          {/* Tag row — only when tags enabled and any defined */}
+          {/* Tag row — only when tags enabled and any defined; show tag's own color as dot */}
           {tagsEnabled && availableTags.length > 0 && (
             <div className="flex items-center gap-1 flex-wrap">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground w-[68px] shrink-0">
+                Tag
+              </span>
               {availableTags.map((t) => {
                 const active = dialogTags.includes(t.label);
+                const color = (t as any).color || "#6B7280";
                 return (
                   <button
                     key={t.id}
@@ -714,10 +744,14 @@ export function CommandSearch() {
                     className={cn(
                       "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] transition-colors",
                       active
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "bg-muted text-muted-foreground hover:bg-muted/70 border-border",
+                        ? "bg-foreground text-background border-foreground"
+                        : "bg-background text-muted-foreground hover:bg-muted/70 border-border",
                     )}
                   >
+                    <span
+                      className="w-1.5 h-1.5 rounded-full mr-1.5"
+                      style={{ backgroundColor: color }}
+                    />
                     {t.label}
                   </button>
                 );
