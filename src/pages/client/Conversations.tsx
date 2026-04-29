@@ -1628,7 +1628,7 @@ export default function Conversations() {
       {/* ── Unified header ── */}
       <div className="bg-card flex-shrink-0 border-b border-border">
         {/* Row 1: Mine toggle + Title + count */}
-        <div className="px-4 pt-3 pb-0 flex items-center gap-2">
+        <div className="px-4 pt-3 pb-3 flex items-center gap-2">
           <Button
             size="icon"
             variant={myOnly ? 'default' : 'ghost'}
@@ -1657,7 +1657,7 @@ export default function Conversations() {
           >
             <Filter className="h-3.5 w-3.5" />
           </Button>
-          <h1 className="text-[15px] font-semibold">Conversations</h1>
+          <h1 className="text-lg font-semibold">Conversations</h1>
           <span className="text-xs text-muted-foreground px-2 py-0.5 bg-muted rounded border">
             {filteredConversations.length}
           </span>
