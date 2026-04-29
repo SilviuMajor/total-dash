@@ -633,27 +633,13 @@ export default function Conversations() {
 
     const channel = supabase
       .channel('pending-sessions')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'handover_sessions' }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'handover_sessions' }, (payload) => {
         loadPendingIds();
-      })
-      .subscribe();
-
-    return () => { channel.unsubscribe(); };
-  }, [selectedAgentId, toast]);
-
-  // Play sound for NEW pending handover sessions across all conversations
-  useEffect(() => {
-    const pendingChannel = supabase
-      .channel('new-handover-requests')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'handover_sessions',
-          filter: 'status=eq.pending'
-        },
-        () => {
+        // Play handover-request sound on a new pending session. Folded into
+        // this channel because Supabase Realtime can drop one of two
+        // subscriptions on the same table from the same client; the unfiltered
+        // one (this) reliably fires.
+        if (payload.eventType === 'INSERT' && (payload.new as any)?.status === 'pending') {
           const prefs = getSoundPreferences();
           if (prefs.handoverRequestEnabled) {
             playHandoverRequestSound(prefs.handoverRequestVolume);
@@ -662,11 +648,11 @@ export default function Conversations() {
             sendBrowserNotification("New Handover Request", "A customer is requesting to speak with an agent");
           }
         }
-      )
+      })
       .subscribe();
 
-    return () => { pendingChannel.unsubscribe(); };
-  }, []);
+    return () => { channel.unsubscribe(); };
+  }, [selectedAgentId, toast]);
 
   // Sound notification for customer messages in ANY of my active handovers
   useEffect(() => {
@@ -1515,8 +1501,8 @@ export default function Conversations() {
     //   Tier 3 = everything else
     // Within Tier 1, oldest wait first so the longest-waiting customer is on top.
     const waitStart = (c: typeof result[number]): number => {
-      const pendingAt = pendingConversationIds.get(c.id);
-      if (pendingAt) return new Date(pendingAt).getTime();
+      const pendingMeta = pendingConversationIds.get(c.id);
+      if (pendingMeta?.createdAt) return new Date(pendingMeta.createdAt).getTime();
       if (c.first_unanswered_message_at) return new Date(c.first_unanswered_message_at).getTime();
       return Date.now();
     };
