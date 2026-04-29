@@ -244,7 +244,21 @@ function generateWidgetScript(config: any): string {
     
     loadConversation(conversationId) {
       const session = this.getSession();
-      return session?.conversations.find(c => c.id === conversationId);
+      const conv = session?.conversations.find(c => c.id === conversationId);
+      if (conv && Array.isArray(conv.messages)) {
+        // Scrub legacy duplicate "Conversation ended" pills baked into
+        // localStorage from sessions that ran before the dedupe was in place.
+        // Keep only the first occurrence; later ones are dropped.
+        let seenEnd = false;
+        conv.messages = conv.messages.filter(m => {
+          if (m && m.speaker === 'system' && m.text === 'Conversation ended') {
+            if (seenEnd) return false;
+            seenEnd = true;
+          }
+          return true;
+        });
+      }
+      return conv;
     },
     
     getConversationHistory() {
@@ -2661,13 +2675,18 @@ function generateWidgetScript(config: any): string {
       if (data.conversationEnded) {
         isTyping = false;
         isConversationEnded = true;
-        const endMsg = {
-          id: 'msg_end_' + Date.now(),
-          speaker: 'system',
-          text: 'Conversation ended',
-          timestamp: new Date().toISOString()
-        };
-        messages.push(endMsg);
+        // Idempotent: if a "Conversation ended" pill is already in the array
+        // (e.g. the poll inserted it first, or it's restored from a prior
+        // session), don't push a second one.
+        const alreadyEnded = messages.some(m => m.speaker === 'system' && m.text === 'Conversation ended');
+        if (!alreadyEnded) {
+          messages.push({
+            id: 'msg_end_' + Date.now(),
+            speaker: 'system',
+            text: 'Conversation ended',
+            timestamp: new Date().toISOString()
+          });
+        }
         // Stop the pre-handover transcript poll — without this it keeps
         // running every 1.5s for the rest of the page session and would
         // re-fetch (and try to redisplay) the conversation_ended row.
@@ -2886,13 +2905,18 @@ function generateWidgetScript(config: any): string {
       if (data.conversationEnded) {
         isTyping = false;
         isConversationEnded = true;
-        const endMsg = {
-          id: 'msg_end_' + Date.now(),
-          speaker: 'system',
-          text: 'Conversation ended',
-          timestamp: new Date().toISOString()
-        };
-        messages.push(endMsg);
+        // Idempotent: if a "Conversation ended" pill is already in the array
+        // (e.g. the poll inserted it first, or it's restored from a prior
+        // session), don't push a second one.
+        const alreadyEnded = messages.some(m => m.speaker === 'system' && m.text === 'Conversation ended');
+        if (!alreadyEnded) {
+          messages.push({
+            id: 'msg_end_' + Date.now(),
+            speaker: 'system',
+            text: 'Conversation ended',
+            timestamp: new Date().toISOString()
+          });
+        }
         // Stop the pre-handover transcript poll — without this it keeps
         // running every 1.5s for the rest of the page session and would
         // re-fetch (and try to redisplay) the conversation_ended row.
