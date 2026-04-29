@@ -2713,7 +2713,7 @@ export default function Conversations() {
                             <Button
                               size="sm"
                               variant="outline"
-                              className="flex-1"
+                              className="flex-1 text-destructive border-destructive/50 hover:bg-destructive/10 hover:text-destructive"
                               onClick={() => setEndHandoverOpen(true)}
                               disabled={!!handoverLoading}
                             >
@@ -3225,7 +3225,11 @@ export default function Conversations() {
           <p className="text-sm text-muted-foreground">How would you like to end this handover?</p>
           <DialogFooter className="flex-col sm:flex-row gap-2">
             <Button variant="outline" onClick={() => setEndHandoverOpen(false)}>Cancel</Button>
-            <Button variant="outline" onClick={() => handleEndHandover(false)}>
+            <Button
+              variant="outline"
+              className="text-yellow-700 border-yellow-300 hover:bg-yellow-50 hover:text-yellow-700 dark:text-yellow-400 dark:border-yellow-800 dark:hover:bg-yellow-950/30 dark:hover:text-yellow-400"
+              onClick={() => handleEndHandover(false)}
+            >
               End — Keep in Aftercare
             </Button>
             <Button onClick={() => handleEndHandover(true)}>
