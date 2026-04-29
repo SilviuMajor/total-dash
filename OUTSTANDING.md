@@ -56,19 +56,6 @@ These are real follow-ups from the 25 April audit. C1, C2, C3 (critical tier) al
 
 ## Tier 2 — strong wants
 
-### N7 — End Handover button styling
-
-**Type:** UI Polish | **Effort:** Small | **Status:** Open
-**Spec:** `TotalDash-Spec-N7-End-Handover-Button-Styling.md`
-
-"End Handover" button is currently `variant="outline"`, identical to adjacent "Transfer". Doesn't signal its destructive/branching nature (clicking opens a dialog with End-and-Aftercare vs End-and-Resolve). Three styling options in spec; recommended Option A (elevated destructive variant — keeps prominence but distinct from Transfer).
-
-**Touches:** `Conversations.tsx` lines 1763-1772.
-
-**Open question:** which shadcn variant? Needs design call.
-
----
-
 ### N9 — Search overhaul
 
 **Type:** Enhancement | **Effort:** Large (5-7 days) | **Status:** Open
@@ -432,6 +419,7 @@ Low priority. Do opportunistically when touching related code.
 
 Date-stamped log of items shipped. Older entries are intentionally terse — open the commit if you need detail. Newer entries keep slightly more context while still relevant.
 
+- **2026-04-29** — `252536b` — N7 (End Handover button styling). Option B picked: End Handover button keeps its `variant="outline"` shape but gains a red destructive tint (`text-destructive border-destructive/50 hover:bg-destructive/10`) so it's visually distinct from the neutral Transfer button next to it. Bonus tweak: inside the End Handover dialog, the "End — Keep in Aftercare" button now uses a yellow-tinted outline (`text-yellow-700 border-yellow-300 hover:bg-yellow-50` + dark variants) matching the Aftercare status badge palette, so the two end-paths telegraph which status they land in (yellow → Aftercare, default primary → Resolved). No behaviour change.
 - **2026-04-29** — `49ad83c` — N4 (date separators in transcript) plus two bundled tweaks. Plain-text centred date separator (`2nd September 2026`, UK ordinal day-month-year via `date-fns` `do MMMM yyyy`) injected at the top of each calendar-day group in both the dashboard Conversations transcript map and the Transcripts page. `MessageBubble` timestamp + the inline `client_user` timestamp + the conversation card Row 2 (last-message line) now share one `h:mm a · d/M` format (e.g. `10:38 AM · 8/3`) for cross-speaker consistency. Widget gets a hover-reveal time per bubble: time-only (no date), absolutely positioned to the *outer* side of the bubble (left for user, right for AI/agent) via a new `vf-msg-body` wrapper inside `vf-msg-user-wrap` / new `vf-msg-bot-wrap`; `[data-msg-id]:hover` toggles `opacity` so layout doesn't shift. `max-width: 78%` moved from `.vf-msg-bot` / `.vf-msg-user` onto `.vf-msg-body` so the bubble width still constrains relative to wrapper, not body.
 - **2026-04-29** — `7573c41` / `7d1e177` — N3 (Waiting/Transfer status timers, expanded scope vs original spec). Shipped: live timer inside the status badge (`Waiting · 1m 30s` red, or `TRANSFER · 1m 30s` for transfer-takeover-type pending sessions, no owner initials); right-column pending-card timer reformatted to current/max with green→amber→red colour ramp via existing `getResponseTimeColor`; bottom-right standalone Clock pill scoped to `in_handover` rows with an unanswered customer message (was over-firing on pending). `formatWaitTime` updated to seconds-within-minutes (`1m 30s`, `2h 5m`) — affects badge timer, pending-card, in_handover pill, and the textbox-footer "Customer waiting" indicator. Reinstated `first_unanswered_message_at` SET in `voiceflow-interact`'s in_handover branch (column was only ever cleared in repo, never set, so the in_handover pill never fired). Fix-up follow-up after deploy: switched the pendingMeta loader's `handover_sessions → departments` join to the explicit `departments:department_id(...)` form (the implicit form was returning empty so the badge timer never showed); added `first_unanswered_message_at: null` clear to every handover-actions handler that transitions away from in_handover (accept_handover, take_over, end_handover, mark_resolved, transfer) so a stale "customer waiting" timestamp can't leak across status transitions; and the bottom-right pill for the *selected* row now reads `first_unanswered_message_at` from `selectedConversation` instead of the list cache, so it tracks the textbox indicator exactly.
 - **2026-04-28** — `8e1487f` / `22fe8d3` / `5ceeb85` — N1 (My Conversations filter). Icon-only `UserCheck` toggle on Row 1 of the Conversations toolbar, left of the title, filters the list to `owner_id === currentClientUserId`. AND-logic with status/department/tag/search. Gated on `canUseMineFilter = userType === 'client' || (isImpersonating && impersonationMode === 'view_as_user')`: real client login or view-as-user impersonation enables it; full-access impersonation / preview-as-client shows it disabled with a tooltip nudging toward view-as-user. Pure client-side filter; bulk-select reset includes `myOnly` in deps.
