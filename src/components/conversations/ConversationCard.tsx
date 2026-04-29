@@ -166,7 +166,7 @@ export function ConversationCard({
         !isPending && conv.status !== 'waiting' && isMine && conv.status === 'aftercare' && 'bg-yellow-50/70 dark:bg-yellow-950/20',
         !isPending && conv.status !== 'waiting' && isMine && conv.status === 'needs_review' && 'bg-amber-50/70 dark:bg-amber-950/20',
         !isPending && conv.status !== 'waiting' && isMine && conv.status === 'resolved' && 'bg-gray-50/70 dark:bg-gray-950/20',
-        isSelected ? 'bg-primary/15' : isPending ? '' : isMine ? '' : 'hover:bg-muted/40',
+        isSelected ? 'bg-primary/5 ring-1 ring-inset ring-primary/40' : isPending ? '' : isMine ? '' : 'hover:bg-muted/40',
       )}
     >
       <div className="flex items-center justify-between mb-1">
