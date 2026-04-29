@@ -1709,7 +1709,13 @@ function generateWidgetScript(config: any): string {
             
             // Skip pre-handover assistant messages (already shown locally from botResponses)
             if (transcript.metadata?.response_type === 'pre_handover') continue;
-            
+
+            // Skip the "Conversation ended" system marker — the widget already
+            // pushes a local end pill from the conversationEnded response flag,
+            // and this poll would otherwise add a second copy with a different
+            // id that the rt_ dedupe below can't catch.
+            if (transcript.metadata?.type === 'conversation_ended') continue;
+
             // Deduplicate by transcript ID
             const rtId = 'rt_' + transcript.id;
             if (messages.some(m => m.id === rtId)) continue;
@@ -2662,6 +2668,10 @@ function generateWidgetScript(config: any): string {
           timestamp: new Date().toISOString()
         };
         messages.push(endMsg);
+        // Stop the pre-handover transcript poll — without this it keeps
+        // running every 1.5s for the rest of the page session and would
+        // re-fetch (and try to redisplay) the conversation_ended row.
+        preHandoverWatching = false;
         renderPanel();
         scrollToLatestMessage();
       }
@@ -2883,6 +2893,10 @@ function generateWidgetScript(config: any): string {
           timestamp: new Date().toISOString()
         };
         messages.push(endMsg);
+        // Stop the pre-handover transcript poll — without this it keeps
+        // running every 1.5s for the rest of the page session and would
+        // re-fetch (and try to redisplay) the conversation_ended row.
+        preHandoverWatching = false;
         renderPanel();
         scrollToLatestMessage();
       }
