@@ -1509,15 +1509,27 @@ export default function Conversations() {
     if (myOnly && currentClientUserId) {
       result = result.filter(c => c.owner_id === currentClientUserId);
     }
-    // Pin priority: Tier 1 = pending/waiting, Tier 2 = in_handover with unanswered message
+    // Pin priority:
+    //   Tier 1 = handover/transfer requests (pending session) OR status=waiting
+    //   Tier 2 = in_handover with an unanswered customer message
+    //   Tier 3 = everything else
+    // Within Tier 1, oldest wait first so the longest-waiting customer is on top.
+    const waitStart = (c: typeof result[number]): number => {
+      const pendingAt = pendingConversationIds.get(c.id);
+      if (pendingAt) return new Date(pendingAt).getTime();
+      if (c.first_unanswered_message_at) return new Date(c.first_unanswered_message_at).getTime();
+      return Date.now();
+    };
     result = [...result].sort((a, b) => {
-      const aTier = pendingConversationIds.has(a.id) ? 1
+      const aTier = (pendingConversationIds.has(a.id) || a.status === 'waiting') ? 1
         : (a.status === 'in_handover' && a.first_unanswered_message_at) ? 2
         : 3;
-      const bTier = pendingConversationIds.has(b.id) ? 1
+      const bTier = (pendingConversationIds.has(b.id) || b.status === 'waiting') ? 1
         : (b.status === 'in_handover' && b.first_unanswered_message_at) ? 2
         : 3;
-      return aTier - bTier;
+      if (aTier !== bTier) return aTier - bTier;
+      if (aTier === 1) return waitStart(a) - waitStart(b);
+      return 0;
     });
     return result;
   }, [conversations, tagFilters, departmentFilters, pendingConversationIds, myOnly, currentClientUserId, tagsEnabled]);
