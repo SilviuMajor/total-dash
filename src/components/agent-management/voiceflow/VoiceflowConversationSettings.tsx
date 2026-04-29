@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { X, Pencil, Trash2, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -32,6 +33,12 @@ export function VoiceflowConversationSettings({ agent, onUpdate }: Props) {
   );
   const [newReasonLabel, setNewReasonLabel] = useState('');
   const [newReasonNoteRequired, setNewReasonNoteRequired] = useState(false);
+
+  // Force-pinned filter rows (admin lock — applies to all users on this agent)
+  const initialForcePinned = agent.config?.force_pinned_filter_rows || {};
+  const [forcePinStatus, setForcePinStatus] = useState<boolean>(initialForcePinned.status === true);
+  const [forcePinDepartment, setForcePinDepartment] = useState<boolean>(initialForcePinned.department === true);
+  const [forcePinTags, setForcePinTags] = useState<boolean>(initialForcePinned.tags === true);
 
   // Tags state
   const initialTags: Array<{ id: string; label: string }> = (
@@ -125,6 +132,11 @@ export function VoiceflowConversationSettings({ agent, onUpdate }: Props) {
           conversation_tags: tags,
           allow_adhoc_tags: allowAdhocTags,
           tags_enabled: tagsEnabled,
+          force_pinned_filter_rows: {
+            status: forcePinStatus,
+            department: forcePinDepartment,
+            tags: forcePinTags,
+          },
         },
       });
       if (error) throw error;
@@ -345,6 +357,30 @@ export function VoiceflowConversationSettings({ agent, onUpdate }: Props) {
             <Button variant="outline" size="sm" onClick={addTag}>Add</Button>
           </div>
 
+          </div>
+        </div>
+
+        {/* Force pinned filter rows section */}
+        <div className="space-y-4 p-4 border rounded-lg">
+          <div>
+            <Label className="text-sm font-medium">Force pinned filter rows</Label>
+            <p className="text-xs text-muted-foreground">
+              Lock these rows visible for all users on the Conversations page. They won't be able to hide them.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="force-pin-status" className="flex items-center gap-2 cursor-pointer">
+              <Checkbox id="force-pin-status" checked={forcePinStatus} onCheckedChange={(v) => setForcePinStatus(v === true)} />
+              <span className="text-sm">Status</span>
+            </label>
+            <label htmlFor="force-pin-department" className="flex items-center gap-2 cursor-pointer">
+              <Checkbox id="force-pin-department" checked={forcePinDepartment} onCheckedChange={(v) => setForcePinDepartment(v === true)} />
+              <span className="text-sm">Department</span>
+            </label>
+            <label htmlFor="force-pin-tags" className="flex items-center gap-2 cursor-pointer">
+              <Checkbox id="force-pin-tags" checked={forcePinTags} onCheckedChange={(v) => setForcePinTags(v === true)} />
+              <span className="text-sm">Tags</span>
+            </label>
           </div>
         </div>
 

@@ -1606,30 +1606,46 @@ export default function Conversations() {
     (isImpersonating && impersonationMode === 'view_as_user');
 
   type PinnableRow = 'status' | 'department' | 'tags';
+  const forcedPins = (agentConfig as any)?.force_pinned_filter_rows ?? {};
+  const isForced = (row: PinnableRow): boolean => forcedPins[row] === true;
   const isRowVisible = (row: PinnableRow): boolean => {
     if (row === 'department' && departments.length <= 1) return false;
     if (row === 'tags' && (!tagsEnabled || availableTags.length === 0)) return false;
-    return pinnedRows[row] || filtersExpanded;
+    return isForced(row) || pinnedRows[row] || filtersExpanded;
   };
-  const togglePin = (row: PinnableRow) =>
+  const togglePin = (row: PinnableRow) => {
+    if (isForced(row)) return;
     setPinnedRows(p => ({ ...p, [row]: !p[row] }));
+  };
 
-  const PinToggle = ({ row }: { row: PinnableRow }) => (
-    <Button
-      size="icon"
-      variant="ghost"
-      onClick={() => togglePin(row)}
-      className="h-6 w-6 shrink-0"
-      title={pinnedRows[row] ? 'Unpin row (hide when filters collapsed)' : 'Pin row (always show)'}
-      aria-label={pinnedRows[row] ? `Unpin ${row} filters` : `Pin ${row} filters`}
-      aria-pressed={pinnedRows[row]}
-    >
-      {pinnedRows[row]
-        ? <Pin className="h-3 w-3 fill-current" />
-        : <PinOff className="h-3 w-3 opacity-60" />
-      }
-    </Button>
-  );
+  const PinToggle = ({ row }: { row: PinnableRow }) => {
+    const locked = isForced(row);
+    return (
+      <Button
+        size="icon"
+        variant="ghost"
+        onClick={() => togglePin(row)}
+        disabled={locked}
+        className="h-6 w-6 shrink-0"
+        title={
+          locked
+            ? 'Pinned by admin (locked)'
+            : pinnedRows[row]
+              ? 'Unpin row (hide when filters collapsed)'
+              : 'Pin row (always show)'
+        }
+        aria-label={locked ? `${row} filters locked by admin` : (pinnedRows[row] ? `Unpin ${row} filters` : `Pin ${row} filters`)}
+        aria-pressed={locked || pinnedRows[row]}
+      >
+        {locked
+          ? <Lock className="h-3 w-3 opacity-60" />
+          : pinnedRows[row]
+            ? <Pin className="h-3 w-3 fill-current" />
+            : <PinOff className="h-3 w-3 opacity-60" />
+        }
+      </Button>
+    );
+  };
 
   return (
     <div className="flex flex-col h-full">
