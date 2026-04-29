@@ -56,40 +56,6 @@ These are real follow-ups from the 25 April audit. C1, C2, C3 (critical tier) al
 
 ## Tier 2 — strong wants
 
-### N9 — Search overhaul
-
-**Type:** Enhancement | **Effort:** Large (5-7 days) | **Status:** In flight (parallel session, 2026-04-29)
-**Spec:** `TotalDash-Spec-N9-Search-Overhaul.md`
-
-Full-text search across transcript content, customer metadata, conversation properties. No real text search exists today (only status/tag filter). Two-phase architecture in spec:
-- **Phase 1 (MVP):** client-side search on already-loaded conversations — customer name, phone, email. Fast to ship.
-- **Phase 2:** server-side full-text via Postgres `tsvector` index on transcripts + RPC. Production-grade.
-
-**Decisions already made:**
-- Approach B+A hybrid: ship Phase 1, then Phase 2.
-- Debounce 300-500ms, pagination, target <200ms search latency in Phase 2.
-
-**Open questions:**
-- Field-specific operators (`from:John`, `department:Sales`) — in scope or later?
-- Fuzzy matching (typo tolerance) — Phase 2 or future?
-
-**Touches:** `Conversations.tsx` toolbar, new `useConversationSearch` hook, eventual SQL migration for tsvector + GIN index, new `search_conversations` RPC.
-
----
-
-### N10 — Filter overlay + toolbar toggle setting
-
-**Type:** Enhancement | **Effort:** Medium | **Status:** Open
-**Spec:** `TotalDash-Spec-N10-Filter-Overlay-Toolbar-Toggle-Setting.md`
-
-Two related changes:
-1. User-level setting to hide/show the always-visible filter toolbar (status chips, tag chips, sort dropdown). For users who prefer cleaner header.
-2. Always-available filter overlay modal accessed via a Filter button. Consolidates ALL filters (status, tags, departments, date range, customer name, my-conversations from N1, optional message-count range) in one place. Has Apply/Clear/Cancel.
-
-**Touches:** `Conversations.tsx` toolbar, new modal component, user preference store.
-
----
-
 ### N12 — Smart login redirect
 
 **Type:** Auth Enhancement | **Effort:** Small | **Status:** Open
@@ -419,6 +385,7 @@ Low priority. Do opportunistically when touching related code.
 
 Date-stamped log of items shipped. Older entries are intentionally terse — open the commit if you need detail. Newer entries keep slightly more context while still relevant.
 
+- **2026-04-29** — N9 (search overhaul) + N10 (filter overlay + toolbar toggle) parked off the backlog. N9 is being executed in a parallel Claude Code session (CommandSearch / Cmd+K upgrade with date range + mirrored dashboard chips + `search_conversations` RPC); review feedback on that plan was sent over before this entry was logged. N10 was paired with N9 at the toolbar/prefs level — its filter-overlay modal idea is largely subsumed by N9's chip-mirroring, and re-evaluation can happen post-N9 ship if any gaps remain. Both removed from Tier 2 to keep the active list focused.
 - **2026-04-29** — `252536b` — N7 (End Handover button styling). Option B picked: End Handover button keeps its `variant="outline"` shape but gains a red destructive tint (`text-destructive border-destructive/50 hover:bg-destructive/10`) so it's visually distinct from the neutral Transfer button next to it. Bonus tweak: inside the End Handover dialog, the "End — Keep in Aftercare" button now uses a yellow-tinted outline (`text-yellow-700 border-yellow-300 hover:bg-yellow-50` + dark variants) matching the Aftercare status badge palette, so the two end-paths telegraph which status they land in (yellow → Aftercare, default primary → Resolved). No behaviour change.
 - **2026-04-29** — `49ad83c` — N4 (date separators in transcript) plus two bundled tweaks. Plain-text centred date separator (`2nd September 2026`, UK ordinal day-month-year via `date-fns` `do MMMM yyyy`) injected at the top of each calendar-day group in both the dashboard Conversations transcript map and the Transcripts page. `MessageBubble` timestamp + the inline `client_user` timestamp + the conversation card Row 2 (last-message line) now share one `h:mm a · d/M` format (e.g. `10:38 AM · 8/3`) for cross-speaker consistency. Widget gets a hover-reveal time per bubble: time-only (no date), absolutely positioned to the *outer* side of the bubble (left for user, right for AI/agent) via a new `vf-msg-body` wrapper inside `vf-msg-user-wrap` / new `vf-msg-bot-wrap`; `[data-msg-id]:hover` toggles `opacity` so layout doesn't shift. `max-width: 78%` moved from `.vf-msg-bot` / `.vf-msg-user` onto `.vf-msg-body` so the bubble width still constrains relative to wrapper, not body.
 - **2026-04-29** — `7573c41` / `7d1e177` — N3 (Waiting/Transfer status timers, expanded scope vs original spec). Shipped: live timer inside the status badge (`Waiting · 1m 30s` red, or `TRANSFER · 1m 30s` for transfer-takeover-type pending sessions, no owner initials); right-column pending-card timer reformatted to current/max with green→amber→red colour ramp via existing `getResponseTimeColor`; bottom-right standalone Clock pill scoped to `in_handover` rows with an unanswered customer message (was over-firing on pending). `formatWaitTime` updated to seconds-within-minutes (`1m 30s`, `2h 5m`) — affects badge timer, pending-card, in_handover pill, and the textbox-footer "Customer waiting" indicator. Reinstated `first_unanswered_message_at` SET in `voiceflow-interact`'s in_handover branch (column was only ever cleared in repo, never set, so the in_handover pill never fired). Fix-up follow-up after deploy: switched the pendingMeta loader's `handover_sessions → departments` join to the explicit `departments:department_id(...)` form (the implicit form was returning empty so the badge timer never showed); added `first_unanswered_message_at: null` clear to every handover-actions handler that transitions away from in_handover (accept_handover, take_over, end_handover, mark_resolved, transfer) so a stale "customer waiting" timestamp can't leak across status transitions; and the bottom-right pill for the *selected* row now reads `first_unanswered_message_at` from `selectedConversation` instead of the list cache, so it tracks the textbox indicator exactly.
