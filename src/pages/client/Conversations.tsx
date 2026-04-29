@@ -146,17 +146,25 @@ export default function Conversations() {
   const [pinnedRows, setPinnedRows] = useState<{ status: boolean; department: boolean; tags: boolean }>({
     status: true,
     department: true,
-    tags: true,
+    tags: false,
   });
   const [filtersExpanded, setFiltersExpanded] = useState(false);
 
-  // Hydrate pinned-rows pref from localStorage on mount
+  // Hydrate pinned-rows pref from localStorage on mount.
+  // v1 → v2 migration: tags default flipped from pinned to unpinned for everyone.
   useEffect(() => {
     try {
       const raw = localStorage.getItem('totaldash_conversations_ui_prefs');
       if (!raw) return;
       const parsed = JSON.parse(raw);
-      if (parsed && parsed.v === 1 && parsed.pinned) {
+      if (!parsed || !parsed.pinned) return;
+      if (parsed.v === 1) {
+        setPinnedRows(p => ({
+          status: typeof parsed.pinned.status === 'boolean' ? parsed.pinned.status : p.status,
+          department: typeof parsed.pinned.department === 'boolean' ? parsed.pinned.department : p.department,
+          tags: false,
+        }));
+      } else if (parsed.v === 2) {
         setPinnedRows(p => ({
           status: typeof parsed.pinned.status === 'boolean' ? parsed.pinned.status : p.status,
           department: typeof parsed.pinned.department === 'boolean' ? parsed.pinned.department : p.department,
@@ -171,7 +179,7 @@ export default function Conversations() {
     try {
       localStorage.setItem(
         'totaldash_conversations_ui_prefs',
-        JSON.stringify({ v: 1, pinned: pinnedRows }),
+        JSON.stringify({ v: 2, pinned: pinnedRows }),
       );
     } catch { /* ignore — private mode / quota */ }
   }, [pinnedRows]);
@@ -1626,9 +1634,9 @@ export default function Conversations() {
   return (
     <div className="flex flex-col h-full">
       {/* ── Unified header ── */}
-      <div className="bg-card flex-shrink-0 border-b border-border">
+      <div className="bg-card flex-shrink-0 border-b border-border pb-3">
         {/* Row 1: Mine toggle + Title + count */}
-        <div className="px-4 pt-3 pb-3 flex items-center gap-2">
+        <div className="px-4 pt-3 pb-0 flex items-center gap-2">
           <Button
             size="icon"
             variant={myOnly ? 'default' : 'ghost'}
