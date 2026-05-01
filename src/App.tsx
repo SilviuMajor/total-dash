@@ -2,13 +2,14 @@ import { useEffect } from "react";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { MultiTenantAuthProvider, useMultiTenantAuth } from "./hooks/useMultiTenantAuth";
 import { ClientAgentProvider } from "./hooks/useClientAgentContext";
 import { ImpersonationProvider } from "./hooks/useImpersonation";
 import { ThemeProvider, useTheme } from "./hooks/useTheme";
 import { useBranding } from "./hooks/useBranding";
 import { useFavicon } from "./hooks/useFavicon";
+import { useCustomDomainAgency } from "./hooks/useCustomDomainAgency";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AdminProtectedRoute } from "./components/AdminProtectedRoute";
@@ -59,6 +60,55 @@ const queryClient = new QueryClient({
   },
 });
 
+// CustomDomainBootstrap
+//
+// On a verified whitelabel custom domain (e.g. dashboard.fiveleaf.co.uk):
+//   - Stores the agency in sessionStorage.loginAgencyContext so Auth.tsx
+//     and SlugBasedAuth pick up agency-branded login automatically.
+//   - When an unauthenticated visitor lands on `/`, redirects them to
+//     `/login/{slug}` so the branded login is the default landing.
+//
+// On the platform host (app.total-dash.com, localhost, *.vercel.app) this
+// component is a no-op.
+//
+// "Unknown custom domain" — host isn't on the platform list AND no agency
+// claims it — is rendered by AppRoutes via the `isUnknownDomain` flag from
+// the hook (see Routes section below).
+const CustomDomainBootstrap = () => {
+  const { agency, loading, isCustomDomain } = useCustomDomainAgency();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (!isCustomDomain || loading || !agency) return;
+    // Only redirect from bare `/` to keep deep-link / change-password / etc.
+    // routes intact. Authenticated client users hitting `/` will be sent to
+    // their dashboard by ProtectedRoute after they land on /login/{slug}
+    // and follow through.
+    if (location.pathname === '/') {
+      navigate(`/login/${agency.slug}`, { replace: true });
+    }
+  }, [agency, loading, isCustomDomain, location.pathname, navigate]);
+
+  return null;
+};
+
+// Renders when the browser is on a custom domain that isn't claimed by any
+// verified agency — typically a misconfigured DNS pointing at our Vercel
+// project, or an agency that was removed without cleaning up DNS.
+const UnknownDomainPage = () => (
+  <div className="min-h-screen flex items-center justify-center bg-background p-6">
+    <div className="max-w-md text-center space-y-3">
+      <h1 className="text-xl font-semibold">This domain isn't configured</h1>
+      <p className="text-sm text-muted-foreground">
+        The domain <span className="font-mono">{typeof window !== 'undefined' ? window.location.host : ''}</span>{' '}
+        points at our service but isn't linked to an active account.
+        Contact your provider to finish setup.
+      </p>
+    </div>
+  </div>
+);
+
 const BrandingWrapper = ({ children }: { children: React.ReactNode }) => {
   const { effectiveTheme } = useTheme();
   const { isClientPreviewMode, previewClientAgencyId, isPreviewMode, previewAgency } = useMultiTenantAuth();
@@ -82,6 +132,32 @@ const BrandingWrapper = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+// Top-level body — switches between the unknown-domain page (when on a
+// custom domain that no agency owns) and the regular routed app. Lives
+// inside MultiTenantAuthProvider so all child contexts work normally.
+const AppBody = () => {
+  const { isCustomDomain, isUnknownDomain, loading } = useCustomDomainAgency();
+
+  // Block rendering anything custom-domain-related until the lookup resolves
+  // (sub-second). Without this we'd briefly flash unbranded content on the
+  // custom domain before redirecting to /login/{slug}.
+  if (isCustomDomain && loading) {
+    return <div className="min-h-screen bg-background" />;
+  }
+  if (isUnknownDomain) {
+    return <UnknownDomainPage />;
+  }
+
+  return (
+    <BrandingWrapper>
+      <CustomDomainBootstrap />
+      <CommandSearch />
+      <DevSwitch />
+      <AppRoutes />
+    </BrandingWrapper>
+  );
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -91,9 +167,17 @@ const App = () => (
             <ThemeProvider>
               <ImpersonationProvider>
               <ClientAgentProvider>
-                <BrandingWrapper>
-                  <CommandSearch />
-                  <DevSwitch />
+                <AppBody />
+              </ClientAgentProvider>
+              </ImpersonationProvider>
+            </ThemeProvider>
+        </MultiTenantAuthProvider>
+      </BrowserRouter>
+    </TooltipProvider>
+  </QueryClientProvider>
+);
+
+const AppRoutes = () => (
               <Routes>
                 {/* Public Routes */}
                 <Route path="/change-password" element={<ChangePassword />} />
@@ -188,14 +272,6 @@ const App = () => (
                 </ProtectedRoute>
               } />
               </Routes>
-                </BrandingWrapper>
-              </ClientAgentProvider>
-              </ImpersonationProvider>
-            </ThemeProvider>
-        </MultiTenantAuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
 );
 
 export default App;

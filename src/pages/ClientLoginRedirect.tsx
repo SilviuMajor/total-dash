@@ -1,15 +1,33 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { isPlatformHost, lookupAgencyByHost } from "@/lib/whitelabel-host";
 
 export default function ClientLoginRedirect() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
+
+  // If we're on a custom whitelabel domain (e.g. dashboard.fiveleaf.co.uk),
+  // skip the email-find-portal step entirely and jump to the branded
+  // login. Visitors should never see this unbranded page on a custom domain.
+  useEffect(() => {
+    const host = window.location.host;
+    if (isPlatformHost(host)) return;
+    let cancelled = false;
+    (async () => {
+      const agency = await lookupAgencyByHost(host);
+      if (cancelled) return;
+      if (agency) {
+        navigate(`/login/${agency.slug}`, { replace: true });
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [navigate]);
 
   const handleFindPortal = async () => {
     if (!email.trim()) return;
