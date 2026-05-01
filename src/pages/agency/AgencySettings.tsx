@@ -9,12 +9,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
 import { useImpersonation } from "@/hooks/useImpersonation";
 import { useToast } from "@/hooks/use-toast";
-import { Save, AlertTriangle, CheckCircle2, XCircle, Eye, Loader2 } from "lucide-react";
+import { Save, AlertTriangle, Eye, Loader2 } from "lucide-react";
 import { AgencyUsersContent } from "@/components/agency-management/AgencyUsersContent";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { BrandingUpload } from "@/components/BrandingUpload";
 import { LoginURLDisplay } from "@/components/LoginURLDisplay";
+import { CustomDomainCard } from "@/components/whitelabel/CustomDomainCard";
 import { getAgencyLoginUrl, getClientLoginUrl } from "@/lib/login-urls";
 
 const RESERVED_SLUGS = [
@@ -58,7 +58,6 @@ export default function AgencySettings() {
   const [agency, setAgency] = useState<AgencyRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [verifying, setVerifying] = useState(false);
   const [showSlugWarning, setShowSlugWarning] = useState(false);
   const [pendingSlug, setPendingSlug] = useState("");
   const [slugValidationError, setSlugValidationError] = useState('');
@@ -134,39 +133,6 @@ export default function AgencySettings() {
     setShowSlugWarning(false);
   };
 
-  const handleVerifyDomain = async () => {
-    if (!agency) return;
-    setVerifying(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('verify-whitelabel-domain', {
-        body: {
-          agencyId: effectiveAgencyId,
-          domain: agency.whitelabel_domain,
-          subdomain: agency.whitelabel_subdomain || 'dashboard',
-        },
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: data.verified ? "Success" : "Verification Failed",
-        description: data.message,
-        variant: data.verified ? "default" : "destructive",
-      });
-
-      // Reload agency to get updated verification status
-      await loadAgency();
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setVerifying(false);
-    }
-  };
-
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!agency || !effectiveAgencyId) return;
@@ -189,11 +155,8 @@ export default function AgencySettings() {
         updateData.slug = agency.slug;
       }
 
-      // Only update whitelabel fields if whitelabel access is enabled
-      if (hasWhitelabel) {
-        updateData.whitelabel_subdomain = agency.whitelabel_subdomain;
-        updateData.whitelabel_domain = agency.whitelabel_domain;
-      }
+      // Whitelabel domain + subdomain are managed by CustomDomainCard via the
+      // whitelabel-domain-actions Edge Function (not this generic save).
 
       const { error } = await supabase
         .from('agencies')
@@ -201,11 +164,6 @@ export default function AgencySettings() {
         .eq('id', effectiveAgencyId);
 
       if (error) throw error;
-
-      // Auto-verify domain if both subdomain and domain are set
-      if (hasWhitelabel && agency.whitelabel_domain && agency.whitelabel_subdomain) {
-        await handleVerifyDomain();
-      }
 
       toast({
         title: "Success",
@@ -358,6 +316,9 @@ export default function AgencySettings() {
             </Card>
           ) : (
             <>
+            {agency && (
+              <CustomDomainCard agency={agency} onUpdate={loadAgency} />
+            )}
             <Card>
               <CardHeader>
                 <CardTitle>Whitelabel Settings</CardTitle>
@@ -440,93 +401,6 @@ export default function AgencySettings() {
                     />
                   </div>
                   
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold border-b pb-2">Custom Domain</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Set up a custom domain so your clients access their dashboard via your own branded URL (e.g., dashboard.youragency.com).
-                    </p>
-
-                    <div className="space-y-2">
-                      <Label>Subdomain Prefix</Label>
-                      <Input
-                        value={agency?.whitelabel_subdomain || 'dashboard'}
-                        onChange={(e) => setAgency(prev => prev ? { ...prev, whitelabel_subdomain: e.target.value } : prev)}
-                        placeholder="dashboard"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        This is the subdomain your clients will use (e.g., <span className="font-mono">dashboard</span>)
-                      </p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Your Domain</Label>
-                      <Input
-                        value={agency?.whitelabel_domain || ''}
-                        onChange={(e) => setAgency(prev => prev ? { ...prev, whitelabel_domain: e.target.value } : prev)}
-                        placeholder="youragency.com"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Full URL: <span className="font-mono font-semibold">{agency?.whitelabel_subdomain || 'dashboard'}.{agency?.whitelabel_domain || 'youragency.com'}</span>
-                      </p>
-                    </div>
-
-                    {agency?.whitelabel_domain && (
-                      <Alert variant={agency?.whitelabel_verified ? "default" : "destructive"}>
-                        <div className="flex items-center gap-2">
-                          {agency?.whitelabel_verified ? (
-                            <>
-                              <CheckCircle2 className="h-4 w-4" />
-                              <AlertDescription>
-                                Domain verified {agency?.whitelabel_verified_at && `on ${new Date(agency.whitelabel_verified_at).toLocaleDateString()}`}
-                              </AlertDescription>
-                            </>
-                          ) : (
-                            <>
-                              <XCircle className="h-4 w-4" />
-                              <AlertDescription>Domain not verified</AlertDescription>
-                            </>
-                          )}
-                        </div>
-                      </Alert>
-                    )}
-
-                    {agency?.whitelabel_domain && !agency?.whitelabel_verified && (
-                      <div className="space-y-3 p-4 bg-muted rounded-lg">
-                        <p className="text-sm font-semibold">DNS Configuration Required:</p>
-                        <p className="text-xs text-muted-foreground">
-                          Add a CNAME record in your domain registrar's DNS settings to point to our platform.
-                        </p>
-                        <ol className="text-xs space-y-2 list-decimal list-inside">
-                          <li>Log into your domain registrar (GoDaddy, Namecheap, Cloudflare, etc.)</li>
-                          <li>Go to DNS settings for <span className="font-mono font-semibold">{agency?.whitelabel_domain}</span></li>
-                          <li>Add a CNAME record:
-                            <div className="mt-1 p-3 bg-background rounded font-mono text-xs border">
-                              <div><span className="text-muted-foreground">Type:</span> CNAME</div>
-                              <div><span className="text-muted-foreground">Name:</span> {agency?.whitelabel_subdomain || 'dashboard'}</div>
-                              <div><span className="text-muted-foreground">Target:</span> totaldash-proxy.workers.dev</div>
-                            </div>
-                          </li>
-                          <li>Wait 5-10 minutes for DNS propagation</li>
-                          <li>Click "Verify Domain" below</li>
-                        </ol>
-                        <Button 
-                          type="button" 
-                          onClick={handleVerifyDomain} 
-                          disabled={verifying}
-                          variant="outline"
-                          className="w-full"
-                        >
-                          {verifying ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Verifying...
-                            </>
-                          ) : 'Verify Domain'}
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Primary Color</Label>
