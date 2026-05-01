@@ -15,6 +15,7 @@ import {
   dashboardPathForUserType,
   userTypeLabel,
 } from "@/lib/auth";
+import { getClientLoginUrl } from "@/lib/login-urls";
 
 export default function AgencyLogin() {
   const [email, setEmail] = useState("");
@@ -94,21 +95,20 @@ export default function AgencyLogin() {
       }
 
       // Wrong portal — sign out then redirect.
-      // For client users we additionally honour whitelabel domains: the
-      // agency's whitelabel subdomain is the "right" client login URL
-      // when verified, not the path-based slug.
+      // For client users we additionally honour whitelabel domains via the
+      // central getClientLoginUrl() helper: when whitelabel_verified is true
+      // it returns the bare whitelabel URL, otherwise the slug-based path.
       if (detected.type === 'client') {
         const { data: agencyRow } = await supabase
           .from('agencies')
-          .select('whitelabel_domain, whitelabel_subdomain, whitelabel_verified, slug')
+          .select('slug, whitelabel_subdomain, whitelabel_domain, whitelabel_verified')
           .eq('slug', detected.agencySlug ?? '')
           .maybeSingle();
 
         await supabase.auth.signOut();
 
-        const a: any = agencyRow ?? {};
-        const redirectUrl = (a.whitelabel_verified && a.whitelabel_domain)
-          ? `https://${a.whitelabel_subdomain || 'dashboard'}.${a.whitelabel_domain}`
+        const redirectUrl = agencyRow
+          ? getClientLoginUrl(agencyRow)
           : loginPathForUserType(detected);
         setDiverting(true);
         setDiversionUrl(redirectUrl);

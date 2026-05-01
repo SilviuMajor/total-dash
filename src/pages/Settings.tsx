@@ -14,6 +14,8 @@ import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { LoginURLDisplay } from "@/components/LoginURLDisplay";
+import { getClientLoginUrl, type AgencyLoginUrlInput } from "@/lib/login-urls";
 
 // Auto-corrects teamSubTab to a visible value when the current selection is
 // hidden by permissions. Lives at module scope so the effect can be co-located
@@ -48,6 +50,7 @@ export default function Settings() {
   const [clientId, setClientId] = useState<string | null>(null);
   const [capabilities, setCapabilities] = useState<Record<string, any>>({});
   const [client, setClient] = useState<any>(null);
+  const [agencyForUrl, setAgencyForUrl] = useState<AgencyLoginUrlInput | null>(null);
   const [teamSubTab, setTeamSubTab] = useState<"departments" | "team" | "roles">("departments");
 
   useEffect(() => {
@@ -89,7 +92,20 @@ export default function Settings() {
         .select('*')
         .eq('id', clientId)
         .single();
-      if (clientData) setClient(clientData);
+      if (clientData) {
+        setClient(clientData);
+        // Fetch agency whitelabel fields so the login URL card stays in sync
+        // with whatever the agency has configured (auto-switches when
+        // whitelabel_verified flips true).
+        if (clientData.agency_id) {
+          const { data: agencyData } = await supabase
+            .from('agencies')
+            .select('slug, whitelabel_subdomain, whitelabel_domain, whitelabel_verified')
+            .eq('id', clientData.agency_id)
+            .maybeSingle();
+          if (agencyData) setAgencyForUrl(agencyData);
+        }
+      }
     };
     loadSettings();
   }, [clientId]);
@@ -223,7 +239,14 @@ export default function Settings() {
         )}
 
         {showGeneral && (
-          <TabsContent value="general" className="space-y-6">
+          <TabsContent value="general" className="space-y-4">
+            {agencyForUrl && (
+              <LoginURLDisplay
+                label="Your team's login URL"
+                description="Share with new team members so they can sign in."
+                url={getClientLoginUrl(agencyForUrl)}
+              />
+            )}
             <Card className="p-6 bg-card border-border/50">
               <div className="space-y-6">
                 <div>

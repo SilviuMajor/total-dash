@@ -21,6 +21,8 @@ import { ClientUsersManagement } from "@/components/client-management/ClientUser
 import { CannedResponsesSettings } from "@/components/settings/CannedResponsesSettings";
 import { AuditLog } from "@/components/settings/AuditLog";
 import { RolesManagement } from "@/components/settings/RolesManagement";
+import { LoginURLDisplay } from "@/components/LoginURLDisplay";
+import { getClientLoginUrl, type AgencyLoginUrlInput } from "@/lib/login-urls";
 
 
 interface ClientData {
@@ -242,6 +244,7 @@ export default function AgencyClientDetails() {
   const { profile, isPreviewMode, previewAgency } = useMultiTenantAuth();
   const { activeSession } = useImpersonation();
   const [client, setClient] = useState<ClientData | null>(null);
+  const [agencyForUrl, setAgencyForUrl] = useState<AgencyLoginUrlInput | null>(null);
   const [loading, setLoading] = useState(true);
   const activeTab = tab || "overview";
 
@@ -254,6 +257,7 @@ export default function AgencyClientDetails() {
   useEffect(() => {
     if (agencyId) {
       loadClientData();
+      loadAgencyForUrl();
     }
   }, [clientId, agencyId]);
 
@@ -286,6 +290,19 @@ export default function AgencyClientDetails() {
     }
   };
 
+  // Minimal agency fetch for the client login URL display. Whitelabel-aware
+  // via getClientLoginUrl(); falls back to slug-based URL when no verified
+  // whitelabel is set.
+  const loadAgencyForUrl = async () => {
+    if (!agencyId) return;
+    const { data } = await supabase
+      .from('agencies')
+      .select('slug, whitelabel_subdomain, whitelabel_domain, whitelabel_verified')
+      .eq('id', agencyId)
+      .maybeSingle();
+    if (data) setAgencyForUrl(data);
+  };
+
   const handleTabChange = (value: string) => {
     navigate(`/agency/clients/${clientId}/${value}`);
   };
@@ -315,7 +332,14 @@ export default function AgencyClientDetails() {
           
         </TabsList>
 
-        <TabsContent value="overview">
+        <TabsContent value="overview" className="space-y-4">
+          {agencyForUrl && (
+            <LoginURLDisplay
+              label="Client login URL"
+              description="The URL this client's team uses to log in."
+              url={getClientLoginUrl(agencyForUrl)}
+            />
+          )}
           <ClientOverview client={client} onUpdate={loadClientData} />
         </TabsContent>
 

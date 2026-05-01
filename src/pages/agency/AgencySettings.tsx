@@ -14,6 +14,8 @@ import { AgencyUsersContent } from "@/components/agency-management/AgencyUsersCo
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { BrandingUpload } from "@/components/BrandingUpload";
+import { LoginURLDisplay } from "@/components/LoginURLDisplay";
+import { getAgencyLoginUrl, getClientLoginUrl } from "@/lib/login-urls";
 
 const RESERVED_SLUGS = [
   'admin', 'agency', 'client', 'login', 'portal', 'api', 'app',
@@ -62,8 +64,16 @@ export default function AgencySettings() {
   const [slugValidationError, setSlugValidationError] = useState('');
   const [checkingSlug, setCheckingSlug] = useState(false);
   const [hasWhitelabel, setHasWhitelabel] = useState<boolean>(false);
-  const [clientLoginUrl, setClientLoginUrl] = useState('/client/login');
-  const [clientLoginLoading, setClientLoginLoading] = useState(true);
+
+  // URLs derived directly from `agency` state (loaded by loadAgency()) via
+  // the central helper so whitelabel awareness is single-sourced.
+  const agencyLoginUrl = getAgencyLoginUrl(agency);
+  const clientLoginUrlBase = getClientLoginUrl(agency);
+  // Login Preview button needs ?preview=true appended so the rendered Auth
+  // page enters preview mode and short-circuits the post-auth redirect.
+  const clientLoginPreviewUrl = clientLoginUrlBase
+    ? `${clientLoginUrlBase}${clientLoginUrlBase.includes('?') ? '&' : '?'}preview=true`
+    : '';
 
   // Check whitelabel access using database function
   useEffect(() => {
@@ -91,36 +101,6 @@ export default function AgencySettings() {
     };
 
     checkWhitelabelAccess();
-  }, [effectiveAgencyId]);
-
-  // Fetch agency domain for login preview URL
-  useEffect(() => {
-    const fetchAgencyDomain = async () => {
-      setClientLoginLoading(true);
-      if (!effectiveAgencyId) {
-        setClientLoginLoading(false);
-        return;
-      }
-      
-      const { data: agencyData } = await supabase
-        .from('agencies')
-        .select('slug, whitelabel_domain, whitelabel_subdomain, whitelabel_verified')
-        .eq('id', effectiveAgencyId)
-        .single();
-      
-      if (agencyData?.whitelabel_verified && agencyData?.whitelabel_domain) {
-        const subdomain = agencyData.whitelabel_subdomain || 'dashboard';
-        setClientLoginUrl(`https://${subdomain}.${agencyData.whitelabel_domain}/client/login?preview=true`);
-      } else if (agencyData?.slug) {
-        const baseUrl = window.location.origin;
-        setClientLoginUrl(`${baseUrl}/login/${agencyData.slug}?preview=true`);
-      } else {
-        setClientLoginUrl('/client/login?preview=true');
-      }
-      setClientLoginLoading(false);
-    };
-
-    fetchAgencyDomain();
   }, [effectiveAgencyId]);
 
   useEffect(() => {
@@ -266,6 +246,20 @@ export default function AgencySettings() {
         </TabsList>
 
         <TabsContent value="general" className="space-y-6">
+          {agency && (
+            <div className="grid gap-3 md:grid-cols-2">
+              <LoginURLDisplay
+                label="Agency staff login"
+                description="Where you and your team sign in."
+                url={agencyLoginUrl}
+              />
+              <LoginURLDisplay
+                label="Client login URL"
+                description="Share this with your clients."
+                url={clientLoginUrlBase}
+              />
+            </div>
+          )}
           <Card>
             <CardHeader>
               <CardTitle>General Settings</CardTitle>
@@ -585,10 +579,10 @@ export default function AgencySettings() {
               <CardContent>
                 <Button
                   variant="outline"
-                  onClick={() => window.open(clientLoginUrl, '_blank')}
-                  disabled={clientLoginLoading}
+                  onClick={() => window.open(clientLoginPreviewUrl, '_blank')}
+                  disabled={!agency || !clientLoginPreviewUrl}
                 >
-                  {clientLoginLoading ? (
+                  {!agency ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
                     <Eye className="mr-2 h-4 w-4" />

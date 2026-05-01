@@ -279,18 +279,15 @@ export function ClientSettings({ client, onUpdate }: ClientSettingsProps) {
               placeholder="client-name"
               className="bg-muted/50 border-border"
             />
-            <div className="text-xs text-muted-foreground space-y-1">
-              <p className="font-semibold">Standard URL:</p>
-              <p className="font-mono">total-dash.com/{agencyData?.slug || 'agency'}/{formData.slug || 'client'}</p>
-              {agencyData?.whitelabel_verified && (
-                <>
-                  <p className="font-semibold mt-2">Whitelabel URL:</p>
-                  <p className="font-mono">
-                    {agencyData.whitelabel_subdomain}.{agencyData.whitelabel_domain}/{formData.slug || 'client'}
-                  </p>
-                </>
-              )}
-            </div>
+            {/*
+              Login URL preview removed — the canonical login URL display
+              now lives at the top of AgencyClientDetails Overview (agency
+              view) and the client's own /settings General tab (client
+              view), driven by the central getClientLoginUrl() helper.
+              Removing the per-client-slug preview here also avoids
+              suggesting a per-client URL form that doesn't exist (login
+              is keyed off agency slug only — see N13 decision).
+            */}
           </div>
 
           <ClientLogoUpload
