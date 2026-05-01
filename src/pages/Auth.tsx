@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import {
+  type DetectedUserType,
   detectUserTypeAfterAuth,
   loginPathForUserType,
   dashboardPathForUserType,
@@ -15,6 +16,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useBranding } from "@/hooks/useBranding";
 import { useFavicon } from "@/hooks/useFavicon";
 import { ForgotPasswordDialog } from "@/components/ForgotPasswordDialog";
+import { WrongRoleBanner } from "@/components/WrongRoleBanner";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 
@@ -32,6 +34,8 @@ export default function Auth() {
   
   const [loginAgencyId, setLoginAgencyId] = useState<string | null>(null);
   const [agencyName, setAgencyName] = useState<string | null>(null);
+  const [mismatchedAs, setMismatchedAs] = useState<DetectedUserType | null>(null);
+  const [mismatchedEmail, setMismatchedEmail] = useState<string>("");
   
   useEffect(() => {
     const storedContext = sessionStorage.getItem('loginAgencyContext');
@@ -53,8 +57,11 @@ export default function Auth() {
   
   useFavicon(branding.faviconUrl || '');
 
-  // Already-authenticated visitor: detect actual role and bounce.
-  // Skip during preview/impersonation and during the explicit ?preview=true UX.
+  // Already-authenticated visitor: matched role (client) → auto-redirect to
+  // dashboard (stale-session ergonomics). Mismatched role → render the page
+  // normally and surface a WrongRoleBanner so the visitor can view branded
+  // login pages, go to their dashboard, or sign out. Skip during
+  // preview/impersonation and during the explicit ?preview=true UX.
   useEffect(() => {
     if (isPreviewMode) return;
     if (sessionStorage.getItem('preview_mode') === '1') return;
@@ -80,7 +87,8 @@ export default function Auth() {
       if (detected.type === 'client') {
         navigate(dashboardPathForUserType(detected));
       } else if (detected.type !== 'unknown') {
-        window.location.href = loginPathForUserType(detected);
+        setMismatchedAs(detected);
+        setMismatchedEmail(user.email ?? '');
       }
     })();
 
@@ -152,13 +160,17 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/30 p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-background via-background to-muted/30 p-4">
       {isPreviewMode && (
         <div className="fixed top-0 left-0 right-0 bg-amber-500 text-amber-950 text-center py-2 text-sm font-medium z-50">
           Preview Mode — This is how your clients see the login page
         </div>
       )}
-      
+
+      {mismatchedAs && !isPreviewMode && (
+        <WrongRoleBanner userEmail={mismatchedEmail} detected={mismatchedAs} />
+      )}
+
       <Card className={`w-full max-w-md bg-gradient-card border-border/50 ${isPreviewMode ? 'mt-8' : ''}`}>
         <CardContent className="pt-8 pb-8 px-8">
           <div className="text-center mb-6">

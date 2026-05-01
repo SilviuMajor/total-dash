@@ -9,7 +9,9 @@ import { Loader2 } from "lucide-react";
 import { useBranding } from "@/hooks/useBranding";
 import { useTheme } from "@/hooks/useTheme";
 import { ForgotPasswordDialog } from "@/components/ForgotPasswordDialog";
+import { WrongRoleBanner } from "@/components/WrongRoleBanner";
 import {
+  type DetectedUserType,
   detectUserTypeAfterAuth,
   loginPathForUserType,
   dashboardPathForUserType,
@@ -21,6 +23,8 @@ export default function SuperAdminLogin() {
   const [password, setPassword] = useState("");
   const [emailError, setEmailError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [mismatchedAs, setMismatchedAs] = useState<DetectedUserType | null>(null);
+  const [mismatchedEmail, setMismatchedEmail] = useState<string>("");
   const navigate = useNavigate();
   const { effectiveTheme } = useTheme();
   const branding = useBranding({ isClientView: false, agencyId: undefined, appTheme: effectiveTheme });
@@ -39,8 +43,10 @@ export default function SuperAdminLogin() {
     }
   };
 
-  // Already-authenticated visitor: bounce them to the right place. Skip during
-  // impersonation so super_admin can revisit login pages without disruption.
+  // Already-authenticated visitor: matched role → auto-redirect to dashboard
+  // (stale-session ergonomics). Mismatched role → render the page normally
+  // and surface a WrongRoleBanner so the visitor can view the page, go to
+  // their dashboard, or sign out. Skip entirely during impersonation.
   useEffect(() => {
     if (sessionStorage.getItem('preview_mode') === '1') return;
     let cancelled = false;
@@ -52,7 +58,8 @@ export default function SuperAdminLogin() {
       if (detected.type === 'super_admin') {
         window.location.href = dashboardPathForUserType(detected);
       } else if (detected.type !== 'unknown') {
-        window.location.href = loginPathForUserType(detected);
+        setMismatchedAs(detected);
+        setMismatchedEmail(session.user.email ?? '');
       }
     })();
     return () => { cancelled = true; };
@@ -97,7 +104,10 @@ export default function SuperAdminLogin() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/30 p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-background via-background to-muted/30 p-4">
+      {mismatchedAs && (
+        <WrongRoleBanner userEmail={mismatchedEmail} detected={mismatchedAs} />
+      )}
       <div className="w-full max-w-md">
         {/* Header — stacked logo, title, subtitle */}
         <div className="mb-8">

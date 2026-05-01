@@ -10,12 +10,14 @@ import { Loader2 } from "lucide-react";
 import { useBranding } from "@/hooks/useBranding";
 import { ForgotPasswordDialog } from "@/components/ForgotPasswordDialog";
 import {
+  type DetectedUserType,
   detectUserTypeAfterAuth,
   loginPathForUserType,
   dashboardPathForUserType,
   userTypeLabel,
 } from "@/lib/auth";
 import { getClientLoginUrl } from "@/lib/login-urls";
+import { WrongRoleBanner } from "@/components/WrongRoleBanner";
 
 export default function AgencyLogin() {
   const [email, setEmail] = useState("");
@@ -24,6 +26,8 @@ export default function AgencyLogin() {
   const [loading, setLoading] = useState(false);
   const [diverting, setDiverting] = useState(false);
   const [diversionUrl, setDiversionUrl] = useState<string | null>(null);
+  const [mismatchedAs, setMismatchedAs] = useState<DetectedUserType | null>(null);
+  const [mismatchedEmail, setMismatchedEmail] = useState<string>("");
   const navigate = useNavigate();
   const branding = useBranding({ isClientView: false, agencyId: undefined, appTheme: 'light' });
 
@@ -41,8 +45,10 @@ export default function AgencyLogin() {
     }
   };
 
-  // Already-authenticated visitor: bounce to right place. Skip during
-  // impersonation so super_admin can revisit login pages without disruption.
+  // Already-authenticated visitor: matched role → auto-redirect to dashboard
+  // (stale-session ergonomics). Mismatched role → render the page normally
+  // and surface a WrongRoleBanner so the visitor can view the page, go to
+  // their dashboard, or sign out. Skip entirely during impersonation.
   useEffect(() => {
     if (sessionStorage.getItem('preview_mode') === '1') return;
     let cancelled = false;
@@ -54,7 +60,8 @@ export default function AgencyLogin() {
       if (detected.type === 'agency') {
         window.location.href = dashboardPathForUserType(detected);
       } else if (detected.type !== 'unknown') {
-        window.location.href = loginPathForUserType(detected);
+        setMismatchedAs(detected);
+        setMismatchedEmail(session.user.email ?? '');
       }
     })();
     return () => { cancelled = true; };
@@ -139,7 +146,10 @@ export default function AgencyLogin() {
   const headerLogoUrl = branding.fullLogoLightUrl || branding.fullLogoUrl;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/30 p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-background via-background to-muted/30 p-4">
+      {mismatchedAs && (
+        <WrongRoleBanner userEmail={mismatchedEmail} detected={mismatchedAs} />
+      )}
       <Card className="w-full max-w-md overflow-hidden border-border/50">
         {/* Dark branded header */}
         <div className="bg-foreground px-8 py-8 text-center">
