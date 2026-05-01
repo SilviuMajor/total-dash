@@ -349,8 +349,6 @@ Low priority. Do opportunistically when touching related code.
 
 - **M1** — `isDepartmentOpen` duplicated. Add cross-pointing comments; deduplicate when convenient.
 - **M2** — Race condition in `duplicate-agent` between name-check and insert. Low impact.
-- **M3** — Use `.eq()` chaining instead of string-interpolated `.or()` in `check-domain-context`.
-- **M4** — In-memory cache in `check-domain-context` only GCs above 1000 entries. Add periodic cleanup.
 - **M5** — GitHub Actions deploys all functions every push. Wasteful, not broken. Detect changed functions.
 - **M6** — `update_agency_subscription_usage()` trigger fires on every UPDATE. Add `WHEN NEW.agency_id IS DISTINCT FROM OLD.agency_id`.
 - **M7** — TypeScript `strictNullChecks: false`, `noImplicitAny: false`. Project choice — flagging only.

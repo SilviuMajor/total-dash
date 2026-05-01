@@ -208,7 +208,6 @@ Managed Supabase rejects `ALTER DATABASE ... SET app.settings.*`. Inline the ano
 | `agent-file-upload` | Atomic upload + send for agent-side attachments (JWT-auth). |
 | `handover-actions` | Accept, end, transfer, takeover, send message, resolve. |
 | `handover-timer` | Periodic timeout checks. |
-| `check-domain-context` | Whitelabel + slug routing resolver (cached 5 min). |
 | `duplicate-agent` | Clones an agent and its workflows/specs/integrations. |
 
 `widget-loader`, `widget-file-upload`, `voiceflow-interact` are intentionally unauthenticated (called by anonymous widget users). They must validate input rigorously and rate-limit by IP/agent. All other functions verify JWT.
