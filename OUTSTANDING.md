@@ -286,6 +286,40 @@ After successful sign-in on `Auth.tsx` (client), success toast shows but user re
 
 ---
 
+### N31 — Live operations dashboard (real-time monitoring view)
+
+**Type:** Feature / Analytics | **Effort:** Large (discovery) | **Status:** Parked — reference only
+
+Captured from screenshot shared 2 May 2026. Real-time view that combines KPIs, a live activity feed, channel-mix bars, and a "headcount on shift" framing. Plausibly doubles as an internal ops console and a marketing showcase ("AI handled all of this with zero humans on shift tonight").
+
+**Components in the reference screenshot:**
+- **Session window header:** time-range display, e.g. `TONIGHT · 23:00 → 00:38`.
+- **KPI strip (3 cards):**
+  - *Resolved Today* — count (e.g. 2,987) + delta vs yesterday (e.g. +12%).
+  - *Active Conversations* — current count (e.g. 58) + agents-on-shift count.
+  - *Avg First Reply* — mean (e.g. 2.1s) + P95 (e.g. 4.4s).
+- **Live Activity feed (auto-updating):** rows of timestamp · channel icon · status icon · short outcome summary · status badge. Status badges seen: `RESOLVED`, `HANDED`, `ACTIVE`. Example outcomes: "Refund issued · £19.50", "Engineer booked · Sat 10am", "Handed to Maria · L2 retention", "Invoice sent · INV-2026-04812", "Speed troubleshoot in progress".
+- **Channel Mix (last 60m):** horizontal bars + % across Web / WhatsApp / Voice / Email / SMS.
+- **Headcount on Shift card:** count + tagline "All conversations above handled with no human on call."
+
+**Dependencies before this is actually buildable:**
+- WhatsApp channel — N17 (parked).
+- Voice / Email / SMS channels — none exist today; each would need its own ingest path.
+- Structured outcome extraction (refund / booking / invoice / etc.) — no schema for this currently; would need either manual tagging, AI summarisation, or a new structured outcome field on conversations / handover sessions.
+- "Agents on shift" — needs a schedule / availability source or a live-presence signal.
+
+**Open questions for when this is reopened:**
+- Audience: internal ops console, external marketing showcase (e.g. embeddable on `total-dash.com`), or both?
+- Definition of "Resolved": AI-only resolutions, handover resolutions, or both combined?
+- "Agents on shift" data source: shift schedule table, live presence (Realtime), or self-declared in-app status?
+- Outcome categorisation source: manual tag at handover-end, AI summary post-resolution, or a structured outcome schema?
+
+**Constraint noted at capture:** no database changes yet. This entry exists purely as a reference for future planning; schema design happens once the prerequisite channels and outcome model are in motion.
+
+**Touches:** TBD. Likely a new dashboard route, aggregation RPCs against `conversations` / `handover_sessions` / a future outcomes table, plus channel-specific ingest. Multi-channel work is the prerequisite.
+
+---
+
 ### Attachments — remaining work
 
 **Type:** Feature | **Effort:** Tiny remaining (config flip) + later phases | **Status:** Phase 2 shipped 28 April; Phases 3-5 parked
