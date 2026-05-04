@@ -610,8 +610,8 @@ export function CommandSearch() {
                               s.value === "with_ai" && "bg-sage-fg",
                               s.value === "waiting" && "bg-rose-fg",
                               s.value === "in_handover" && "bg-sky-fg",
-                              s.value === "aftercare" && "bg-sand-fg",
-                              s.value === "needs_review" && "bg-peach-fg",
+                              s.value === "aftercare" && "bg-lav-fg",
+                              s.value === "needs_review" && "bg-sand-fg",
                               s.value === "resolved" && "bg-gray-400",
                             )}
                           />

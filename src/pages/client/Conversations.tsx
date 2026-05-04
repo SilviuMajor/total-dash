@@ -1770,34 +1770,45 @@ export default function Conversations() {
           {filtersExpanded && <PinToggle row="status" />}
           <Button
             size="sm"
-            variant={statusFilters.length === 0 ? 'default' : 'ghost'}
+            variant="ghost"
             onClick={() => setStatusFilters([])}
-            className="h-7 text-xs px-3"
+            className={cn(
+              "h-7 text-xs px-3",
+              statusFilters.length === 0 && "bg-ink text-surface-base hover:bg-ink/90 hover:text-surface-base"
+            )}
           >
             All
           </Button>
           {(['with_ai', 'waiting', 'in_handover', 'aftercare', 'needs_review', 'resolved'] as const).map(s => {
             const isActive = statusFilters.includes(s);
+            const ACTIVE_TONE: Record<typeof s, string> = {
+              with_ai:      'bg-status-ai-bg text-status-ai-fg hover:bg-status-ai-bg/80 hover:text-status-ai-fg',
+              waiting:      'bg-status-waiting-bg text-status-waiting-fg hover:bg-status-waiting-bg/80 hover:text-status-waiting-fg',
+              in_handover:  'bg-status-handover-bg text-status-handover-fg hover:bg-status-handover-bg/80 hover:text-status-handover-fg',
+              aftercare:    'bg-status-aftercare-bg text-status-aftercare-fg hover:bg-status-aftercare-bg/80 hover:text-status-aftercare-fg',
+              needs_review: 'bg-status-review-bg text-status-review-fg hover:bg-status-review-bg/80 hover:text-status-review-fg',
+              resolved:     'bg-status-resolved-bg text-status-resolved-fg hover:bg-status-resolved-bg/80 hover:text-status-resolved-fg',
+            };
             return (
               <Button
                 key={s}
                 size="sm"
-                variant={isActive ? 'default' : 'ghost'}
+                variant="ghost"
                 onClick={() => {
                   setStatusFilters(prev => {
                     const next = isActive ? prev.filter(x => x !== s) : [...prev, s];
                     return next.length === 6 ? [] : next;
                   });
                 }}
-                className="h-7 text-xs px-3"
+                className={cn("h-7 text-xs px-3", isActive && ACTIVE_TONE[s])}
               >
                 <span className={cn(
                   "w-1.5 h-1.5 rounded-full mr-1.5",
                   s === 'with_ai' && 'bg-sage-fg',
                   s === 'waiting' && 'bg-rose-fg',
                   s === 'in_handover' && 'bg-sky-fg',
-                  s === 'aftercare' && 'bg-sand-fg',
-                  s === 'needs_review' && 'bg-peach-fg',
+                  s === 'aftercare' && 'bg-lav-fg',
+                  s === 'needs_review' && 'bg-sand-fg',
                   s === 'resolved' && 'bg-gray-400'
                 )} />
                 {s === 'with_ai' ? 'With AI' : s === 'waiting' ? 'Waiting' : s === 'in_handover' ? 'In Handover' : s === 'aftercare' ? 'Aftercare' : s === 'needs_review' ? 'Needs Review' : 'Resolved'}
@@ -2265,7 +2276,7 @@ export default function Conversations() {
                                 selectedButton={selectedButton}
                                 attachments={transcript.attachments}
                                 appearance={{
-                                  primaryColor: '#3b82f6',
+                                  primaryColor: '#00425b',
                                   secondaryColor: '#ffffff',
                                   textColor: '#1f2937',
                                   messageTextColor: '#1f2937',
@@ -2598,8 +2609,8 @@ export default function Conversations() {
                       !pendingSession && selectedConversation.status === 'with_ai' && "border-sage-fg bg-sage-bg",
                       !pendingSession && selectedConversation.status === 'waiting' && "border-rose-fg bg-rose-bg",
                       !pendingSession && selectedConversation.status === 'in_handover' && "border-sky-fg bg-sky-bg",
-                      !pendingSession && selectedConversation.status === 'aftercare' && "border-sand-fg bg-sand-bg",
-                      !pendingSession && selectedConversation.status === 'needs_review' && "border-peach-fg bg-peach-bg",
+                      !pendingSession && selectedConversation.status === 'aftercare' && "border-lav-fg bg-lav-bg",
+                      !pendingSession && selectedConversation.status === 'needs_review' && "border-sand-fg bg-sand-bg",
                       !pendingSession && selectedConversation.status === 'resolved' && "border-gray-300 bg-gray-50 dark:bg-gray-950/20 dark:border-gray-700"
                     )}>
                       {/* WITH AI or WAITING with no pending session (edge case fallback) */}
@@ -2995,8 +3006,8 @@ export default function Conversations() {
                                       conv.status === 'with_ai' && "bg-sage-fg",
                                       conv.status === 'waiting' && "bg-rose-fg",
                                       conv.status === 'in_handover' && "bg-sky-fg",
-                                      conv.status === 'aftercare' && "bg-sand-fg",
-                                      conv.status === 'needs_review' && "bg-peach-fg",
+                                      conv.status === 'aftercare' && "bg-lav-fg",
+                                      conv.status === 'needs_review' && "bg-sand-fg",
                                       conv.status === 'resolved' && "bg-gray-400"
                                     )} />
                                     <span className="text-xs truncate">
@@ -3140,7 +3151,8 @@ export default function Conversations() {
                       />
                       <Button
                         size="sm"
-                        className="mt-2 w-full"
+                        variant="ghost"
+                        className="mt-2 w-full bg-sky-bg text-sky-fg hover:bg-sky-bg-2 hover:text-sky-fg"
                         onClick={saveNote}
                         disabled={savingNote}
                       >

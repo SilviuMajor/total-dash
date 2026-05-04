@@ -157,14 +157,14 @@ export function ConversationCard({
         conv.status === 'with_ai' && 'border-l-sage-fg',
         conv.status === 'waiting' && 'border-l-rose-fg',
         conv.status === 'in_handover' && 'border-l-sky-fg',
-        conv.status === 'aftercare' && 'border-l-sand-fg',
-        conv.status === 'needs_review' && 'border-l-peach-fg',
+        conv.status === 'aftercare' && 'border-l-lav-fg',
+        conv.status === 'needs_review' && 'border-l-sand-fg',
         conv.status === 'resolved' && 'border-l-ink-4',
         !KNOWN_STATUSES.has(conv.status) && 'border-l-border',
         (isPending || conv.status === 'waiting') && 'bg-rose-bg/60 border-l-rose-fg',
         !isPending && conv.status !== 'waiting' && isMine && conv.status === 'in_handover' && 'bg-sky-bg/60',
-        !isPending && conv.status !== 'waiting' && isMine && conv.status === 'aftercare' && 'bg-sand-bg/60',
-        !isPending && conv.status !== 'waiting' && isMine && conv.status === 'needs_review' && 'bg-peach-bg/60',
+        !isPending && conv.status !== 'waiting' && isMine && conv.status === 'aftercare' && 'bg-lav-bg/60',
+        !isPending && conv.status !== 'waiting' && isMine && conv.status === 'needs_review' && 'bg-sand-bg/60',
         !isPending && conv.status !== 'waiting' && isMine && conv.status === 'resolved' && 'bg-surface-2',
         isSelected && 'bg-primary/5',
         !isSelected && !isPending && !isMine && 'hover:bg-muted/40',
@@ -191,7 +191,7 @@ export function ConversationCard({
             <Badge variant="outline" className="text-[10px] shrink-0 px-1 py-0">🧪</Badge>
           )}
           {conv.status === 'needs_review' && (
-            <AlertTriangle className="w-3 h-3 text-peach-fg shrink-0" />
+            <AlertTriangle className="w-3 h-3 text-sand-fg shrink-0" />
           )}
         </div>
         {departments.length > 1 && dept && (
