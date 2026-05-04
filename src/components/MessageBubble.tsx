@@ -60,6 +60,8 @@ interface MessageBubbleProps {
   conversationId?: string;
   /** Optional captured customer name for initials inside the avatar. */
   conversationName?: string | null;
+  /** Conversation status — used to colour the customer avatar. */
+  conversationStatus?: string | null;
 }
 
 function renderAttachment(att: Attachment, key: string | number) {
@@ -120,6 +122,7 @@ export function MessageBubble({
   buttonsDisabled = false,
   conversationId,
   conversationName,
+  conversationStatus,
 }: MessageBubbleProps) {
   const isUser = speaker === 'user';
   
@@ -214,6 +217,7 @@ export function MessageBubble({
         <ConversationAvatar
           seed={conversationId}
           name={conversationName ?? null}
+          status={conversationStatus ?? null}
           size="sm"
           className="h-8 w-8 text-[11px]"
         />

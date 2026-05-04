@@ -395,13 +395,6 @@ export function UserProfileCard({ onSignOut }: UserProfileCardProps) {
               <Label className="text-xs text-muted-foreground">Avatar colour</Label>
               <div className="flex items-center gap-2">
                 {AVATAR_COLORS.map(({ value, label }) => {
-                  const swatchClass: Record<AvatarColor, string> = {
-                    rose:  'bg-rose-fg',
-                    sky:   'bg-sky-fg',
-                    sand:  'bg-sand-fg',
-                    lav:   'bg-lav-fg',
-                    peach: 'bg-peach-fg',
-                  };
                   const isSelected = avatarColor === value;
                   return (
                     <button
@@ -412,11 +405,17 @@ export function UserProfileCard({ onSignOut }: UserProfileCardProps) {
                       aria-label={label}
                       aria-pressed={isSelected}
                       className={cn(
-                        'h-7 w-7 rounded-md transition-all',
-                        swatchClass[value],
+                        'rounded-md transition-all',
                         isSelected ? 'ring-2 ring-offset-2 ring-offset-background ring-foreground' : 'hover:scale-110',
                       )}
-                    />
+                    >
+                      <UserAvatar
+                        firstName={firstName}
+                        lastName={lastName}
+                        color={value}
+                        size="sm"
+                      />
+                    </button>
                   );
                 })}
               </div>

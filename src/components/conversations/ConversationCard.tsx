@@ -171,6 +171,7 @@ export function ConversationCard({
               <ConversationAvatar
                 seed={conv.id}
                 name={hasRealName ? rawName : null}
+                status={conv.status}
                 size="sm"
                 className={cn(
                   'absolute inset-0 transition-opacity',
@@ -191,6 +192,7 @@ export function ConversationCard({
             <ConversationAvatar
               seed={conv.id}
               name={hasRealName ? rawName : null}
+              status={conv.status}
               size="sm"
             />
           )}

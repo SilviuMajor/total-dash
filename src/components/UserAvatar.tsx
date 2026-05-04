@@ -11,11 +11,11 @@ export const AVATAR_COLORS: { value: AvatarColor; label: string }[] = [
 ];
 
 const TONE_CLASSES: Record<AvatarColor, string> = {
-  rose:  'bg-rose-bg text-rose-fg',
-  sky:   'bg-sky-bg text-sky-fg',
-  sand:  'bg-sand-bg text-sand-fg',
-  lav:   'bg-lav-bg text-lav-fg',
-  peach: 'bg-peach-bg text-peach-fg',
+  rose:  'bg-rose-fg text-rose-bg',
+  sky:   'bg-sky-fg text-sky-bg',
+  sand:  'bg-sand-fg text-sand-bg',
+  lav:   'bg-lav-fg text-lav-bg',
+  peach: 'bg-peach-fg text-peach-bg',
 };
 
 const SIZE_CLASSES = {

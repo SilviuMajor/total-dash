@@ -13,6 +13,16 @@ const TONE_CLASSES: Record<Tone, string> = {
   peach: 'bg-peach-bg text-peach-fg',
 };
 
+const STATUS_TO_TONE: Record<string, Tone> = {
+  with_ai:      'sage',
+  waiting:      'rose',
+  in_handover:  'sky',
+  aftercare:    'lav',
+  needs_review: 'sand',
+};
+
+const RESOLVED_CLASSES = 'bg-status-resolved-bg text-status-resolved-fg';
+
 const SIZE_CLASSES: Record<'xs' | 'sm' | 'md', string> = {
   xs: 'w-5 h-5 text-[8px] rounded-[5px]',
   sm: 'w-6 h-6 text-[10px] rounded-md',
@@ -44,19 +54,29 @@ function getInitials(name: string | null | undefined): string | null {
 interface ConversationAvatarProps {
   seed: string;
   name?: string | null;
+  status?: string | null;
   size?: 'xs' | 'sm' | 'md';
   className?: string;
 }
 
-export function ConversationAvatar({ seed, name, size = 'sm', className }: ConversationAvatarProps) {
-  const tone = hashTone(seed);
+export function ConversationAvatar({ seed, name, status, size = 'sm', className }: ConversationAvatarProps) {
   const initials = getInitials(name);
+
+  let toneClasses: string;
+  if (status === 'resolved') {
+    toneClasses = RESOLVED_CLASSES;
+  } else if (status && STATUS_TO_TONE[status]) {
+    toneClasses = TONE_CLASSES[STATUS_TO_TONE[status]];
+  } else {
+    toneClasses = TONE_CLASSES[hashTone(seed)];
+  }
+
   return (
     <div
       className={cn(
         'inline-flex items-center justify-center font-semibold flex-shrink-0 tracking-tight',
         SIZE_CLASSES[size],
-        TONE_CLASSES[tone],
+        toneClasses,
         className,
       )}
     >

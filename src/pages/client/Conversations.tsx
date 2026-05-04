@@ -2090,6 +2090,7 @@ export default function Conversations() {
                     <ConversationAvatar
                       seed={selectedConversation.id}
                       name={selectedConversation.metadata?.variables?.user_name || null}
+                      status={selectedConversation.status}
                       size="md"
                     />
                     <div className="min-w-0">
@@ -2285,6 +2286,7 @@ export default function Conversations() {
                                 attachments={transcript.attachments}
                                 conversationId={selectedConversation.id}
                                 conversationName={selectedConversation.metadata?.variables?.user_name || null}
+                                conversationStatus={selectedConversation.status}
                                 appearance={{
                                   primaryColor: '#00425b',
                                   secondaryColor: '#ffffff',
