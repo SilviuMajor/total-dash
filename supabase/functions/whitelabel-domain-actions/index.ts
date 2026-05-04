@@ -198,7 +198,7 @@ serve(async (req) => {
       if (v.status === 409) {
         const cur = await callVercel('GET', `/v9/projects/${projectId}/domains/${fqdn}`);
         if (cur.ok) {
-          return respondWithDomain(cur.data, supabase, agencyId);
+          return respondWithDomain(cur.data as VercelDomainResponse, supabase, agencyId, agency.whitelabel_verified ?? false);
         }
       }
 
@@ -209,7 +209,7 @@ serve(async (req) => {
         );
       }
 
-      return respondWithDomain(v.data as VercelDomainResponse, supabase, agencyId);
+      return respondWithDomain(v.data as VercelDomainResponse, supabase, agencyId, agency.whitelabel_verified ?? false);
     }
 
     if (action === 'verify' || action === 'status') {
@@ -236,7 +236,7 @@ serve(async (req) => {
         );
       }
 
-      return respondWithDomain(v.data as VercelDomainResponse, supabase, agencyId);
+      return respondWithDomain(v.data as VercelDomainResponse, supabase, agencyId, agency.whitelabel_verified ?? false);
     }
 
     if (action === 'remove') {
@@ -293,15 +293,76 @@ function vercelErrorMessage(v: { status: number; data: any }): string {
   return `Vercel API ${v.status}`;
 }
 
-// Side-effect: when Vercel reports the domain is verified, persist that to
-// the agencies row so the rest of the app (login redirects, branding etc.)
-// switches over without waiting for a separate poll.
-async function respondWithDomain(
-  vercelDomain: VercelDomainResponse,
+// DNS-over-HTTPS lookup for the routing CNAME. Returns true when the
+// subdomain has a CNAME chain ending at *.vercel-dns.com — proof that
+// browsers asking for this hostname will reach Vercel's edge.
+async function checkRouting(fqdn: string): Promise<boolean> {
+  try {
+    const res = await fetch(`https://dns.google/resolve?name=${encodeURIComponent(fqdn)}&type=CNAME`);
+    if (!res.ok) return false;
+    const data = await res.json();
+    const cnames: string[] = (data.Answer || [])
+      .filter((r: any) => r.type === 5) // CNAME record
+      .map((r: any) => (r.data || '').replace(/\.$/, '').toLowerCase());
+    return cnames.some((c) => c.endsWith('vercel-dns.com'));
+  } catch {
+    return false;
+  }
+}
+
+// Confirms HTTPS works at the FQDN. Any successful TLS handshake (even
+// to a 4xx/5xx) means SSL is provisioned. SSL-handshake errors or
+// connection refused means Vercel hasn't issued the cert yet.
+async function checkHttps(fqdn: string): Promise<boolean> {
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 5_000);
+    const res = await fetch(`https://${fqdn}/`, {
+      method: 'HEAD',
+      signal: ctrl.signal,
+      redirect: 'manual',
+    });
+    clearTimeout(t);
+    return res.status >= 100 && res.status < 600;
+  } catch {
+    return false;
+  }
+}
+
+interface DomainStatus {
+  vercelVerified: boolean;
+  dnsRouted: boolean;
+  httpReady: boolean;
+  fullyLive: boolean;
+}
+
+// Computes the three-signal status for a Vercel domain object. Network
+// checks run in parallel since they're independent.
+async function computeStatus(vercelDomain: VercelDomainResponse): Promise<DomainStatus> {
+  const fqdn = vercelDomain.name;
+  const [dnsRouted, httpReady] = await Promise.all([
+    checkRouting(fqdn),
+    checkHttps(fqdn),
+  ]);
+  const vercelVerified = vercelDomain.verified === true;
+  return {
+    vercelVerified,
+    dnsRouted,
+    httpReady,
+    fullyLive: vercelVerified && dnsRouted && httpReady,
+  };
+}
+
+// Persists `whitelabel_verified` to match the live status. Sets to true
+// only when fullyLive; reverts to false on drift so stale Live claims
+// can't poison redirect / branding logic elsewhere in the app.
+async function persistLiveState(
   supabase: any,
   agencyId: string,
-): Promise<Response> {
-  if (vercelDomain.verified === true) {
+  fullyLive: boolean,
+  previouslyVerified: boolean | null,
+): Promise<void> {
+  if (fullyLive && !previouslyVerified) {
     const { error } = await supabase
       .from('agencies')
       .update({
@@ -309,13 +370,32 @@ async function respondWithDomain(
         whitelabel_verified_at: new Date().toISOString(),
       })
       .eq('id', agencyId);
-    if (error) {
-      console.error('Failed to persist verified state:', error);
-    }
+    if (error) console.error('Failed to mark agency verified:', error);
+  } else if (!fullyLive && previouslyVerified) {
+    const { error } = await supabase
+      .from('agencies')
+      .update({
+        whitelabel_verified: false,
+        whitelabel_verified_at: null,
+      })
+      .eq('id', agencyId);
+    if (error) console.error('Failed to revert agency verified state:', error);
   }
+}
 
+// Side-effect: persists the live state to the DB based on the multi-signal
+// check, then returns the Vercel domain object plus the rich status to
+// the frontend.
+async function respondWithDomain(
+  vercelDomain: VercelDomainResponse,
+  supabase: any,
+  agencyId: string,
+  previouslyVerified: boolean | null,
+): Promise<Response> {
+  const status = await computeStatus(vercelDomain);
+  await persistLiveState(supabase, agencyId, status.fullyLive, previouslyVerified);
   return new Response(
-    JSON.stringify({ success: true, domain: vercelDomain }),
+    JSON.stringify({ success: true, domain: vercelDomain, status }),
     { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
   );
 }

@@ -26,9 +26,12 @@ import { format } from "date-fns";
 import {
   AlertCircle,
   Check,
+  ChevronDown,
+  ChevronRight,
   Copy,
   ExternalLink,
   Loader2,
+  RefreshCw,
   Trash2,
 } from "lucide-react";
 
@@ -58,18 +61,103 @@ interface VercelDomain {
   verification?: VercelVerification[];
 }
 
+// Multi-signal status returned by the Edge Function. Vercel's `verified`
+// only confirms ownership challenges; the URL only actually serves
+// traffic when all three are true.
+interface DomainStatus {
+  vercelVerified: boolean;
+  dnsRouted: boolean;
+  httpReady: boolean;
+  fullyLive: boolean;
+}
+
 type CardState = 'not_configured' | 'awaiting_dns' | 'live' | 'error';
+
+// Sub-state of `awaiting_dns`, derived from DomainStatus so the UI shows
+// exactly which step the agency is on.
+type SubState = 'all_pending' | 'need_routing' | 'need_ownership' | 'provisioning_ssl';
+
+function deriveSubState(s: DomainStatus | null): SubState {
+  if (!s) return 'all_pending';
+  if (s.vercelVerified && s.dnsRouted && !s.httpReady) return 'provisioning_ssl';
+  if (s.vercelVerified && !s.dnsRouted) return 'need_routing';
+  if (!s.vercelVerified && s.dnsRouted) return 'need_ownership';
+  return 'all_pending';
+}
 
 const SUBDOMAIN_RE = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i;
 const DOMAIN_RE = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/i;
 const POLL_INTERVAL_MS = 5_000;
 const POLL_CAP_COUNT = 60; // 5 minutes at 5s intervals
 
-const PROVIDER_GUIDES: { name: string; href: string }[] = [
-  { name: 'Cloudflare', href: 'https://developers.cloudflare.com/dns/manage-dns-records/how-to/create-dns-records/#create-a-cname-record' },
-  { name: 'GoDaddy', href: 'https://www.godaddy.com/help/add-a-cname-record-19236' },
-  { name: 'Namecheap', href: 'https://www.namecheap.com/support/knowledgebase/article.aspx/9646/2237/how-to-create-a-cname-record-for-your-domain/' },
-  { name: 'Route 53', href: 'https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/resource-record-sets-creating.html' },
+// In-app guidance for the most-used DNS providers. Steps are deliberately
+// short — agencies should be able to scan and act, not read a manual.
+// `nameHint` describes what the provider calls the Name/Host field and
+// what form it expects (relative subdomain vs full FQDN).
+interface ProviderGuide {
+  name: string;
+  steps: string[];
+  nameHint: string;
+  href: string;
+  warning?: string;
+}
+
+const PROVIDER_GUIDES: ProviderGuide[] = [
+  {
+    name: 'Cloudflare',
+    steps: [
+      'Cloudflare dashboard → your domain → DNS → Records → Add record.',
+      'Add the records exactly as shown above.',
+    ],
+    nameHint: '"Name" field accepts either the relative subdomain or the full FQDN.',
+    warning: 'Set Proxy status to "DNS only" (grey cloud) for the routing CNAME, otherwise SSL provisioning fails.',
+    href: 'https://developers.cloudflare.com/dns/manage-dns-records/how-to/create-dns-records/#create-a-cname-record',
+  },
+  {
+    name: 'Squarespace Domains',
+    steps: [
+      'domains.squarespace.com → your domain → DNS.',
+      'Scroll to Custom Records → Add Record.',
+    ],
+    nameHint: '"Host" field wants just the subdomain (e.g. dashboard).',
+    href: 'https://support.squarespace.com/hc/en-us/articles/205812348',
+  },
+  {
+    name: 'GoDaddy',
+    steps: [
+      'Domain Portfolio → your domain → DNS → Add Record.',
+      'Add the records exactly as shown.',
+    ],
+    nameHint: '"Host" field wants just the subdomain (or @ for the apex).',
+    href: 'https://www.godaddy.com/help/add-a-cname-record-19236',
+  },
+  {
+    name: 'Namecheap',
+    steps: [
+      'Domain List → Manage → Advanced DNS → Add New Record.',
+      'Add the records exactly as shown.',
+    ],
+    nameHint: '"Host" field wants just the subdomain.',
+    href: 'https://www.namecheap.com/support/knowledgebase/article.aspx/9646/2237/how-to-create-a-cname-record-for-your-domain/',
+  },
+  {
+    name: 'Google Cloud DNS',
+    steps: [
+      'console.cloud.google.com → Network services → Cloud DNS.',
+      'Open your zone → Add Record Set.',
+    ],
+    nameHint: 'DNS Name field auto-completes the apex; type just the subdomain prefix.',
+    href: 'https://cloud.google.com/dns/docs/records',
+  },
+  {
+    name: 'AWS Route 53',
+    steps: [
+      'Route 53 → Hosted zones → your zone → Create record.',
+      'Use Simple routing → enter the subdomain in Record name.',
+    ],
+    nameHint: 'Record name field shows the subdomain prefix; full FQDN is built from it. Drop any trailing dot.',
+    href: 'https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/resource-record-sets-creating.html',
+  },
 ];
 
 export function CustomDomainCard({ agency, onUpdate }: CustomDomainCardProps) {
@@ -86,12 +174,16 @@ export function CustomDomainCard({ agency, onUpdate }: CustomDomainCardProps) {
   const [domainInput, setDomainInput] = useState(agency.whitelabel_domain || '');
   const [submitting, setSubmitting] = useState(false);
   const [verification, setVerification] = useState<VercelVerification[]>([]);
+  const [lastStatus, setLastStatus] = useState<DomainStatus | null>(null);
   const [pollSeconds, setPollSeconds] = useState(0);
   const [pollCapped, setPollCapped] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
   const [showChangeConfirm, setShowChangeConfirm] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [providerHelpOpen, setProviderHelpOpen] = useState(false);
+  const [openProvider, setOpenProvider] = useState<string | null>(null);
+  const [recheckingNow, setRecheckingNow] = useState(false);
 
   const pollTimerRef = useRef<number | null>(null);
   const pollTickRef = useRef<number | null>(null);
@@ -108,9 +200,7 @@ export function CustomDomainCard({ agency, onUpdate }: CustomDomainCardProps) {
     }
   };
 
-  // On mount in awaiting_dns: re-fetch the verification challenge from Vercel
-  // (the parent agency row doesn't store it; it lives in the Vercel API
-  // response). Then start polling.
+  // Effect for awaiting_dns: re-fetch verification + status, start polling.
   useEffect(() => {
     if (state !== 'awaiting_dns') {
       stopPolling();
@@ -126,12 +216,14 @@ export function CustomDomainCard({ agency, onUpdate }: CustomDomainCardProps) {
         if (error) throw new Error(error.message);
         if (data?.success === false) throw new Error(data.error || 'Couldn\'t fetch domain status');
         const dom = data?.domain as VercelDomain | undefined;
+        const status = data?.status as DomainStatus | undefined;
+        if (status) setLastStatus(status);
         if (dom) {
-          if (dom.verified) {
+          setVerification(dom.verification || []);
+          if (status?.fullyLive) {
             handleVerifiedFlip();
             return;
           }
-          setVerification(dom.verification || []);
         }
         startPolling();
       } catch (err) {
@@ -144,6 +236,37 @@ export function CustomDomainCard({ agency, onUpdate }: CustomDomainCardProps) {
       cancelled = true;
       stopPolling();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state, agency.id]);
+
+  // Self-healing on mount in `live` state: validate that the URL still
+  // actually works. If routing or SSL has drifted (or the DB was set to
+  // verified=true under the old single-signal logic), drop back to
+  // awaiting_dns with the missing record(s) in focus.
+  useEffect(() => {
+    if (state !== 'live') return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('whitelabel-domain-actions', {
+          body: { action: 'status', agencyId: agency.id },
+        });
+        if (cancelled || error || data?.success === false) return;
+        const dom = data?.domain as VercelDomain | undefined;
+        const status = data?.status as DomainStatus | undefined;
+        if (status) setLastStatus(status);
+        if (status && !status.fullyLive) {
+          setVerification(dom?.verification || []);
+          setState('awaiting_dns');
+          // onUpdate so the agency row's whitelabel_verified is refreshed
+          // from the Edge Function's revert-on-drift write.
+          onUpdate();
+        }
+      } catch {
+        // network blip — leave state alone, next render or recheck will retry
+      }
+    })();
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state, agency.id]);
 
@@ -178,11 +301,14 @@ export function CustomDomainCard({ agency, onUpdate }: CustomDomainCardProps) {
       if (error) return; // transient — keep polling
       if (data?.success === false) return; // ditto
       const dom = data?.domain as VercelDomain | undefined;
-      if (dom?.verified) {
-        handleVerifiedFlip();
-      } else if (dom?.verification) {
+      const status = data?.status as DomainStatus | undefined;
+      if (status) setLastStatus(status);
+      if (dom?.verification) {
         // Vercel sometimes refines the challenge; keep ours fresh
         setVerification(dom.verification);
+      }
+      if (status?.fullyLive) {
+        handleVerifiedFlip();
       }
     } catch {
       // network blip — let the next tick try again
@@ -199,6 +325,15 @@ export function CustomDomainCard({ agency, onUpdate }: CustomDomainCardProps) {
     if (state === 'awaiting_dns') {
       startPolling();
     }
+  };
+
+  // "Recheck now" — fires an immediate verify regardless of poll cadence.
+  // Available in awaiting_dns AND live states (the latter to manually
+  // trigger drift detection).
+  const handleRecheckNow = async () => {
+    setRecheckingNow(true);
+    await runVerifyOnce();
+    setRecheckingNow(false);
   };
 
   const handleVerifiedFlip = () => {
@@ -237,15 +372,16 @@ export function CustomDomainCard({ agency, onUpdate }: CustomDomainCardProps) {
       if (data?.success === false) throw new Error(humaniseError(data.error || 'Couldn\'t add domain'));
 
       const dom = data?.domain as VercelDomain | undefined;
+      const status = data?.status as DomainStatus | undefined;
       if (!dom) throw new Error('Vercel returned an unexpected response');
 
       onUpdate();
 
-      if (dom.verified) {
-        // Rare: Vercel verifies immediately
+      if (status) setLastStatus(status);
+      setVerification(dom.verification || []);
+      if (status?.fullyLive) {
         handleVerifiedFlip();
       } else {
-        setVerification(dom.verification || []);
         setState('awaiting_dns');
       }
     } catch (err) {
@@ -357,6 +493,19 @@ export function CustomDomainCard({ agency, onUpdate }: CustomDomainCardProps) {
             <Trash2 className="h-3.5 w-3.5 mr-1.5" />
             Remove custom domain
           </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleRecheckNow}
+            disabled={recheckingNow}
+            className="text-xs ml-auto"
+            title="Re-validates DNS routing and SSL — useful if the URL stops working"
+          >
+            {recheckingNow
+              ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+              : <RefreshCw className="h-3.5 w-3.5 mr-1.5" />}
+            Recheck
+          </Button>
         </div>
 
         {confirmDialogs()}
@@ -369,75 +518,126 @@ export function CustomDomainCard({ agency, onUpdate }: CustomDomainCardProps) {
     const apex = agency.whitelabel_domain || '';
     const fqdn = buildFqdn(subdomain, apex);
     const records = buildDisplayRecords(subdomain, apex, verification);
+    const subState = deriveSubState(lastStatus);
+
+    // Phase-aware header message + record-row "satisfied" flags. We keep
+    // every record visible (greyed when satisfied) so agencies can confirm
+    // what's already in place vs what's still missing.
+    const phaseHeader = (() => {
+      switch (subState) {
+        case 'need_routing':
+          return {
+            icon: <Loader2 className="h-4 w-4 animate-spin" />,
+            text: 'Ownership verified ✓ — now add the routing CNAME below.',
+            tone: 'amber' as const,
+          };
+        case 'need_ownership':
+          return {
+            icon: <Loader2 className="h-4 w-4 animate-spin" />,
+            text: 'Routing detected ✓ — add the ownership TXT below to finish.',
+            tone: 'amber' as const,
+          };
+        case 'provisioning_ssl':
+          return {
+            icon: <Loader2 className="h-4 w-4 animate-spin" />,
+            text: 'Everything in place ✓ — provisioning SSL certificate (~30 seconds)…',
+            tone: 'sky' as const,
+          };
+        default:
+          return {
+            icon: <Loader2 className="h-4 w-4 animate-spin" />,
+            text: 'Add the records below at your DNS provider.',
+            tone: 'amber' as const,
+          };
+      }
+    })();
+    const headerToneClass = phaseHeader.tone === 'sky'
+      ? 'text-sky-700 dark:text-sky-300'
+      : 'text-amber-700 dark:text-amber-300';
+
+    const isRecordSatisfied = (label: string | undefined): boolean => {
+      if (!lastStatus) return false;
+      if (label === 'Routing — sends traffic to Vercel') return lastStatus.dnsRouted;
+      if (label === 'Ownership verification') return lastStatus.vercelVerified;
+      return false;
+    };
+
     return (
       <Card className="p-6 space-y-4">
         <div className="space-y-1">
           <h3 className="text-sm font-semibold">Custom domain · <span className="font-mono">{fqdn}</span></h3>
-          <p className="text-sm text-amber-700 dark:text-amber-300 flex items-center gap-1.5">
-            <Loader2 className="h-4 w-4 animate-spin" /> Waiting for your DNS records
+          <p className={`text-sm flex items-center gap-1.5 ${headerToneClass}`}>
+            {phaseHeader.icon} {phaseHeader.text}
           </p>
         </div>
 
-        <div className="space-y-2">
-          <p className="text-sm">
-            Add {records.length === 1 ? 'this record' : `these ${records.length} records`} at your DNS provider for{' '}
-            <span className="font-mono">{apex}</span>:
-          </p>
-          <div className="rounded-md border overflow-hidden divide-y">
-            {records.map((r, idx) => (
-              <div key={idx} className="p-3 space-y-2">
-                {r.label && (
-                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">{r.label}</p>
-                )}
-                <div className="grid grid-cols-[80px_1fr_auto] items-center gap-2 text-xs">
-                  <span className="text-muted-foreground uppercase">Type</span>
-                  <code className="font-mono">{r.type}</code>
-                  <span aria-hidden="true" />
+        {subState !== 'provisioning_ssl' && (
+          <>
+            <div className="space-y-2">
+              <p className="text-sm">
+                Add {records.length === 1 ? 'this record' : `these ${records.length} records`} at your DNS provider for{' '}
+                <span className="font-mono">{apex}</span>:
+              </p>
+              <div className="rounded-md border overflow-hidden divide-y">
+                {records.map((r, idx) => {
+                  const satisfied = isRecordSatisfied(r.label);
+                  return (
+                    <div
+                      key={idx}
+                      className={`p-3 space-y-2 ${satisfied ? 'bg-muted/40 opacity-60' : ''}`}
+                    >
+                      {r.label && (
+                        <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium flex items-center gap-1.5">
+                          {satisfied && <Check className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />}
+                          {r.label}
+                          {satisfied && <span className="text-emerald-700 dark:text-emerald-400 normal-case tracking-normal">in place</span>}
+                        </p>
+                      )}
+                      <div className="grid grid-cols-[80px_1fr_auto] items-center gap-2 text-xs">
+                        <span className="text-muted-foreground uppercase">Type</span>
+                        <code className="font-mono">{r.type}</code>
+                        <span aria-hidden="true" />
 
-                  <span className="text-muted-foreground">Name</span>
-                  <code className="font-mono break-all">{r.name}</code>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7"
-                    onClick={() => handleCopy(`name-${idx}`, r.name)}
-                  >
-                    {copiedKey === `name-${idx}` ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                  </Button>
+                        <span className="text-muted-foreground">Name</span>
+                        <code className="font-mono break-all">{r.name}</code>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7"
+                          onClick={() => handleCopy(`name-${idx}`, r.name)}
+                          disabled={satisfied}
+                        >
+                          {copiedKey === `name-${idx}` ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                        </Button>
 
-                  <span className="text-muted-foreground">Value</span>
-                  <code className="font-mono break-all">{r.value}</code>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7"
-                    onClick={() => handleCopy(`value-${idx}`, r.value)}
-                  >
-                    {copiedKey === `value-${idx}` ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                  </Button>
-                </div>
+                        <span className="text-muted-foreground">Value</span>
+                        <code className="font-mono break-all">{r.value}</code>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7"
+                          onClick={() => handleCopy(`value-${idx}`, r.value)}
+                          disabled={satisfied}
+                        >
+                          {copiedKey === `value-${idx}` ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            ))}
-          </div>
-          <p className="text-xs text-muted-foreground">
-            On Cloudflare, set the proxy to <strong>DNS-only (grey cloud)</strong> for the routing record so SSL can provision.
-          </p>
-        </div>
+              <p className="text-xs text-muted-foreground">
+                Most providers (Squarespace, GoDaddy, Namecheap, etc.) expect just the subdomain in the Name/Host field.
+                If your provider asks for the full domain, paste{' '}
+                <span className="font-mono">{fqdn}</span> instead. SSL is provisioned by Vercel directly — if your provider
+                has a "proxy" or "CDN" option for the routing CNAME, turn it off (DNS-only).
+              </p>
+            </div>
 
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-          <span>Setup guides:</span>
-          {PROVIDER_GUIDES.map((p) => (
-            <a
-              key={p.name}
-              href={p.href}
-              target="_blank"
-              rel="noreferrer noopener"
-              className="underline hover:text-foreground"
-            >
-              {p.name}
-            </a>
-          ))}
-        </div>
+            {renderProviderHelp(subdomain, apex)}
+            {renderCommonMistakes()}
+          </>
+        )}
 
         <div className="flex items-center justify-between gap-2">
           <p className="text-xs text-muted-foreground">
@@ -445,12 +645,26 @@ export function CustomDomainCard({ agency, onUpdate }: CustomDomainCardProps) {
               ? 'Auto-checking paused. Click below to check now.'
               : `Auto-checking every 5 seconds — ${formatElapsed(pollSeconds)} elapsed`}
           </p>
-          {pollCapped && (
-            <Button size="sm" variant="outline" onClick={handleManualCheck} disabled={submitting}>
-              {submitting ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
-              I've added the record
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={handleRecheckNow}
+              disabled={recheckingNow}
+              className="h-7 text-xs"
+            >
+              {recheckingNow
+                ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                : <RefreshCw className="h-3.5 w-3.5 mr-1.5" />}
+              Recheck now
             </Button>
-          )}
+            {pollCapped && (
+              <Button size="sm" variant="outline" onClick={handleManualCheck} disabled={submitting}>
+                {submitting ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
+                I've added the records
+              </Button>
+            )}
+          </div>
         </div>
 
         <div className="pt-2 border-t">
@@ -526,6 +740,94 @@ export function CustomDomainCard({ agency, onUpdate }: CustomDomainCardProps) {
       </Button>
     </Card>
   );
+
+  function renderProviderHelp(subdomain: string, apex: string) {
+    return (
+      <div className="rounded-md border border-dashed">
+        <button
+          type="button"
+          onClick={() => setProviderHelpOpen((v) => !v)}
+          className="w-full flex items-center justify-between px-3 py-2 text-xs text-muted-foreground hover:text-foreground"
+        >
+          <span className="flex items-center gap-1.5">
+            {providerHelpOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+            Need help adding records at your DNS provider?
+          </span>
+        </button>
+        {providerHelpOpen && (
+          <div className="border-t divide-y">
+            {PROVIDER_GUIDES.map((g) => {
+              const isOpen = openProvider === g.name;
+              return (
+                <div key={g.name} className="px-3 py-2">
+                  <button
+                    type="button"
+                    onClick={() => setOpenProvider(isOpen ? null : g.name)}
+                    className="w-full flex items-center justify-between text-xs text-foreground"
+                  >
+                    <span className="flex items-center gap-1.5 font-medium">
+                      {isOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                      {g.name}
+                    </span>
+                    <a
+                      href={g.href}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="text-[10px] text-muted-foreground hover:text-foreground inline-flex items-center gap-0.5"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      docs <ExternalLink className="h-2.5 w-2.5" />
+                    </a>
+                  </button>
+                  {isOpen && (
+                    <div className="mt-2 space-y-1.5 text-xs text-muted-foreground pl-4">
+                      <ol className="space-y-1 list-decimal list-inside">
+                        {g.steps.map((s, i) => <li key={i}>{s}</li>)}
+                      </ol>
+                      <p className="text-[11px]"><span className="font-medium text-foreground">Field name:</span> {g.nameHint}</p>
+                      {g.warning && (
+                        <p className="text-[11px] text-amber-700 dark:text-amber-400">
+                          <span className="font-medium">Important:</span> {g.warning}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            <div className="px-3 py-2 text-[11px] text-muted-foreground">
+              Other provider? Look for "DNS", "Custom Records", or "Records" in their dashboard. The fields and values are the same everywhere.
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  function renderCommonMistakes() {
+    return (
+      <div className="rounded-md border border-amber-200/60 bg-amber-50/60 dark:border-amber-900/40 dark:bg-amber-950/20 p-3 space-y-1.5">
+        <p className="text-[11px] uppercase tracking-wide font-medium text-amber-800 dark:text-amber-300">
+          Common mistakes
+        </p>
+        <ul className="text-xs text-amber-900 dark:text-amber-200 space-y-1 list-disc pl-4">
+          <li>
+            <span className="font-medium">Pasted the full domain in the Name field.</span>{' '}
+            "Name" usually wants just the prefix — <span className="font-mono">{agency.whitelabel_subdomain || 'dashboard'}</span>,
+            not the full FQDN.
+          </li>
+          <li>
+            <span className="font-medium">Cloudflare proxy enabled.</span>{' '}
+            Orange-cloud blocks Vercel from issuing the SSL cert. Switch to grey-cloud (DNS only) for the routing CNAME.
+          </li>
+          <li>
+            <span className="font-medium">Forgot the routing CNAME.</span>{' '}
+            Some setups need both a TXT (ownership) and a CNAME (routing). The URL won't serve until both are in DNS.
+          </li>
+        </ul>
+      </div>
+    );
+  }
 
   function confirmDialogs() {
     return (
