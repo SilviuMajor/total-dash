@@ -219,11 +219,11 @@ export function ConversationCard({
         )}
       </div>
 
-      <p className={cn('text-xs text-muted-foreground truncate mb-1.5', 'pl-[30px]')}>
+      <p className={cn('text-xs text-muted-foreground truncate mb-1.5', '')}>
         {format(new Date(conv.last_activity_at || conv.started_at), 'h:mm a · d/M')}
       </p>
 
-      <div className={cn('flex items-center justify-between', 'pl-[30px]')}>
+      <div className={cn('flex items-center justify-between', '')}>
         <div className="flex items-center gap-1.5 flex-wrap">
           <span
             className={cn(
@@ -273,7 +273,7 @@ export function ConversationCard({
       </div>
 
       {showSnippet && (
-        <p className={cn('text-[11px] text-muted-foreground truncate mt-1.5', 'pl-[30px]')}>
+        <p className={cn('text-[11px] text-muted-foreground truncate mt-1.5', '')}>
           <span className="font-medium">matched: {fieldLabel(matchedField!)}</span>
           {hasSnippetText && (
             <>
