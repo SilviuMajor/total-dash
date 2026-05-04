@@ -4,6 +4,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { formatWaitTime, getResponseTimeColor, type ResponseThresholds } from './cardUtils';
+import { ConversationAvatar } from './ConversationAvatar';
 
 export interface CardConversation {
   id: string;
@@ -153,15 +154,8 @@ export function ConversationCard({
       onClick={onClick}
       data-conversation-id={conv.id}
       className={cn(
-        'group border-l-[3px] px-4 py-3 border-b border-border cursor-pointer transition-colors',
-        conv.status === 'with_ai' && 'border-l-sage-fg',
-        conv.status === 'waiting' && 'border-l-rose-fg',
-        conv.status === 'in_handover' && 'border-l-sky-fg',
-        conv.status === 'aftercare' && 'border-l-lav-fg',
-        conv.status === 'needs_review' && 'border-l-sand-fg',
-        conv.status === 'resolved' && 'border-l-ink-4',
-        !KNOWN_STATUSES.has(conv.status) && 'border-l-border',
-        (isPending || conv.status === 'waiting') && 'bg-rose-bg/60 border-l-rose-fg',
+        'group px-4 py-3 border-b border-border cursor-pointer transition-colors',
+        (isPending || conv.status === 'waiting') && 'bg-rose-bg/60',
         !isPending && conv.status !== 'waiting' && isMine && conv.status === 'in_handover' && 'bg-sky-bg/60',
         !isPending && conv.status !== 'waiting' && isMine && conv.status === 'aftercare' && 'bg-lav-bg/60',
         !isPending && conv.status !== 'waiting' && isMine && conv.status === 'needs_review' && 'bg-sand-bg/60',
@@ -183,6 +177,11 @@ export function ConversationCard({
               )}
             />
           )}
+          <ConversationAvatar
+            seed={conv.id}
+            name={hasRealName ? rawName : null}
+            size="sm"
+          />
           <span className="text-[13px] font-medium truncate" title={rawName}>{displayName}</span>
           {isMine && (
             <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-sky-bg text-sky-fg shrink-0">You</span>
@@ -208,11 +207,11 @@ export function ConversationCard({
         )}
       </div>
 
-      <p className={cn('text-xs text-muted-foreground truncate mb-1.5', showCheckbox && 'pl-6')}>
+      <p className={cn('text-xs text-muted-foreground truncate mb-1.5', 'pl-[30px]')}>
         {format(new Date(conv.last_activity_at || conv.started_at), 'h:mm a · d/M')}
       </p>
 
-      <div className={cn('flex items-center justify-between', showCheckbox && 'pl-6')}>
+      <div className={cn('flex items-center justify-between', 'pl-[30px]')}>
         <div className="flex items-center gap-1.5 flex-wrap">
           <span
             className={cn(
@@ -262,7 +261,7 @@ export function ConversationCard({
       </div>
 
       {showSnippet && (
-        <p className={cn('text-[11px] text-muted-foreground truncate mt-1.5', showCheckbox && 'pl-6')}>
+        <p className={cn('text-[11px] text-muted-foreground truncate mt-1.5', 'pl-[30px]')}>
           <span className="font-medium">matched: {fieldLabel(matchedField!)}</span>
           {hasSnippetText && (
             <>

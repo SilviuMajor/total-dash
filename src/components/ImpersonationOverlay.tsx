@@ -230,7 +230,7 @@ export function ImpersonationOverlay({ open, onClose }: ImpersonationOverlayProp
                 <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider px-1.5">Users</p>
                 {searchMatchedUsers.map((u) => (
                   <div key={u.id} className="flex items-center gap-2 px-1.5 py-1 hover:bg-muted/50 rounded-md transition-colors">
-                    <div className="w-5 h-5 rounded-full bg-sage-bg flex items-center justify-center flex-shrink-0"><span className="text-[8px] font-bold text-sage-fg">{u.full_name.split(" ").map((n) => n[0]).join("").substring(0, 2).toUpperCase()}</span></div>
+                    <div className="w-5 h-5 rounded-md bg-sage-bg flex items-center justify-center flex-shrink-0"><span className="text-[8px] font-bold text-sage-fg">{u.full_name.split(" ").map((n) => n[0]).join("").substring(0, 2).toUpperCase()}</span></div>
                     <div className="min-w-0 flex-1"><p className="text-[11px] font-medium truncate">{u.full_name}</p><p className="text-[9px] text-muted-foreground truncate">{u.client_name}</p></div>
                     <button onClick={() => handleViewAsUser(u)} className="text-[9px] px-1.5 py-0.5 rounded bg-sage-bg text-sage-fg hover:bg-sage-bg transition-colors flex-shrink-0">View</button>
                   </div>
@@ -274,7 +274,7 @@ export function ImpersonationOverlay({ open, onClose }: ImpersonationOverlayProp
                             <p className="text-[9px] text-muted-foreground px-1.5 py-1">No users</p>
                           ) : cUsers.map((u) => (
                             <div key={u.id} className="flex items-center gap-2 px-1.5 py-1 hover:bg-muted/50 rounded-md transition-colors">
-                              <div className="w-5 h-5 rounded-full bg-sage-bg flex items-center justify-center flex-shrink-0"><span className="text-[8px] font-bold text-sage-fg">{u.full_name.split(" ").map((n) => n[0]).join("").substring(0, 2).toUpperCase()}</span></div>
+                              <div className="w-5 h-5 rounded-md bg-sage-bg flex items-center justify-center flex-shrink-0"><span className="text-[8px] font-bold text-sage-fg">{u.full_name.split(" ").map((n) => n[0]).join("").substring(0, 2).toUpperCase()}</span></div>
                               <div className="min-w-0 flex-1"><p className="text-[11px] font-medium truncate">{u.full_name}</p><p className="text-[9px] text-muted-foreground truncate">{u.role_name}</p></div>
                               <button onClick={() => handleViewAsUser(u)} className="text-[9px] px-1.5 py-0.5 rounded bg-sage-bg text-sage-fg hover:bg-sage-bg transition-colors flex-shrink-0">View</button>
                             </div>

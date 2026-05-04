@@ -22,7 +22,7 @@ export default function LiveCalls() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-6">
                 <div className="relative">
-                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                  <div className="w-16 h-16 rounded-md bg-primary/10 flex items-center justify-center">
                     <Phone className="w-8 h-8 text-primary" />
                   </div>
                   <div className="absolute -top-1 -right-1 w-4 h-4 bg-success rounded-full animate-pulse" />

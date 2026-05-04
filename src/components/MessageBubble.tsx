@@ -1,6 +1,6 @@
-import { Avatar } from "@/components/ui/avatar";
 import { Bot, FileText, Download } from "lucide-react";
 import { format } from "date-fns";
+import { ConversationAvatar } from "@/components/conversations/ConversationAvatar";
 
 // Append `?download=<filename>` so Supabase storage serves the file with
 // Content-Disposition: attachment instead of inline. Without this, browsers
@@ -56,6 +56,10 @@ interface MessageBubbleProps {
   isWidget?: boolean;
   onButtonClick?: (payload: any, text: string) => void;
   buttonsDisabled?: boolean;
+  /** When provided, renders a customer avatar to the right of user-side bubbles. */
+  conversationId?: string;
+  /** Optional captured customer name for initials inside the avatar. */
+  conversationName?: string | null;
 }
 
 function renderAttachment(att: Attachment, key: string | number) {
@@ -113,7 +117,9 @@ export function MessageBubble({
   selectedButton,
   isWidget = false,
   onButtonClick,
-  buttonsDisabled = false
+  buttonsDisabled = false,
+  conversationId,
+  conversationName,
 }: MessageBubbleProps) {
   const isUser = speaker === 'user';
   
@@ -190,22 +196,27 @@ export function MessageBubble({
   return (
     <div className={`flex gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
       {!isUser && (
-        <Avatar className="h-8 w-8 flex-shrink-0">
+        <div className="h-8 w-8 flex-shrink-0 rounded-md overflow-hidden">
           {appearance.chatIconUrl ? (
-            <img 
-              src={appearance.chatIconUrl} 
-              alt="Agent" 
+            <img
+              src={appearance.chatIconUrl}
+              alt="Agent"
               className="object-cover w-full h-full"
             />
           ) : (
-            <div 
-              className="w-full h-full rounded-full flex items-center justify-center"
-              style={{ backgroundColor: `${appearance.primaryColor}20` }}
-            >
-              <Bot className="w-4 h-4" style={{ color: appearance.primaryColor }} />
+            <div className="w-full h-full bg-sage-bg flex items-center justify-center">
+              <Bot className="w-4 h-4 text-sage-fg" />
             </div>
           )}
-        </Avatar>
+        </div>
+      )}
+      {isUser && conversationId && (
+        <ConversationAvatar
+          seed={conversationId}
+          name={conversationName ?? null}
+          size="sm"
+          className="h-8 w-8 text-[11px]"
+        />
       )}
       
       <div className={`flex flex-col gap-1 max-w-[80%] ${isUser ? 'items-end' : 'items-start'}`}>

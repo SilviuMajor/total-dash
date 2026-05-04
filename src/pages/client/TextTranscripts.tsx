@@ -930,7 +930,7 @@ function ConversationTab({ transcripts }: { transcripts: TranscriptMessage[] }) 
             const name = m.metadata?.client_user_name ?? "Staff";
             return (
               <div key={m.id ?? idx} className="flex gap-2 mb-2">
-                <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 text-[11px] font-bold text-primary">
+                <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center flex-shrink-0 text-[11px] font-bold text-primary">
                   {initialsOf(name)}
                 </div>
                 <div className="min-w-0">
@@ -970,7 +970,7 @@ function ConversationTab({ transcripts }: { transcripts: TranscriptMessage[] }) 
                 </span>
               </div>
               {isUser && (
-                <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center flex-shrink-0 text-[11px] font-bold text-primary-foreground">
+                <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center flex-shrink-0 text-[11px] font-bold text-primary-foreground">
                   U
                 </div>
               )}
@@ -1215,7 +1215,7 @@ function StaffTab({
             <div className="space-y-2">
               {involved.map((s) => (
                 <div key={s.id ?? s.name} className="flex items-center gap-3 text-sm">
-                  <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-[11px] font-bold text-primary">
+                  <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center text-[11px] font-bold text-primary">
                     {initialsOf(s.name)}
                   </div>
                   <span className="font-medium">{s.name}</span>

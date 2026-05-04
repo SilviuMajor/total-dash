@@ -46,6 +46,7 @@ import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
 import { useImpersonation } from "@/hooks/useImpersonation";
 import { useClientDepartments } from "@/hooks/useClientDepartments";
 import { ConversationCard } from "@/components/conversations/ConversationCard";
+import { ConversationAvatar } from "@/components/conversations/ConversationAvatar";
 import { formatWaitTime, getResponseTimeColor } from "@/components/conversations/cardUtils";
 import { getSoundPreferences, playHandoverRequestSound, playNewMessageSound, sendBrowserNotification } from "@/lib/notificationSounds";
 
@@ -2085,21 +2086,28 @@ export default function Conversations() {
             {selectedConversation ? (
               <>
                 <div className="px-4 py-3 border-b border-border flex items-start justify-between">
-                  <div>
-                    <h3 className="font-semibold text-sm">
-                      {(() => {
-                        const raw = selectedConversation.metadata?.variables?.user_name || selectedConversation.caller_phone || 'Unknown';
-                        const hasName = !!selectedConversation.metadata?.variables?.user_name;
-                        const display = (!hasName && raw.length > 8) ? 'User…' + raw.slice(-4) : raw;
-                        return <span title={raw}>{display}</span>;
-                      })()}
-                    </h3>
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      Started {format(new Date(selectedConversation.started_at), 'PPp')}
-                      <span className="mx-0.5">·</span>
-                      <MessageSquareText className="inline h-3 w-3" />
-                      {transcripts.length}
-                    </p>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <ConversationAvatar
+                      seed={selectedConversation.id}
+                      name={selectedConversation.metadata?.variables?.user_name || null}
+                      size="md"
+                    />
+                    <div className="min-w-0">
+                      <h3 className="font-semibold text-sm">
+                        {(() => {
+                          const raw = selectedConversation.metadata?.variables?.user_name || selectedConversation.caller_phone || 'Unknown';
+                          const hasName = !!selectedConversation.metadata?.variables?.user_name;
+                          const display = (!hasName && raw.length > 8) ? 'User…' + raw.slice(-4) : raw;
+                          return <span title={raw}>{display}</span>;
+                        })()}
+                      </h3>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        Started {format(new Date(selectedConversation.started_at), 'PPp')}
+                        <span className="mx-0.5">·</span>
+                        <MessageSquareText className="inline h-3 w-3" />
+                        {transcripts.length}
+                      </p>
+                    </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     {departments.length > 1 && selectedConversation.department_id && (() => {
@@ -2194,7 +2202,7 @@ export default function Conversations() {
                               <Fragment key={fragKey}>
                                 {separatorEl}
                                 <div className="flex gap-2 mb-4">
-                                <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 text-[11px] font-bold text-primary">
+                                <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center flex-shrink-0 text-[11px] font-bold text-primary">
                                   {name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
                                 </div>
                                 <div>
@@ -2275,6 +2283,8 @@ export default function Conversations() {
                                 buttons={transcript.buttons}
                                 selectedButton={selectedButton}
                                 attachments={transcript.attachments}
+                                conversationId={selectedConversation.id}
+                                conversationName={selectedConversation.metadata?.variables?.user_name || null}
                                 appearance={{
                                   primaryColor: '#00425b',
                                   secondaryColor: '#ffffff',
@@ -2768,13 +2778,14 @@ export default function Conversations() {
                       {selectedConversation.status === 'aftercare' && (
                         <div className="space-y-2">
                           <div className="flex items-center gap-1.5">
-                            <Clock className="h-4 w-4 text-sand-fg" />
-                            <p className="text-xs font-semibold text-sand-fg">Aftercare</p>
+                            <Clock className="h-4 w-4 text-lav-fg" />
+                            <p className="text-xs font-semibold text-lav-fg">Aftercare</p>
                           </div>
                           <p className="text-xs text-muted-foreground">Handover ended — needs follow-up</p>
                           <Button
                             size="sm"
-                            className="w-full bg-yellow-500 hover:bg-yellow-600 text-white"
+                            variant="ghost"
+                            className="w-full bg-sky-bg text-sky-fg hover:bg-sky-bg-2 hover:text-sky-fg"
                             onClick={() => handleResolveWithReason('mark_resolved')}
                             disabled={!!handoverLoading}
                           >
@@ -2800,15 +2811,16 @@ export default function Conversations() {
                         return (
                           <div className="space-y-2">
                             <div className="flex items-center gap-1.5">
-                              <AlertTriangle className="h-4 w-4 text-peach-fg" />
-                              <p className="text-xs font-semibold text-peach-fg">
-                                Needs Review{reasonShort ? <span className="text-peach-fg/80 font-medium"> · {reasonShort}</span> : null}
+                              <AlertTriangle className="h-4 w-4 text-sand-fg" />
+                              <p className="text-xs font-semibold text-sand-fg">
+                                Needs Review{reasonShort ? <span className="text-sand-fg/80 font-medium"> · {reasonShort}</span> : null}
                               </p>
                             </div>
                             <p className="text-xs text-muted-foreground">{reasonLong}</p>
                             <Button
                               size="sm"
-                              className="w-full bg-amber-500 hover:bg-amber-600 text-white"
+                              variant="ghost"
+                              className="w-full bg-ink text-surface-base hover:bg-ink/90 hover:text-surface-base"
                               onClick={() => setTakeoverConfirmOpen(true)}
                               disabled={!!handoverLoading}
                             >
@@ -2818,7 +2830,7 @@ export default function Conversations() {
                             <Button
                               size="sm"
                               variant="outline"
-                              className="w-full border-peach-fg text-peach-fg hover:bg-peach-bg hover:text-peach-fg"
+                              className="w-full border-sand-fg text-sand-fg hover:bg-sand-bg hover:text-sand-fg"
                               onClick={() => handleResolveWithReason('mark_resolved')}
                               disabled={!!handoverLoading}
                             >

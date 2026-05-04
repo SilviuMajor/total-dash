@@ -271,7 +271,7 @@ export function UserProfileCard({ onSignOut }: UserProfileCardProps) {
     }}>
       <PopoverTrigger asChild>
         <Button variant="ghost" className="flex items-center gap-3 w-full justify-start hover:bg-accent/50 px-3.5 py-3 h-auto min-h-[72px]">
-          <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm flex-shrink-0">
+          <div className="h-9 w-9 rounded-md bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm flex-shrink-0">
             {(profile?.first_name?.[0] || "").toUpperCase()}{(profile?.last_name?.[0] || "").toUpperCase()}
           </div>
           <div className="flex flex-col items-start flex-1 min-w-0">

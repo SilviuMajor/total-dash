@@ -101,7 +101,7 @@ export function AvatarUpload({ onUploadComplete, currentUrl }: AvatarUploadProps
             <img
               src={preview}
               alt="Avatar preview"
-              className="w-20 h-20 rounded-full object-cover border-2 border-border"
+              className="w-20 h-20 rounded-md object-cover border-2 border-border"
             />
             <Button
               type="button"
