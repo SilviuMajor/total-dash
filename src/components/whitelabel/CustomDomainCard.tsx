@@ -365,47 +365,63 @@ export function CustomDomainCard({ agency, onUpdate }: CustomDomainCardProps) {
   }
 
   if (state === 'awaiting_dns') {
-    const fqdn = buildFqdn(agency.whitelabel_subdomain || 'dashboard', agency.whitelabel_domain || '');
+    const subdomain = agency.whitelabel_subdomain || 'dashboard';
+    const apex = agency.whitelabel_domain || '';
+    const fqdn = buildFqdn(subdomain, apex);
+    const records = buildDisplayRecords(subdomain, apex, verification);
     return (
       <Card className="p-6 space-y-4">
         <div className="space-y-1">
           <h3 className="text-sm font-semibold">Custom domain · <span className="font-mono">{fqdn}</span></h3>
           <p className="text-sm text-amber-700 dark:text-amber-300 flex items-center gap-1.5">
-            <Loader2 className="h-4 w-4 animate-spin" /> Waiting for your DNS record
+            <Loader2 className="h-4 w-4 animate-spin" /> Waiting for your DNS records
           </p>
         </div>
 
         <div className="space-y-2">
-          <p className="text-sm">Add this record at your DNS provider:</p>
-          <div className="rounded-md border overflow-hidden">
-            {verification.length === 0 && (
-              <div className="p-3 text-xs text-muted-foreground">Loading record details…</div>
-            )}
-            {verification.map((v, idx) => (
-              <div key={idx} className="grid grid-cols-[80px_1fr_auto] items-center gap-2 p-3 text-xs border-b last:border-b-0">
-                <span className="text-muted-foreground uppercase">{v.type}</span>
-                <code className="font-mono break-all">{v.domain}</code>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7"
-                  onClick={() => handleCopy(`name-${idx}`, v.domain)}
-                >
-                  {copiedKey === `name-${idx}` ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                </Button>
-                <span className="text-muted-foreground">Value</span>
-                <code className="font-mono break-all">{v.value}</code>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7"
-                  onClick={() => handleCopy(`value-${idx}`, v.value)}
-                >
-                  {copiedKey === `value-${idx}` ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                </Button>
+          <p className="text-sm">
+            Add {records.length === 1 ? 'this record' : `these ${records.length} records`} at your DNS provider for{' '}
+            <span className="font-mono">{apex}</span>:
+          </p>
+          <div className="rounded-md border overflow-hidden divide-y">
+            {records.map((r, idx) => (
+              <div key={idx} className="p-3 space-y-2">
+                {r.label && (
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">{r.label}</p>
+                )}
+                <div className="grid grid-cols-[80px_1fr_auto] items-center gap-2 text-xs">
+                  <span className="text-muted-foreground uppercase">Type</span>
+                  <code className="font-mono">{r.type}</code>
+                  <span aria-hidden="true" />
+
+                  <span className="text-muted-foreground">Name</span>
+                  <code className="font-mono break-all">{r.name}</code>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7"
+                    onClick={() => handleCopy(`name-${idx}`, r.name)}
+                  >
+                    {copiedKey === `name-${idx}` ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                  </Button>
+
+                  <span className="text-muted-foreground">Value</span>
+                  <code className="font-mono break-all">{r.value}</code>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7"
+                    onClick={() => handleCopy(`value-${idx}`, r.value)}
+                  >
+                    {copiedKey === `value-${idx}` ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
+          <p className="text-xs text-muted-foreground">
+            On Cloudflare, set the proxy to <strong>DNS-only (grey cloud)</strong> for the routing record so SSL can provision.
+          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
@@ -581,4 +597,72 @@ function humaniseError(raw: string): string {
   if (lower.includes('payment')) return 'Couldn\'t set up the domain (payment issue on the platform). Contact support.';
   if (lower.includes('forbidden')) return 'You don\'t have permission to manage domains for this agency.';
   return raw;
+}
+
+interface DisplayRecord {
+  type: string;
+  name: string;
+  value: string;
+  label?: string;
+}
+
+// Composes the DNS records the agency actually needs to add at their
+// provider. Vercel's verification[] only contains *ownership* challenges
+// (TXT for apex-owned-elsewhere domains, sometimes a CNAME). It does NOT
+// include the routing record that's required for traffic to reach Vercel
+// for the subdomain itself — which is always a CNAME to cname.vercel-dns.com.
+//
+// We:
+//   1. Always include the routing CNAME (subdomain → cname.vercel-dns.com).
+//   2. Add Vercel's verification challenges, with the apex stripped from
+//      the Name field so DNS providers like Cloudflare/GoDaddy see the
+//      relative form they expect (e.g. _vercel instead of _vercel.fiveleaf.co.uk).
+//   3. De-duplicate when Vercel's challenge IS the routing CNAME.
+function buildDisplayRecords(
+  subdomain: string,
+  apex: string,
+  verification: VercelVerification[],
+): DisplayRecord[] {
+  const records: DisplayRecord[] = [];
+
+  // Routing — always required for traffic
+  records.push({
+    type: 'CNAME',
+    name: subdomain,
+    value: 'cname.vercel-dns.com',
+    label: 'Routing — sends traffic to Vercel',
+  });
+
+  for (const v of verification) {
+    const name = stripApex(v.domain, apex);
+    const isDuplicate = records.some((r) =>
+      r.type.toUpperCase() === v.type.toUpperCase() &&
+      r.name.toLowerCase() === name.toLowerCase() &&
+      r.value === v.value,
+    );
+    if (isDuplicate) continue;
+
+    records.push({
+      type: v.type.toUpperCase(),
+      name,
+      value: v.value,
+      label: 'Ownership verification',
+    });
+  }
+
+  return records;
+}
+
+// _vercel.fiveleaf.co.uk + apex=fiveleaf.co.uk  →  _vercel
+// testdashboard.fiveleaf.co.uk + apex=fiveleaf.co.uk  →  testdashboard
+// fiveleaf.co.uk + apex=fiveleaf.co.uk  →  @  (apex marker; rare for our flow)
+function stripApex(name: string, apex: string): string {
+  if (!apex) return name;
+  const lowerName = name.toLowerCase();
+  const lowerApex = apex.toLowerCase();
+  if (lowerName === lowerApex) return '@';
+  if (lowerName.endsWith(`.${lowerApex}`)) {
+    return name.slice(0, -(apex.length + 1));
+  }
+  return name;
 }
