@@ -166,22 +166,34 @@ export function ConversationCard({
     >
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-1.5 min-w-0">
-          {showCheckbox && (
-            <Checkbox
-              checked={isChecked}
-              onCheckedChange={(checked) => onCheckChange?.(!!checked)}
-              onClick={(e) => e.stopPropagation()}
-              className={cn(
-                'shrink-0 transition-opacity',
-                isChecked ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
-              )}
+          {showCheckbox ? (
+            <div className="relative shrink-0 w-6 h-6">
+              <ConversationAvatar
+                seed={conv.id}
+                name={hasRealName ? rawName : null}
+                size="sm"
+                className={cn(
+                  'absolute inset-0 transition-opacity',
+                  isChecked ? 'opacity-0' : 'opacity-100 group-hover:opacity-0',
+                )}
+              />
+              <Checkbox
+                checked={isChecked}
+                onCheckedChange={(checked) => onCheckChange?.(!!checked)}
+                onClick={(e) => e.stopPropagation()}
+                className={cn(
+                  'absolute inset-0 m-auto transition-opacity',
+                  isChecked ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
+                )}
+              />
+            </div>
+          ) : (
+            <ConversationAvatar
+              seed={conv.id}
+              name={hasRealName ? rawName : null}
+              size="sm"
             />
           )}
-          <ConversationAvatar
-            seed={conv.id}
-            name={hasRealName ? rawName : null}
-            size="sm"
-          />
           <span className="text-[13px] font-medium truncate" title={rawName}>{displayName}</span>
           {isMine && (
             <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-sky-bg text-sky-fg shrink-0">You</span>

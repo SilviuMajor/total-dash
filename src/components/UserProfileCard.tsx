@@ -14,6 +14,8 @@ import { Slider } from "@/components/ui/slider";
 import { getSoundPreferences, saveSoundPreferences, playTestSound, SoundPreferences, HANDOVER_SOUNDS, MESSAGE_SOUNDS, requestNotificationPermission } from "@/lib/notificationSounds";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { UserAvatar, AVATAR_COLORS, type AvatarColor } from "@/components/UserAvatar";
+import { cn } from "@/lib/utils";
 
 interface Department {
   id: string;
@@ -46,6 +48,7 @@ export function UserProfileCard({ onSignOut }: UserProfileCardProps) {
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [newEmail, setNewEmail] = useState("");
+  const [avatarColor, setAvatarColor] = useState<AvatarColor | null>(null);
   
   // Password fields
   const [oldPassword, setOldPassword] = useState("");
@@ -64,9 +67,25 @@ export function UserProfileCard({ onSignOut }: UserProfileCardProps) {
       setLastName(profile.last_name || "");
       setEmail(profile.email || "");
       setNewEmail(profile.email || "");
+      setAvatarColor(((profile as any).avatar_color as AvatarColor | null) || null);
       loadUserDetails();
     }
   }, [profile]);
+
+  const handleSelectAvatarColor = async (color: AvatarColor) => {
+    if (!profile?.id) return;
+    const next = avatarColor === color ? null : color;
+    setAvatarColor(next);
+    const { error } = await supabase
+      .from('profiles')
+      .update({ avatar_color: next })
+      .eq('id', profile.id);
+    if (error) {
+      toast({ title: 'Could not save avatar colour', description: error.message, variant: 'destructive' });
+      // revert UI
+      setAvatarColor(avatarColor);
+    }
+  };
 
   const loadUserDetails = async () => {
     if (!profile?.id) return;
@@ -271,9 +290,12 @@ export function UserProfileCard({ onSignOut }: UserProfileCardProps) {
     }}>
       <PopoverTrigger asChild>
         <Button variant="ghost" className="flex items-center gap-3 w-full justify-start hover:bg-accent/50 px-3.5 py-3 h-auto min-h-[72px]">
-          <div className="h-9 w-9 rounded-md bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm flex-shrink-0">
-            {(profile?.first_name?.[0] || "").toUpperCase()}{(profile?.last_name?.[0] || "").toUpperCase()}
-          </div>
+          <UserAvatar
+            firstName={profile?.first_name}
+            lastName={profile?.last_name}
+            color={avatarColor}
+            size="md"
+          />
           <div className="flex flex-col items-start flex-1 min-w-0">
             <span className="text-sm font-medium text-foreground truncate max-w-full">
               {profile?.full_name || profile?.first_name || profile?.email}
@@ -368,6 +390,37 @@ export function UserProfileCard({ onSignOut }: UserProfileCardProps) {
               <ChevronLeft className="h-4 w-4" />
               <span>Back</span>
             </Button>
+            <Separator />
+            <div className="px-3 py-3 space-y-2">
+              <Label className="text-xs text-muted-foreground">Avatar colour</Label>
+              <div className="flex items-center gap-2">
+                {AVATAR_COLORS.map(({ value, label }) => {
+                  const swatchClass: Record<AvatarColor, string> = {
+                    rose:  'bg-rose-fg',
+                    sky:   'bg-sky-fg',
+                    sand:  'bg-sand-fg',
+                    lav:   'bg-lav-fg',
+                    peach: 'bg-peach-fg',
+                  };
+                  const isSelected = avatarColor === value;
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => handleSelectAvatarColor(value)}
+                      title={label}
+                      aria-label={label}
+                      aria-pressed={isSelected}
+                      className={cn(
+                        'h-7 w-7 rounded-md transition-all',
+                        swatchClass[value],
+                        isSelected ? 'ring-2 ring-offset-2 ring-offset-background ring-foreground' : 'hover:scale-110',
+                      )}
+                    />
+                  );
+                })}
+              </div>
+            </div>
             <Separator />
             {canEditName && (
               <Button
