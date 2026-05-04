@@ -25,7 +25,7 @@ export interface WhitelabelAgency {
 // what's in the database.
 export function isPlatformHost(host: string): boolean {
   if (!host) return true;
-  if (host === 'app.total-dash.com' || host === 'total-dash.com') return true;
+  if (host === 'app.total-dash.com' || host === 'total-dash.com' || host === 'www.total-dash.com') return true;
   if (host.startsWith('localhost') || host.startsWith('127.0.0.1')) return true;
   if (host.endsWith('.vercel.app')) return true;
   return false;
