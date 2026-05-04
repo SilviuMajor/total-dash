@@ -23,6 +23,7 @@ const RESERVED_SLUGS = [
   'knowledge-base', 'agent-settings', 'specs', 'guides', 'settings',
   'dashboard', 'auth', 'signup', 'register', 'help', 'support',
   'billing', 'pricing', 'terms', 'privacy', 'status',
+  'contact', 'about',
 ];
 
 export default function AgencySettings() {

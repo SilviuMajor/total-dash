@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -49,6 +49,11 @@ import AgentSettings from "./pages/client/AgentSettings";
 import AgentSpecs from "./pages/client/AgentSpecs";
 import Guides from "./pages/client/Guides";
 import NotFound from "./pages/NotFound";
+import { isMarketingHost } from "./lib/marketing-host";
+
+const MarketingHomePage = lazy(() => import("./pages/marketing/HomePage"));
+const MarketingContactPage = lazy(() => import("./pages/marketing/ContactPage"));
+const MarketingComingSoonPage = lazy(() => import("./pages/marketing/ComingSoonPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -177,8 +182,31 @@ const App = () => (
   </QueryClientProvider>
 );
 
-const AppRoutes = () => (
+const AppRoutes = () => {
+  const showMarketing = isMarketingHost();
+  return (
               <Routes>
+                {/* Marketing Routes (apex + dev hosts only — see lib/marketing-host.ts) */}
+                {showMarketing && (
+                  <>
+                    <Route path="/" element={
+                      <Suspense fallback={<div className="min-h-screen bg-background" />}>
+                        <MarketingHomePage />
+                      </Suspense>
+                    } />
+                    <Route path="/contact" element={
+                      <Suspense fallback={<div className="min-h-screen bg-background" />}>
+                        <MarketingContactPage />
+                      </Suspense>
+                    } />
+                    <Route path="/signup" element={
+                      <Suspense fallback={<div className="min-h-screen bg-background" />}>
+                        <MarketingComingSoonPage />
+                      </Suspense>
+                    } />
+                  </>
+                )}
+
                 {/* Public Routes */}
                 <Route path="/change-password" element={<ChangePassword />} />
                 
@@ -272,6 +300,7 @@ const AppRoutes = () => (
                 </ProtectedRoute>
               } />
               </Routes>
-);
+  );
+};
 
 export default App;
