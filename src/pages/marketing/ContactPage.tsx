@@ -47,7 +47,7 @@ export default function ContactPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div data-marketing="true" className="min-h-screen bg-background text-foreground antialiased">
       <MarketingNav />
       <main className="mx-auto max-w-2xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
         <div className="text-center">

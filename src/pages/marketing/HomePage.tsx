@@ -6,9 +6,10 @@ import { MarketingFooter } from "@/components/marketing/MarketingFooter";
 import { HeroSection } from "@/components/marketing/sections/HeroSection";
 import { ProblemSection } from "@/components/marketing/sections/ProblemSection";
 import { ProductSection } from "@/components/marketing/sections/ProductSection";
-import { WhiteLabelSection } from "@/components/marketing/sections/WhiteLabelSection";
+import { WorkflowSection } from "@/components/marketing/sections/WorkflowSection";
 import { HandoverSection } from "@/components/marketing/sections/HandoverSection";
-import { TrustSection } from "@/components/marketing/sections/TrustSection";
+import { WhiteLabelSection } from "@/components/marketing/sections/WhiteLabelSection";
+import { StatsSection } from "@/components/marketing/sections/StatsSection";
 import { PricingSection } from "@/components/marketing/sections/PricingSection";
 import { FinalCTASection } from "@/components/marketing/sections/FinalCTASection";
 
@@ -36,15 +37,16 @@ export default function HomePage() {
   }, [userType, loading, navigate]);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div data-marketing="true" className="min-h-screen bg-background text-foreground antialiased">
       <MarketingNav />
       <main>
         <HeroSection />
         <ProblemSection />
         <ProductSection />
-        <WhiteLabelSection />
+        <WorkflowSection />
         <HandoverSection />
-        <TrustSection />
+        <WhiteLabelSection />
+        <StatsSection />
         <PricingSection />
         <FinalCTASection />
       </main>

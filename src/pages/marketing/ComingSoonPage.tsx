@@ -6,7 +6,7 @@ import { MarketingFooter } from "@/components/marketing/MarketingFooter";
 
 export default function ComingSoonPage() {
   return (
-    <div className="min-h-screen bg-background">
+    <div data-marketing="true" className="min-h-screen bg-background text-foreground antialiased">
       <MarketingNav />
       <main className="mx-auto max-w-xl px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
         <Card>

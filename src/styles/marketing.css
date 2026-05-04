@@ -1,0 +1,62 @@
+/*
+ * Marketing-only theme overrides. Scoped to elements with data-marketing="true"
+ * so the dashboard's tokens (blue primary, etc.) stay untouched.
+ *
+ * Brand language: monochrome (black wordmark on white). No brand colour.
+ * Reference points: Linear / Vercel / Stripe — confident, dense, sharp.
+ */
+
+[data-marketing="true"] {
+  /* Near-black primary so CTAs read as ink, not as a tinted accent. */
+  --primary: 0 0% 9%;
+  --primary-foreground: 0 0% 100%;
+  --primary-glow: 0 0% 20%;
+  --ring: 0 0% 9%;
+
+  /* Subtler secondary surface for cards and panels. */
+  --secondary: 0 0% 96%;
+  --secondary-foreground: 0 0% 9%;
+  --muted: 0 0% 96%;
+  --muted-foreground: 0 0% 38%;
+  --accent: 0 0% 94%;
+  --accent-foreground: 0 0% 9%;
+
+  --border: 0 0% 90%;
+  --input: 0 0% 90%;
+  --card: 0 0% 100%;
+  --background: 0 0% 99%;
+  --foreground: 0 0% 9%;
+
+  /* Functional status colours used inside product mockups — these intentionally
+   * map to the live dashboard's palette (green/red/blue/amber/grey) so the
+   * mockups read as the actual app rather than reskinned facades. */
+  --mk-status-with-ai: 142 71% 38%;
+  --mk-status-waiting: 0 72% 50%;
+  --mk-status-handover: 217 91% 53%;
+  --mk-status-aftercare: 38 92% 50%;
+  --mk-status-needs-review: 32 95% 44%;
+  --mk-status-resolved: 0 0% 60%;
+}
+
+/* Subtle dotted-grid background for hero / feature surfaces. */
+.marketing-grid {
+  background-image:
+    radial-gradient(circle, hsl(0 0% 90%) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.marketing-grid-fade {
+  -webkit-mask-image: linear-gradient(to bottom, black 0%, black 60%, transparent 100%);
+          mask-image: linear-gradient(to bottom, black 0%, black 60%, transparent 100%);
+}
+
+/* Tabular numerics for stats / timers / IDs in mockups — keeps columns aligned. */
+.marketing-tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* A confident, near-black gradient band used by the final CTA. */
+.marketing-ink-band {
+  background:
+    radial-gradient(ellipse at top, hsl(0 0% 18%) 0%, hsl(0 0% 6%) 70%);
+}
