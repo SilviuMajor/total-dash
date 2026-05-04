@@ -1,6 +1,5 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { Resend } from "https://esm.sh/resend@2.0.0";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { Resend } from "npm:resend@4.0.1";
+import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -25,7 +24,7 @@ async function hashIp(ip: string): Promise<string> {
     .join("");
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -129,7 +128,7 @@ serve(async (req) => {
         const { data: sendData, error: sendError } = await resend.emails.send({
           from: "Total Dash <noreply@totaldash.com>",
           to: [NOTIFY_TO],
-          reply_to: email,
+          replyTo: email,
           subject: `New enquiry from ${name}${company ? ` (${company})` : ""}`,
           html,
         });
