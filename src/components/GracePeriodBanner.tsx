@@ -21,8 +21,8 @@ export function GracePeriodBanner({ gracePeriodEndsAt, subscription }: GracePeri
     
     if (daysRemaining <= 3 && daysRemaining > 0) {
       return (
-        <Alert variant="default" className="mb-4 border-blue-500">
-          <Clock className="h-5 w-5 text-blue-500" />
+        <Alert variant="default" className="mb-4 border-sky-fg">
+          <Clock className="h-5 w-5 text-sky-fg" />
           <AlertDescription className="flex items-center justify-between">
             <div>
               <strong>Trial Ending Soon</strong>

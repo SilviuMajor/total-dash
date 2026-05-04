@@ -30,9 +30,9 @@ interface AgentDetailHeaderProps {
 const getStatusColor = (status: string) => {
   switch (status) {
     case 'active':
-      return 'bg-green-500/10 text-green-500 border-green-500/20';
+      return 'bg-sage-fg/10 text-sage-fg border-sage-fg/20';
     case 'testing':
-      return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
+      return 'bg-sand-fg/10 text-sand-fg border-sand-fg/20';
     case 'in_development':
       return 'bg-gray-500/10 text-gray-500 border-gray-500/20';
     default:

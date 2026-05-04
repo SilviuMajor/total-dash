@@ -30,10 +30,10 @@ interface AuditLogProps {
 }
 
 const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
-  user: { bg: "bg-green-100 dark:bg-green-900", text: "text-green-700 dark:text-green-300" },
-  permission: { bg: "bg-blue-100 dark:bg-blue-900", text: "text-blue-700 dark:text-blue-300" },
-  role: { bg: "bg-purple-100 dark:bg-purple-900", text: "text-purple-700 dark:text-purple-300" },
-  settings: { bg: "bg-amber-100 dark:bg-amber-900", text: "text-amber-700 dark:text-amber-300" },
+  user: { bg: "bg-sage-bg", text: "text-sage-fg" },
+  permission: { bg: "bg-sky-bg", text: "text-sky-fg" },
+  role: { bg: "bg-lav-bg", text: "text-lav-fg" },
+  settings: { bg: "bg-peach-bg", text: "text-peach-fg" },
 };
 
 const CATEGORY_ICONS: Record<string, any> = {
@@ -164,7 +164,7 @@ export function AuditLog({ clientId, isAgencyView = false, agencyName }: AuditLo
 
   const getActorBadgeClass = (entry: AuditEntry) => {
     if (entry.actor_type === "agency_user" || entry.actor_type === "super_admin") {
-      return "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300 px-1.5 rounded";
+      return "bg-peach-bg text-peach-fg px-1.5 rounded";
     }
     return "";
   };
@@ -179,7 +179,7 @@ export function AuditLog({ clientId, isAgencyView = false, agencyName }: AuditLo
   };
 
   const getActionIconBg = (entry: AuditEntry) => {
-    if (entry.action === "deleted") return "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300";
+    if (entry.action === "deleted") return "bg-rose-bg text-rose-fg";
     const colors = getCategoryColor(entry.category);
     return `${colors.bg} ${colors.text}`;
   };

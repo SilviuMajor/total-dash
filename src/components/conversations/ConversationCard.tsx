@@ -269,7 +269,7 @@ export function ConversationCard({
               {' · '}
               <span className="text-muted-foreground/80">
                 {matchPrefix && matchPrefix.length > 0 ? '…' : ''}{matchPrefix}
-                <mark className="bg-yellow-200/60 dark:bg-yellow-500/30 text-foreground rounded-sm px-0.5">{matchHit}</mark>
+                <mark className="bg-sand-bg-2/60 text-foreground rounded-sm px-0.5">{matchHit}</mark>
                 {matchSuffix}{matchSuffix && matchSuffix.length > 0 ? '…' : ''}
               </span>
             </>

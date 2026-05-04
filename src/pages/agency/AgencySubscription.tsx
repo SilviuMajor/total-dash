@@ -233,7 +233,7 @@ export default function AgencySubscription() {
             </div>
 
             {subscription.trial_ends_at && subscription.status === 'trialing' && (
-              <div className="text-sm text-muted-foreground bg-blue-500/10 p-3 rounded-lg">
+              <div className="text-sm text-muted-foreground bg-sky-fg/10 p-3 rounded-lg">
                 Trial ends on {new Date(subscription.trial_ends_at).toLocaleDateString()}
               </div>
             )}
@@ -242,7 +242,7 @@ export default function AgencySubscription() {
       )}
 
       {subscription?.status === 'trialing' && subscription?.trial_ends_at && (
-        <Card className="border-blue-500/50 bg-blue-500/5">
+        <Card className="border-sky-fg/50 bg-sky-fg/5">
           <CardHeader>
             <CardTitle>Your Trial</CardTitle>
           </CardHeader>

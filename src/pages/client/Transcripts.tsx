@@ -567,19 +567,19 @@ export default function Transcripts() {
                   <SelectContent>
                     <SelectItem value="active">
                       <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-green-500" />
+                        <div className="w-2 h-2 rounded-full bg-sage-fg" />
                         <span>Active</span>
                       </div>
                     </SelectItem>
                     <SelectItem value="owned">
                       <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-yellow-500" />
+                        <div className="w-2 h-2 rounded-full bg-sand-fg" />
                         <span>Owned</span>
                       </div>
                     </SelectItem>
                     <SelectItem value="resolved">
                       <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-blue-500" />
+                        <div className="w-2 h-2 rounded-full bg-sky-fg" />
                         <span>Resolved</span>
                       </div>
                     </SelectItem>

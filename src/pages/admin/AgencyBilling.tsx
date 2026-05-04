@@ -196,7 +196,7 @@ export default function AgencyBilling() {
     if (status === 'trialing' && trialEndsAt) {
       const daysLeft = Math.floor((new Date(trialEndsAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
       return (
-        <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20">
+        <Badge className="bg-sky-fg/10 text-sky-fg border-sky-fg/20">
           Trial ({daysLeft > 0 ? `${daysLeft}d left` : 'Expired'})
         </Badge>
       );

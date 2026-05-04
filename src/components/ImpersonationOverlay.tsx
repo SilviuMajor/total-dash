@@ -149,7 +149,7 @@ export function ImpersonationOverlay({ open, onClose }: ImpersonationOverlayProp
 
   const formatTimeAgo = (dateStr: string) => { const d = Date.now() - new Date(dateStr).getTime(); const m = Math.floor(d / 60000); if (m < 60) return `${m}m`; const h = Math.floor(m / 60); if (h < 24) return `${h}h`; return `${Math.floor(h / 24)}d`; };
   const getSessionLabel = (s: RecentSession) => { if (s.target_type === "agency") return s.agency_name || "Agency"; if (s.target_user_name) return s.target_user_name; return s.client_name || "Client"; };
-  const getSessionColor = (s: RecentSession) => { if (s.target_type === "agency") return "bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-300"; if (s.target_user_name) return "bg-green-50 text-green-700 dark:bg-green-950/50 dark:text-green-300"; return "bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300"; };
+  const getSessionColor = (s: RecentSession) => { if (s.target_type === "agency") return "bg-rose-bg text-rose-fg"; if (s.target_user_name) return "bg-sage-bg text-sage-fg"; return "bg-sky-bg text-sky-fg"; };
 
   if (!open) return null;
 
@@ -159,8 +159,8 @@ export function ImpersonationOverlay({ open, onClose }: ImpersonationOverlayProp
       {isImpersonating && activeSession && (() => {
         const isAgency = activeSession.target_type === 'agency';
         const isUser = activeSession.mode === 'view_as_user';
-        const sc = isAgency ? 'bg-red-50/50 dark:bg-red-950/20 border-red-200/50 dark:border-red-800/50' : isUser ? 'bg-green-50/50 dark:bg-green-950/20 border-green-200/50 dark:border-green-800/50' : 'bg-blue-50/50 dark:bg-blue-950/20 border-blue-200/50 dark:border-blue-800/50';
-        const tc = isAgency ? 'text-red-700 dark:text-red-300' : isUser ? 'text-green-700 dark:text-green-300' : 'text-blue-700 dark:text-blue-300';
+        const sc = isAgency ? 'bg-rose-bg/50 border-rose-bg-2/50' : isUser ? 'bg-sage-bg/50 border-sage-bg-2/50' : 'bg-sky-bg/50 border-sky-bg-2/50';
+        const tc = isAgency ? 'text-rose-fg' : isUser ? 'text-sage-fg' : 'text-sky-fg';
         const TypeIcon = isAgency ? Building2 : isUser ? User : Users;
         const elapsed = (() => { const mins = Math.floor((Date.now() - new Date(activeSession.started_at).getTime()) / 60000); if (mins < 1) return '< 1m'; if (mins < 60) return `${mins}m`; return `${Math.floor(mins / 60)}h ${mins % 60}m`; })();
         return (
@@ -183,7 +183,7 @@ export function ImpersonationOverlay({ open, onClose }: ImpersonationOverlayProp
               </div>
               <button
                 onClick={handleEndCurrent}
-                className="text-[9px] px-1.5 py-0.5 rounded bg-red-100 dark:bg-red-950/50 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900 transition-colors flex-shrink-0"
+                className="text-[9px] px-1.5 py-0.5 rounded bg-rose-bg text-rose-fg hover:bg-rose-bg-2 transition-colors flex-shrink-0"
               >
                 End
               </button>
@@ -230,9 +230,9 @@ export function ImpersonationOverlay({ open, onClose }: ImpersonationOverlayProp
                 <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider px-1.5">Users</p>
                 {searchMatchedUsers.map((u) => (
                   <div key={u.id} className="flex items-center gap-2 px-1.5 py-1 hover:bg-muted/50 rounded-md transition-colors">
-                    <div className="w-5 h-5 rounded-full bg-green-100 dark:bg-green-950/50 flex items-center justify-center flex-shrink-0"><span className="text-[8px] font-bold text-green-700 dark:text-green-300">{u.full_name.split(" ").map((n) => n[0]).join("").substring(0, 2).toUpperCase()}</span></div>
+                    <div className="w-5 h-5 rounded-full bg-sage-bg flex items-center justify-center flex-shrink-0"><span className="text-[8px] font-bold text-sage-fg">{u.full_name.split(" ").map((n) => n[0]).join("").substring(0, 2).toUpperCase()}</span></div>
                     <div className="min-w-0 flex-1"><p className="text-[11px] font-medium truncate">{u.full_name}</p><p className="text-[9px] text-muted-foreground truncate">{u.client_name}</p></div>
-                    <button onClick={() => handleViewAsUser(u)} className="text-[9px] px-1.5 py-0.5 rounded bg-green-50 dark:bg-green-950/50 text-green-700 dark:text-green-300 hover:bg-green-100 transition-colors flex-shrink-0">View</button>
+                    <button onClick={() => handleViewAsUser(u)} className="text-[9px] px-1.5 py-0.5 rounded bg-sage-bg text-sage-fg hover:bg-sage-bg transition-colors flex-shrink-0">View</button>
                   </div>
                 ))}
               </>
@@ -245,7 +245,7 @@ export function ImpersonationOverlay({ open, onClose }: ImpersonationOverlayProp
                   <div key={agency.id} className="flex items-center gap-2 px-1.5 py-1 hover:bg-muted/50 rounded-md transition-colors cursor-pointer" onClick={() => { setSelectedAgencyId(selectedAgencyId === agency.id ? null : agency.id); setExpandedClientId(null); }}>
                     <Building2 className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
                     <span className="text-[11px] font-medium truncate flex-1">{agency.name}</span>
-                    <button onClick={(e) => { e.stopPropagation(); handleViewAgency(agency); }} className="text-[9px] px-1.5 py-0.5 rounded bg-red-50 dark:bg-red-950/50 text-red-700 dark:text-red-300 hover:bg-red-100 transition-colors flex-shrink-0">Enter</button>
+                    <button onClick={(e) => { e.stopPropagation(); handleViewAgency(agency); }} className="text-[9px] px-1.5 py-0.5 rounded bg-rose-bg text-rose-fg hover:bg-rose-bg transition-colors flex-shrink-0">Enter</button>
                   </div>
                 ))}
               </>
@@ -264,7 +264,7 @@ export function ImpersonationOverlay({ open, onClose }: ImpersonationOverlayProp
                         <ChevronRight className={`w-3 h-3 text-muted-foreground flex-shrink-0 transition-transform ${isExp ? 'rotate-90' : ''}`} />
                         <Users className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
                         <span className="text-[11px] font-medium truncate flex-1">{client.name}</span>
-                        <button onClick={(e) => { e.stopPropagation(); handleFullAccess(client); }} className="text-[9px] px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 hover:bg-blue-100 transition-colors flex-shrink-0">Full</button>
+                        <button onClick={(e) => { e.stopPropagation(); handleFullAccess(client); }} className="text-[9px] px-1.5 py-0.5 rounded bg-sky-bg text-sky-fg hover:bg-sky-bg transition-colors flex-shrink-0">Full</button>
                       </div>
                       {isExp && (
                         <div className="ml-5 mt-0.5 space-y-0.5">
@@ -274,9 +274,9 @@ export function ImpersonationOverlay({ open, onClose }: ImpersonationOverlayProp
                             <p className="text-[9px] text-muted-foreground px-1.5 py-1">No users</p>
                           ) : cUsers.map((u) => (
                             <div key={u.id} className="flex items-center gap-2 px-1.5 py-1 hover:bg-muted/50 rounded-md transition-colors">
-                              <div className="w-5 h-5 rounded-full bg-green-100 dark:bg-green-950/50 flex items-center justify-center flex-shrink-0"><span className="text-[8px] font-bold text-green-700 dark:text-green-300">{u.full_name.split(" ").map((n) => n[0]).join("").substring(0, 2).toUpperCase()}</span></div>
+                              <div className="w-5 h-5 rounded-full bg-sage-bg flex items-center justify-center flex-shrink-0"><span className="text-[8px] font-bold text-sage-fg">{u.full_name.split(" ").map((n) => n[0]).join("").substring(0, 2).toUpperCase()}</span></div>
                               <div className="min-w-0 flex-1"><p className="text-[11px] font-medium truncate">{u.full_name}</p><p className="text-[9px] text-muted-foreground truncate">{u.role_name}</p></div>
-                              <button onClick={() => handleViewAsUser(u)} className="text-[9px] px-1.5 py-0.5 rounded bg-green-50 dark:bg-green-950/50 text-green-700 dark:text-green-300 hover:bg-green-100 transition-colors flex-shrink-0">View</button>
+                              <button onClick={() => handleViewAsUser(u)} className="text-[9px] px-1.5 py-0.5 rounded bg-sage-bg text-sage-fg hover:bg-sage-bg transition-colors flex-shrink-0">View</button>
                             </div>
                           ))}
                         </div>

@@ -916,7 +916,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                 </div>
               </PopoverContent>
             </Popover>
-            <Button variant="outline" size="sm" className="text-xs text-amber-600" onClick={bulkSuspend}>Suspend</Button>
+            <Button variant="outline" size="sm" className="text-xs text-peach-fg" onClick={bulkSuspend}>Suspend</Button>
             <div className="flex-1" />
             <Button variant="ghost" size="sm" className="text-xs" onClick={clearSelection}>Clear</Button>
           </div>
@@ -965,17 +965,17 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                           <span className={cn(
                             "text-[10px] px-2 py-0.5 rounded-full",
                             user.is_admin_tier
-                              ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
-                              : 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                              ? 'bg-sky-bg text-sky-fg'
+                              : 'bg-sage-bg text-sage-fg'
                           )}>
                             {user.role_name}
                           </span>
                         )}
                         {user.status === 'suspended' && (
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300">Suspended</span>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-peach-bg text-peach-fg">Suspended</span>
                         )}
                         {user.status === 'removed' && (
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300">Removed</span>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-bg text-rose-fg">Removed</span>
                         )}
                       </div>
                       <span className="text-xs text-muted-foreground block">
@@ -1169,8 +1169,8 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                       </div>
 
                       {/* Scope label — amber accent to signal "this is the override layer" */}
-                      <div className="border-l-2 border-amber-500 pl-3 py-1 mt-2">
-                        <h3 className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">Per-user permissions</h3>
+                      <div className="border-l-2 border-peach-fg pl-3 py-1 mt-2">
+                        <h3 className="text-xs font-semibold uppercase tracking-wide text-peach-fg">Per-user permissions</h3>
                         <p className="text-xs text-muted-foreground mt-0.5">Overrides the role default for this user only. Toggles marked "override" differ from the role.</p>
                       </div>
                       {/* Page access grid */}
@@ -1178,7 +1178,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Agent access</span>
                           {user.has_overrides && (
-                            <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300">
+                            <span className="text-[11px] px-2 py-0.5 rounded-full bg-peach-bg text-peach-fg">
                               overrides from role
                             </span>
                           )}
@@ -1254,7 +1254,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                                           key={p.key}
                                           className={`flex items-center gap-2 px-3 py-2 rounded-md cursor-pointer text-sm transition-colors ${
                                             isOverride
-                                              ? 'bg-amber-50 border border-amber-200 dark:bg-amber-950/30 dark:border-amber-800'
+                                              ? 'bg-peach-bg border border-peach-bg-2'
                                               : 'bg-muted/50 hover:bg-muted'
                                           }`}
                                         >
@@ -1270,7 +1270,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                                           />
                                           <span>{p.label}</span>
                                           {isOverride && (
-                                            <span className="ml-auto flex items-center gap-1.5 text-[10px] text-amber-600 dark:text-amber-400">
+                                            <span className="ml-auto flex items-center gap-1.5 text-[10px] text-peach-fg">
                                               override
                                               <span className="text-muted-foreground">· role: {(templatePerms[p.key] ?? false) ? 'on' : 'off'}</span>
                                               {!readOnly && (
@@ -1282,7 +1282,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                                                     toggleAgentPermission(agent.id, p.key as keyof AgentPermission, templatePerms[p.key] ?? false, false);
                                                   }}
                                                   title="Reset to role default"
-                                                  className="hover:text-amber-700 dark:hover:text-amber-300"
+                                                  className="hover:text-peach-fg"
                                                 >
                                                   <RotateCcw className="h-3 w-3" />
                                                 </button>
@@ -1364,7 +1364,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                                       key={tab.key}
                                       className={`flex items-center justify-between px-3 py-2 rounded-md ${
                                         viewIsOverride || manageIsOverride
-                                          ? 'bg-amber-50 border border-amber-200 dark:bg-amber-950/30 dark:border-amber-800'
+                                          ? 'bg-peach-bg border border-peach-bg-2'
                                           : 'bg-muted/50'
                                       }`}
                                     >
@@ -1387,7 +1387,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                                           />
                                           view
                                           {viewIsOverride && (
-                                            <span className="flex items-center gap-1 text-[10px] text-amber-600 dark:text-amber-400">
+                                            <span className="flex items-center gap-1 text-[10px] text-peach-fg">
                                               override
                                               <span className="text-muted-foreground">· role: {((rolePerms as any)[viewKey] ?? false) ? 'on' : 'off'}</span>
                                               {!readOnly && (
@@ -1401,7 +1401,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                                                     setSelectedUserClientPerms(updates);
                                                   }}
                                                   title="Reset to role default"
-                                                  className="hover:text-amber-700 dark:hover:text-amber-300"
+                                                  className="hover:text-peach-fg"
                                                 >
                                                   <RotateCcw className="h-3 w-3" />
                                                 </button>
@@ -1432,7 +1432,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                                             />
                                             manage
                                             {manageIsOverride && (
-                                              <span className="flex items-center gap-1 text-[10px] text-amber-600 dark:text-amber-400">
+                                              <span className="flex items-center gap-1 text-[10px] text-peach-fg">
                                                 override
                                                 <span className="text-muted-foreground">· role: {((rolePerms as any)[manageKey] ?? false) ? 'on' : 'off'}</span>
                                                 {!readOnly && (
@@ -1446,7 +1446,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                                                       setSelectedUserClientPerms(updates);
                                                     }}
                                                     title="Reset to role default"
-                                                    className="hover:text-amber-700 dark:hover:text-amber-300"
+                                                    className="hover:text-peach-fg"
                                                   >
                                                     <RotateCcw className="h-3 w-3" />
                                                   </button>
@@ -1471,7 +1471,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="text-xs text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-950/30"
+                            className="text-xs text-peach-fg hover:text-peach-fg hover:bg-peach-bg"
                             onClick={async () => {
                               if (!user.role_id) return;
                               const templates = await loadRoleTemplates(user.role_id);
@@ -1508,7 +1508,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/30"
+                              className="text-xs text-sky-fg hover:text-sky-fg hover:bg-sky-bg"
                               disabled={isImpersonating}
                               onClick={async () => {
                                 try {
@@ -1570,7 +1570,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="text-xs text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                              className="text-xs text-peach-fg hover:text-peach-fg hover:bg-peach-bg"
                               onClick={() => handleSuspendUser(user)}
                             >
                               Suspend user
@@ -1580,7 +1580,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="text-xs text-green-600 hover:text-green-700 hover:bg-green-50"
+                              className="text-xs text-sage-fg hover:text-sage-fg hover:bg-sage-bg"
                               onClick={() => handleReactivateUser(user)}
                             >
                               Reactivate

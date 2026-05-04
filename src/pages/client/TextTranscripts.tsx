@@ -1125,7 +1125,7 @@ function TagsAndNotesTab({
                 <p className="text-sm text-muted-foreground">{resolution.resolution_note}</p>
               )}
               {resolution.needs_review_reason && (
-                <p className="text-sm text-amber-700 dark:text-amber-400">
+                <p className="text-sm text-peach-fg">
                   Flagged for review: {resolution.needs_review_reason}
                 </p>
               )}

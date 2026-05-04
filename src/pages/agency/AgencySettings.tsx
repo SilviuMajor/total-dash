@@ -480,7 +480,7 @@ export default function AgencySettings() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-yellow-500" />
+              <AlertTriangle className="h-5 w-5 text-sand-fg" />
               Change Agency URL?
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-4">

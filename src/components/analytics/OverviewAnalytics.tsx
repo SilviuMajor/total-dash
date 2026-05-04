@@ -39,7 +39,7 @@ function TrendBadge({ current, previous, inverse = false }: { current: number; p
   const isNeutral = Math.abs(change) < 1;
 
   return (
-    <span className={`inline-flex items-center gap-0.5 text-xs font-medium ${isNeutral ? "text-muted-foreground" : isPositive ? "text-green-600" : "text-red-600"}`}>
+    <span className={`inline-flex items-center gap-0.5 text-xs font-medium ${isNeutral ? "text-muted-foreground" : isPositive ? "text-sage-fg" : "text-rose-fg"}`}>
       {isNeutral ? <Minus className="h-3 w-3" /> : isPositive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
       {Math.abs(change).toFixed(1)}%
     </span>

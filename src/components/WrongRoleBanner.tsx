@@ -34,10 +34,10 @@ export function WrongRoleBanner({ userEmail, detected }: WrongRoleBannerProps) {
     : 'dashboard';
 
   return (
-    <div className="w-full max-w-md mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm dark:border-amber-900/50 dark:bg-amber-950/30">
-      <p className="text-amber-900 dark:text-amber-200">
+    <div className="w-full max-w-md mb-4 rounded-lg border border-peach-bg-2 bg-peach-bg px-4 py-3 text-sm">
+      <p className="text-peach-fg">
         Already signed in as <span className="font-medium">{userEmail}</span>{' '}
-        <span className="text-amber-700 dark:text-amber-300">
+        <span className="text-peach-fg">
           ({userTypeLabel(detected)})
         </span>.
       </p>

@@ -69,7 +69,7 @@ export default function AgencyAgents() {
           <p className="text-sm text-muted-foreground">
             Manage your AI agents
             {limits && (
-              <span className={`ml-2 ${isOverLimit ? 'text-red-500 font-semibold' : ''}`}>
+              <span className={`ml-2 ${isOverLimit ? 'text-rose-fg font-semibold' : ''}`}>
                 ({currentAgents} / {maxAgents === -1 ? '∞' : maxAgents})
               </span>
             )}
@@ -85,11 +85,11 @@ export default function AgencyAgents() {
       </div>
 
       {isOverLimit && (
-        <Card className="border-red-500 bg-red-500/10">
+        <Card className="border-rose-fg bg-rose-fg/10">
           <CardContent className="flex items-center gap-3 p-4">
-            <AlertCircle className="h-5 w-5 text-red-500" />
+            <AlertCircle className="h-5 w-5 text-rose-fg" />
             <div>
-              <p className="font-semibold text-red-500">Over Subscription Limit</p>
+              <p className="font-semibold text-rose-fg">Over Subscription Limit</p>
               <p className="text-sm text-muted-foreground">
                 You currently have {currentAgents} agents but your plan allows {maxAgents}.
                 You cannot add new agents until you delete some or upgrade your plan.
@@ -103,9 +103,9 @@ export default function AgencyAgents() {
       )}
 
       {!canAddMore && !isOverLimit && (
-        <Card className="border-yellow-500 bg-yellow-500/10">
+        <Card className="border-sand-fg bg-sand-fg/10">
           <CardContent className="flex items-center gap-3 p-4">
-            <AlertCircle className="h-5 w-5 text-yellow-500" />
+            <AlertCircle className="h-5 w-5 text-sand-fg" />
             <div>
               <p className="font-semibold">Agent Limit Reached</p>
               <p className="text-sm text-muted-foreground">Upgrade your subscription to add more agents</p>
@@ -154,10 +154,10 @@ export default function AgencyAgents() {
               {/* Status */}
               <div className="w-24 flex justify-center">
                 {agent.status === 'active' && (
-                  <span className="text-xs px-2 py-0.5 rounded-md bg-green-50 text-green-600 font-medium">Active</span>
+                  <span className="text-xs px-2 py-0.5 rounded-md bg-sage-bg text-sage-fg font-medium">Active</span>
                 )}
                 {agent.status === 'testing' && (
-                  <span className="text-xs px-2 py-0.5 rounded-md bg-yellow-50 text-yellow-600 font-medium">Testing</span>
+                  <span className="text-xs px-2 py-0.5 rounded-md bg-sand-bg text-sand-fg font-medium">Testing</span>
                 )}
                 {agent.status === 'in_development' && (
                   <span className="text-xs px-2 py-0.5 rounded-md bg-muted text-muted-foreground font-medium">Dev</span>

@@ -99,7 +99,7 @@ export default function Agencies() {
       case 'trialing':
         return <Badge variant="secondary">Trial</Badge>;
       case 'active':
-        return <Badge className="bg-green-600 hover:bg-green-700">Active</Badge>;
+        return <Badge className="bg-sage-bg text-sage-fg hover:bg-sage-bg-2">Active</Badge>;
       case 'past_due':
         return <Badge variant="destructive">Past Due</Badge>;
       case 'canceled':

@@ -366,7 +366,7 @@ export default function AgencyDetails() {
               <div className="flex items-center gap-2 flex-wrap">
                 {subscription?.subscription_plans ? (
                   <>
-                    <Badge variant={isCustomPlan() ? "outline" : "default"} className={isCustomPlan() ? "border-purple-500 text-purple-600" : ""}>
+                    <Badge variant={isCustomPlan() ? "outline" : "default"} className={isCustomPlan() ? "border-lav-fg text-lav-fg" : ""}>
                       {isCustomPlan() ? "Custom Plan" : subscription.subscription_plans.name}
                     </Badge>
                     {!isCustomPlan() && (
@@ -386,7 +386,7 @@ export default function AgencyDetails() {
                   {subscription?.status || 'None'}
                 </Badge>
                 {subscription?.manual_override && (
-                  <Badge variant="outline" className="border-yellow-500 text-yellow-600">
+                  <Badge variant="outline" className="border-sand-fg text-sand-fg">
                     Manual Override Active
                   </Badge>
                 )}

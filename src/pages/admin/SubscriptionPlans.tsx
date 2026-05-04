@@ -384,7 +384,7 @@ export default function SubscriptionPlans() {
                   {plan.stripe_price_id}
                 </div>
               ) : (
-                <div className="text-xs text-yellow-600 dark:text-yellow-500 flex items-center gap-1">
+                <div className="text-xs text-sand-fg flex items-center gap-1">
                   ⚠️ Stripe Price ID not configured
                 </div>
               )}

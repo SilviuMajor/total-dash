@@ -34,15 +34,15 @@ interface WorkflowsSectionProps {
 }
 
 const colorOptions = [
-  { value: 'blue', label: 'Blue', classes: 'from-blue-500/20 to-cyan-500/20 border-blue-500/30' },
-  { value: 'green', label: 'Green', classes: 'from-green-500/20 to-emerald-500/20 border-green-500/30' },
-  { value: 'purple', label: 'Purple', classes: 'from-purple-500/20 to-pink-500/20 border-purple-500/30' },
-  { value: 'orange', label: 'Orange', classes: 'from-orange-500/20 to-red-500/20 border-orange-500/30' },
-  { value: 'red', label: 'Red', classes: 'from-red-500/20 to-rose-500/20 border-red-500/30' },
-  { value: 'indigo', label: 'Indigo', classes: 'from-indigo-500/20 to-blue-500/20 border-indigo-500/30' },
-  { value: 'teal', label: 'Teal', classes: 'from-teal-500/20 to-green-500/20 border-teal-500/30' },
-  { value: 'pink', label: 'Pink', classes: 'from-pink-500/20 to-rose-500/20 border-pink-500/30' },
-  { value: 'yellow', label: 'Yellow', classes: 'from-yellow-500/20 to-orange-500/20 border-yellow-500/30' },
+  { value: 'blue', label: 'Blue', classes: 'from-sky-fg/20 to-cyan-500/20 border-sky-fg/30' },
+  { value: 'green', label: 'Green', classes: 'from-sage-fg/20 to-sage-fg/20 border-sage-fg/30' },
+  { value: 'purple', label: 'Purple', classes: 'from-lav-fg/20 to-pink-500/20 border-lav-fg/30' },
+  { value: 'orange', label: 'Orange', classes: 'from-peach-fg/20 to-rose-fg/20 border-peach-fg/30' },
+  { value: 'red', label: 'Red', classes: 'from-rose-fg/20 to-rose-fg/20 border-rose-fg/30' },
+  { value: 'indigo', label: 'Indigo', classes: 'from-indigo-500/20 to-sky-fg/20 border-indigo-500/30' },
+  { value: 'teal', label: 'Teal', classes: 'from-teal-500/20 to-sage-fg/20 border-teal-500/30' },
+  { value: 'pink', label: 'Pink', classes: 'from-pink-500/20 to-rose-fg/20 border-pink-500/30' },
+  { value: 'yellow', label: 'Yellow', classes: 'from-sand-fg/20 to-peach-fg/20 border-sand-fg/30' },
 ];
 
 export function WorkflowsSection({ workflows, categories, onWorkflowsChange, onCategoriesChange }: WorkflowsSectionProps) {

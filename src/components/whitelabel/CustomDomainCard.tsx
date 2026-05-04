@@ -450,7 +450,7 @@ export function CustomDomainCard({ agency, onUpdate }: CustomDomainCardProps) {
       <Card className="p-6 space-y-4">
         <div className="space-y-1">
           <h3 className="text-sm font-semibold">Custom domain · <span className="font-mono">{fqdn}</span></h3>
-          <p className="text-sm text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
+          <p className="text-sm text-sage-fg flex items-center gap-1.5">
             <Check className="h-4 w-4" /> Live{liveSince ? ` since ${liveSince}` : ''}
           </p>
         </div>
@@ -552,8 +552,8 @@ export function CustomDomainCard({ agency, onUpdate }: CustomDomainCardProps) {
       }
     })();
     const headerToneClass = phaseHeader.tone === 'sky'
-      ? 'text-sky-700 dark:text-sky-300'
-      : 'text-amber-700 dark:text-amber-300';
+      ? 'text-sky-fg'
+      : 'text-peach-fg';
 
     const isRecordSatisfied = (label: string | undefined): boolean => {
       if (!lastStatus) return false;
@@ -588,9 +588,9 @@ export function CustomDomainCard({ agency, onUpdate }: CustomDomainCardProps) {
                     >
                       {r.label && (
                         <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium flex items-center gap-1.5">
-                          {satisfied && <Check className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />}
+                          {satisfied && <Check className="h-3 w-3 text-sage-fg" />}
                           {r.label}
-                          {satisfied && <span className="text-emerald-700 dark:text-emerald-400 normal-case tracking-normal">in place</span>}
+                          {satisfied && <span className="text-sage-fg normal-case tracking-normal">in place</span>}
                         </p>
                       )}
                       <div className="grid grid-cols-[80px_1fr_auto] items-center gap-2 text-xs">
@@ -786,7 +786,7 @@ export function CustomDomainCard({ agency, onUpdate }: CustomDomainCardProps) {
                       </ol>
                       <p className="text-[11px]"><span className="font-medium text-foreground">Field name:</span> {g.nameHint}</p>
                       {g.warning && (
-                        <p className="text-[11px] text-amber-700 dark:text-amber-400">
+                        <p className="text-[11px] text-peach-fg">
                           <span className="font-medium">Important:</span> {g.warning}
                         </p>
                       )}
@@ -806,11 +806,11 @@ export function CustomDomainCard({ agency, onUpdate }: CustomDomainCardProps) {
 
   function renderCommonMistakes() {
     return (
-      <div className="rounded-md border border-amber-200/60 bg-amber-50/60 dark:border-amber-900/40 dark:bg-amber-950/20 p-3 space-y-1.5">
-        <p className="text-[11px] uppercase tracking-wide font-medium text-amber-800 dark:text-amber-300">
+      <div className="rounded-md border border-peach-bg-2/60 bg-peach-bg/60 p-3 space-y-1.5">
+        <p className="text-[11px] uppercase tracking-wide font-medium text-peach-fg">
           Common mistakes
         </p>
-        <ul className="text-xs text-amber-900 dark:text-amber-200 space-y-1 list-disc pl-4">
+        <ul className="text-xs text-peach-fg space-y-1 list-disc pl-4">
           <li>
             <span className="font-medium">Pasted the full domain in the Name field.</span>{' '}
             "Name" usually wants just the prefix — <span className="font-mono">{agency.whitelabel_subdomain || 'dashboard'}</span>,

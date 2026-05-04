@@ -276,10 +276,10 @@ export function Sidebar({ className }: { className?: string } = {}) {
                       const isAgencyView = activeSession?.target_type === 'agency';
                       const isUserView = impersonationMode === 'view_as_user';
                       return isAgencyView
-                        ? 'bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800'
+                        ? 'bg-rose-bg border border-rose-bg-2'
                         : isUserView
-                        ? 'bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800'
-                        : 'bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800';
+                        ? 'bg-sage-bg border border-sage-bg-2'
+                        : 'bg-sky-bg border border-sky-bg-2';
                     })()
                   : 'border border-border'
               }`}
@@ -314,10 +314,10 @@ export function Sidebar({ className }: { className?: string } = {}) {
                   const isUserView = impersonationMode === 'view_as_user';
 
                   const colors = isAgencyView
-                    ? { icon: 'text-red-600 dark:text-red-400', title: 'text-red-900 dark:text-red-100', sub: 'text-red-700 dark:text-red-300', line: 'bg-red-200 dark:bg-red-800', badge: 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300' }
+                    ? { icon: 'text-rose-fg', title: 'text-rose-fg', sub: 'text-rose-fg', line: 'bg-rose-bg-2', badge: 'bg-rose-bg text-rose-fg' }
                     : isUserView
-                    ? { icon: 'text-green-600 dark:text-green-400', title: 'text-green-900 dark:text-green-100', sub: 'text-green-700 dark:text-green-300', line: 'bg-green-200 dark:bg-green-800', badge: 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300' }
-                    : { icon: 'text-blue-600 dark:text-blue-400', title: 'text-blue-900 dark:text-blue-100', sub: 'text-blue-700 dark:text-blue-300', line: 'bg-blue-200 dark:bg-blue-800', badge: 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300' };
+                    ? { icon: 'text-sage-fg', title: 'text-sage-fg', sub: 'text-sage-fg', line: 'bg-sage-bg-2', badge: 'bg-sage-bg text-sage-fg' }
+                    : { icon: 'text-sky-fg', title: 'text-sky-fg', sub: 'text-sky-fg', line: 'bg-sky-bg-2', badge: 'bg-sky-bg text-sky-fg' };
 
                   const TypeIcon = isAgencyView ? Building2 : isUserView ? User : Users;
                   const displayName = isAgencyView

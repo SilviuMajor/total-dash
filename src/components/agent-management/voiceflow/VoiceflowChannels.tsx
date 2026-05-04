@@ -90,7 +90,7 @@ export function VoiceflowChannels({ agent }: VoiceflowChannelsProps) {
                   </div>
                 </div>
                 {channel.status === "active" ? (
-                  <Badge variant="default" className="bg-green-500/10 text-green-600 border-green-200 hover:bg-green-500/10">
+                  <Badge variant="default" className="bg-sage-fg/10 text-sage-fg border-sage-bg-2 hover:bg-sage-fg/10">
                     Active
                   </Badge>
                 ) : (

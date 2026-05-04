@@ -27,7 +27,7 @@ const integrationIconMap: Record<string, any> = {
 const getStatusColor = (status: string) => {
   switch (status) {
     case 'active':
-      return 'bg-green-500/10 text-green-500 border-green-500/20';
+      return 'bg-sage-fg/10 text-sage-fg border-sage-fg/20';
     case 'in_development':
       return 'bg-gray-500/10 text-gray-500 border-gray-500/20';
     default:
@@ -187,13 +187,13 @@ export default function AgentSpecs() {
               {domains.map((domain) => {
                 const Icon = domainIcons[domain];
                 const domainColors: Record<string, string> = {
-                  website: "from-blue-500/20 to-cyan-500/20",
-                  whatsapp: "from-green-500/20 to-emerald-500/20",
-                  telegram: "from-sky-500/20 to-blue-500/20",
-                  instagram: "from-pink-500/20 to-purple-500/20",
-                  messenger: "from-blue-600/20 to-indigo-600/20",
-                  telephony: "from-violet-500/20 to-purple-500/20",
-                  sms: "from-orange-500/20 to-amber-500/20",
+                  website: "from-sky-fg/20 to-cyan-500/20",
+                  whatsapp: "from-sage-fg/20 to-sage-fg/20",
+                  telegram: "from-sky-fg/20 to-sky-fg/20",
+                  instagram: "from-pink-500/20 to-lav-fg/20",
+                  messenger: "from-sky-fg/20 to-indigo-600/20",
+                  telephony: "from-lav-fg/20 to-lav-fg/20",
+                  sms: "from-peach-fg/20 to-peach-fg/20",
                 };
                 const color = domainColors[domain] || "from-gray-500/20 to-slate-500/20";
                 
@@ -229,14 +229,14 @@ export default function AgentSpecs() {
               {integrations.map((integration: any, index) => {
                 const Icon = integrationIconMap[integration.icon] || Database;
                 const gradients = [
-                  "from-blue-500/20 to-cyan-500/20",
-                  "from-green-500/20 to-emerald-500/20",
-                  "from-purple-500/20 to-pink-500/20",
-                  "from-orange-500/20 to-red-500/20",
-                  "from-indigo-500/20 to-blue-500/20",
-                  "from-teal-500/20 to-green-500/20",
-                  "from-pink-500/20 to-rose-500/20",
-                  "from-yellow-500/20 to-orange-500/20",
+                  "from-sky-fg/20 to-cyan-500/20",
+                  "from-sage-fg/20 to-sage-fg/20",
+                  "from-lav-fg/20 to-pink-500/20",
+                  "from-peach-fg/20 to-rose-fg/20",
+                  "from-indigo-500/20 to-sky-fg/20",
+                  "from-teal-500/20 to-sage-fg/20",
+                  "from-pink-500/20 to-rose-fg/20",
+                  "from-sand-fg/20 to-peach-fg/20",
                 ];
                 const gradient = gradients[index % gradients.length];
                 
@@ -285,12 +285,12 @@ export default function AgentSpecs() {
               if (categoryWorkflows.length === 0) return null;
 
               const colorMap: Record<string, string> = {
-                blue: "from-blue-500 to-cyan-500",
-                green: "from-green-500 to-emerald-500",
-                purple: "from-purple-500 to-pink-500",
-                orange: "from-orange-500 to-amber-500",
-                red: "from-red-500 to-rose-500",
-                indigo: "from-indigo-500 to-violet-500",
+                blue: "from-sky-fg to-cyan-500",
+                green: "from-sage-fg to-sage-fg",
+                purple: "from-lav-fg to-pink-500",
+                orange: "from-peach-fg to-peach-fg",
+                red: "from-rose-fg to-rose-fg",
+                indigo: "from-indigo-500 to-lav-fg",
                 teal: "from-teal-500 to-cyan-500",
                 pink: "from-pink-500 to-fuchsia-500",
               };

@@ -607,11 +607,11 @@ export function CommandSearch() {
                           <span
                             className={cn(
                               "w-1.5 h-1.5 rounded-full mr-1.5",
-                              s.value === "with_ai" && "bg-green-500",
-                              s.value === "waiting" && "bg-red-500",
-                              s.value === "in_handover" && "bg-blue-500",
-                              s.value === "aftercare" && "bg-yellow-500",
-                              s.value === "needs_review" && "bg-amber-500",
+                              s.value === "with_ai" && "bg-sage-fg",
+                              s.value === "waiting" && "bg-rose-fg",
+                              s.value === "in_handover" && "bg-sky-fg",
+                              s.value === "aftercare" && "bg-sand-fg",
+                              s.value === "needs_review" && "bg-peach-fg",
                               s.value === "resolved" && "bg-gray-400",
                             )}
                           />

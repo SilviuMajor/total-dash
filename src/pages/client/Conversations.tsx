@@ -1793,11 +1793,11 @@ export default function Conversations() {
               >
                 <span className={cn(
                   "w-1.5 h-1.5 rounded-full mr-1.5",
-                  s === 'with_ai' && 'bg-green-500',
-                  s === 'waiting' && 'bg-red-500',
-                  s === 'in_handover' && 'bg-blue-500',
-                  s === 'aftercare' && 'bg-yellow-500',
-                  s === 'needs_review' && 'bg-amber-500',
+                  s === 'with_ai' && 'bg-sage-fg',
+                  s === 'waiting' && 'bg-rose-fg',
+                  s === 'in_handover' && 'bg-sky-fg',
+                  s === 'aftercare' && 'bg-sand-fg',
+                  s === 'needs_review' && 'bg-peach-fg',
                   s === 'resolved' && 'bg-gray-400'
                 )} />
                 {s === 'with_ai' ? 'With AI' : s === 'waiting' ? 'Waiting' : s === 'in_handover' ? 'In Handover' : s === 'aftercare' ? 'Aftercare' : s === 'needs_review' ? 'Needs Review' : 'Resolved'}
@@ -1928,7 +1928,7 @@ export default function Conversations() {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
                     <DropdownMenuItem onClick={() => bulkUpdateStatus('needs_review')}>
-                      <span className="w-2 h-2 rounded-full bg-amber-500 mr-2" />Needs Review
+                      <span className="w-2 h-2 rounded-full bg-peach-fg mr-2" />Needs Review
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => bulkUpdateStatus('resolved')}>
                       <span className="w-2 h-2 rounded-full bg-gray-400 mr-2" />Resolved
@@ -2594,26 +2594,26 @@ export default function Conversations() {
                     {/* Handover Control Card */}
                     <Card className={cn(
                       "p-3",
-                      pendingSession && "border-red-300 bg-red-50 dark:bg-red-950/20 dark:border-red-800",
-                      !pendingSession && selectedConversation.status === 'with_ai' && "border-green-300 bg-green-50 dark:bg-green-950/20 dark:border-green-800",
-                      !pendingSession && selectedConversation.status === 'waiting' && "border-red-300 bg-red-50 dark:bg-red-950/20 dark:border-red-800",
-                      !pendingSession && selectedConversation.status === 'in_handover' && "border-blue-300 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-800",
-                      !pendingSession && selectedConversation.status === 'aftercare' && "border-yellow-300 bg-yellow-50 dark:bg-yellow-950/20 dark:border-yellow-800",
-                      !pendingSession && selectedConversation.status === 'needs_review' && "border-amber-300 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800",
+                      pendingSession && "border-rose-fg bg-rose-bg",
+                      !pendingSession && selectedConversation.status === 'with_ai' && "border-sage-fg bg-sage-bg",
+                      !pendingSession && selectedConversation.status === 'waiting' && "border-rose-fg bg-rose-bg",
+                      !pendingSession && selectedConversation.status === 'in_handover' && "border-sky-fg bg-sky-bg",
+                      !pendingSession && selectedConversation.status === 'aftercare' && "border-sand-fg bg-sand-bg",
+                      !pendingSession && selectedConversation.status === 'needs_review' && "border-peach-fg bg-peach-bg",
                       !pendingSession && selectedConversation.status === 'resolved' && "border-gray-300 bg-gray-50 dark:bg-gray-950/20 dark:border-gray-700"
                     )}>
                       {/* WITH AI or WAITING with no pending session (edge case fallback) */}
                       {(selectedConversation.status === 'with_ai' || (selectedConversation.status === 'waiting' && !pendingSession)) && !pendingSession && (
                         <div className="space-y-2">
                           <div className="flex items-center gap-1.5">
-                            <Bot className="h-4 w-4 text-green-600 dark:text-green-400" />
-                            <p className="text-xs font-semibold text-green-700 dark:text-green-400">With AI</p>
+                            <Bot className="h-4 w-4 text-sage-fg" />
+                            <p className="text-xs font-semibold text-sage-fg">With AI</p>
                           </div>
                           <p className="text-xs text-muted-foreground">AI is responding to the customer</p>
                           <Button
                             size="sm"
                             variant="outline"
-                            className="w-full border-green-300 text-green-700 hover:bg-green-100 hover:text-green-800 dark:border-green-800 dark:text-green-400 dark:hover:bg-green-950/40 dark:hover:text-green-300"
+                            className="w-full border-sage-fg text-sage-fg hover:bg-sage-bg hover:text-sage-fg"
                             onClick={() => setTakeoverConfirmOpen(true)}
                             disabled={handoverLoading === 'take_over'}
                           >
@@ -2629,11 +2629,11 @@ export default function Conversations() {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-1.5">
                               {pendingSession.takeover_type === 'transfer' ? (
-                                <ArrowRightLeft className="h-4 w-4 text-red-600 dark:text-red-400" />
+                                <ArrowRightLeft className="h-4 w-4 text-rose-fg" />
                               ) : (
-                                <Bell className="h-4 w-4 text-red-600 dark:text-red-400" />
+                                <Bell className="h-4 w-4 text-rose-fg" />
                               )}
-                              <p className="text-xs font-semibold text-red-700 dark:text-red-400">
+                              <p className="text-xs font-semibold text-rose-fg">
                                 {pendingSession.takeover_type === 'transfer' ? 'Transfer Request' : 'Handover Request'}
                               </p>
                             </div>
@@ -2655,7 +2655,7 @@ export default function Conversations() {
                                 Transferred from <span className="font-medium text-foreground">{pendingSession.transferred_from_department_name || 'another department'}</span> by <span className="font-medium text-foreground">{pendingSession.transferred_from_agent_name || 'an agent'}</span>
                               </p>
                               {pendingSession.transfer_note && (
-                                <div className="bg-white dark:bg-background rounded-md p-2 border border-red-200 dark:border-red-800">
+                                <div className="bg-white dark:bg-background rounded-md p-2 border border-rose-bg-2">
                                   <p className="text-[10px] font-semibold text-muted-foreground mb-0.5">Transfer note:</p>
                                   <p className="text-xs text-foreground">{pendingSession.transfer_note}</p>
                                 </div>
@@ -2681,11 +2681,11 @@ export default function Conversations() {
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-1.5">
-                              <Headphones className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                              <p className="text-xs font-semibold text-blue-700 dark:text-blue-400">In Handover</p>
+                              <Headphones className="h-4 w-4 text-sky-fg" />
+                              <p className="text-xs font-semibold text-sky-fg">In Handover</p>
                             </div>
                             {activeSession?.accepted_at && (
-                              <span className="text-[10px] font-medium text-blue-700/70 dark:text-blue-400/70 font-mono tabular-nums">
+                              <span className="text-[10px] font-medium text-sky-fg/70 font-mono tabular-nums">
                                 {(() => {
                                   const secs = Math.floor((Date.now() - new Date(activeSession.accepted_at).getTime()) / 1000);
                                   const h = Math.floor(secs / 3600);
@@ -2711,7 +2711,7 @@ export default function Conversations() {
                             <Button
                               size="sm"
                               variant="outline"
-                              className="flex-1 border-blue-300 text-blue-700 hover:bg-blue-100 hover:text-blue-800 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-950/40 dark:hover:text-blue-300"
+                              className="flex-1 border-sky-fg text-sky-fg hover:bg-sky-bg hover:text-sky-fg"
                               onClick={() => setTransferOpen(true)}
                               disabled={!!handoverLoading}
                             >
@@ -2727,16 +2727,16 @@ export default function Conversations() {
                         <div className="space-y-1.5">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-1.5">
-                              <Headphones className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                              <p className="text-xs font-semibold text-blue-700 dark:text-blue-400">In Handover</p>
+                              <Headphones className="h-4 w-4 text-sky-fg" />
+                              <p className="text-xs font-semibold text-sky-fg">In Handover</p>
                               {selectedConversation.owner_name && (
-                                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-[9px] font-semibold text-blue-700 dark:text-blue-300">
+                                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-sky-bg text-[9px] font-semibold text-sky-fg">
                                   {selectedConversation.owner_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                                 </span>
                               )}
                             </div>
                             {activeSession?.accepted_at && (
-                              <span className="text-[10px] font-medium text-blue-700/70 dark:text-blue-400/70 font-mono tabular-nums">
+                              <span className="text-[10px] font-medium text-sky-fg/70 font-mono tabular-nums">
                                 {(() => {
                                   const secs = Math.floor((Date.now() - new Date(activeSession.accepted_at).getTime()) / 1000);
                                   const h = Math.floor(secs / 3600);
@@ -2757,13 +2757,13 @@ export default function Conversations() {
                       {selectedConversation.status === 'aftercare' && (
                         <div className="space-y-2">
                           <div className="flex items-center gap-1.5">
-                            <Clock className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
-                            <p className="text-xs font-semibold text-yellow-700 dark:text-yellow-400">Aftercare</p>
+                            <Clock className="h-4 w-4 text-sand-fg" />
+                            <p className="text-xs font-semibold text-sand-fg">Aftercare</p>
                           </div>
                           <p className="text-xs text-muted-foreground">Handover ended — needs follow-up</p>
                           <Button
                             size="sm"
-                            className="w-full bg-yellow-600 hover:bg-yellow-700 text-white"
+                            className="w-full bg-yellow-500 hover:bg-yellow-600 text-white"
                             onClick={() => handleResolveWithReason('mark_resolved')}
                             disabled={!!handoverLoading}
                           >
@@ -2789,15 +2789,15 @@ export default function Conversations() {
                         return (
                           <div className="space-y-2">
                             <div className="flex items-center gap-1.5">
-                              <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                              <p className="text-xs font-semibold text-amber-700 dark:text-amber-400">
-                                Needs Review{reasonShort ? <span className="text-amber-600/80 dark:text-amber-400/80 font-medium"> · {reasonShort}</span> : null}
+                              <AlertTriangle className="h-4 w-4 text-peach-fg" />
+                              <p className="text-xs font-semibold text-peach-fg">
+                                Needs Review{reasonShort ? <span className="text-peach-fg/80 font-medium"> · {reasonShort}</span> : null}
                               </p>
                             </div>
                             <p className="text-xs text-muted-foreground">{reasonLong}</p>
                             <Button
                               size="sm"
-                              className="w-full bg-amber-600 hover:bg-amber-700 text-white"
+                              className="w-full bg-amber-500 hover:bg-amber-600 text-white"
                               onClick={() => setTakeoverConfirmOpen(true)}
                               disabled={!!handoverLoading}
                             >
@@ -2807,7 +2807,7 @@ export default function Conversations() {
                             <Button
                               size="sm"
                               variant="outline"
-                              className="w-full border-amber-300 text-amber-700 hover:bg-amber-100 hover:text-amber-800 dark:border-amber-800 dark:text-amber-400 dark:hover:bg-amber-950/40 dark:hover:text-amber-300"
+                              className="w-full border-peach-fg text-peach-fg hover:bg-peach-bg hover:text-peach-fg"
                               onClick={() => handleResolveWithReason('mark_resolved')}
                               disabled={!!handoverLoading}
                             >
@@ -2865,8 +2865,8 @@ export default function Conversations() {
                                       <span className={cn(
                                         "text-[9px] px-1.5 py-0.5 rounded",
                                         session.completion_method === 'transfer'
-                                          ? "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
-                                          : "bg-yellow-100 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-300"
+                                          ? "bg-sky-bg text-sky-fg"
+                                          : "bg-sand-bg text-sand-fg"
                                       )}>
                                         {session.completion_method === 'transfer' ? 'Transferred' : 'Handback'}
                                       </span>
@@ -2992,11 +2992,11 @@ export default function Conversations() {
                                   <div className="flex items-center gap-2 min-w-0">
                                     <span className={cn(
                                       "w-1.5 h-1.5 rounded-full shrink-0",
-                                      conv.status === 'with_ai' && "bg-green-500",
-                                      conv.status === 'waiting' && "bg-red-500",
-                                      conv.status === 'in_handover' && "bg-blue-500",
-                                      conv.status === 'aftercare' && "bg-yellow-500",
-                                      conv.status === 'needs_review' && "bg-amber-500",
+                                      conv.status === 'with_ai' && "bg-sage-fg",
+                                      conv.status === 'waiting' && "bg-rose-fg",
+                                      conv.status === 'in_handover' && "bg-sky-fg",
+                                      conv.status === 'aftercare' && "bg-sand-fg",
+                                      conv.status === 'needs_review' && "bg-peach-fg",
                                       conv.status === 'resolved' && "bg-gray-400"
                                     )} />
                                     <span className="text-xs truncate">
@@ -3231,7 +3231,7 @@ export default function Conversations() {
             <Button variant="outline" onClick={() => setEndHandoverOpen(false)}>Cancel</Button>
             <Button
               variant="outline"
-              className="text-yellow-700 border-yellow-300 hover:bg-yellow-50 hover:text-yellow-700 dark:text-yellow-400 dark:border-yellow-800 dark:hover:bg-yellow-950/30 dark:hover:text-yellow-400"
+              className="text-sand-fg border-sand-fg hover:bg-sand-bg hover:text-sand-fg"
               onClick={() => handleEndHandover(false)}
             >
               End — Keep in Aftercare

@@ -166,11 +166,11 @@ export default function AgencyClients() {
 
       {/* Limit warnings */}
       {isOverLimit && (
-        <Card className="border-red-500 bg-red-500/10">
+        <Card className="border-rose-fg bg-rose-fg/10">
           <CardContent className="flex items-center gap-3 p-4">
-            <AlertCircle className="h-5 w-5 text-red-500" />
+            <AlertCircle className="h-5 w-5 text-rose-fg" />
             <div>
-              <p className="font-semibold text-red-500">Over Subscription Limit</p>
+              <p className="font-semibold text-rose-fg">Over Subscription Limit</p>
               <p className="text-sm text-muted-foreground">
                 You currently have {currentClients} clients but your plan allows {maxClients}.
                 You cannot add new clients until you delete some or upgrade your plan.
@@ -184,9 +184,9 @@ export default function AgencyClients() {
       )}
 
       {!canAddMore && !isOverLimit && (
-        <Card className="border-yellow-500 bg-yellow-500/10">
+        <Card className="border-sand-fg bg-sand-fg/10">
           <CardContent className="flex items-center gap-3 p-4">
-            <AlertCircle className="h-5 w-5 text-yellow-500" />
+            <AlertCircle className="h-5 w-5 text-sand-fg" />
             <div>
               <p className="font-semibold">Client Limit Reached</p>
               <p className="text-sm text-muted-foreground">Upgrade your subscription to add more clients</p>
@@ -299,16 +299,16 @@ export default function AgencyClients() {
               {/* Status */}
               <div>
                 {status === 'active' && (
-                  <span className="text-xs bg-green-50 text-green-600 px-2.5 py-0.5 rounded-md font-medium">Active</span>
+                  <span className="text-xs bg-sage-bg text-sage-fg px-2.5 py-0.5 rounded-md font-medium">Active</span>
                 )}
                 {status === 'inactive' && (
                   <span className="text-xs bg-muted text-muted-foreground px-2.5 py-0.5 rounded-md font-medium">Inactive</span>
                 )}
                 {status === 'pending' && (
-                  <span className="text-xs bg-yellow-50 text-yellow-600 px-2.5 py-0.5 rounded-md font-medium">Pending</span>
+                  <span className="text-xs bg-sand-bg text-sand-fg px-2.5 py-0.5 rounded-md font-medium">Pending</span>
                 )}
                 {status === 'suspended' && (
-                  <span className="text-xs bg-red-50 text-red-600 px-2.5 py-0.5 rounded-md font-medium">Suspended</span>
+                  <span className="text-xs bg-rose-bg text-rose-fg px-2.5 py-0.5 rounded-md font-medium">Suspended</span>
                 )}
                 {!['active', 'inactive', 'pending', 'suspended'].includes(status) && (
                   <span className="text-xs bg-muted text-muted-foreground px-2.5 py-0.5 rounded-md font-medium">{client.status}</span>

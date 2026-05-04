@@ -507,7 +507,7 @@ export function DepartmentManagement({ clientId, readOnly }: { clientId: string;
                             <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Global</Badge>
                           )}
                           {dept.always_open && (
-                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300 border-0">24/7</Badge>
+                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-sage-bg text-sage-fg border-0">24/7</Badge>
                           )}
                         </div>
                         <span className="text-[11px] text-muted-foreground">
@@ -521,7 +521,7 @@ export function DepartmentManagement({ clientId, readOnly }: { clientId: string;
                       <span className="text-xs text-muted-foreground hidden sm:block">{dept.timeout_seconds || 60}s</span>
                       <span className="text-xs text-muted-foreground hidden md:block">{dept.timezone || "UTC"}</span>
                       <div className="flex items-center gap-1">
-                        <span className={cn("w-2 h-2 rounded-full", isOpen ? "bg-green-500" : "bg-red-400")} />
+                        <span className={cn("w-2 h-2 rounded-full", isOpen ? "bg-sage-fg" : "bg-rose-fg")} />
                         <span className="text-xs text-muted-foreground hidden lg:block">{isOpen ? "Open" : "Closed"}</span>
                       </div>
                       {!readOnly && (
