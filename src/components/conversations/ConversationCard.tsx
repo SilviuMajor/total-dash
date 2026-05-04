@@ -154,18 +154,18 @@ export function ConversationCard({
       data-conversation-id={conv.id}
       className={cn(
         'group border-l-[3px] px-4 py-3 border-b border-border cursor-pointer transition-colors',
-        conv.status === 'with_ai' && 'border-l-green-500',
-        conv.status === 'waiting' && 'border-l-red-500',
-        conv.status === 'in_handover' && 'border-l-blue-500',
-        conv.status === 'aftercare' && 'border-l-yellow-500',
-        conv.status === 'needs_review' && 'border-l-amber-500',
-        conv.status === 'resolved' && 'border-l-gray-400',
+        conv.status === 'with_ai' && 'border-l-sage-fg',
+        conv.status === 'waiting' && 'border-l-rose-fg',
+        conv.status === 'in_handover' && 'border-l-sky-fg',
+        conv.status === 'aftercare' && 'border-l-sand-fg',
+        conv.status === 'needs_review' && 'border-l-peach-fg',
+        conv.status === 'resolved' && 'border-l-ink-4',
         !KNOWN_STATUSES.has(conv.status) && 'border-l-border',
-        (isPending || conv.status === 'waiting') && 'bg-red-50/80 dark:bg-red-950/20 border-l-red-500',
-        !isPending && conv.status !== 'waiting' && isMine && conv.status === 'in_handover' && 'bg-blue-50/70 dark:bg-blue-950/20',
-        !isPending && conv.status !== 'waiting' && isMine && conv.status === 'aftercare' && 'bg-yellow-50/70 dark:bg-yellow-950/20',
-        !isPending && conv.status !== 'waiting' && isMine && conv.status === 'needs_review' && 'bg-amber-50/70 dark:bg-amber-950/20',
-        !isPending && conv.status !== 'waiting' && isMine && conv.status === 'resolved' && 'bg-gray-50/70 dark:bg-gray-950/20',
+        (isPending || conv.status === 'waiting') && 'bg-rose-bg/60 border-l-rose-fg',
+        !isPending && conv.status !== 'waiting' && isMine && conv.status === 'in_handover' && 'bg-sky-bg/60',
+        !isPending && conv.status !== 'waiting' && isMine && conv.status === 'aftercare' && 'bg-sand-bg/60',
+        !isPending && conv.status !== 'waiting' && isMine && conv.status === 'needs_review' && 'bg-peach-bg/60',
+        !isPending && conv.status !== 'waiting' && isMine && conv.status === 'resolved' && 'bg-surface-2',
         isSelected && 'bg-primary/5',
         !isSelected && !isPending && !isMine && 'hover:bg-muted/40',
       )}
@@ -185,13 +185,13 @@ export function ConversationCard({
           )}
           <span className="text-[13px] font-medium truncate" title={rawName}>{displayName}</span>
           {isMine && (
-            <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 shrink-0">You</span>
+            <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-sky-bg text-sky-fg shrink-0">You</span>
           )}
           {conv.is_widget_test && (
             <Badge variant="outline" className="text-[10px] shrink-0 px-1 py-0">🧪</Badge>
           )}
           {conv.status === 'needs_review' && (
-            <AlertTriangle className="w-3 h-3 text-amber-500 shrink-0" />
+            <AlertTriangle className="w-3 h-3 text-peach-fg shrink-0" />
           )}
         </div>
         {departments.length > 1 && dept && (
@@ -216,14 +216,14 @@ export function ConversationCard({
         <div className="flex items-center gap-1.5 flex-wrap">
           <span
             className={cn(
-              'inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold border',
-              conv.status === 'with_ai' && 'bg-green-50 text-green-600 border-green-200',
-              conv.status === 'waiting' && 'bg-red-50 text-red-600 border-red-200',
-              conv.status === 'in_handover' && 'bg-blue-50 text-blue-600 border-blue-200',
-              conv.status === 'aftercare' && 'bg-yellow-50 text-yellow-600 border-yellow-200',
-              conv.status === 'needs_review' && 'bg-amber-50 text-amber-600 border-amber-200',
-              conv.status === 'resolved' && 'bg-gray-100 text-gray-500 border-gray-200',
-              !KNOWN_STATUSES.has(conv.status) && 'bg-muted text-muted-foreground border-border',
+              'inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold',
+              conv.status === 'with_ai' && 'bg-status-ai-bg text-status-ai-fg',
+              conv.status === 'waiting' && 'bg-status-waiting-bg text-status-waiting-fg',
+              conv.status === 'in_handover' && 'bg-status-handover-bg text-status-handover-fg',
+              conv.status === 'aftercare' && 'bg-status-aftercare-bg text-status-aftercare-fg',
+              conv.status === 'needs_review' && 'bg-status-review-bg text-status-review-fg',
+              conv.status === 'resolved' && 'bg-status-resolved-bg text-status-resolved-fg',
+              !KNOWN_STATUSES.has(conv.status) && 'bg-muted text-muted-foreground',
             )}
             style={{ fontVariantNumeric: 'tabular-nums' }}
           >

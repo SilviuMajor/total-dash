@@ -2,12 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* ═══════════════════════════════════════════════════════
+   Design tokens — Heyl/TotalDash spec
+   Hybrid: legacy HSL shadcn vars (kept for compatibility)
+   + new oklch token system (ink, surfaces, pastels, status, density).
+   New code should consume the new tokens; legacy tokens remain for shadcn.
+   ═══════════════════════════════════════════════════════ */
 
 @layer base {
-  :root {
+  :root, [data-theme="light"] {
+    /* ── Legacy shadcn HSL tokens (kept) ── */
     --background: 0 0% 98%;
     --foreground: 0 0% 9%;
 
@@ -39,11 +43,8 @@ All colors MUST be HSL.
 
     --success: 160 84% 39%;
     --warning: 38 92% 50%;
-    
-    --radius: 0.375rem;
-    
-    /* Shadows */
-    --shadow-lg: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+
+    --radius: 0.625rem; /* 10px — matches spec --r-md for cards (rounded-lg) */
 
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 0 0% 9%;
@@ -53,9 +54,86 @@ All colors MUST be HSL.
     --sidebar-accent-foreground: 217 91% 53%;
     --sidebar-border: 0 0% 90%;
     --sidebar-ring: 217 91% 53%;
+
+    /* ── New token system ── */
+
+    /* Ink scale (text) */
+    --ink:        #0a0a0a;
+    --ink-1:      oklch(20% 0.005 80);
+    --ink-2:      oklch(38% 0.005 80);
+    --ink-3:      oklch(50% 0.005 80);
+    --ink-4:      oklch(62% 0.005 80);
+    --ink-5:      oklch(75% 0.005 80);
+
+    /* Surfaces */
+    --bg:         #FAFAFA;
+    --surface:    #FFFFFF;
+    --surface-2:  oklch(97% 0.003 80);
+    --surface-3:  oklch(94% 0.003 80);
+
+    /* Lines */
+    --line:       oklch(93% 0.005 80);
+    --line-2:     oklch(88% 0.005 80);
+
+    /* Primary (action) — same as legacy --primary, exposed as direct value */
+    --primary-solid:  #2563EB;
+    --primary-fg:     #ffffff;
+    --primary-hover:  #1d4ed8;
+    --ring-solid:     color-mix(in oklch, #2563EB 35%, transparent);
+
+    /* Pastel families — light bg + dark fg */
+    --sage-bg:    oklch(94% 0.04 155);
+    --sage-bg-2:  oklch(96% 0.03 155);
+    --sage-fg:    oklch(34% 0.09 155);
+
+    --rose-bg:    oklch(94% 0.04 10);
+    --rose-bg-2:  oklch(96% 0.03 10);
+    --rose-fg:    oklch(36% 0.10 10);
+
+    --sky-bg:     oklch(95% 0.04 220);
+    --sky-bg-2:   oklch(97% 0.03 220);
+    --sky-fg:     oklch(34% 0.10 220);
+
+    --sand-bg:    oklch(95% 0.04 75);
+    --sand-bg-2:  oklch(97% 0.03 75);
+    --sand-fg:    oklch(36% 0.10 75);
+
+    --lav-bg:     oklch(95% 0.04 290);
+    --lav-bg-2:   oklch(97% 0.03 290);
+    --lav-fg:     oklch(36% 0.10 290);
+
+    --peach-bg:   oklch(94% 0.04 45);
+    --peach-bg-2: oklch(96% 0.03 45);
+    --peach-fg:   oklch(36% 0.10 45);
+
+    /* Status semantics */
+    --status-ai-bg:        var(--sage-bg);
+    --status-ai-fg:        var(--sage-fg);
+    --status-waiting-bg:   var(--rose-bg);
+    --status-waiting-fg:   var(--rose-fg);
+    --status-handover-bg:  var(--sky-bg);
+    --status-handover-fg:  var(--sky-fg);
+    --status-aftercare-bg: var(--sand-bg);
+    --status-aftercare-fg: var(--sand-fg);
+    --status-review-bg:    var(--peach-bg);
+    --status-review-fg:    var(--peach-fg);
+    --status-resolved-bg:  oklch(95% 0 0);
+    --status-resolved-fg:  oklch(48% 0 0);
+
+    /* Radii (spec scale) */
+    --r-sm: 6px;
+    --r-md: 10px;
+    --r-lg: 14px;
+    --r-xl: 20px;
+
+    /* Shadows */
+    --shadow-sm:  0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md:  0 4px 12px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04);
+    --shadow-lg:  0 12px 40px rgba(0,0,0,0.10), 0 4px 12px rgba(0,0,0,0.06);
   }
 
-  .dark {
+  .dark, [data-theme="dark"] {
+    /* ── Legacy shadcn HSL ── */
     --background: 0 0% 9%;
     --foreground: 0 0% 90%;
 
@@ -88,9 +166,6 @@ All colors MUST be HSL.
     --success: 160 84% 45%;
     --warning: 38 92% 55%;
 
-    /* Shadows */
-    --shadow-lg: 0 1px 3px 0 rgb(0 0 0 / 0.3);
-
     --sidebar-background: 0 0% 10%;
     --sidebar-foreground: 0 0% 90%;
     --sidebar-primary: 217 91% 53%;
@@ -99,6 +174,80 @@ All colors MUST be HSL.
     --sidebar-accent-foreground: 0 0% 90%;
     --sidebar-border: 0 0% 18%;
     --sidebar-ring: 217 91% 53%;
+
+    /* ── New token system (dark) ── */
+    --ink:        #fafafa;
+    --ink-1:      oklch(95% 0.005 80);
+    --ink-2:      oklch(78% 0.005 80);
+    --ink-3:      oklch(64% 0.005 80);
+    --ink-4:      oklch(50% 0.005 80);
+    --ink-5:      oklch(38% 0.005 80);
+
+    --bg:         #0a0a0a;
+    --surface:    #141414;
+    --surface-2:  #1c1c1c;
+    --surface-3:  #232323;
+
+    --line:       #262626;
+    --line-2:     #333333;
+
+    --primary-solid:  #3b82f6;
+    --primary-fg:     #ffffff;
+    --primary-hover:  #2563EB;
+    --ring-solid:     color-mix(in oklch, #3b82f6 35%, transparent);
+
+    --sage-bg:    oklch(28% 0.06 155);
+    --sage-bg-2:  oklch(22% 0.045 155);
+    --sage-fg:    oklch(78% 0.12 155);
+
+    --rose-bg:    oklch(28% 0.07 10);
+    --rose-bg-2:  oklch(22% 0.05 10);
+    --rose-fg:    oklch(78% 0.13 10);
+
+    --sky-bg:     oklch(28% 0.07 220);
+    --sky-bg-2:   oklch(22% 0.05 220);
+    --sky-fg:     oklch(78% 0.13 220);
+
+    --sand-bg:    oklch(28% 0.06 75);
+    --sand-bg-2:  oklch(22% 0.045 75);
+    --sand-fg:    oklch(80% 0.12 75);
+
+    --lav-bg:     oklch(28% 0.07 290);
+    --lav-bg-2:   oklch(22% 0.05 290);
+    --lav-fg:     oklch(80% 0.13 290);
+
+    --peach-bg:   oklch(28% 0.07 45);
+    --peach-bg-2: oklch(22% 0.05 45);
+    --peach-fg:   oklch(82% 0.13 45);
+
+    --status-resolved-bg:  oklch(25% 0 0);
+    --status-resolved-fg:  oklch(72% 0 0);
+
+    --shadow-sm:  0 1px 2px rgba(0,0,0,0.4);
+    --shadow-md:  0 4px 12px rgba(0,0,0,0.4), 0 1px 3px rgba(0,0,0,0.3);
+    --shadow-lg:  0 12px 40px rgba(0,0,0,0.6), 0 4px 12px rgba(0,0,0,0.4);
+  }
+
+  /* ── Density tokens ── */
+  :root, [data-density="comfortable"] {
+    --row-py:    12px;
+    --row-px:    16px;
+    --pane-py:   14px;
+    --gap:       12px;
+    --font-row:  13px;
+    --font-meta: 11.5px;
+    --avatar:    28px;
+    --avatar-sm: 22px;
+  }
+  [data-density="compact"] {
+    --row-py:    7px;
+    --row-px:    12px;
+    --pane-py:   10px;
+    --gap:       8px;
+    --font-row:  12.5px;
+    --font-meta: 11px;
+    --avatar:    24px;
+    --avatar-sm: 20px;
   }
 }
 
@@ -110,17 +259,52 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
     font-weight: 400;
+    font-size: 13px;
+    line-height: 1.45;
+    letter-spacing: -0.005em;
+    font-feature-settings: 'cv11' 1, 'ss01' 1, 'tnum' 0;
+    -webkit-font-smoothing: antialiased;
   }
 
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Inter', system-ui, sans-serif;
     font-weight: 600;
+    letter-spacing: -0.01em;
   }
+  h1 { font-size: 22px; letter-spacing: -0.02em; }
+  h2 { font-size: 17px; }
+  h3 { font-size: 15px; }
 
   button {
     font-family: 'Inter', system-ui, sans-serif;
     font-weight: 500;
+  }
+}
+
+@layer components {
+  /* Eyebrow label */
+  .eyebrow {
+    font-size: 10.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--ink-4);
+  }
+
+  /* Live status dot — pulsing */
+  .status-dot-live {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--sage-fg);
+    box-shadow: 0 0 0 3px color-mix(in oklch, var(--sage-fg) 25%, transparent);
+    animation: tdash-pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes tdash-pulse {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.55; }
   }
 }
