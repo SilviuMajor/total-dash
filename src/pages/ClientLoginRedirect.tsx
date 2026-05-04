@@ -13,8 +13,10 @@ export default function ClientLoginRedirect() {
   const navigate = useNavigate();
 
   // If we're on a custom whitelabel domain (e.g. dashboard.fiveleaf.co.uk),
-  // skip the email-find-portal step entirely and jump to the branded
-  // login. Visitors should never see this unbranded page on a custom domain.
+  // skip the email-find-portal step entirely and jump to the slug-less
+  // /login URL. The host already identifies the agency, so we don't need
+  // the slug in the path. Auth.tsx reads loginAgencyContext from
+  // sessionStorage (populated by useCustomDomainAgency on app boot).
   useEffect(() => {
     const host = window.location.host;
     if (isPlatformHost(host)) return;
@@ -23,7 +25,7 @@ export default function ClientLoginRedirect() {
       const agency = await lookupAgencyByHost(host);
       if (cancelled) return;
       if (agency) {
-        navigate(`/login/${agency.slug}`, { replace: true });
+        navigate('/login', { replace: true });
       }
     })();
     return () => { cancelled = true; };

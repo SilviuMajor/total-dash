@@ -87,11 +87,15 @@ const CustomDomainBootstrap = () => {
   useEffect(() => {
     if (!isCustomDomain || loading || !agency) return;
     // Only redirect from bare `/` to keep deep-link / change-password / etc.
-    // routes intact. Authenticated client users hitting `/` will be sent to
-    // their dashboard by ProtectedRoute after they land on /login/{slug}
-    // and follow through.
+    // routes intact. We send to `/login` (slug-less) — on a custom domain
+    // the host already identifies the agency, so `/login/fiveleaf` would
+    // be redundant in the URL bar. The agency context is already in
+    // sessionStorage.loginAgencyContext (populated by useCustomDomainAgency)
+    // so Auth.tsx renders branded without needing the slug in the path.
+    // Authenticated client users hitting `/` are sent through ProtectedRoute
+    // to their dashboard.
     if (location.pathname === '/') {
-      navigate(`/login/${agency.slug}`, { replace: true });
+      navigate('/login', { replace: true });
     }
   }, [agency, loading, isCustomDomain, location.pathname, navigate]);
 
@@ -268,9 +272,16 @@ const AppRoutes = () => {
                 
                 {/* Client Auth Route */}
                 <Route path="/client/login" element={<ClientLoginRedirect />} />
-                
-                {/* Slug-based client login route */}
+
+                {/* Slug-based client login route — primary entry on the
+                    platform domain (app.total-dash.com/login/{slug}) */}
                 <Route path="/login/:agencySlug" element={<SlugBasedAuth />} />
+
+                {/* Slug-less login — used on custom whitelabel domains where
+                    the host identifies the agency. Renders Auth using
+                    sessionStorage.loginAgencyContext set by
+                    useCustomDomainAgency on app boot. */}
+                <Route path="/login" element={<Auth />} />
 
               {/* Client Routes - Isolated */}
               <Route path="/*" element={
