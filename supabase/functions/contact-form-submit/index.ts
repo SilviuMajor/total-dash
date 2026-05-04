@@ -104,6 +104,8 @@ serve(async (req) => {
     }
 
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
+    let emailStatus: "sent" | "skipped" | "failed" = "skipped";
+    let emailError: string | undefined;
     if (resendApiKey) {
       try {
         const resend = new Resend(resendApiKey);
@@ -124,22 +126,31 @@ serve(async (req) => {
             </p>
           </div>
         `;
-        await resend.emails.send({
+        const { data: sendData, error: sendError } = await resend.emails.send({
           from: "Total Dash <noreply@totaldash.com>",
           to: [NOTIFY_TO],
           reply_to: email,
           subject: `New enquiry from ${name}${company ? ` (${company})` : ""}`,
           html,
         });
+        if (sendError) {
+          emailStatus = "failed";
+          emailError = JSON.stringify(sendError);
+          console.error("contact-form-submit Resend returned error:", sendError);
+        } else {
+          emailStatus = "sent";
+          console.log("contact-form-submit notification sent:", sendData?.id);
+        }
       } catch (mailError) {
-        // Notification failure must not fail the request — the row is saved.
-        console.error("contact-form-submit notification email failed:", mailError);
+        emailStatus = "failed";
+        emailError = mailError instanceof Error ? `${mailError.name}: ${mailError.message}` : String(mailError);
+        console.error("contact-form-submit notification email threw:", mailError);
       }
     } else {
       console.warn("RESEND_API_KEY not configured; skipping notification email");
     }
 
-    return new Response(JSON.stringify({ ok: true }), {
+    return new Response(JSON.stringify({ ok: true, emailStatus, ...(emailError ? { emailError } : {}) }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
