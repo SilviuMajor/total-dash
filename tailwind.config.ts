@@ -21,13 +21,13 @@ export default {
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
+        ring: "var(--theme-ring)",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
-          glow: "hsl(var(--primary-glow))",
+          DEFAULT: "var(--theme-fg)",
+          foreground: "var(--theme-bg)",
+          glow: "var(--theme-fg)",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
@@ -58,12 +58,12 @@ export default {
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
-          primary: "hsl(var(--sidebar-primary))",
-          "primary-foreground": "hsl(var(--sidebar-primary-foreground))",
-          accent: "hsl(var(--sidebar-accent))",
-          "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
+          primary: "var(--theme-fg)",
+          "primary-foreground": "var(--theme-bg)",
+          accent: "var(--theme-bg)",
+          "accent-foreground": "var(--theme-fg)",
           border: "hsl(var(--sidebar-border))",
-          ring: "hsl(var(--sidebar-ring))",
+          ring: "var(--theme-ring)",
         },
 
         // ── New token system ──
@@ -91,6 +91,17 @@ export default {
         sand:  { bg: "var(--sand-bg)",  "bg-2": "var(--sand-bg-2)",  fg: "var(--sand-fg)" },
         lav:   { bg: "var(--lav-bg)",   "bg-2": "var(--lav-bg-2)",   fg: "var(--lav-fg)" },
         peach: { bg: "var(--peach-bg)", "bg-2": "var(--peach-bg-2)", fg: "var(--peach-fg)" },
+        teal:  { bg: "var(--teal-bg)",  "bg-2": "var(--teal-bg-2)",  fg: "var(--teal-fg)" },
+        lime:  { bg: "var(--lime-bg)",  "bg-2": "var(--lime-bg-2)",  fg: "var(--lime-fg)" },
+        berry: { bg: "var(--berry-bg)", "bg-2": "var(--berry-bg-2)", fg: "var(--berry-fg)" },
+        // User-selectable theme accent — auto-aliased per <html data-theme-color="...">
+        theme: {
+          DEFAULT: "var(--theme-fg)",
+          bg:      "var(--theme-bg)",
+          "bg-2":  "var(--theme-bg-2)",
+          fg:      "var(--theme-fg)",
+          ring:    "var(--theme-ring)",
+        },
         status: {
           "ai-bg":         "var(--status-ai-bg)",
           "ai-fg":         "var(--status-ai-fg)",

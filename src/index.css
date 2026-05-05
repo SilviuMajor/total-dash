@@ -7,6 +7,22 @@
    Hybrid: legacy HSL shadcn vars (kept for compatibility)
    + new oklch token system (ink, surfaces, pastels, status, density).
    New code should consume the new tokens; legacy tokens remain for shadcn.
+
+   ─── How to add a theme colour ─────────────────────────
+   1. Add --<name>-bg, --<name>-bg-2, --<name>-fg variables to both
+      light (:root) and dark ([data-theme="dark"]) blocks below. Use:
+        Light: bg = oklch(94% 0.04 H)   bg-2 = oklch(96% 0.03 H)
+               fg = oklch(36% 0.10 H)
+        Dark:  bg = oklch(28% 0.07 H)   bg-2 = oklch(22% 0.05 H)
+               fg = oklch(80% 0.13 H)
+   2. Add a [data-theme-color="<name>"] block aliasing --theme-* to
+      var(--<name>-*).
+   3. Register the family in tailwind.config.ts colors (so utilities
+      like bg-<name>-bg / text-<name>-fg exist for departments).
+   4. Add { value: '<name>', label: '<Name>' } to AVATAR_COLORS in
+      src/components/UserAvatar.tsx.
+   5. Drop+recreate the CHECK constraints on profiles.theme_color and
+      departments.color to allow the new family name.
    ═══════════════════════════════════════════════════════ */
 
 @layer base {
@@ -105,6 +121,24 @@
     --peach-bg:   oklch(94% 0.04 45);
     --peach-bg-2: oklch(96% 0.03 45);
     --peach-fg:   oklch(36% 0.10 45);
+
+    --teal-bg:    oklch(94% 0.04 185);
+    --teal-bg-2:  oklch(96% 0.03 185);
+    --teal-fg:    oklch(36% 0.10 185);
+
+    --lime-bg:    oklch(94% 0.04 115);
+    --lime-bg-2:  oklch(96% 0.03 115);
+    --lime-fg:    oklch(36% 0.10 115);
+
+    --berry-bg:   oklch(94% 0.04 330);
+    --berry-bg-2: oklch(96% 0.03 330);
+    --berry-fg:   oklch(36% 0.10 330);
+
+    /* Theme tokens (default = sky). Per-theme overrides below. */
+    --theme-bg:    var(--sky-bg);
+    --theme-bg-2:  var(--sky-bg-2);
+    --theme-fg:    var(--sky-fg);
+    --theme-ring:  color-mix(in oklch, var(--sky-fg) 35%, transparent);
 
     /* Status semantics */
     --status-ai-bg:        var(--sage-bg);
@@ -220,6 +254,18 @@
     --peach-bg-2: oklch(22% 0.05 45);
     --peach-fg:   oklch(82% 0.13 45);
 
+    --teal-bg:    oklch(28% 0.07 185);
+    --teal-bg-2:  oklch(22% 0.05 185);
+    --teal-fg:    oklch(80% 0.13 185);
+
+    --lime-bg:    oklch(28% 0.07 115);
+    --lime-bg-2:  oklch(22% 0.05 115);
+    --lime-fg:    oklch(80% 0.13 115);
+
+    --berry-bg:   oklch(28% 0.07 330);
+    --berry-bg-2: oklch(22% 0.05 330);
+    --berry-fg:   oklch(80% 0.13 330);
+
     --status-resolved-bg:  oklch(25% 0 0);
     --status-resolved-fg:  oklch(72% 0 0);
 
@@ -227,6 +273,16 @@
     --shadow-md:  0 4px 12px rgba(0,0,0,0.4), 0 1px 3px rgba(0,0,0,0.3);
     --shadow-lg:  0 12px 40px rgba(0,0,0,0.6), 0 4px 12px rgba(0,0,0,0.4);
   }
+
+  /* ── Per-theme overrides for --theme-* aliases ── */
+  [data-theme-color="rose"]  { --theme-bg: var(--rose-bg);  --theme-bg-2: var(--rose-bg-2);  --theme-fg: var(--rose-fg);  --theme-ring: color-mix(in oklch, var(--rose-fg) 35%, transparent); }
+  [data-theme-color="peach"] { --theme-bg: var(--peach-bg); --theme-bg-2: var(--peach-bg-2); --theme-fg: var(--peach-fg); --theme-ring: color-mix(in oklch, var(--peach-fg) 35%, transparent); }
+  [data-theme-color="sand"]  { --theme-bg: var(--sand-bg);  --theme-bg-2: var(--sand-bg-2);  --theme-fg: var(--sand-fg);  --theme-ring: color-mix(in oklch, var(--sand-fg) 35%, transparent); }
+  [data-theme-color="lime"]  { --theme-bg: var(--lime-bg);  --theme-bg-2: var(--lime-bg-2);  --theme-fg: var(--lime-fg);  --theme-ring: color-mix(in oklch, var(--lime-fg) 35%, transparent); }
+  [data-theme-color="teal"]  { --theme-bg: var(--teal-bg);  --theme-bg-2: var(--teal-bg-2);  --theme-fg: var(--teal-fg);  --theme-ring: color-mix(in oklch, var(--teal-fg) 35%, transparent); }
+  [data-theme-color="sky"]   { --theme-bg: var(--sky-bg);   --theme-bg-2: var(--sky-bg-2);   --theme-fg: var(--sky-fg);   --theme-ring: color-mix(in oklch, var(--sky-fg) 35%, transparent); }
+  [data-theme-color="lav"]   { --theme-bg: var(--lav-bg);   --theme-bg-2: var(--lav-bg-2);   --theme-fg: var(--lav-fg);   --theme-ring: color-mix(in oklch, var(--lav-fg) 35%, transparent); }
+  [data-theme-color="berry"] { --theme-bg: var(--berry-bg); --theme-bg-2: var(--berry-bg-2); --theme-fg: var(--berry-fg); --theme-ring: color-mix(in oklch, var(--berry-fg) 35%, transparent); }
 
   /* ── Density tokens ── */
   :root, [data-density="comfortable"] {

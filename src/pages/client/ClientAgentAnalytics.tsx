@@ -58,9 +58,9 @@ export default function ClientAgentAnalytics() {
               <Line 
                 type="monotone" 
                 dataKey="calls" 
-                stroke="hsl(var(--primary))" 
+                stroke="var(--theme-fg)" 
                 strokeWidth={3}
-                dot={{ fill: "hsl(var(--primary))", r: 4 }}
+                dot={{ fill: "var(--theme-fg)", r: 4 }}
               />
             </LineChart>
           </ResponsiveContainer>

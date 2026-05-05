@@ -243,7 +243,7 @@ export function Sidebar({ className }: { className?: string } = {}) {
               cn(
                 "flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm font-medium transition-all",
                 isActive
-                  ? "bg-sky-bg text-sky-fg"
+                  ? "bg-theme-bg text-theme-fg"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground"
               )
             }

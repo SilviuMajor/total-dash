@@ -952,7 +952,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                       checked={selectedUserIds.has(user.id)}
                       onClick={(e) => toggleUserSelection(user.id, e)}
                       onChange={() => {}}
-                      style={{ accentColor: 'hsl(var(--primary))' }}
+                      style={{ accentColor: 'var(--theme-fg)' }}
                     />
                     <Avatar className="h-9 w-9">
                       <AvatarImage src={user.avatar_url || undefined} />
@@ -965,7 +965,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                           <span className={cn(
                             "text-[10px] px-2 py-0.5 rounded-full",
                             user.is_admin_tier
-                              ? 'bg-sky-bg text-sky-fg'
+                              ? 'bg-theme-bg text-theme-fg'
                               : 'bg-sage-bg text-sage-fg'
                           )}>
                             {user.role_name}
@@ -1235,7 +1235,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                                       }));
                                     }
                                   }}
-                                  style={{ accentColor: 'hsl(var(--primary))' }}
+                                  style={{ accentColor: 'var(--theme-fg)' }}
                                 />
                                 <span className="text-sm font-medium flex-1">{agent.name}</span>
                                 <span className="text-[11px] text-muted-foreground">{agent.provider}</span>
@@ -1508,7 +1508,7 @@ export function ClientUsersManagement({ clientId, readOnly }: { clientId: string
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="text-xs text-sky-fg hover:text-sky-fg hover:bg-sky-bg"
+                              className="text-xs text-theme-fg hover:text-theme-fg hover:bg-theme-bg"
                               disabled={isImpersonating}
                               onClick={async () => {
                                 try {

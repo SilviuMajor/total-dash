@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
+import { deptChipClasses } from "@/lib/deptColor";
 
 type Json = any;
 
@@ -771,14 +772,18 @@ export default function TextTranscripts() {
                           </td>
                           <td className="px-4 py-3 text-sm">{formatDuration(c.duration)}</td>
                           <td className="px-4 py-3">
-                            {c.departments?.name ? (
+                            {c.departments?.name ? (() => {
+                              const chip = deptChipClasses(c.departments.color);
+                              return (
                               <Badge
                                 variant="outline"
-                                style={c.departments.color ? { borderColor: c.departments.color, color: c.departments.color } : undefined}
+                                className={chip.className}
+                                style={chip.style}
                               >
                                 {c.departments.name}
                               </Badge>
-                            ) : (
+                              );
+                            })() : (
                               <span className="text-xs text-muted-foreground">—</span>
                             )}
                           </td>
@@ -1028,14 +1033,18 @@ function HandoversTab({ handovers }: { handovers: HandoverSession[] }) {
                   <Badge variant={h.status === "completed" ? "secondary" : "default"}>
                     {h.status ?? "—"}
                   </Badge>
-                  {h.departments?.name && (
+                  {h.departments?.name && (() => {
+                    const chip = deptChipClasses(h.departments.color);
+                    return (
                     <Badge
                       variant="outline"
-                      style={h.departments.color ? { borderColor: h.departments.color, color: h.departments.color } : undefined}
+                      className={chip.className}
+                      style={chip.style}
                     >
                       {h.departments.name}
                     </Badge>
-                  )}
+                    );
+                  })()}
                   {h.fallback_occurred && (
                     <Badge variant="destructive">Fallback ×{h.fallback_count ?? 1}</Badge>
                   )}

@@ -47,6 +47,7 @@ import { useImpersonation } from "@/hooks/useImpersonation";
 import { useClientDepartments } from "@/hooks/useClientDepartments";
 import { ConversationCard } from "@/components/conversations/ConversationCard";
 import { ConversationAvatar } from "@/components/conversations/ConversationAvatar";
+import { deptChipClasses, deptDotClasses } from "@/lib/deptColor";
 import { formatWaitTime, getResponseTimeColor } from "@/components/conversations/cardUtils";
 import { getSoundPreferences, playHandoverRequestSound, playNewMessageSound, sendBrowserNotification } from "@/lib/notificationSounds";
 
@@ -1837,7 +1838,7 @@ export default function Conversations() {
             {departments.map(dept => {
               const count = departmentCounts.get(dept.id) || 0;
               const isActive = departmentFilters.includes(dept.id);
-              const color = dept.color || '#6B7280';
+              const chip = deptChipClasses(dept.color || 'sky');
               return (
                 <button
                   key={dept.id}
@@ -1849,17 +1850,11 @@ export default function Conversations() {
                   }}
                   className={cn(
                     "h-7 text-xs px-3 font-medium inline-flex items-center rounded-full border transition-colors",
-                    count === 0 && !isActive && "opacity-40"
+                    chip.className,
+                    !isActive && "opacity-70 hover:opacity-100",
+                    count === 0 && !isActive && "opacity-40",
                   )}
-                  style={isActive ? {
-                    backgroundColor: `${color}25`,
-                    borderColor: color,
-                    color: color,
-                  } : {
-                    backgroundColor: `${color}15`,
-                    borderColor: `${color}40`,
-                    color: color,
-                  }}
+                  style={chip.style}
                 >
                   {dept.name} ({count})
                 </button>
@@ -2113,18 +2108,19 @@ export default function Conversations() {
                   <div className="flex items-center gap-2 shrink-0">
                     {departments.length > 1 && selectedConversation.department_id && (() => {
                       const dept = departments.find(d => d.id === selectedConversation.department_id);
-                      return dept ? (
+                      if (!dept) return null;
+                      const chip = deptChipClasses(dept.color);
+                      return (
                         <span
-                          className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-medium border"
-                          style={{
-                            backgroundColor: `${dept.color || '#6B7280'}15`,
-                            borderColor: `${dept.color || '#6B7280'}40`,
-                            color: dept.color || '#6B7280',
-                          }}
+                          className={cn(
+                            "inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-medium border",
+                            chip.className,
+                          )}
+                          style={chip.style}
                         >
                           {dept.name}
                         </span>
-                      ) : null;
+                      );
                     })()}
                     <Button
                       variant="ghost"
@@ -2787,7 +2783,7 @@ export default function Conversations() {
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="w-full bg-sky-bg text-sky-fg hover:bg-sky-bg-2 hover:text-sky-fg"
+                            className="w-full bg-theme-bg text-theme-fg hover:bg-theme-bg-2 hover:text-theme-fg"
                             onClick={() => handleResolveWithReason('mark_resolved')}
                             disabled={!!handoverLoading}
                           >
@@ -3040,12 +3036,14 @@ export default function Conversations() {
                                 </div>
                                 {conv.department_id && (() => {
                                   const dept = departments.find(d => d.id === conv.department_id);
-                                  return dept ? (
+                                  if (!dept) return null;
+                                  const dot = deptDotClasses(dept.color);
+                                  return (
                                     <div className="flex items-center gap-1 mt-1 pl-[14px]">
-                                      <span className="w-1 h-1 rounded-full" style={{ backgroundColor: dept.color || '#6B7280' }} />
+                                      <span className={cn("w-1 h-1 rounded-full", dot.className)} style={dot.style} />
                                       <span className="text-[10px] text-muted-foreground">{dept.name}</span>
                                     </div>
-                                  ) : null;
+                                  );
                                 })()}
                               </button>
                             ))}
@@ -3166,7 +3164,7 @@ export default function Conversations() {
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="mt-2 w-full bg-sky-bg text-sky-fg hover:bg-sky-bg-2 hover:text-sky-fg"
+                        className="mt-2 w-full bg-theme-bg text-theme-fg hover:bg-theme-bg-2 hover:text-theme-fg"
                         onClick={saveNote}
                         disabled={savingNote}
                       >

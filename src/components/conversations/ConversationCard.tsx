@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { formatWaitTime, getResponseTimeColor, type ResponseThresholds } from './cardUtils';
 import { ConversationAvatar } from './ConversationAvatar';
+import { deptChipClasses } from '@/lib/deptColor';
 
 export interface CardConversation {
   id: string;
@@ -198,7 +199,7 @@ export function ConversationCard({
           )}
           <span className="text-[13px] font-medium truncate" title={rawName}>{displayName}</span>
           {isMine && (
-            <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-sky-bg text-sky-fg shrink-0">You</span>
+            <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-theme-bg text-theme-fg shrink-0">You</span>
           )}
           {conv.is_widget_test && (
             <Badge variant="outline" className="text-[10px] shrink-0 px-1 py-0">🧪</Badge>
@@ -207,18 +208,20 @@ export function ConversationCard({
             <AlertTriangle className="w-3 h-3 text-sand-fg shrink-0" />
           )}
         </div>
-        {departments.length > 1 && dept && (
-          <span
-            className="inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-medium border shrink-0 ml-2"
-            style={{
-              backgroundColor: `${dept.color || '#6B7280'}15`,
-              borderColor: `${dept.color || '#6B7280'}40`,
-              color: dept.color || '#6B7280',
-            }}
-          >
-            {dept.name}
-          </span>
-        )}
+        {departments.length > 1 && dept && (() => {
+          const chip = deptChipClasses(dept.color);
+          return (
+            <span
+              className={cn(
+                'inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-medium border shrink-0 ml-2',
+                chip.className,
+              )}
+              style={chip.style}
+            >
+              {dept.name}
+            </span>
+          );
+        })()}
       </div>
 
       <p className={cn('text-xs text-muted-foreground truncate mb-1.5', '')}>

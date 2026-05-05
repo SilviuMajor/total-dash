@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { UserAvatar, AVATAR_COLORS, type AvatarColor } from "@/components/UserAvatar";
 import { cn } from "@/lib/utils";
+import { deptChipClasses } from "@/lib/deptColor";
 
 interface Department {
   id: string;
@@ -48,7 +49,7 @@ export function UserProfileCard({ onSignOut }: UserProfileCardProps) {
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [newEmail, setNewEmail] = useState("");
-  const [avatarColor, setAvatarColor] = useState<AvatarColor | null>(null);
+  const [themeColor, setThemeColor] = useState<AvatarColor | null>(null);
   
   // Password fields
   const [oldPassword, setOldPassword] = useState("");
@@ -67,23 +68,24 @@ export function UserProfileCard({ onSignOut }: UserProfileCardProps) {
       setLastName(profile.last_name || "");
       setEmail(profile.email || "");
       setNewEmail(profile.email || "");
-      setAvatarColor(((profile as any).avatar_color as AvatarColor | null) || null);
+      setThemeColor(((profile as any).theme_color as AvatarColor | null) || null);
       loadUserDetails();
     }
   }, [profile]);
 
   const handleSelectAvatarColor = async (color: AvatarColor) => {
     if (!profile?.id) return;
-    const next = avatarColor === color ? null : color;
-    setAvatarColor(next);
+    const next = themeColor === color ? null : color;
+    setThemeColor(next);
+    document.documentElement.setAttribute('data-theme-color', next || 'sky');
     const { error } = await supabase
       .from('profiles')
-      .update({ avatar_color: next })
+      .update({ theme_color: next })
       .eq('id', profile.id);
     if (error) {
-      toast({ title: 'Could not save avatar colour', description: error.message, variant: 'destructive' });
-      // revert UI
-      setAvatarColor(avatarColor);
+      toast({ title: 'Could not save theme colour', description: error.message, variant: 'destructive' });
+      setThemeColor(themeColor);
+      document.documentElement.setAttribute('data-theme-color', themeColor || 'sky');
     }
   };
 
@@ -293,7 +295,7 @@ export function UserProfileCard({ onSignOut }: UserProfileCardProps) {
           <UserAvatar
             firstName={profile?.first_name}
             lastName={profile?.last_name}
-            color={avatarColor}
+            color={themeColor}
             size="md"
           />
           <div className="flex flex-col items-start flex-1 min-w-0">
@@ -301,11 +303,14 @@ export function UserProfileCard({ onSignOut }: UserProfileCardProps) {
               {profile?.full_name || profile?.first_name || profile?.email}
             </span>
             <div className="flex gap-1 flex-wrap">
-              {department && (
-                <Badge className="text-xs px-1.5 py-0" style={{ backgroundColor: department.color }}>
-                  {department.name}
-                </Badge>
-              )}
+              {department && (() => {
+                const chip = deptChipClasses(department.color);
+                return (
+                  <Badge className={cn("text-xs px-1.5 py-0 border", chip.className)} style={chip.style}>
+                    {department.name}
+                  </Badge>
+                );
+              })()}
               {roles.length > 0 && (
                 <Badge variant="secondary" className="text-xs px-1.5 py-0">{roles[0]}</Badge>
               )}
@@ -324,14 +329,17 @@ export function UserProfileCard({ onSignOut }: UserProfileCardProps) {
                   {firstName && lastName ? `${firstName} ${lastName}` : 'User Profile'}
                 </p>
                 <p className="text-xs text-muted-foreground">{email}</p>
-                {department && (
-                  <Badge 
-                    className="mt-2 text-xs"
-                    style={{ backgroundColor: department.color }}
+                {department && (() => {
+                  const chip = deptChipClasses(department.color);
+                  return (
+                  <Badge
+                    className={cn("mt-2 text-xs border", chip.className)}
+                    style={chip.style}
                   >
                     {department.name}
                   </Badge>
-                )}
+                  );
+                })()}
               </div>
               
               {/* Theme toggle button */}
@@ -392,10 +400,10 @@ export function UserProfileCard({ onSignOut }: UserProfileCardProps) {
             </Button>
             <Separator />
             <div className="px-3 py-3 space-y-2">
-              <Label className="text-xs text-muted-foreground">Avatar colour</Label>
+              <Label className="text-xs text-muted-foreground">Theme colour</Label>
               <div className="flex items-center gap-2">
                 {AVATAR_COLORS.map(({ value, label }) => {
-                  const isSelected = avatarColor === value;
+                  const isSelected = themeColor === value;
                   return (
                     <button
                       key={value}

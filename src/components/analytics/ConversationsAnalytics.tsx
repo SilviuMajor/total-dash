@@ -182,7 +182,7 @@ export function ConversationsAnalytics({ agentId, dateRange }: ConversationsAnal
                 <XAxis dataKey="label" tick={{ fontSize: 11 }} tickFormatter={l => formatTickLabel(l, data.granularity)} />
                 <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
                 <Tooltip labelFormatter={l => formatTickLabel(l, data.granularity)} />
-                <Area type="monotone" dataKey="count" stroke="hsl(var(--primary))" fill="hsl(var(--primary) / 0.15)" strokeWidth={2} />
+                <Area type="monotone" dataKey="count" stroke="var(--theme-fg)" fill="hsl(var(--primary) / 0.15)" strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
           ) : <p className="text-sm text-muted-foreground py-10 text-center">No data</p>}
@@ -196,7 +196,7 @@ export function ConversationsAnalytics({ agentId, dateRange }: ConversationsAnal
                 <XAxis dataKey="day" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
                 <Tooltip />
-                <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="count" fill="var(--theme-fg)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </Card>
@@ -213,7 +213,7 @@ export function ConversationsAnalytics({ agentId, dateRange }: ConversationsAnal
               <XAxis dataKey="range" tick={{ fontSize: 10 }} />
               <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
               <Tooltip />
-              <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="count" fill="var(--theme-fg)" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </Card>
@@ -259,7 +259,7 @@ export function ConversationsAnalytics({ agentId, dateRange }: ConversationsAnal
               <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
               <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={120} />
               <Tooltip />
-              <Bar dataKey="count" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+              <Bar dataKey="count" fill="var(--theme-fg)" radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </Card>

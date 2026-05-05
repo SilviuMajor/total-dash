@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PasswordDisplay } from "@/components/PasswordDisplay";
 import { Settings, Trash2, Mail } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { deptChipClasses } from "@/lib/deptColor";
 import { format } from "date-fns";
 
 interface Profile {
@@ -87,17 +89,17 @@ export function ClientUserManagementTable({
                 {user.profile.email}
               </td>
               <td className="py-2 px-3">
-                {user.department ? (
-                  <Badge 
-                    className="text-xs py-0 px-2"
-                    style={{ 
-                      backgroundColor: user.department.color,
-                      color: '#fff'
-                    }}
+                {user.department ? (() => {
+                  const chip = deptChipClasses(user.department.color);
+                  return (
+                  <Badge
+                    className={cn("text-xs py-0 px-2 border", chip.className)}
+                    style={chip.style}
                   >
                     {user.department.name}
                   </Badge>
-                ) : (
+                  );
+                })() : (
                   <span className="text-xs text-muted-foreground">—</span>
                 )}
               </td>

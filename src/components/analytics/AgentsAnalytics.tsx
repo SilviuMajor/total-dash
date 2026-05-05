@@ -179,7 +179,7 @@ export function AgentsAnalytics({ agentId, dateRange }: AgentsAnalyticsProps) {
               <XAxis type="number" tick={{ fontSize: 11 }} />
               <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={120} />
               <Tooltip />
-              <Bar dataKey="totalHandovers" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+              <Bar dataKey="totalHandovers" fill="var(--theme-fg)" radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </Card>

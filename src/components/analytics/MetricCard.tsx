@@ -25,7 +25,7 @@ interface MetricCardProps {
 }
 
 const COLORS = [
-  "hsl(var(--primary))",
+  "var(--theme-fg)",
   "hsl(var(--success))",
   "hsl(var(--warning))",
   "hsl(var(--destructive))",
@@ -78,7 +78,7 @@ export function MetricCard({ card, metrics, onToggleExpand, onDelete, onDuplicat
                 <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" />
                 <YAxis stroke="hsl(var(--muted-foreground))" />
                 <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "0.5rem" }} />
-                <Area type="monotone" dataKey="count" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.2} />
+                <Area type="monotone" dataKey="count" stroke="var(--theme-fg)" fill="var(--theme-fg)" fillOpacity={0.2} />
               </AreaChart>
             </ResponsiveContainer>
           );
@@ -91,7 +91,7 @@ export function MetricCard({ card, metrics, onToggleExpand, onDelete, onDuplicat
               <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" />
               <YAxis stroke="hsl(var(--muted-foreground))" />
               <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "0.5rem" }} />
-              <Line type="monotone" dataKey="count" stroke="hsl(var(--primary))" strokeWidth={3} dot={{ fill: "hsl(var(--primary))", r: 4 }} />
+              <Line type="monotone" dataKey="count" stroke="var(--theme-fg)" strokeWidth={3} dot={{ fill: "var(--theme-fg)", r: 4 }} />
             </LineChart>
           </ResponsiveContainer>
         );
@@ -122,7 +122,7 @@ export function MetricCard({ card, metrics, onToggleExpand, onDelete, onDuplicat
               <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" />
               <YAxis stroke="hsl(var(--muted-foreground))" />
               <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "0.5rem" }} />
-              <Bar dataKey="value" fill="hsl(var(--primary))" radius={[8, 8, 0, 0]} />
+              <Bar dataKey="value" fill="var(--theme-fg)" radius={[8, 8, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         );

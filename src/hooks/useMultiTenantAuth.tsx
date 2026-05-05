@@ -575,6 +575,12 @@ export function MultiTenantAuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('impersonation-changed', handleImpersonationChange);
   }, []);
 
+  // Apply per-user theme accent on the document root.
+  useEffect(() => {
+    const themeColor = (profile as any)?.theme_color;
+    document.documentElement.setAttribute('data-theme-color', themeColor || 'sky');
+  }, [profile]);
+
   return (
     <MultiTenantAuthContext.Provider
       value={{

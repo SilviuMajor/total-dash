@@ -243,11 +243,11 @@ export function VoiceflowSettings({ agent, onUpdate }: VoiceflowSettingsProps) {
                 </div>
               </div>
               
-              <div className="mt-4 p-3 bg-sky-bg rounded border border-sky-bg-2">
-                <p className="text-xs text-sky-fg">
+              <div className="mt-4 p-3 bg-theme-bg rounded border border-theme-bg-2">
+                <p className="text-xs text-theme-fg">
                   <strong>💡 Setup Tip:</strong> In your Voiceflow canvas, use "Capture Response" blocks to save user inputs 
-                  into variables named exactly <code className="px-1 py-0.5 bg-sky-bg rounded font-mono">user_name</code> and{' '}
-                  <code className="px-1 py-0.5 bg-sky-bg rounded font-mono">user_email</code>. 
+                  into variables named exactly <code className="px-1 py-0.5 bg-theme-bg rounded font-mono">user_name</code> and{' '}
+                  <code className="px-1 py-0.5 bg-theme-bg rounded font-mono">user_email</code>. 
                   These will automatically sync with your dashboard.
                 </p>
               </div>
@@ -312,11 +312,11 @@ export function VoiceflowSettings({ agent, onUpdate }: VoiceflowSettingsProps) {
                 </div>
               </div>
 
-              <div className="mt-2 p-3 bg-sky-bg rounded border border-sky-bg-2">
-                <p className="text-xs text-sky-fg">
+              <div className="mt-2 p-3 bg-theme-bg rounded border border-theme-bg-2">
+                <p className="text-xs text-theme-fg">
                   <strong>💡 How it works:</strong>
                   <br />
-                  • <strong>Voiceflow variable name:</strong> The exact variable name in your Voiceflow agent (e.g., <code className="px-1 py-0.5 bg-sky-bg rounded font-mono">phone_number</code>)
+                  • <strong>Voiceflow variable name:</strong> The exact variable name in your Voiceflow agent (e.g., <code className="px-1 py-0.5 bg-theme-bg rounded font-mono">phone_number</code>)
                   <br />
                   • <strong>Display name:</strong> How it appears in your dashboard (e.g., "Phone Number")
                 </p>

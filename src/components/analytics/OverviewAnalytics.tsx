@@ -238,7 +238,7 @@ export function OverviewAnalytics({ agentId, dateRange }: OverviewAnalyticsProps
                 <XAxis dataKey="label" tick={{ fontSize: 11 }} tickFormatter={l => formatTickLabel(l, data.granularity)} />
                 <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
                 <Tooltip labelFormatter={l => formatTickLabel(l, data.granularity)} />
-                <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Conversations" />
+                <Bar dataKey="count" fill="var(--theme-fg)" radius={[4, 4, 0, 0]} name="Conversations" />
               </BarChart>
             </ResponsiveContainer>
           ) : <div className="h-[280px] flex items-center justify-center text-sm text-muted-foreground">No data for this period</div>}

@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { DateRange } from "@/hooks/useAnalyticsMetrics";
+import { cn } from "@/lib/utils";
+import { deptDotClasses } from "@/lib/deptColor";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, Legend,
@@ -279,7 +281,7 @@ export function HandoverAnalytics({ agentId, dateRange }: HandoverAnalyticsProps
                 <XAxis dataKey="label" tick={{ fontSize: 11 }} tickFormatter={l => formatTickLabel(l, metrics.granularity)} />
                 <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
                 <Tooltip labelFormatter={l => formatTickLabel(l, metrics.granularity)} />
-                <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Requests" />
+                <Bar dataKey="count" fill="var(--theme-fg)" radius={[4, 4, 0, 0]} name="Requests" />
               </BarChart>
             </ResponsiveContainer>
           ) : (
@@ -296,7 +298,7 @@ export function HandoverAnalytics({ agentId, dateRange }: HandoverAnalyticsProps
                 <XAxis dataKey="label" tick={{ fontSize: 11 }} tickFormatter={l => formatTickLabel(l, metrics.granularity)} />
                 <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => formatDuration(v)} />
                 <Tooltip labelFormatter={l => formatTickLabel(l, metrics.granularity)} formatter={(v: number) => [formatDuration(v), "Avg Accept Time"]} />
-                <Line type="monotone" dataKey="avgTime" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="avgTime" stroke="var(--theme-fg)" strokeWidth={2} dot={{ r: 3 }} />
               </LineChart>
             </ResponsiveContainer>
           ) : (
@@ -367,16 +369,19 @@ export function HandoverAnalytics({ agentId, dateRange }: HandoverAnalyticsProps
                   </tr>
                 </thead>
                 <tbody>
-                  {metrics.byDepartment.map((dept, i) => (
+                  {metrics.byDepartment.map((dept, i) => {
+                    const dot = deptDotClasses(dept.color);
+                    return (
                     <tr key={i} className="border-b border-border/50">
                       <td className="py-1.5 flex items-center gap-1.5">
-                        <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ background: dept.color }} />
+                        <span className={cn("w-2.5 h-2.5 rounded-md inline-block", dot.className)} style={dot.style} />
                         {dept.name}
                       </td>
                       <td className="text-right py-1.5">{dept.count}</td>
                       <td className="text-right py-1.5">{formatDuration(dept.avgAcceptTime)}</td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

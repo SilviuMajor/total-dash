@@ -117,7 +117,7 @@ function CompanySettingsPanel({ clientId }: { clientId: string }) {
           <Card className="p-4 bg-card border-border/50 mb-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="h-2 w-2 rounded-full" style={{ backgroundColor: isTabEnabled("client_departments_enabled") ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))' }} />
+                <div className="h-2 w-2 rounded-full" style={{ backgroundColor: isTabEnabled("client_departments_enabled") ? 'var(--theme-fg)' : 'hsl(var(--muted-foreground))' }} />
                 <div>
                   <Label className="text-sm font-medium">Visible to Client</Label>
                   <p className="text-xs text-muted-foreground">Allow clients to view and manage departments. Disabling hides this tab for every user at this client.</p>
@@ -136,7 +136,7 @@ function CompanySettingsPanel({ clientId }: { clientId: string }) {
           <Card className="p-4 bg-card border-border/50 mb-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="h-2 w-2 rounded-full" style={{ backgroundColor: isTabEnabled("client_team_enabled") ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))' }} />
+                <div className="h-2 w-2 rounded-full" style={{ backgroundColor: isTabEnabled("client_team_enabled") ? 'var(--theme-fg)' : 'hsl(var(--muted-foreground))' }} />
                 <div>
                   <Label className="text-sm font-medium">Visible to Client</Label>
                   <p className="text-xs text-muted-foreground">Allow clients to view and manage team members. Disabling hides this tab for every user at this client.</p>
@@ -180,7 +180,7 @@ function CompanySettingsPanel({ clientId }: { clientId: string }) {
           <Card className="p-4 bg-card border-border/50 mb-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="h-2 w-2 rounded-full" style={{ backgroundColor: isTabEnabled("client_canned_responses_enabled") ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))' }} />
+                <div className="h-2 w-2 rounded-full" style={{ backgroundColor: isTabEnabled("client_canned_responses_enabled") ? 'var(--theme-fg)' : 'hsl(var(--muted-foreground))' }} />
                 <div>
                   <Label className="text-sm font-medium">Visible to Client</Label>
                   <p className="text-xs text-muted-foreground">Allow clients to view and manage canned responses. Disabling hides this tab for every user at this client.</p>
@@ -199,7 +199,7 @@ function CompanySettingsPanel({ clientId }: { clientId: string }) {
           <Card className="p-4 bg-card border-border/50 mb-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="h-2 w-2 rounded-full" style={{ backgroundColor: isTabEnabled("client_general_enabled") ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))' }} />
+                <div className="h-2 w-2 rounded-full" style={{ backgroundColor: isTabEnabled("client_general_enabled") ? 'var(--theme-fg)' : 'hsl(var(--muted-foreground))' }} />
                 <div>
                   <Label className="text-sm font-medium">Visible to Client</Label>
                   <p className="text-xs text-muted-foreground">Allow clients to view company information. Disabling hides this tab for every user at this client.</p>
@@ -218,7 +218,7 @@ function CompanySettingsPanel({ clientId }: { clientId: string }) {
           <Card className="p-4 bg-card border-border/50 mb-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="h-2 w-2 rounded-full" style={{ backgroundColor: isTabEnabled("client_audit_log_enabled") ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))' }} />
+                <div className="h-2 w-2 rounded-full" style={{ backgroundColor: isTabEnabled("client_audit_log_enabled") ? 'var(--theme-fg)' : 'hsl(var(--muted-foreground))' }} />
                 <div>
                   <Label className="text-sm font-medium">Visible to Client</Label>
                   <p className="text-xs text-muted-foreground">Allow clients to view the audit log. Disabling hides this tab for every user at this client.</p>
