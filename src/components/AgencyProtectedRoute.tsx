@@ -2,6 +2,7 @@ import { ReactNode, useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
 import { useImpersonation } from "@/hooks/useImpersonation";
+import { getImpersonationBridge } from "@/lib/impersonation-bridge";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 import { GracePeriodBanner } from "./GracePeriodBanner";
@@ -23,8 +24,9 @@ export function AgencyProtectedRoute({ children }: AgencyProtectedRouteProps) {
   const hasToken = !!(tokenInUrl || tokenInSession);
 
   // Check bridge values synchronously — don't wait for async impersonation restore
-  const hasBridgePreview = sessionStorage.getItem('preview_mode') === 'agency';
-  const hasImpersonationSession = !!sessionStorage.getItem('impersonation_session_id');
+  const bridge = getImpersonationBridge();
+  const hasBridgePreview = bridge.previewMode === 'agency';
+  const hasImpersonationSession = !!bridge.sessionId;
 
   useEffect(() => {
     const checkSubscription = async () => {

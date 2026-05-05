@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
 import { useClientAgentContext } from "@/hooks/useClientAgentContext";
 import { useImpersonation } from "@/hooks/useImpersonation";
+import { hasImpersonationBridge } from "@/lib/impersonation-bridge";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -50,9 +51,7 @@ export function ProtectedRoute({
   const hasPreviewAccess = (() => {
     if (previewDepth !== 'none' && previewDepth !== undefined) return true;
     if (isImpersonating) return true;
-    // Also check bridge values synchronously as fallback
-    const bridgeMode = sessionStorage.getItem('preview_mode');
-    if (bridgeMode) return true;
+    if (hasImpersonationBridge()) return true;
     return false;
   })();
 

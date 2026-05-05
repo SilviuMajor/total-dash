@@ -1,6 +1,8 @@
 import { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
+import { useImpersonation } from "@/hooks/useImpersonation";
+import { hasImpersonationBridge } from "@/lib/impersonation-bridge";
 import { Loader2 } from "lucide-react";
 
 interface AdminProtectedRouteProps {
@@ -9,6 +11,7 @@ interface AdminProtectedRouteProps {
 
 export function AdminProtectedRoute({ children }: AdminProtectedRouteProps) {
   const { userType, loading } = useMultiTenantAuth();
+  const { isImpersonating } = useImpersonation();
 
   if (loading) {
     return (
@@ -23,10 +26,9 @@ export function AdminProtectedRoute({ children }: AdminProtectedRouteProps) {
   }
 
   // Signed-in non-super-admin → redirect to *their* dashboard, not to the
-  // admin login page. Skip during impersonation (preview_mode bridge) so the
-  // super_admin's own impersonation flow isn't bounced.
-  const previewBridge = sessionStorage.getItem('preview_mode');
-  if (previewBridge && previewBridge !== '') {
+  // admin login page. Skip during impersonation so the super_admin's own
+  // impersonation flow isn't bounced.
+  if (isImpersonating || hasImpersonationBridge()) {
     return <>{children}</>;
   }
 
