@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
+import { hasImpersonationBridge } from "@/lib/impersonation-bridge";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { useBranding } from "@/hooks/useBranding";
@@ -48,7 +49,7 @@ export default function SuperAdminLogin() {
   // and surface a WrongRoleBanner so the visitor can view the page, go to
   // their dashboard, or sign out. Skip entirely during impersonation.
   useEffect(() => {
-    if (sessionStorage.getItem('preview_mode') === '1') return;
+    if (hasImpersonationBridge()) return;
     let cancelled = false;
     (async () => {
       const { data: { session } } = await supabase.auth.getSession();

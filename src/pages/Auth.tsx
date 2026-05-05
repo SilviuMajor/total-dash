@@ -18,6 +18,7 @@ import { useFavicon } from "@/hooks/useFavicon";
 import { ForgotPasswordDialog } from "@/components/ForgotPasswordDialog";
 import { WrongRoleBanner } from "@/components/WrongRoleBanner";
 import { supabase } from "@/integrations/supabase/client";
+import { hasImpersonationBridge } from "@/lib/impersonation-bridge";
 import { Loader2 } from "lucide-react";
 
 export default function Auth() {
@@ -64,7 +65,7 @@ export default function Auth() {
   // preview/impersonation and during the explicit ?preview=true UX.
   useEffect(() => {
     if (isPreviewMode) return;
-    if (sessionStorage.getItem('preview_mode') === '1') return;
+    if (hasImpersonationBridge()) return;
     if (!user) return;
 
     let cancelled = false;
