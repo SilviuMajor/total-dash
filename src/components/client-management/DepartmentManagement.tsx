@@ -24,7 +24,7 @@ import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEn
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-import { DEPT_FAMILIES, DEPT_FAMILY_LABELS, deptColorClasses } from "@/lib/deptColor";
+import { DEPT_FAMILIES, DEPT_FAMILY_LABELS, deptColorClasses, deptDotClasses } from "@/lib/deptColor";
 
 const DEPARTMENT_COLORS = DEPT_FAMILIES.map(value => ({
   value,
@@ -681,23 +681,22 @@ export function DepartmentManagement({ clientId, readOnly }: { clientId: string;
                 <Label>Colour</Label>
                 <div className="flex flex-wrap gap-2 mt-2">
                   {DEPARTMENT_COLORS.map((c) => {
-                    const tile = deptColorClasses(c.value);
+                    const dot = deptDotClasses(c.value);
                     return (
                       <button
                         key={c.value}
                         type="button"
                         onClick={() => setColor(c.value)}
                         className={cn(
-                          "h-8 w-8 rounded-md transition-all hover:scale-110 flex items-center justify-center text-[11px] font-semibold",
-                          tile.className,
+                          "h-8 w-8 rounded-md transition-all hover:scale-110",
+                          dot.className,
                           color === c.value && "ring-2 ring-offset-2 ring-offset-background ring-foreground"
                         )}
-                        style={tile.style}
+                        style={dot.style}
                         title={c.label}
+                        aria-label={c.label}
                         aria-pressed={color === c.value}
-                      >
-                        {c.label.charAt(0)}
-                      </button>
+                      />
                     );
                   })}
                 </div>

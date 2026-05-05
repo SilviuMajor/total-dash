@@ -2818,7 +2818,7 @@ export default function Conversations() {
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="w-full bg-ink text-surface-base hover:bg-ink/90 hover:text-surface-base"
+                              className="w-full bg-theme-fg text-theme-bg hover:bg-theme-fg/90 hover:text-theme-bg"
                               onClick={() => setTakeoverConfirmOpen(true)}
                               disabled={!!handoverLoading}
                             >

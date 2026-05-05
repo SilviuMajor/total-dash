@@ -272,15 +272,7 @@ export function Sidebar({ className }: { className?: string } = {}) {
                 overlayOpen
                   ? 'absolute bottom-0 left-0 right-0 mx-2 bg-background border border-border shadow-xl'
                   : isImpersonating
-                  ? (() => {
-                      const isAgencyView = activeSession?.target_type === 'agency';
-                      const isUserView = impersonationMode === 'view_as_user';
-                      return isAgencyView
-                        ? 'bg-rose-bg border border-rose-bg-2'
-                        : isUserView
-                        ? 'bg-sage-bg border border-sage-bg-2'
-                        : 'bg-sky-bg border border-sky-bg-2';
-                    })()
+                  ? 'bg-theme-bg border border-theme-bg-2'
                   : 'border border-border'
               }`}
               style={overlayOpen ? { maxHeight: 'calc(100vh - 160px)' } : {}}
@@ -313,11 +305,13 @@ export function Sidebar({ className }: { className?: string } = {}) {
                   const isAgencyView = activeSession?.target_type === 'agency';
                   const isUserView = impersonationMode === 'view_as_user';
 
-                  const colors = isAgencyView
-                    ? { icon: 'text-rose-fg', title: 'text-rose-fg', sub: 'text-rose-fg', line: 'bg-rose-bg-2', badge: 'bg-rose-bg text-rose-fg' }
-                    : isUserView
-                    ? { icon: 'text-sage-fg', title: 'text-sage-fg', sub: 'text-sage-fg', line: 'bg-sage-bg-2', badge: 'bg-sage-bg text-sage-fg' }
-                    : { icon: 'text-sky-fg', title: 'text-sky-fg', sub: 'text-sky-fg', line: 'bg-sky-bg-2', badge: 'bg-sky-bg text-sky-fg' };
+                  const colors = {
+                    icon:  'text-theme-fg',
+                    title: 'text-theme-fg',
+                    sub:   'text-theme-fg',
+                    line:  'bg-theme-bg-2',
+                    badge: 'bg-theme-bg text-theme-fg',
+                  };
 
                   const TypeIcon = isAgencyView ? Building2 : isUserView ? User : Users;
                   const displayName = isAgencyView
