@@ -16,9 +16,10 @@ interface RetellSettingsProps {
     config: Record<string, any>;
   };
   onUpdate: () => void;
+  hideDangerZone?: boolean;
 }
 
-export function RetellSettings({ agent, onUpdate }: RetellSettingsProps) {
+export function RetellSettings({ agent, onUpdate, hideDangerZone = false }: RetellSettingsProps) {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -142,7 +143,7 @@ export function RetellSettings({ agent, onUpdate }: RetellSettingsProps) {
           {loading ? "Saving..." : "Save Settings"}
         </Button>
 
-        {isAdmin && (
+        {!hideDangerZone && isAdmin && (
           <div className="pt-6 border-t border-border">
             <div className="space-y-4">
               <div>
@@ -162,23 +163,23 @@ export function RetellSettings({ agent, onUpdate }: RetellSettingsProps) {
         )}
       </div>
 
-      <AgentDeletionDialog
-        agentId={agent.id}
-        agentName={agent.name}
-        open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-        onSuccess={() => {
-          console.log("Delete success callback triggered");
-          toast({
-            title: "Success",
-            description: "Agent deleted successfully"
-          });
-          setTimeout(() => {
-            console.log("Navigating to /admin/agents");
-            navigate('/admin/agents');
-          }, 100);
-        }}
-      />
+      {!hideDangerZone && (
+        <AgentDeletionDialog
+          agentId={agent.id}
+          agentName={agent.name}
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          onSuccess={() => {
+            toast({
+              title: "Success",
+              description: "Agent deleted successfully"
+            });
+            setTimeout(() => {
+              navigate('/admin/agents');
+            }, 100);
+          }}
+        />
+      )}
     </Card>
   );
 }

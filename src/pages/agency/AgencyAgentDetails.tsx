@@ -18,6 +18,9 @@ import { SpecsSettings } from "@/components/agent-management/specs/SpecsSettings
 import { WidgetTestPanel } from "@/components/agent-management/voiceflow/widget/WidgetTestPanel";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { AgentDeletionDialog } from "@/components/agent-management/AgentDeletionDialog";
 import { Lock } from "lucide-react";
 import { useMultiTenantAuth } from "@/hooks/useMultiTenantAuth";
 import { useImpersonation } from "@/hooks/useImpersonation";
@@ -52,13 +55,29 @@ export default function AgencyAgentDetails() {
   const [agent, setAgent] = useState<Agent | null>(null);
   const [assignedClients, setAssignedClients] = useState<AssignedClient[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("client-access");
+  const [activeTab, setActiveTab] = useState("config-and-permissions");
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   useEffect(() => {
     if (agencyId) {
       loadAgentDetails();
     }
   }, [agentId, agencyId]);
+
+  useEffect(() => {
+    const checkAdmin = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+      setIsAdmin(data?.role === 'admin');
+    };
+    checkAdmin();
+  }, []);
 
   const loadAgentDetails = async () => {
     if (!agentId || !agencyId) return;
@@ -140,7 +159,7 @@ export default function AgencyAgentDetails() {
         case "handover":
           return <VoiceflowHandoverSettings agent={agent} onUpdate={loadAgentDetails} />;
         case "config":
-          return <VoiceflowSettings agent={agent} onUpdate={loadAgentDetails} />;
+          return <VoiceflowSettings agent={agent} onUpdate={loadAgentDetails} hideDangerZone />;
         default:
           return null;
       }
@@ -153,7 +172,7 @@ export default function AgencyAgentDetails() {
         case "channels":
           return <RetellChannels agent={agent} />;
         case "config":
-          return <RetellSettings agent={agent} onUpdate={loadAgentDetails} />;
+          return <RetellSettings agent={agent} onUpdate={loadAgentDetails} hideDangerZone />;
         default:
           return null;
       }
@@ -181,65 +200,55 @@ export default function AgencyAgentDetails() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList>
-          <TabsTrigger value="client-access"><Lock className="w-3.5 h-3.5 mr-1.5" />Client Access</TabsTrigger>
+          <TabsTrigger value="config-and-permissions">Configuration & Permissions</TabsTrigger>
           <TabsTrigger value="widget">Widget</TabsTrigger>
           <TabsTrigger value="knowledge-base">Knowledge Base</TabsTrigger>
           <TabsTrigger value="channels">Channels</TabsTrigger>
           <TabsTrigger value="specs">Specs</TabsTrigger>
           {agent.provider === "voiceflow" && <TabsTrigger value="conversations">Conversations</TabsTrigger>}
           {agent.provider === "voiceflow" && <TabsTrigger value="handover">Handover</TabsTrigger>}
-          <TabsTrigger value="config">Config</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="client-access" className="space-y-6">
-          {/* Agency-only banner — destructive accent signals per-agent cap */}
-          <div className="flex items-start gap-3 p-3 border-l-4 border-l-destructive border-y border-r border-y-border/50 border-r-border/50 rounded-lg bg-destructive/5">
-            <Lock className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
-            <p className="text-sm text-muted-foreground">
-              <span className="font-medium text-foreground">Agency only. Per-agent cap.</span> These toggles control what client users can see for this specific agent. Disabling a toggle hides that feature for every client user assigned to this agent. Clients never see this page.
-            </p>
-          </div>
-
-          {/* Sidebar pages */}
-          <div className="rounded-lg border bg-card">
-            <div className="p-4 border-b">
-              <h3 className="text-sm font-semibold">Sidebar pages</h3>
+        <TabsContent value="config-and-permissions" className="space-y-8">
+          {/* Configuration */}
+          <section className="space-y-4">
+            <div>
+              <h2 className="text-lg font-semibold">Configuration</h2>
+              <p className="text-sm text-muted-foreground">Agent credentials and {agent.provider === "voiceflow" ? "Voiceflow" : "Retell"} settings. Agency only.</p>
             </div>
-            {[
-              { key: "client_conversations_enabled", label: "Conversations", desc: "View conversations and handle handovers" },
-              { key: "client_transcripts_enabled", label: "Transcripts", desc: "View completed conversation records" },
-              { key: "client_analytics_enabled", label: "Analytics", desc: "View performance metrics and insights" },
-              { key: "client_specs_enabled", label: "Specifications", desc: "View agent specs and update logs" },
-              { key: "client_knowledge_base_enabled", label: "Knowledge base", desc: "View and manage knowledge base content" },
-              { key: "client_guides_enabled", label: "Guides", desc: "View agent guides and documentation" },
-              { key: "client_agent_settings_enabled", label: "Agent settings", desc: "Access agent configuration pages" },
-            ].map((item, i, arr) => (
-              <div key={item.key} className={`flex items-center justify-between p-4 ${i < arr.length - 1 ? 'border-b' : ''}`}>
-                <div>
-                  <p className="text-sm font-medium">{item.label}</p>
-                  <p className="text-xs text-muted-foreground">{item.desc}</p>
-                </div>
-                <Switch
-                  checked={agent.config?.[item.key] !== false}
-                  onCheckedChange={(checked) => handleToggleAccess(item.key, checked)}
-                />
-              </div>
-            ))}
-          </div>
+            {renderProviderContent("config")}
+          </section>
 
-          {/* Agent Settings sub-tabs — only show if agent_settings is enabled */}
-          {agent.config?.client_agent_settings_enabled !== false && (
+          <Separator />
+
+          {/* Permissions */}
+          <section className="space-y-4">
+            <div>
+              <h2 className="text-lg font-semibold">Permissions</h2>
+              <p className="text-sm text-muted-foreground">Per-agent ceiling toggles for what client users can see and access.</p>
+            </div>
+
+            {/* Agency-only banner — destructive accent signals per-agent cap */}
+            <div className="flex items-start gap-3 p-3 border-l-4 border-l-destructive border-y border-r border-y-border/50 border-r-border/50 rounded-lg bg-destructive/5">
+              <Lock className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+              <p className="text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">Agency only. Per-agent cap.</span> These toggles control what client users can see for this specific agent. Disabling a toggle hides that feature for every client user assigned to this agent. Clients never see this page.
+              </p>
+            </div>
+
+            {/* Sidebar pages */}
             <div className="rounded-lg border bg-card">
               <div className="p-4 border-b">
-                <h3 className="text-sm font-semibold">Agent settings sub-tabs</h3>
+                <h3 className="text-sm font-semibold">Sidebar pages</h3>
               </div>
               {[
-                { key: "client_widget_access_enabled", label: "Widget", desc: "View and edit widget appearance" },
-                { key: "client_channels_access_enabled", label: "Channels", desc: "View and manage communication channels" },
-                ...(agent.provider === "voiceflow" ? [
-                  { key: "client_conversations_settings_enabled", label: "Conversation settings", desc: "Configure auto-end timers and thresholds" },
-                  { key: "client_handover_settings_enabled", label: "Handover settings", desc: "Configure inactivity nudge and timeout" },
-                ] : []),
+                { key: "client_conversations_enabled", label: "Conversations", desc: "View conversations and handle handovers" },
+                { key: "client_transcripts_enabled", label: "Transcripts", desc: "View completed conversation records" },
+                { key: "client_analytics_enabled", label: "Analytics", desc: "View performance metrics and insights" },
+                { key: "client_specs_enabled", label: "Specifications", desc: "View agent specs and update logs" },
+                { key: "client_knowledge_base_enabled", label: "Knowledge base", desc: "View and manage knowledge base content" },
+                { key: "client_guides_enabled", label: "Guides", desc: "View agent guides and documentation" },
+                { key: "client_agent_settings_enabled", label: "Agent settings", desc: "Access agent configuration pages" },
               ].map((item, i, arr) => (
                 <div key={item.key} className={`flex items-center justify-between p-4 ${i < arr.length - 1 ? 'border-b' : ''}`}>
                   <div>
@@ -253,9 +262,57 @@ export default function AgencyAgentDetails() {
                 </div>
               ))}
             </div>
-          )}
 
-          <p className="text-xs text-muted-foreground">Changes save automatically. Disabling a page removes it from all client users immediately.</p>
+            {/* Agent Settings sub-tabs — only show if agent_settings is enabled */}
+            {agent.config?.client_agent_settings_enabled !== false && (
+              <div className="rounded-lg border bg-card">
+                <div className="p-4 border-b">
+                  <h3 className="text-sm font-semibold">Agent settings sub-tabs</h3>
+                </div>
+                {[
+                  { key: "client_widget_access_enabled", label: "Widget", desc: "View and edit widget appearance" },
+                  { key: "client_channels_access_enabled", label: "Channels", desc: "View and manage communication channels" },
+                  ...(agent.provider === "voiceflow" ? [
+                    { key: "client_conversations_settings_enabled", label: "Conversation settings", desc: "Configure auto-end timers and thresholds" },
+                    { key: "client_handover_settings_enabled", label: "Handover settings", desc: "Configure inactivity nudge and timeout" },
+                  ] : []),
+                ].map((item, i, arr) => (
+                  <div key={item.key} className={`flex items-center justify-between p-4 ${i < arr.length - 1 ? 'border-b' : ''}`}>
+                    <div>
+                      <p className="text-sm font-medium">{item.label}</p>
+                      <p className="text-xs text-muted-foreground">{item.desc}</p>
+                    </div>
+                    <Switch
+                      checked={agent.config?.[item.key] !== false}
+                      onCheckedChange={(checked) => handleToggleAccess(item.key, checked)}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <p className="text-xs text-muted-foreground">Changes save automatically. Disabling a page removes it from all client users immediately.</p>
+          </section>
+
+          {isAdmin && (
+            <>
+              <Separator />
+              <section className="space-y-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-destructive">Danger Zone</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Permanently delete this agent and all associated data
+                  </p>
+                </div>
+                <Button
+                  variant="destructive"
+                  onClick={() => setDeleteDialogOpen(true)}
+                >
+                  Delete Agent
+                </Button>
+              </section>
+            </>
+          )}
         </TabsContent>
 
         <TabsContent value="widget" className="space-y-6">
@@ -285,11 +342,23 @@ export default function AgencyAgentDetails() {
             {renderProviderContent("handover")}
           </TabsContent>
         )}
-
-        <TabsContent value="config" className="space-y-6">
-          {renderProviderContent("config")}
-        </TabsContent>
       </Tabs>
+
+      <AgentDeletionDialog
+        agentId={agent.id}
+        agentName={agent.name}
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onSuccess={() => {
+          toast({
+            title: "Success",
+            description: "Agent deleted successfully"
+          });
+          setTimeout(() => {
+            navigate('/agency/agents');
+          }, 100);
+        }}
+      />
     </div>
   );
 

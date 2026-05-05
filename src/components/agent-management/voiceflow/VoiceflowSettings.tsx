@@ -17,9 +17,10 @@ interface VoiceflowSettingsProps {
     config: Record<string, any>;
   };
   onUpdate: () => void;
+  hideDangerZone?: boolean;
 }
 
-export function VoiceflowSettings({ agent, onUpdate }: VoiceflowSettingsProps) {
+export function VoiceflowSettings({ agent, onUpdate, hideDangerZone = false }: VoiceflowSettingsProps) {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -325,7 +326,7 @@ export function VoiceflowSettings({ agent, onUpdate }: VoiceflowSettingsProps) {
           </div>
         </div>
 
-        {isAdmin && (
+        {!hideDangerZone && isAdmin && (
           <div className="pt-6 border-t border-border">
             <div className="space-y-4">
               <div>
@@ -345,23 +346,23 @@ export function VoiceflowSettings({ agent, onUpdate }: VoiceflowSettingsProps) {
         )}
       </div>
 
-      <AgentDeletionDialog
-        agentId={agent.id}
-        agentName={agent.name}
-        open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-        onSuccess={() => {
-          console.log("Delete success callback triggered");
-          toast({
-            title: "Success",
-            description: "Agent deleted successfully"
-          });
-          setTimeout(() => {
-            console.log("Navigating to /admin/agents");
-            navigate('/admin/agents');
-          }, 100);
-        }}
-      />
+      {!hideDangerZone && (
+        <AgentDeletionDialog
+          agentId={agent.id}
+          agentName={agent.name}
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          onSuccess={() => {
+            toast({
+              title: "Success",
+              description: "Agent deleted successfully"
+            });
+            setTimeout(() => {
+              navigate('/admin/agents');
+            }, 100);
+          }}
+        />
+      )}
     </Card>
   );
 }
