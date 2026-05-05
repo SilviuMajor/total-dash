@@ -1,6 +1,7 @@
 import { Bot, FileText, Download } from "lucide-react";
 import { format } from "date-fns";
 import { ConversationAvatar } from "@/components/conversations/ConversationAvatar";
+import { cn } from "@/lib/utils";
 
 // Append `?download=<filename>` so Supabase storage serves the file with
 // Content-Disposition: attachment instead of inline. Without this, browsers
@@ -153,6 +154,14 @@ export function MessageBubble({
       (!!attachments && attachments.length > 0 && attachments.every((a) => a.kind === 'file')) ||
       (!!fileUrl && !isImage)
     );
+  // In the dashboard (non-widget) view, button-only messages render their
+  // buttons directly without a wrapping chat bubble.
+  const stripBubbleForButtons =
+    !isWidget &&
+    hasButtons &&
+    !messageContent &&
+    !(attachments && attachments.length > 0) &&
+    !fileUrl;
   
   const getBubbleStyle = () => {
     const style = appearance.messageBubbleStyle || 'rounded';
@@ -225,8 +234,8 @@ export function MessageBubble({
       
       <div className={`flex flex-col gap-1 max-w-[80%] ${isUser ? 'items-end' : 'items-start'}`}>
         <div
-          className={`${onlyFileAttachments ? '' : `${getBubbleStyle()} shadow-sm ${messageContent || (buttons?.length) ? 'px-4 py-2.5' : 'p-1'}`}`}
-          style={onlyFileAttachments ? undefined : {
+          className={`${onlyFileAttachments || stripBubbleForButtons ? '' : `${getBubbleStyle()} shadow-sm ${messageContent || (buttons?.length) ? 'px-4 py-2.5' : 'p-1'}`}`}
+          style={onlyFileAttachments || stripBubbleForButtons ? undefined : {
             backgroundColor: isUser
               ? appearance.primaryColor
               : appearance.messageBgColor || '#f3f4f6',
@@ -269,21 +278,27 @@ export function MessageBubble({
           )}
           
           {buttons && buttons.length > 0 && (
-            <div className="flex flex-col gap-2 mt-2">
+            <div className={cn("flex flex-col gap-2", !stripBubbleForButtons && "mt-2")}>
               {buttons.map((button, idx) => {
                 const isSelected = selectedButton === button.text;
-                
+                const inDashboard = !isWidget;
                 return (
                   <button
                     key={idx}
                     onClick={() => isWidget && onButtonClick?.(button.payload, button.text)}
                     disabled={!isWidget || buttonsDisabled}
-                    className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                      (!isWidget || buttonsDisabled) ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-md cursor-pointer'
-                    }`}
-                    style={{
+                    className={cn(
+                      "px-4 py-2 rounded-lg font-medium transition-all",
+                      (!isWidget || buttonsDisabled) ? 'cursor-not-allowed' : 'hover:shadow-md cursor-pointer',
+                      inDashboard && (
+                        isSelected
+                          ? 'bg-theme-fg text-theme-bg'
+                          : 'bg-theme-bg text-theme-fg opacity-70'
+                      ),
+                    )}
+                    style={inDashboard ? undefined : {
                       ...getButtonStyle(isSelected),
-                      opacity: (!isWidget && !isSelected) || buttonsDisabled ? 0.6 : 1
+                      opacity: buttonsDisabled ? 0.6 : 1,
                     }}
                   >
                     <span className="flex items-center gap-2 justify-center">
