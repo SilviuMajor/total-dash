@@ -183,47 +183,6 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
     restoreSession().finally(() => clearTimeout(timeout));
   }, [user]);
 
-  // Cross-tab sync: when another tab starts/ends impersonation, the
-  // localStorage mirror in src/lib/impersonation-bridge.ts hydrates this tab's
-  // sessionStorage and dispatches `impersonation-changed`. Re-sync activeSession
-  // from the DB so the sidebar/overlay/clientUsers in this tab match.
-  useEffect(() => {
-    if (!user) return;
-
-    const onImpersonationChanged = async () => {
-      const storedSessionId = sessionStorage.getItem(SESSION_STORAGE_KEY);
-      if (!storedSessionId) {
-        setActiveSession(null);
-        setClientUsers([]);
-        return;
-      }
-      try {
-        const { data, error } = await supabase
-          .from('impersonation_sessions')
-          .select('*')
-          .eq('id', storedSessionId)
-          .eq('actor_id', user.id)
-          .is('ended_at', null)
-          .maybeSingle();
-        if (data && !error) {
-          setActiveSession(data as ImpersonationSession);
-          if (data.client_id) loadClientUsers(data.client_id);
-          else setClientUsers([]);
-        } else {
-          setActiveSession(null);
-          setClientUsers([]);
-        }
-      } catch (e) {
-        console.error('Cross-tab impersonation sync error:', e);
-      }
-    };
-
-    window.addEventListener('impersonation-changed', onImpersonationChanged);
-    return () => {
-      window.removeEventListener('impersonation-changed', onImpersonationChanged);
-    };
-  }, [user]);
-
   // Elapsed time timer
   useEffect(() => {
     if (!activeSession) {
