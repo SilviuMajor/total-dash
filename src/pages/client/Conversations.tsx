@@ -2863,7 +2863,7 @@ export default function Conversations() {
                       {handoverHistory.length > 0 && (
                         <div className="border-t border-border/50 mt-2 pt-2">
                           <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
-                            {handoverHistory.length === 1 ? 'Previous handover' : `Previous handovers (${handoverHistory.length})`}
+                            {handoverHistory.length === 1 ? 'Handover Sessions' : `Handover Sessions (${handoverHistory.length})`}
                           </p>
                           <div className="space-y-1.5">
                             {(showAllHandoverHistory ? handoverHistory : handoverHistory.slice(0, 1)).map((session: any) => {
