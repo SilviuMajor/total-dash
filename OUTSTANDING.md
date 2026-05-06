@@ -56,27 +56,6 @@ These are real follow-ups from the 25 April audit. C1, C2, C3 (critical tier) al
 
 ## Tier 2 — strong wants
 
-### N19 — Agent Config + Client Access page merge
-
-**Type:** Agency UX | **Effort:** Medium | **Status:** Open
-**Spec:** `TotalDash-Spec-N19-Agent-Config-Client-Access-Merge.md`
-
-`AgencyAgentDetails` currently has "Client Access" as a separate tab from agent config. Mix of agency-only vs client-visible settings is unclear elsewhere too. Merge "Client Access" into a renamed "Configuration & Permissions" tab with explicit section dividers between agency-only config and client-visibility toggles.
-
-**Decisions already made:**
-- Recommended Option 2 (merge into Config) over Option 1 (just relabel) or Option 3 (full new permissions UI).
-- New tab name: "Configuration & Permissions".
-- Section ordering: Configuration first, Permissions second.
-- Horizontal-rule divider between sections.
-
-**Open questions:**
-- Should we add interaction-level permissions in future ("client can edit widget", etc.)? Affects data model. Answer before finalising.
-- Default tab on page load: keep current default or switch to merged tab?
-
-**Touches:** `AgencyAgentDetails.tsx` (tabs structure + Client Access content).
-
----
-
 ## Tier 3 — parked / post-stability
 
 ### N14 — White-label password reset emails
@@ -381,6 +360,7 @@ Low priority. Do opportunistically when touching related code.
 
 Date-stamped log of items shipped. Older entries are intentionally terse — open the commit if you need detail. Newer entries keep slightly more context while still relevant.
 
+- **2026-05-06** — `e3263f2` — N19 (Agent Config + Client Access merge) shipped. The two tabs `Client Access` (per-agent ceiling toggles) and `Config` (provider credentials + custom variables) are merged into a single `Configuration & Permissions` tab on `AgencyAgentDetails`, now the default tab on page load (was `client-access`). Body layout: Configuration section (renders existing `VoiceflowSettings` / `RetellSettings` with new `hideDangerZone` prop) → `Separator` → Permissions section (agency-only banner + Sidebar pages card + conditional Agent settings sub-tabs card, content lifted wholesale from old `client-access` TabsContent) → `Separator` → Danger Zone (admin-gated `Delete Agent`, same `profiles.role === 'admin'` check pattern as the original settings components). `AgencyAgentDetails` now owns the `AgentDeletionDialog` instance instead of each provider settings component (the prop suppresses both the Danger Zone block and the dialog inside the settings component when `hideDangerZone` is set). Pure UI consolidation — no schema change, no RPC change. Permission toggles still write via `update_agent_config` RPC. Data model deliberately left as `client_X_enabled: boolean`; interaction-level permissions ("client can edit widget" vs "view-only") deferred until actually needed.
 - **2026-05-05** — `bfa91b7` — N30 closed as **not needed** (no code shipped). Initial implementation (Option B: localStorage mirror with `storage` event listener for cross-tab sync, plus a `useImpersonation` re-fetch on `impersonation-changed`) was shipped in `bde35ba` + `dfd7f43`, then reverted in `bfa91b7` once Silv confirmed the requirement: tab isolation is intentional. Each tab can hold its own impersonation identity (super_admin in tab A, impersonated agency in tab B) — that's a feature, not a race. The original entry's worry about divergent state leaking into Realtime / filters / guards doesn't materialise: Realtime clients are per-tab, sessionStorage-driven filters are per-tab, and the N29 guard work already lets a super_admin in tab B navigate freely while tab A is impersonating. `src/lib/impersonation-bridge.ts` returns to its post-N29 shape (just the `getImpersonationBridge()` / `hasImpersonationBridge()` helpers).
 - **2026-05-05** — `e50a2d1` / `18a6fa4` — N29 (AdminProtectedRoute impersonation awareness) shipped. New `src/lib/impersonation-bridge.ts` exports `hasImpersonationBridge()` (truthy if `preview_mode` or `impersonation_session_id` is set in sessionStorage) and `getImpersonationBridge()` (raw values for callers that need specificity, e.g. AgencyProtectedRoute's `previewMode === 'agency'` semantics). All three route guards now consume the helper instead of inline `sessionStorage.getItem` reads: `AdminProtectedRoute` gains a `useImpersonation()` hook arm to match the hybrid pattern of its siblings (`isImpersonating || hasImpersonationBridge()`); `AgencyProtectedRoute` keeps its role-specific `previewMode === 'agency'` check via the destructured raw value; `ProtectedRoute` drops its inline fallback inside `hasPreviewAccess`. Behavioural no-op — same render/redirect outcomes for every (userType × impersonation) combination. Materially shrinks the N30 (cross-tab race) diff which sits next on the backlog. Bonus follow-up in `18a6fa4`: replaced three dead `sessionStorage.getItem('preview_mode') === '1'` checks in `Auth.tsx`, `AdminLogin.tsx`, and `AgencyLogin.tsx` (introduced new in N12 commit `4ce209b` but never matched anything — `useImpersonation.startImpersonation` writes `'agency'` or `'client'`, never `'1'`) with the new helper. Failure mode the dead checks were *meant* to prevent: super_admin mid-impersonation visiting any login page (e.g. to verify a branded login during a demo) would get full-page-redirected to their own dashboard, blowing up the impersonation context. Now correctly skipped.
 - **2026-05-01** — `d36c9e5` — N12 follow-up: softened the cross-role auto-redirect introduced by N12. Pasting another role's login URL while signed in (e.g. super_admin → `/login/fiveleaf` to verify Fiveleaf branding renders correctly) was bouncing the user through `/admin/login` to `/admin/agencies` before the page could render — blocking branding verification, stakeholder demos, and "sign out then sign in as someone else" flows. Now: matched-role still auto-redirects (the original N12 stale-session win is preserved); mismatched-role renders the page normally with a slim amber `WrongRoleBanner` above the login card showing email + role and two actions ("Go to your dashboard", "Sign out"). New `src/components/WrongRoleBanner.tsx` (~70 LOC); each of the 3 login pages swaps its mismatch redirect for `setMismatchedAs(detected)` + conditional banner render. Post-sign-in wrong-portal flow (typing wrong-role creds → sign out + toast + redirect) and `sessionStorage.preview_mode === '1'` impersonation skip are unchanged. Verified branded login flow already worked end-to-end (`/login/:agencySlug` → `SlugBasedAuth` → `loginAgencyContext` sessionStorage → `useBranding({ isClientView: true, agencyId })` → agency `logo_*` / `favicon_*` / `name` overlay platform defaults) — Silv just couldn't see it before because of the redirect. Banner state stays after this fix so the branded page is finally visible to admins.
